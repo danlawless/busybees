@@ -33,8 +33,8 @@ export function InfoHero() {
   const businessOpen = isOpen()
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-secondary-50 via-white to-primary-50 py-16 sm:py-20">
-      <HoneycombPattern className="opacity-5" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-honey-50 via-primary-50 to-charcoal-50 py-16 sm:py-20">
+      <HoneycombPattern variant="medium" size="lg" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -49,10 +49,10 @@ export function InfoHero() {
                 <Info className="w-8 h-8 text-primary-600" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl mb-4">
+            <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl mb-4">
               Everything You Need to Know
             </h1>
-            <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+            <p className="text-xl text-charcoal-600 max-w-2xl mx-auto">
               All the details about visiting Busy Bees Indoor Play Center
             </p>
           </motion.div>
@@ -67,12 +67,12 @@ export function InfoHero() {
               return (
                 <Card key={index} className="text-center">
                   <CardContent className="p-6">
-                    <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                      <Icon className="w-6 h-6 text-primary-600" />
+                    <div className="w-12 h-12 bg-honey-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-6 h-6 text-honey-600" />
                     </div>
-                    <h3 className="font-semibold text-neutral-900 mb-2">{info.title}</h3>
-                    <p className="text-neutral-700 font-medium whitespace-pre-line">{info.content}</p>
-                    <p className="text-sm text-neutral-500 mt-1">{info.subtext}</p>
+                    <h3 className="font-semibold text-charcoal-800 mb-2">{info.title}</h3>
+                    <p className="text-charcoal-700 font-medium whitespace-pre-line">{info.content}</p>
+                    <p className="text-sm text-charcoal-500 mt-1">{info.subtext}</p>
                   </CardContent>
                 </Card>
               )

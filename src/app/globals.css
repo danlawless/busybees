@@ -1,26 +1,113 @@
 @import "tailwindcss";
 
+/* Busy Bees Brand Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fefdf8;
+  --foreground: #262626;
+  --honey-primary: #eab308;
+  --honey-light: #fef3c7;
+  --charcoal-dark: #262626;
+  --charcoal-light: #737373;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #171717;
+    --foreground: #fafafa;
   }
 }
 
+/* Busy Bees Brand Enhancements */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #fefdf8 0%, #fffaeb 50%, #f8f8f8 100%);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar with honey theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f8f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #fbbf24, #eab308);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #f59e0b, #d97706);
+}
+
+/* Honeycomb hover effect for cards */
+.honeycomb-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.honeycomb-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg stroke='%23fbbf24' stroke-width='1'%3E%3Cpolygon points='30,2 45,12 45,28 30,38 15,28 15,12'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.honeycomb-hover:hover::before {
+  opacity: 0.05;
+}
+
+/* Bee-themed focus states */
+.focus-honey:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+}
+
+/* Gradient text for brand elements */
+.text-honey-gradient {
+  background: linear-gradient(135deg, #fbbf24, #eab308);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animation enhancements */
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.float-gentle {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }

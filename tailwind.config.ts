@@ -9,19 +9,46 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Busy Bees Brand Colors
+        // Busy Bees Brand Colors - Enhanced Palette
         primary: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b', // Main bee yellow
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
+          50: '#fffef7',  // Lightest honey cream
+          100: '#fffaeb',  // Soft honey
+          200: '#fef3c7',  // Light honey
+          300: '#fde68a',  // Warm honey
+          400: '#fbbf24',  // Golden honey
+          500: '#f59e0b',  // Main bee yellow
+          600: '#d97706',  // Deep honey
+          700: '#b45309',  // Rich amber
+          800: '#92400e',  // Dark amber
+          900: '#78350f',  // Deepest amber
         },
+        // Pastel blacks and grays
+        charcoal: {
+          50: '#f8f8f8',   // Softest gray
+          100: '#f1f1f1',  // Light pastel gray
+          200: '#e4e4e4',  // Pastel gray
+          300: '#d1d1d1',  // Medium pastel gray
+          400: '#a8a8a8',  // Soft charcoal
+          500: '#737373',  // Medium charcoal
+          600: '#525252',  // Deep charcoal
+          700: '#404040',  // Rich charcoal
+          800: '#262626',  // Dark charcoal
+          900: '#171717',  // Deepest charcoal
+        },
+        // Honeycomb accent colors
+        honey: {
+          50: '#fefdf8',   // Cream white
+          100: '#fef9e7',  // Pale cream
+          200: '#fef3c7',  // Light cream
+          300: '#fde68a',  // Soft yellow
+          400: '#facc15',  // Bright honey
+          500: '#eab308',  // Rich honey
+          600: '#ca8a04',  // Deep honey
+          700: '#a16207',  // Dark honey
+          800: '#854d0e',  // Amber
+          900: '#713f12',  // Deep amber
+        },
+        // Keep secondary for nature elements
         secondary: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -34,29 +61,18 @@ const config: Config = {
           800: '#166534',
           900: '#14532d',
         },
-        accent: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316', // Warm orange
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-        },
+        // Refined neutral palette
         neutral: {
-          50: '#fafaf9',
-          100: '#f5f5f4',
-          200: '#e7e5e4',
-          300: '#d6d3d1',
-          400: '#a8a29e',
-          500: '#78716c',
-          600: '#57534e',
-          700: '#44403c',
-          800: '#292524',
-          900: '#1c1917',
+          50: '#fafafa',   // Pure light
+          100: '#f5f5f5',  // Soft light
+          200: '#e5e5e5',  // Light gray
+          300: '#d4d4d4',  // Medium light
+          400: '#a3a3a3',  // Medium gray
+          500: '#737373',  // True gray
+          600: '#525252',  // Dark gray
+          700: '#404040',  // Deep gray
+          800: '#262626',  // Very dark
+          900: '#171717',  // Almost black
         },
       },
       fontFamily: {

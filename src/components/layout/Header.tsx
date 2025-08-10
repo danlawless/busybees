@@ -29,8 +29,8 @@ export function Header() {
             <Link href="/" className="flex items-center space-x-2">
               <BeeIcon size="lg" />
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-neutral-900">Busy Bees</span>
-                <span className="text-xs text-neutral-600">Indoor Play Center</span>
+                <span className="text-xl font-bold text-charcoal-800">Busy Bees</span>
+                <span className="text-xs text-charcoal-600">Indoor Play Center</span>
               </div>
             </Link>
           </div>
@@ -41,7 +41,7 @@ export function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-neutral-700 hover:text-primary-600 transition-colors duration-200 font-medium"
+                className="text-charcoal-700 hover:text-honey-600 transition-colors duration-200 font-medium"
               >
                 {item.name}
               </Link>

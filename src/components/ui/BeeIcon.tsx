@@ -69,25 +69,128 @@ export function BeeIcon({ size = 'md', animate = true, className }: BeeIconProps
   )
 }
 
-// Honeycomb Pattern Component
-export function HoneycombPattern({ className }: { className?: string }) {
+// Enhanced Honeycomb Pattern Components
+interface HoneycombPatternProps {
+  className?: string
+  variant?: 'light' | 'medium' | 'dark' | 'subtle'
+  size?: 'sm' | 'md' | 'lg'
+}
+
+export function HoneycombPattern({ className, variant = 'light', size = 'md' }: HoneycombPatternProps) {
+  const sizes = {
+    sm: '40 40',
+    md: '60 60', 
+    lg: '80 80'
+  }
+
+  const variants = {
+    light: { stroke: '#fbbf24', opacity: 'opacity-5' },
+    medium: { stroke: '#f59e0b', opacity: 'opacity-10' },
+    dark: { stroke: '#d97706', opacity: 'opacity-15' },
+    subtle: { stroke: '#fef3c7', opacity: 'opacity-8' }
+  }
+
+  const patternSize = sizes[size]
+  const { stroke, opacity } = variants[variant]
+
   return (
-    <div className={cn("absolute inset-0 opacity-10", className)}>
+    <div className={cn("absolute inset-0 pointer-events-none", opacity, className)}>
       <svg
         width="100%"
         height="100%"
-        viewBox="0 0 60 60"
+        viewBox={`0 0 ${patternSize.split(' ')[0]} ${patternSize.split(' ')[1]}`}
         xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
       >
         <defs>
-          <pattern id="honeycomb" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-            <polygon points="30,2 45,12 45,28 30,38 15,28 15,12" fill="none" stroke="#F59E0B" strokeWidth="1"/>
-            <polygon points="0,17 15,27 15,43 0,53 -15,43 -15,27" fill="none" stroke="#F59E0B" strokeWidth="1"/>
-            <polygon points="60,17 75,27 75,43 60,53 45,43 45,27" fill="none" stroke="#F59E0B" strokeWidth="1"/>
+          <pattern 
+            id={`honeycomb-${variant}-${size}`} 
+            x="0" 
+            y="0" 
+            width={patternSize.split(' ')[0]} 
+            height={patternSize.split(' ')[1]} 
+            patternUnits="userSpaceOnUse"
+          >
+            {/* Main hexagon */}
+            <polygon 
+              points={`${parseInt(patternSize.split(' ')[0])/2},2 ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.2} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.47} ${parseInt(patternSize.split(' ')[0])/2},${parseInt(patternSize.split(' ')[1])*0.63} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.47} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.2}`}
+              fill="none" 
+              stroke={stroke} 
+              strokeWidth="0.8"
+            />
+            {/* Left hexagon */}
+            <polygon 
+              points={`0,${parseInt(patternSize.split(' ')[1])*0.28} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.45} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.72} 0,${parseInt(patternSize.split(' ')[1])*0.88} ${-parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.72} ${-parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.45}`}
+              fill="none" 
+              stroke={stroke} 
+              strokeWidth="0.8"
+            />
+            {/* Right hexagon */}
+            <polygon 
+              points={`${parseInt(patternSize.split(' ')[0])},${parseInt(patternSize.split(' ')[1])*0.28} ${parseInt(patternSize.split(' ')[0])*1.25},${parseInt(patternSize.split(' ')[1])*0.45} ${parseInt(patternSize.split(' ')[0])*1.25},${parseInt(patternSize.split(' ')[1])*0.72} ${parseInt(patternSize.split(' ')[0])},${parseInt(patternSize.split(' ')[1])*0.88} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.72} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.45}`}
+              fill="none" 
+              stroke={stroke} 
+              strokeWidth="0.8"
+            />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#honeycomb)" />
+        <rect width="100%" height="100%" fill={`url(#honeycomb-${variant}-${size})`} />
       </svg>
+    </div>
+  )
+}
+
+// Floating Honeycomb Elements
+export function FloatingHoneycombs({ className }: { className?: string }) {
+  return (
+    <div className={cn("absolute inset-0 pointer-events-none overflow-hidden", className)}>
+      {/* Large floating honeycomb - top left */}
+      <div className="absolute -top-10 -left-10 w-32 h-32 opacity-5">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon 
+            points="50,5 80,25 80,55 50,75 20,55 20,25" 
+            fill="none" 
+            stroke="#fbbf24" 
+            strokeWidth="2"
+          />
+        </svg>
+      </div>
+      
+      {/* Medium floating honeycomb - top right */}
+      <div className="absolute -top-5 -right-5 w-20 h-20 opacity-8">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon 
+            points="50,10 75,30 75,50 50,70 25,50 25,30" 
+            fill="#fef3c7" 
+            stroke="#f59e0b" 
+            strokeWidth="1.5"
+          />
+        </svg>
+      </div>
+      
+      {/* Small floating honeycomb - bottom left */}
+      <div className="absolute -bottom-8 -left-8 w-16 h-16 opacity-6">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon 
+            points="50,15 70,35 70,55 50,75 30,55 30,35" 
+            fill="none" 
+            stroke="#eab308" 
+            strokeWidth="1.8"
+          />
+        </svg>
+      </div>
+      
+      {/* Extra small honeycomb - bottom right */}
+      <div className="absolute -bottom-3 -right-12 w-12 h-12 opacity-4">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon 
+            points="50,20 65,35 65,55 50,70 35,55 35,35" 
+            fill="#fffaeb" 
+            stroke="#d97706" 
+            strokeWidth="1"
+          />
+        </svg>
+      </div>
     </div>
   )
 }

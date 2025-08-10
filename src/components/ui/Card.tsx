@@ -25,7 +25,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         className={cn(
           'bg-white rounded-2xl shadow-soft border border-neutral-100',
           paddingStyles[padding],
-          hover && 'hover:shadow-medium transition-shadow duration-300',
+          hover && 'hover:shadow-medium transition-all duration-300 honeycomb-hover',
           className
         )}
         initial={{ opacity: 0, y: 20 }}

@@ -33,8 +33,8 @@ const businessHours = [
 
 export function Footer() {
   return (
-    <footer className="relative bg-neutral-50 border-t border-neutral-200">
-      <HoneycombPattern className="opacity-5" />
+    <footer className="relative bg-gradient-to-b from-charcoal-50 to-charcoal-100 border-t border-charcoal-200">
+      <HoneycombPattern variant="light" size="lg" />
       
       <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -43,11 +43,11 @@ export function Footer() {
             <div className="flex items-center space-x-2 mb-4">
               <BeeIcon size="lg" />
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-neutral-900">Busy Bees</span>
-                <span className="text-sm text-neutral-600">Indoor Play Center</span>
+                <span className="text-xl font-bold text-charcoal-800">Busy Bees</span>
+                <span className="text-sm text-charcoal-600">Indoor Play Center</span>
               </div>
             </div>
-            <p className="text-neutral-600 mb-6 max-w-md">
+            <p className="text-charcoal-600 mb-6 max-w-md">
               A modern, safe and engaging indoor play space for children ages 0-6. 
               Creating a go-to destination for families to play, socialize and celebrate.
             </p>
