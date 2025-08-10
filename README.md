@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🐝 Busy Bees Indoor Play Center
 
-## Getting Started
+A modern, beautiful website for Busy Bees Indoor Play Center - a safe and engaging indoor play space for children ages 0-6.
 
-First, run the development server:
+## ✨ Features
+
+- **Beautiful UI/UX** with bee-themed design system
+- **Responsive design** that works perfectly on all devices
+- **Smooth animations** powered by Framer Motion
+- **Comprehensive information** including hours, pricing, amenities, and policies
+- **Interactive FAQ section** with expandable answers
+- **Professional layout** with modern typography and spacing
+
+## 🎨 Design System
+
+- Custom bee-themed color palette with warm yellows and nature greens
+- Animated bee icons and honeycomb patterns throughout
+- Modern typography with Inter font family
+- Consistent spacing and visual hierarchy
+- Accessible design with proper focus states
+
+## 🏗️ Technical Stack
+
+- **Next.js 14** with App Router and TypeScript
+- **Tailwind CSS** for utility-first styling
+- **Framer Motion** for smooth animations
+- **Lucide React** for beautiful icons
+- **React Hook Form** for form handling
+- **Zod** for validation
+
+## 🚀 Getting Started
+
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📱 Pages
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Homepage** (`/`) - Hero section, features, and pricing overview
+- **Info Page** (`/info`) - Comprehensive information including:
+  - Detailed hours and schedule
+  - Complete pricing breakdown
+  - Facility amenities
+  - Safety policies and guidelines
+  - Interactive FAQ section
 
-## Learn More
+## 🏢 Business Information
 
-To learn more about Next.js, take a look at the following resources:
+**Busy Bees Indoor Play Center**
+- Ages: 0-6 years with dedicated areas for different age groups
+- Location: 380-432 John Fitch Highway, Suite A-190 & A-200
+- Hours: Mon-Fri 10AM-5PM, Sat-Sun 9AM-12PM (Open Play)
+- Pricing: $15 daily admission, $75 monthly membership
+- Features: 4,000+ sq ft, private party room, snack bar, ample parking
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The project uses modern development practices:
 
-## Deploy on Vercel
+- **TypeScript** for type safety
+- **ESLint** for code quality
+- **Tailwind CSS** for consistent styling
+- **Component-based architecture** for maintainability
+- **Responsive design** with mobile-first approach
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📄 License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is built for Busy Bees Indoor Play Center.
+
+---
+
+Built with ❤️ using Next.js and modern web technologies.
