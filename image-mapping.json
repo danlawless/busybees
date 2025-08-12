@@ -1,0 +1,148 @@
+{
+  "imageMapping": {
+    "partyGallery": [
+      {
+        "component": "PartyGallery.tsx",
+        "location": "galleryImages array",
+        "images": [
+          {
+            "title": "Princess Party Magic",
+            "filename": "princess-party-magic.jpg",
+            "alt": "Children in princess costumes at birthday party",
+            "description": "Birthday girl and friends in princess costumes"
+          },
+          {
+            "title": "Superhero Squad", 
+            "filename": "superhero-squad.jpg",
+            "alt": "Children in superhero costumes playing together",
+            "description": "Kids in capes celebrating superhero style"
+          },
+          {
+            "title": "Face Painting Fun",
+            "filename": "face-painting-fun.jpg", 
+            "alt": "Face painter working on child at party",
+            "description": "Professional face painter creating masterpieces"
+          },
+          {
+            "title": "Birthday Cake Moment",
+            "filename": "birthday-cake-moment.jpg",
+            "alt": "Birthday child blowing out candles on cake", 
+            "description": "Special cake cutting celebration"
+          },
+          {
+            "title": "Play Area Adventures",
+            "filename": "play-area-adventures.jpg",
+            "alt": "Children playing in indoor playground equipment",
+            "description": "Kids having blast in our play zones"
+          },
+          {
+            "title": "Group Photo Joy",
+            "filename": "group-photo-joy.jpg",
+            "alt": "Group photo of birthday party guests",
+            "description": "All party guests together with birthday child"
+          }
+        ]
+      }
+    ],
+    "aboutSection": [
+      {
+        "component": "AboutHero.tsx",
+        "location": "Main hero image",
+        "images": [
+          {
+            "title": "Main About Hero",
+            "filename": "children-playing-happily.jpg",
+            "alt": "Children playing happily in indoor playground", 
+            "description": "Children playing happily"
+          }
+        ]
+      },
+      {
+        "component": "OurStory.tsx",
+        "location": "Founders image placeholder",
+        "images": [
+          {
+            "title": "Founders Photo",
+            "filename": "founders-photo.jpg",
+            "alt": "Busy Bees founders Sarah and Mike Johnson",
+            "description": "Sarah & Mike Johnson"
+          }
+        ]
+      },
+      {
+        "component": "TeamSection.tsx", 
+        "location": "Team photo section",
+        "images": [
+          {
+            "title": "Team Member Profile",
+            "filename": "team-photo.jpg",
+            "alt": "Busy Bees staff member profile photo",
+            "description": "Staff member photo"
+          },
+          {
+            "title": "Full Team Photo",
+            "filename": "full-team-photo.jpg", 
+            "alt": "All Busy Bees staff members together",
+            "description": "All Busy Bees staff together"
+          }
+        ]
+      }
+    ],
+    "partiesSection": [
+      {
+        "component": "PartiesHero.tsx",
+        "location": "Main party hero image",
+        "images": [
+          {
+            "title": "Epic Party in Action",
+            "filename": "epic-party-action.jpg",
+            "alt": "Kids celebrating with pure joy at birthday party",
+            "description": "Kids celebrating with pure joy"
+          }
+        ]
+      }
+    ],
+    "communitySection": [
+      {
+        "component": "CommunitySection.tsx",
+        "location": "Community initiatives",
+        "images": [
+          {
+            "title": "Community Outreach",
+            "filename": "community-outreach.jpg",
+            "alt": "Community event with families volunteering",
+            "description": "Community event with families volunteering"
+          },
+          {
+            "title": "Birthday Celebrations",
+            "filename": "birthday-celebration-play.jpg", 
+            "alt": "Birthday party celebration in play area",
+            "description": "Birthday party celebration in play area"
+          },
+          {
+            "title": "Holiday Events",
+            "filename": "holiday-decorations.jpg",
+            "alt": "Holiday themed decorations and activities", 
+            "description": "Holiday themed decorations and activities"
+          },
+          {
+            "title": "Parent Groups",
+            "filename": "parents-chatting.jpg",
+            "alt": "Parents chatting while children play",
+            "description": "Parents chatting while children play"
+          }
+        ]
+      }
+    ]
+  },
+  "totalImages": 16,
+  "imageSpecs": {
+    "format": "JPG",
+    "minResolution": "1200x800",
+    "aspectRatio": "4:3", 
+    "style": "Photorealistic",
+    "lighting": "Natural, warm, welcoming",
+    "colors": "Bright but not oversaturated",
+    "focus": "Clear, sharp, high-quality"
+  }
+}
