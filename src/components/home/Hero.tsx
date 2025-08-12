@@ -42,10 +42,9 @@ export function Hero() {
               <Logo size="xl" animate={true} showText={false} />
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
-              Welcome to{' '}
               <span className="text-honey-600">Busy Bees</span>
               <br />
-              <span className="text-2xl sm:text-3xl lg:text-4xl font-medium text-charcoal-600">
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-charcoal-700">
                 Indoor Play Center
               </span>
             </h1>

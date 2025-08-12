@@ -9,69 +9,43 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const packages = [
   {
-    name: 'Buzzing Basic',
-    price: 199,
-    duration: '1.5 Hours',
-    guests: 'Up to 12 Kids',
-    icon: Gift,
+    name: 'Semi-Private Party',
+    price: 350,
+    duration: '2 Hours',
+    guests: '15 Kids Included',
+    icon: Users,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
-    popular: false,
-    features: [
-      'Private party area for 1.5 hours',
-      'Dedicated party host',
-      'Basic decorations included',
-      'Birthday child gets special crown',
-      'Free play time for all guests',
-      'Party setup and cleanup',
-      'Digital photo package',
-      'Birthday song celebration'
-    ]
-  },
-  {
-    name: 'Sweet Celebration',
-    price: 299,
-    duration: '2 Hours',
-    guests: 'Up to 16 Kids',
-    icon: Cake,
-    color: 'from-pink-200 to-pink-300',
-    borderColor: 'border-pink-300',
     popular: true,
     features: [
-      'Private party area for 2 hours',
-      'Dedicated party host + assistant',
-      'Premium decorations & balloons',
-      'Birthday child gets special crown',
-      'Organized games and activities',
-      'Party setup and cleanup',
-      'Professional photo session',
-      'Goodie bags for all guests',
-      'Special birthday surprise',
-      'Juice boxes and water included'
+      'Exclusive party room access',
+      'Access to play area during public play',
+      'Paper goods included (plates, napkins, cups)',
+      'Table cloth and plastic cutlery',
+      '15 kids included, $12 each additional',
+      'Weekdays: 10am - 4pm available',
+      'Weekends: 9am - 12pm available',
+      'You bring food, drinks & decorations'
     ]
   },
   {
-    name: 'Ultimate Hive',
-    price: 399,
-    duration: '2.5 Hours',
-    guests: 'Up to 20 Kids',
+    name: 'Private Party',
+    price: 425,
+    duration: '2 Hours',
+    guests: '15 Kids Included',
     icon: Crown,
-    color: 'from-purple-200 to-purple-300',
-    borderColor: 'border-purple-300',
+    color: 'from-pink-200 to-pink-300',
+    borderColor: 'border-pink-300',
     popular: false,
     features: [
-      'Exclusive facility access for 2.5 hours',
-      'Two dedicated party hosts',
-      'Deluxe decorations & custom theme',
-      'Birthday child gets royal treatment',
-      'Organized games, activities & crafts',
-      'Professional party setup/cleanup',
-      'Premium photo & video package',
-      'Deluxe goodie bags for all guests',
-      'Special birthday cake ceremony',
-      'Drinks and healthy snacks included',
-      'Take-home party favor',
-      'Personalized thank you cards'
+      'Exclusive access to entire play area',
+      'Exclusive party room access',
+      'No public play during your party',
+      'Paper goods included (plates, napkins, cups)',
+      'Table cloth and plastic cutlery',
+      '15 kids included, $12 each additional',
+      'Weekends: 1pm-3pm or 4pm-6pm',
+      'You bring food, drinks & decorations'
     ]
   }
 ]
@@ -112,7 +86,7 @@ export function PartyPackages() {
         
         {/* Package Cards */}
         <motion.div
-          className="grid lg:grid-cols-3 gap-8 mb-16"
+          className="grid lg:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"

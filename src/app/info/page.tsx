@@ -1,5 +1,6 @@
 import { Layout } from '@/components/layout/Layout'
 import { InfoHero } from '@/components/info/InfoHero'
+import { ImportantInfo } from '@/components/info/ImportantInfo'
 import { DetailedHours } from '@/components/info/DetailedHours'
 import { PricingDetails } from '@/components/info/PricingDetails'
 import { Amenities } from '@/components/info/Amenities'
@@ -15,6 +16,7 @@ export default function InfoPage() {
   return (
     <Layout>
       <InfoHero />
+      <ImportantInfo />
       <DetailedHours />
       <PricingDetails />
       <Amenities />

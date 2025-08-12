@@ -72,15 +72,17 @@ export function OurStory() {
                 Born from a Parent's Vision
               </h3>
               <p className="text-charcoal-600 leading-relaxed">
-                Busy Bees was founded by Sarah and Mike Johnson, parents who recognized 
-                the need for a truly exceptional indoor play space. After struggling to 
-                find clean, safe, and engaging environments for their own children, they 
-                decided to create the solution themselves.
+                Once upon a time, a husband and wife had a dream: to create an indoor play center 
+                for young children in their hometown. Inspired by the many play spaces they visited 
+                with their two young kids, they envisioned something uniquely their own.
               </p>
               <p className="text-charcoal-600 leading-relaxed">
-                Starting with a simple vision of "play with purpose," they designed every 
-                aspect of Busy Bees to promote not just fun, but learning, social development, 
-                and family bonding. Today, that vision continues to guide everything we do.
+                What began as a simple idea grew into a heartfelt mission: to provide a safe, 
+                playful, and inviting space where children could explore, imagine, and make 
+                memories—while parents could relax, connect, and feel at home.
+              </p>
+              <p className="text-charcoal-600 leading-relaxed">
+                And so, Busy Bees was born—built by a family, for families, right here in our community.
               </p>
               
               <div className="flex items-center space-x-4 p-4 bg-honey-50 rounded-xl border border-honey-200">
