@@ -16,10 +16,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center rounded-2xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
     
     const variants = {
-      primary: 'bg-honey-500 hover:bg-honey-600 text-white shadow-soft hover:shadow-medium focus:ring-honey-500',
+      primary: 'btn-pastel-primary text-white font-semibold',
       secondary: 'bg-secondary-500 hover:bg-secondary-600 text-white shadow-soft hover:shadow-medium focus:ring-secondary-500',
-      outline: 'border-2 border-honey-500 text-honey-600 hover:bg-honey-50 focus:ring-honey-500',
-      ghost: 'text-honey-600 hover:bg-honey-50 focus:ring-honey-500'
+      outline: 'border-2 border-honey-400 text-honey-700 hover:bg-pastel-yellow hover:border-honey-500 focus:ring-honey-400 card-pastel',
+      ghost: 'text-honey-700 hover:bg-pastel-yellow focus:ring-honey-400'
     }
     
     const sizes = {

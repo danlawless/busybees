@@ -42,8 +42,8 @@ const features = [
 
 export function Features() {
   return (
-    <section className="relative py-20 bg-gradient-to-b from-white via-honey-50/30 to-white overflow-hidden">
-      <HoneycombPattern variant="subtle" size="md" />
+    <section className="relative py-20 section-hexagon-light hexagon-overlay overflow-hidden">
+      <HoneycombPattern variant="scattered" size="lg" animated />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16"
@@ -71,10 +71,10 @@ export function Features() {
             const Icon = feature.icon
             return (
               <motion.div key={index} variants={fadeInUp}>
-                <Card className="h-full text-center group">
+                <Card className="h-full text-center group card-pastel">
                   <CardContent className="p-8">
-                    <div className="w-16 h-16 bg-honey-100 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-honey-200 transition-colors duration-300">
-                      <Icon className="w-8 h-8 text-honey-600" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:from-honey-300 group-hover:to-honey-400 transition-all duration-300 hexagon-pulse">
+                      <Icon className="w-8 h-8 text-charcoal-700" />
                     </div>
                     <h3 className="text-xl font-semibold text-charcoal-800 mb-4">
                       {feature.title}

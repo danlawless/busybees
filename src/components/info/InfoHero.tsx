@@ -3,6 +3,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Clock, MapPin, Phone, Info } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'

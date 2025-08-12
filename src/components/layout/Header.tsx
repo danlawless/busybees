@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Phone, Clock } from 'lucide-react'
-import { BeeIcon } from '@/components/ui/BeeIcon'
+import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { cn, isOpen, getBusinessHours } from '@/lib/utils'
 
@@ -26,12 +26,8 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <BeeIcon size="lg" />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-charcoal-800">Busy Bees</span>
-                <span className="text-xs text-charcoal-600">Indoor Play Center</span>
-              </div>
+            <Link href="/" className="flex items-center">
+              <Logo size="lg" animate={true} textSize="md" />
             </Link>
           </div>
 
@@ -99,9 +95,8 @@ export function Header() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
               <div className="flex items-center justify-between">
-                <Link href="/" className="flex items-center space-x-2">
-                  <BeeIcon size="md" />
-                  <span className="text-lg font-bold text-neutral-900">Busy Bees</span>
+                <Link href="/" className="flex items-center">
+                  <Logo size="md" animate={false} textSize="sm" />
                 </Link>
                 <button
                   type="button"

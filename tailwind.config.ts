@@ -9,44 +9,52 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Busy Bees Brand Colors - Enhanced Palette
+        // Enhanced Pastel Primary Colors
         primary: {
-          50: '#fffef7',  // Lightest honey cream
-          100: '#fffaeb',  // Soft honey
-          200: '#fef3c7',  // Light honey
-          300: '#fde68a',  // Warm honey
-          400: '#fbbf24',  // Golden honey
-          500: '#f59e0b',  // Main bee yellow
-          600: '#d97706',  // Deep honey
-          700: '#b45309',  // Rich amber
-          800: '#92400e',  // Dark amber
-          900: '#78350f',  // Deepest amber
+          50: '#fffef9',   // Cream white
+          100: '#fef7d3',  // Pale pastel yellow
+          200: '#fef3c7',  // Light pastel yellow
+          300: '#f5d565',  // Soft honey pastel
+          400: '#f0c674',  // Medium honey pastel
+          500: '#e6b800',  // Rich honey
+          600: '#d4a300',  // Deep honey
+          700: '#b8900',   // Amber
+          800: '#996600',  // Dark amber
+          900: '#7a5200',  // Deepest amber
         },
-        // Pastel blacks and grays
+        // Enhanced Pastel Charcoals
         charcoal: {
-          50: '#f8f8f8',   // Softest gray
-          100: '#f1f1f1',  // Light pastel gray
-          200: '#e4e4e4',  // Pastel gray
-          300: '#d1d1d1',  // Medium pastel gray
-          400: '#a8a8a8',  // Soft charcoal
-          500: '#737373',  // Medium charcoal
-          600: '#525252',  // Deep charcoal
+          50: '#fafafa',   // Softest pastel gray
+          100: '#f5f5f5',  // Light pastel gray
+          200: '#e8e8e8',  // Soft pastel gray
+          300: '#d4d4d4',  // Medium pastel gray
+          400: '#a8a8a8',  // Soft charcoal pastel
+          500: '#8a8a8a',  // Medium charcoal pastel
+          600: '#666666',  // Deep charcoal pastel
           700: '#404040',  // Rich charcoal
-          800: '#262626',  // Dark charcoal
-          900: '#171717',  // Deepest charcoal
+          800: '#2d2d2d',  // Dark charcoal
+          900: '#1a1a1a',  // Deepest charcoal
         },
-        // Honeycomb accent colors
+        // Enhanced Pastel Honey Colors
         honey: {
-          50: '#fefdf8',   // Cream white
-          100: '#fef9e7',  // Pale cream
-          200: '#fef3c7',  // Light cream
-          300: '#fde68a',  // Soft yellow
-          400: '#facc15',  // Bright honey
-          500: '#eab308',  // Rich honey
-          600: '#ca8a04',  // Deep honey
-          700: '#a16207',  // Dark honey
-          800: '#854d0e',  // Amber
-          900: '#713f12',  // Deep amber
+          50: '#fffef9',   // Pure cream white
+          100: '#fff9e6',  // Pale pastel yellow
+          200: '#ffecb3',  // Light pastel gold
+          300: '#f5d565',  // Soft honey pastel
+          400: '#f0c674',  // Medium honey pastel
+          500: '#e6b800',  // Rich honey (primary)
+          600: '#d4a300',  // Deep honey
+          700: '#b89000',  // Dark honey
+          800: '#996600',  // Amber
+          900: '#7a5200',  // Deep amber
+        },
+        // Pastel accent colors
+        pastel: {
+          cream: '#fffef9',
+          yellow: '#fff9e6', 
+          gold: '#ffecb3',
+          charcoal: '#2d2d2d',
+          gray: '#8a8a8a',
         },
         // Keep secondary for nature elements
         secondary: {

@@ -72,26 +72,31 @@ export function BeeIcon({ size = 'md', animate = true, className }: BeeIconProps
 // Enhanced Honeycomb Pattern Components
 interface HoneycombPatternProps {
   className?: string
-  variant?: 'light' | 'medium' | 'dark' | 'subtle'
-  size?: 'sm' | 'md' | 'lg'
+  variant?: 'light' | 'medium' | 'dark' | 'subtle' | 'dense' | 'scattered'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  animated?: boolean
 }
 
-export function HoneycombPattern({ className, variant = 'light', size = 'md' }: HoneycombPatternProps) {
+export function HoneycombPattern({ className, variant = 'light', size = 'md', animated = false }: HoneycombPatternProps) {
   const sizes = {
-    sm: '40 40',
-    md: '60 60', 
-    lg: '80 80'
+    sm: '30 30',
+    md: '50 50', 
+    lg: '70 70',
+    xl: '100 100'
   }
 
   const variants = {
-    light: { stroke: '#fbbf24', opacity: 'opacity-5' },
-    medium: { stroke: '#f59e0b', opacity: 'opacity-10' },
-    dark: { stroke: '#d97706', opacity: 'opacity-15' },
-    subtle: { stroke: '#fef3c7', opacity: 'opacity-8' }
+    light: { stroke: '#f5d565', fill: 'none', opacity: 'opacity-6' },
+    medium: { stroke: '#e6b800', fill: 'none', opacity: 'opacity-12' },
+    dark: { stroke: '#b89000', fill: 'none', opacity: 'opacity-18' },
+    subtle: { stroke: '#fff9e6', fill: '#fffef9', opacity: 'opacity-4' },
+    dense: { stroke: '#f0c674', fill: '#fff9e6', opacity: 'opacity-15' },
+    scattered: { stroke: '#f5d565', fill: 'none', opacity: 'opacity-8' }
   }
 
   const patternSize = sizes[size]
-  const { stroke, opacity } = variants[variant]
+  const { stroke, fill, opacity } = variants[variant]
+  const patternId = `honeycomb-${variant}-${size}-${animated ? 'animated' : 'static'}`
 
   return (
     <div className={cn("absolute inset-0 pointer-events-none", opacity, className)}>
@@ -100,97 +105,288 @@ export function HoneycombPattern({ className, variant = 'light', size = 'md' }: 
         height="100%"
         viewBox={`0 0 ${patternSize.split(' ')[0]} ${patternSize.split(' ')[1]}`}
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full"
+        className={cn("w-full h-full", animated && "animate-pulse")}
       >
         <defs>
           <pattern 
-            id={`honeycomb-${variant}-${size}`} 
+            id={patternId} 
             x="0" 
             y="0" 
             width={patternSize.split(' ')[0]} 
             height={patternSize.split(' ')[1]} 
             patternUnits="userSpaceOnUse"
           >
-            {/* Main hexagon */}
-            <polygon 
-              points={`${parseInt(patternSize.split(' ')[0])/2},2 ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.2} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.47} ${parseInt(patternSize.split(' ')[0])/2},${parseInt(patternSize.split(' ')[1])*0.63} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.47} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.2}`}
-              fill="none" 
-              stroke={stroke} 
-              strokeWidth="0.8"
-            />
-            {/* Left hexagon */}
-            <polygon 
-              points={`0,${parseInt(patternSize.split(' ')[1])*0.28} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.45} ${parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.72} 0,${parseInt(patternSize.split(' ')[1])*0.88} ${-parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.72} ${-parseInt(patternSize.split(' ')[0])*0.25},${parseInt(patternSize.split(' ')[1])*0.45}`}
-              fill="none" 
-              stroke={stroke} 
-              strokeWidth="0.8"
-            />
-            {/* Right hexagon */}
-            <polygon 
-              points={`${parseInt(patternSize.split(' ')[0])},${parseInt(patternSize.split(' ')[1])*0.28} ${parseInt(patternSize.split(' ')[0])*1.25},${parseInt(patternSize.split(' ')[1])*0.45} ${parseInt(patternSize.split(' ')[0])*1.25},${parseInt(patternSize.split(' ')[1])*0.72} ${parseInt(patternSize.split(' ')[0])},${parseInt(patternSize.split(' ')[1])*0.88} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.72} ${parseInt(patternSize.split(' ')[0])*0.75},${parseInt(patternSize.split(' ')[1])*0.45}`}
-              fill="none" 
-              stroke={stroke} 
-              strokeWidth="0.8"
-            />
+            {/* Perfect hexagon calculations */}
+            {(() => {
+              const w = parseInt(patternSize.split(' ')[0])
+              const h = parseInt(patternSize.split(' ')[1])
+              const centerX = w / 2
+              const centerY = h / 2
+              const radius = Math.min(w, h) * 0.3
+              
+              // Generate hexagon points
+              const hexPoints = []
+              for (let i = 0; i < 6; i++) {
+                const angle = (i * 60 - 30) * (Math.PI / 180)
+                const x = centerX + radius * Math.cos(angle)
+                const y = centerY + radius * Math.sin(angle)
+                hexPoints.push(`${x},${y}`)
+              }
+              
+              return (
+                <>
+                  {/* Main center hexagon */}
+                  <polygon 
+                    points={hexPoints.join(' ')}
+                    fill={fill} 
+                    stroke={stroke} 
+                    strokeWidth="1.2"
+                    className={animated ? "animate-pulse" : ""}
+                  />
+                  
+                  {/* Surrounding hexagons for seamless tiling */}
+                  {variant === 'dense' && (
+                    <>
+                      {/* Top hexagon */}
+                      <polygon 
+                        points={hexPoints.map(point => {
+                          const [x, y] = point.split(',').map(Number)
+                          return `${x},${y - h * 0.6}`
+                        }).join(' ')}
+                        fill={fill} 
+                        stroke={stroke} 
+                        strokeWidth="1"
+                        opacity="0.6"
+                      />
+                      
+                      {/* Bottom hexagon */}
+                      <polygon 
+                        points={hexPoints.map(point => {
+                          const [x, y] = point.split(',').map(Number)
+                          return `${x},${y + h * 0.6}`
+                        }).join(' ')}
+                        fill={fill} 
+                        stroke={stroke} 
+                        strokeWidth="1"
+                        opacity="0.6"
+                      />
+                      
+                      {/* Left hexagon */}
+                      <polygon 
+                        points={hexPoints.map(point => {
+                          const [x, y] = point.split(',').map(Number)
+                          return `${x - w * 0.75},${y}`
+                        }).join(' ')}
+                        fill={fill} 
+                        stroke={stroke} 
+                        strokeWidth="1"
+                        opacity="0.6"
+                      />
+                      
+                      {/* Right hexagon */}
+                      <polygon 
+                        points={hexPoints.map(point => {
+                          const [x, y] = point.split(',').map(Number)
+                          return `${x + w * 0.75},${y}`
+                        }).join(' ')}
+                        fill={fill} 
+                        stroke={stroke} 
+                        strokeWidth="1"
+                        opacity="0.6"
+                      />
+                    </>
+                  )}
+                </>
+              )
+            })()}
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#honeycomb-${variant}-${size})`} />
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
       </svg>
     </div>
   )
 }
 
-// Floating Honeycomb Elements
+// Hexagonal Content Grid
+interface HexGridProps {
+  children: React.ReactNode[]
+  className?: string
+  size?: 'sm' | 'md' | 'lg'
+  animated?: boolean
+}
+
+export function HexGrid({ children, className, size = 'md', animated = false }: HexGridProps) {
+  const sizes = {
+    sm: 'w-24 h-24',
+    md: 'w-32 h-32',
+    lg: 'w-40 h-40'
+  }
+
+  return (
+    <div className={cn("grid grid-cols-3 gap-4 max-w-4xl mx-auto", className)}>
+      {children.map((child, index) => (
+        <motion.div
+          key={index}
+          className={cn(
+            "relative flex items-center justify-center",
+            sizes[size],
+            animated && "hover:scale-105 transition-transform duration-300"
+          )}
+          style={{
+            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+            background: 'linear-gradient(135deg, rgba(245, 213, 101, 0.1), rgba(255, 249, 230, 0.2))',
+            border: '2px solid rgba(245, 213, 101, 0.3)'
+          }}
+          whileHover={animated ? { scale: 1.05 } : undefined}
+        >
+          <div className="text-center p-4">
+            {child}
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+// Enhanced Floating Honeycomb Elements with Animation
 export function FloatingHoneycombs({ className }: { className?: string }) {
   return (
     <div className={cn("absolute inset-0 pointer-events-none overflow-hidden", className)}>
-      {/* Large floating honeycomb - top left */}
-      <div className="absolute -top-10 -left-10 w-32 h-32 opacity-5">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
+      {/* Animated hexagon cluster - top left */}
+      <motion.div 
+        className="absolute -top-16 -left-16 w-40 h-40 opacity-8"
+        animate={{ 
+          rotate: [0, 360],
+          scale: [1, 1.1, 1]
+        }}
+        transition={{ 
+          duration: 20,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      >
+        <svg viewBox="0 0 120 120" className="w-full h-full">
+          {/* Central hexagon */}
           <polygon 
-            points="50,5 80,25 80,55 50,75 20,55 20,25" 
-            fill="none" 
-            stroke="#fbbf24" 
+            points="60,20 85,35 85,65 60,80 35,65 35,35" 
+            fill="rgba(245, 213, 101, 0.1)" 
+            stroke="#f5d565" 
             strokeWidth="2"
           />
-        </svg>
-      </div>
-      
-      {/* Medium floating honeycomb - top right */}
-      <div className="absolute -top-5 -right-5 w-20 h-20 opacity-8">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
+          {/* Surrounding hexagons */}
           <polygon 
-            points="50,10 75,30 75,50 50,70 25,50 25,30" 
-            fill="#fef3c7" 
-            stroke="#f59e0b" 
-            strokeWidth="1.5"
-          />
-        </svg>
-      </div>
-      
-      {/* Small floating honeycomb - bottom left */}
-      <div className="absolute -bottom-8 -left-8 w-16 h-16 opacity-6">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon 
-            points="50,15 70,35 70,55 50,75 30,55 30,35" 
+            points="60,5 75,12 75,28 60,35 45,28 45,12" 
             fill="none" 
-            stroke="#eab308" 
-            strokeWidth="1.8"
+            stroke="#f0c674" 
+            strokeWidth="1"
           />
-        </svg>
-      </div>
-      
-      {/* Extra small honeycomb - bottom right */}
-      <div className="absolute -bottom-3 -right-12 w-12 h-12 opacity-4">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
           <polygon 
-            points="50,20 65,35 65,55 50,70 35,55 35,35" 
-            fill="#fffaeb" 
-            stroke="#d97706" 
+            points="85,10 100,17 100,33 85,40 70,33 70,17" 
+            fill="none" 
+            stroke="#f0c674" 
+            strokeWidth="1"
+          />
+          <polygon 
+            points="35,10 50,17 50,33 35,40 20,33 20,17" 
+            fill="none" 
+            stroke="#f0c674" 
             strokeWidth="1"
           />
         </svg>
-      </div>
+      </motion.div>
+      
+      {/* Pulsing hexagon - top right */}
+      <motion.div 
+        className="absolute -top-8 -right-8 w-24 h-24 opacity-12"
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.12, 0.2, 0.12]
+        }}
+        transition={{ 
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon 
+            points="50,15 70,27 70,53 50,65 30,53 30,27" 
+            fill="rgba(255, 249, 230, 0.3)" 
+            stroke="#e6b800" 
+            strokeWidth="2"
+          />
+          <polygon 
+            points="50,25 60,31 60,43 50,49 40,43 40,31" 
+            fill="rgba(245, 213, 101, 0.2)" 
+            stroke="#f5d565" 
+            strokeWidth="1"
+          />
+        </svg>
+      </motion.div>
+      
+      {/* Floating hexagon chain - bottom */}
+      <motion.div 
+        className="absolute -bottom-12 left-1/4 w-48 h-16 opacity-6"
+        animate={{ 
+          x: [0, 20, 0],
+          y: [0, -5, 0]
+        }}
+        transition={{ 
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <svg viewBox="0 0 200 60" className="w-full h-full">
+          <polygon 
+            points="30,15 40,21 40,33 30,39 20,33 20,21" 
+            fill="none" 
+            stroke="#f5d565" 
+            strokeWidth="1.5"
+          />
+          <polygon 
+            points="70,15 80,21 80,33 70,39 60,33 60,21" 
+            fill="rgba(255, 249, 230, 0.1)" 
+            stroke="#f0c674" 
+            strokeWidth="1.5"
+          />
+          <polygon 
+            points="110,15 120,21 120,33 110,39 100,33 100,21" 
+            fill="none" 
+            stroke="#e6b800" 
+            strokeWidth="1.5"
+          />
+          <polygon 
+            points="150,15 160,21 160,33 150,39 140,33 140,21" 
+            fill="rgba(245, 213, 101, 0.05)" 
+            stroke="#f5d565" 
+            strokeWidth="1.5"
+          />
+        </svg>
+      </motion.div>
+      
+      {/* Small animated hexagon - bottom right */}
+      <motion.div 
+        className="absolute -bottom-6 -right-6 w-16 h-16 opacity-10"
+        animate={{ 
+          rotate: [0, -360],
+          scale: [0.8, 1, 0.8]
+        }}
+        transition={{ 
+          duration: 15,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      >
+        <svg viewBox="0 0 80 80" className="w-full h-full">
+          <polygon 
+            points="40,15 55,23 55,37 40,45 25,37 25,23" 
+            fill="rgba(255, 249, 230, 0.2)" 
+            stroke="#f0c674" 
+            strokeWidth="2"
+          />
+        </svg>
+      </motion.div>
     </div>
   )
 }

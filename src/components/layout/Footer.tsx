@@ -3,7 +3,8 @@
 import React from 'react'
 import Link from 'next/link'
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram } from 'lucide-react'
-import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
+import { Logo } from '@/components/ui/Logo'
+import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { getBusinessHours } from '@/lib/utils'
 
 const footerNavigation = {
@@ -40,12 +41,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <BeeIcon size="lg" />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-charcoal-800">Busy Bees</span>
-                <span className="text-sm text-charcoal-600">Indoor Play Center</span>
-              </div>
+            <div className="mb-4">
+              <Logo size="lg" animate={true} textSize="lg" />
             </div>
             <p className="text-charcoal-600 mb-6 max-w-md">
               A modern, safe and engaging indoor play space for children ages 0-6. 

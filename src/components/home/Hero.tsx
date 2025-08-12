@@ -4,6 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Star, Shield, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Logo } from '@/components/ui/Logo'
 import { BeeIcon, HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
@@ -24,8 +25,8 @@ const features = [
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-honey-50 via-primary-50 to-charcoal-50 py-20 sm:py-24">
-      <HoneycombPattern variant="subtle" size="lg" />
+    <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
+      <HoneycombPattern variant="dense" size="xl" animated />
       <FloatingHoneycombs />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -38,7 +39,7 @@ export function Hero() {
           {/* Main Hero Content */}
           <motion.div variants={fadeInUp} className="mb-8">
             <div className="flex justify-center mb-6">
-              <BeeIcon size="xl" animate />
+              <Logo size="xl" animate={true} showText={false} />
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
               Welcome to{' '}
@@ -68,10 +69,10 @@ export function Hero() {
               return (
                 <div
                   key={index}
-                  className="flex items-center space-x-2 bg-honey-50/90 backdrop-blur-sm px-4 py-2 rounded-full border border-honey-200 shadow-soft"
+                  className="flex items-center space-x-2 card-pastel px-4 py-2 rounded-full shadow-soft pulse-honey"
                 >
                   <Icon className="w-4 h-4 text-honey-600" />
-                  <span className="text-sm font-medium text-charcoal-700">{feature.text}</span>
+                  <span className="text-sm font-medium text-charcoal-800">{feature.text}</span>
                 </div>
               )
             })}
@@ -94,12 +95,12 @@ export function Hero() {
           {/* Pricing Highlight */}
           <motion.div 
             variants={fadeInUp}
-            className="mt-12 p-6 bg-honey-50/80 backdrop-blur-sm rounded-2xl border border-honey-200 shadow-soft max-w-md mx-auto"
+            className="mt-12 p-6 card-pastel rounded-2xl shadow-soft max-w-md mx-auto shimmer"
           >
             <div className="text-center">
               <p className="text-sm font-medium text-charcoal-600 mb-2">Daily Admission</p>
               <div className="flex items-baseline justify-center space-x-2">
-                <span className="text-3xl font-bold text-honey-600">$15</span>
+                <span className="text-3xl font-bold text-honey-gradient">$15</span>
                 <span className="text-lg text-charcoal-600">per child (2+)</span>
               </div>
               <p className="text-sm text-charcoal-500 mt-2">
@@ -111,14 +112,14 @@ export function Hero() {
       </div>
 
       {/* Decorative Elements */}
-      <div className="absolute top-20 left-10 opacity-20">
-        <BeeIcon size="lg" />
+      <div className="absolute top-20 left-10 opacity-15">
+        <Logo size="md" showText={false} animate={true} />
       </div>
       <div className="absolute bottom-20 right-10 opacity-20">
         <BeeIcon size="md" />
       </div>
       <div className="absolute top-1/2 right-20 opacity-10">
-        <BeeIcon size="xl" />
+        <Logo size="lg" showText={false} animate={true} />
       </div>
     </section>
   )
