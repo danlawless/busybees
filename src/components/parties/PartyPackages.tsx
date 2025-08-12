@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Gift, Users, Clock, Cake, Star, Check, Crown, Zap } from 'lucide-react'
+import { Gift, Users, Clock, Cake, Star, Check, Crown, Zap, Calendar } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'

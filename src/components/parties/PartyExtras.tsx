@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Palette, Camera, Music, Utensils, Gift2, Sparkles } from 'lucide-react'
+import { Palette, Camera, Music, Utensils, Gift, Sparkles } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -61,7 +61,7 @@ const entertainers = [
     duration: '1-2 hours',
     price: 85,
     image: 'Balloon artist creating sculptures',
-    icon: Gift2
+    icon: Gift
   },
   {
     name: 'DJ & Dance Party',
@@ -313,7 +313,7 @@ export function PartyExtras() {
                       </div>
                       
                       <Button size="sm" className="w-full">
-                        <Gift2 className="w-3 h-3 mr-2" />
+                        <Gift className="w-3 h-3 mr-2" />
                         Add to Party
                       </Button>
                     </div>

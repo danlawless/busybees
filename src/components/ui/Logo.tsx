@@ -41,8 +41,7 @@ export function Logo({
       transition: { 
         duration: 0.6, 
         repeat: Infinity, 
-        repeatType: "reverse" as const,
-        ease: "easeInOut"
+        repeatType: "reverse" as const
       }
     }
   }

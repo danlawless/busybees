@@ -1,23 +1,25 @@
 # 🐝 Busy Bees Indoor Play Center
 
-A modern, beautiful website for Busy Bees Indoor Play Center - a safe and engaging indoor play space for children ages 0-6.
+A modern, beautiful website for Busy Bees Indoor Play Center - where little dreamers come to play! This comprehensive website features a stunning hexagonal bee hive design system and complete business functionality.
 
 ## ✨ Features
 
-- **Beautiful UI/UX** with bee-themed design system
-- **Responsive design** that works perfectly on all devices
-- **Smooth animations** powered by Framer Motion
-- **Comprehensive information** including hours, pricing, amenities, and policies
-- **Interactive FAQ section** with expandable answers
-- **Professional layout** with modern typography and spacing
+- **🎨 Sophisticated Design System** with hexagonal honeycomb patterns and animations
+- **📱 Fully Responsive** design that works perfectly on all devices  
+- **✨ Advanced Animations** powered by Framer Motion with floating hexagons
+- **🎉 Complete Party Booking System** with packages, themes, and easy booking flow
+- **📖 Comprehensive About Section** with team profiles and company story
+- **📋 Detailed Info Pages** with hours, pricing, amenities, policies, and FAQ
+- **🎯 Professional Business Features** ready for real-world use
 
 ## 🎨 Design System
 
-- Custom bee-themed color palette with warm yellows and nature greens
-- Animated bee icons and honeycomb patterns throughout
-- Modern typography with Inter font family
-- Consistent spacing and visual hierarchy
-- Accessible design with proper focus states
+- **Hexagonal Theme**: Mathematical precision hexagonal patterns throughout
+- **Color Palette**: Sophisticated pastel yellows and charcoal blacks  
+- **Animations**: Floating honeycombs, pulsing hexagons, and smooth transitions
+- **Typography**: Inter font family with honey gradient text effects
+- **Logo Integration**: Custom logo with animation support
+- **Responsive**: Mobile-first design with perfect scaling
 
 ## 🏗️ Technical Stack
 
@@ -46,13 +48,24 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## 📱 Pages
 
-- **Homepage** (`/`) - Hero section, features, and pricing overview
-- **Info Page** (`/info`) - Comprehensive information including:
+- **🏠 Homepage** (`/`) - Hero section, features, and pricing overview
+- **📖 About** (`/about`) - Complete company story including:
+  - Founder narrative and timeline
+  - Team member profiles with specialties
+  - Core values and mission statement  
+  - Community impact and testimonials
+- **📋 Info** (`/info`) - Comprehensive information including:
   - Detailed hours and schedule
   - Complete pricing breakdown
-  - Facility amenities
+  - Facility amenities and play areas
   - Safety policies and guidelines
   - Interactive FAQ section
+- **🎉 Parties** (`/parties`) - Full party booking system with:
+  - Three party packages with clear pricing
+  - Themes, entertainment, and food add-ons
+  - Easy 4-step booking process
+  - Photo gallery and testimonials
+  - Comprehensive party FAQ
 
 ## 🏢 Business Information
 
