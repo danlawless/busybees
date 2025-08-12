@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Gift, Calendar, Users, Star, Sparkles, Clock } from 'lucide-react'
 import { HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -115,15 +116,17 @@ export function PartiesHero() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-              {/* Main Party Image Placeholder */}
-              <div className="aspect-[4/3] bg-gradient-to-br from-pink-100 via-purple-100 to-honey-200 flex items-center justify-center relative">
-                <div className="text-center text-charcoal-600">
-                  <div className="w-24 h-24 bg-white/60 rounded-2xl flex items-center justify-center mx-auto mb-4 hexagon-shape hexagon-pulse">
-                    <Gift className="w-12 h-12 text-pink-600" />
-                  </div>
-                  <p className="text-lg font-semibold">Epic Party in Action!</p>
-                  <p className="text-sm opacity-75">Kids celebrating with pure joy</p>
-                </div>
+              {/* Main Party Image */}
+              <div className="aspect-[4/3] relative">
+                <Image
+                  src="/images/epic-party-action.jpg"
+                  alt="Epic party in action - kids celebrating with pure joy"
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 
                 {/* Floating party elements */}
                 <div className="absolute top-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200 to-pink-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-float">

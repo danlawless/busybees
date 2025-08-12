@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Heart, Gift, Calendar, Users, Star, MessageCircle } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -12,25 +13,29 @@ const communityInitiatives = [
     icon: Heart,
     title: 'Community Outreach',
     description: 'Regular charity events and fundraisers supporting local families in need.',
-    image: 'Community event with families volunteering'
+    image: 'Community event with families volunteering',
+    src: '/images/community-outreach.jpg'
   },
   {
     icon: Gift,
     title: 'Birthday Celebrations',
     description: 'Special birthday packages that create unforgettable memories for children.',
-    image: 'Birthday party celebration in play area'
+    image: 'Birthday party celebration in play area',
+    src: '/images/birthday-celebration-play.jpg'
   },
   {
     icon: Calendar,
     title: 'Special Events',
     description: 'Seasonal celebrations, educational workshops, and family fun days.',
-    image: 'Holiday themed decorations and activities'
+    image: 'Holiday themed decorations and activities',
+    src: '/images/holiday-decorations.jpg'
   },
   {
     icon: Users,
     title: 'Parent Groups',
     description: 'Support networks for parents to connect, share experiences, and build friendships.',
-    image: 'Parents chatting while children play'
+    image: 'Parents chatting while children play',
+    src: '/images/parents-chatting.jpg'
   }
 ]
 
@@ -101,14 +106,15 @@ export function CommunitySection() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card className="h-full card-pastel group hover:shadow-xl transition-all duration-300">
                   <CardContent className="p-6">
-                    {/* Image Placeholder */}
-                    <div className="aspect-[4/3] bg-gradient-to-br from-honey-100 via-pastel-yellow to-honey-200 rounded-2xl mb-4 flex items-center justify-center">
-                      <div className="text-center text-charcoal-600">
-                        <div className="w-12 h-12 bg-white/60 rounded-xl flex items-center justify-center mx-auto mb-2 hexagon-shape">
-                          <Icon className="w-6 h-6 text-honey-600" />
-                        </div>
-                        <p className="text-xs font-medium px-2">{initiative.image}</p>
-                      </div>
+                    {/* Community Image */}
+                    <div className="aspect-[4/3] rounded-2xl mb-4 overflow-hidden relative">
+                      <Image
+                        src={initiative.src}
+                        alt={initiative.image}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                      />
                     </div>
                     
                     <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse">

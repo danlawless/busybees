@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Mail, Phone, Star, Award, Heart, Users } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -150,15 +151,15 @@ export function TeamSection() {
           <Card className="card-pastel overflow-hidden">
             <CardContent className="p-0">
               <div className="grid lg:grid-cols-2">
-                {/* Team Photo Placeholder */}
-                <div className="aspect-[4/3] lg:aspect-auto bg-gradient-to-br from-honey-100 via-pastel-yellow to-honey-200 flex items-center justify-center">
-                  <div className="text-center text-charcoal-600">
-                    <div className="w-20 h-20 bg-white/60 rounded-2xl flex items-center justify-center mx-auto mb-4 hexagon-shape">
-                      <Users className="w-10 h-10 text-honey-600" />
-                    </div>
-                    <p className="text-lg font-semibold">Full Team Photo</p>
-                    <p className="text-sm opacity-75">All Busy Bees staff together</p>
-                  </div>
+                {/* Team Photo */}
+                <div className="aspect-[4/3] lg:aspect-auto relative">
+                  <Image
+                    src="/images/full-team-photo.jpg"
+                    alt="Full Busy Bees Team - All staff together"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
                 </div>
                 
                 {/* Team Stats & Info */}

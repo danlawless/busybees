@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Camera, Star, Heart, Users, Gift, Sparkles } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -11,37 +12,43 @@ const galleryImages = [
     title: 'Princess Party Magic',
     description: 'Birthday girl and friends in princess costumes',
     category: 'Princess Theme',
-    color: 'from-pink-100 to-purple-200'
+    color: 'from-pink-100 to-purple-200',
+    src: '/images/princess-party-magic.jpg'
   },
   {
     title: 'Superhero Squad',
     description: 'Kids in capes celebrating superhero style',
     category: 'Superhero Theme',
-    color: 'from-blue-100 to-red-200'
+    color: 'from-blue-100 to-red-200',
+    src: '/images/superhero-squad.jpg'
   },
   {
     title: 'Face Painting Fun',
     description: 'Professional face painter creating masterpieces',
     category: 'Entertainment',
-    color: 'from-yellow-100 to-orange-200'
+    color: 'from-yellow-100 to-orange-200',
+    src: '/images/face-painting-fun.jpg'
   },
   {
     title: 'Birthday Cake Moment',
     description: 'Special cake cutting celebration',
     category: 'Celebration',
-    color: 'from-green-100 to-blue-200'
+    color: 'from-green-100 to-blue-200',
+    src: '/images/birthday-cake-moment.jpg'
   },
   {
     title: 'Play Area Adventures',
     description: 'Kids having blast in our play zones',
     category: 'Play Time',
-    color: 'from-purple-100 to-pink-200'
+    color: 'from-purple-100 to-pink-200',
+    src: '/images/play-area-adventures.jpg'
   },
   {
     title: 'Group Photo Joy',
     description: 'All party guests together with birthday child',
     category: 'Memories',
-    color: 'from-honey-100 to-yellow-200'
+    color: 'from-honey-100 to-yellow-200',
+    src: '/images/group-photo-joy.jpg'
   }
 ]
 
@@ -125,19 +132,20 @@ export function PartyGallery() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card className="card-pastel group hover:shadow-xl transition-all duration-300 overflow-hidden">
                   <CardContent className="p-0">
-                    {/* Image Placeholder */}
-                    <div className={`aspect-[4/3] bg-gradient-to-br ${image.color} flex items-center justify-center relative overflow-hidden`}>
-                      <div className="text-center text-charcoal-600 z-10">
-                        <div className="w-16 h-16 bg-white/60 rounded-2xl flex items-center justify-center mx-auto mb-3 hexagon-shape">
-                          <Camera className="w-8 h-8 text-charcoal-600" />
-                        </div>
-                        <p className="text-sm font-medium px-4">{image.description}</p>
-                      </div>
+                    {/* Generated Image */}
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      <Image
+                        src={image.src}
+                        alt={image.title}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
                       
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
-                          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 text-center">
+                          <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 text-center">
                             <p className="font-semibold text-charcoal-800 text-sm">{image.title}</p>
                             <p className="text-xs text-charcoal-600 mt-1">{image.category}</p>
                           </div>

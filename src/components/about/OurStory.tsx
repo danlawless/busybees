@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Calendar, MapPin, Lightbulb, Target, Users } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -105,14 +106,14 @@ export function OurStory() {
             viewport={{ once: true }}
           >
             <div className="relative">
-              <div className="aspect-[4/3] bg-gradient-to-br from-honey-100 via-pastel-yellow to-honey-200 rounded-3xl shadow-lg flex items-center justify-center">
-                <div className="text-center text-charcoal-600">
-                  <div className="w-20 h-20 bg-white/60 rounded-2xl flex items-center justify-center mx-auto mb-4 hexagon-shape">
-                    <Users className="w-10 h-10 text-honey-600" />
-                  </div>
-                  <p className="text-lg font-semibold">Founders Photo</p>
-                  <p className="text-sm opacity-75">Sarah & Mike Johnson</p>
-                </div>
+              <div className="aspect-[4/3] rounded-3xl shadow-lg overflow-hidden">
+                <Image
+                  src="/images/founders-photo.jpg"
+                  alt="Busy Bees Founders - Sarah & Mike Johnson"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
               </div>
               
               {/* Decorative elements */}

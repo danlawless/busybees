@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Heart, Users, Star, Award } from 'lucide-react'
 import { HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -76,23 +77,27 @@ export function AboutHero() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-              {/* Main Image Placeholder */}
-              <div className="aspect-[4/3] bg-gradient-to-br from-honey-100 via-honey-200 to-honey-300 flex items-center justify-center">
-                <div className="text-center text-charcoal-600">
-                  <div className="w-24 h-24 bg-white/50 rounded-2xl flex items-center justify-center mx-auto mb-4 hexagon-shape">
-                    <Heart className="w-12 h-12 text-honey-600" />
-                  </div>
-                  <p className="text-lg font-semibold">Main About Hero Image</p>
-                  <p className="text-sm opacity-75">Children playing happily</p>
-                </div>
+              {/* Main Hero Image */}
+              <div className="aspect-[4/3] relative">
+                <Image
+                  src="/images/children-playing-happily.jpg"
+                  alt="Children playing happily at Busy Bees"
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
               </div>
               
               {/* Floating overlay images */}
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-gradient-to-br from-pastel-yellow to-honey-200 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape">
-                <div className="text-center text-charcoal-600">
-                  <Users className="w-8 h-8 mx-auto mb-1" />
-                  <p className="text-xs font-medium">Team Photo</p>
-                </div>
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-2xl shadow-lg overflow-hidden hexagon-shape">
+                <Image
+                  src="/images/team-photo.jpg"
+                  alt="Busy Bees Team"
+                  fill
+                  className="object-cover"
+                  sizes="128px"
+                />
               </div>
               
               <div className="absolute -top-6 -right-6 w-28 h-28 bg-gradient-to-br from-honey-200 to-honey-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape">
