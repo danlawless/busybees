@@ -421,6 +421,15 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                       Since {new Date(activeSessions[0].startTime).toLocaleTimeString()}
                                     </p>
                                   )}
+                                  {/* Expiration & Auto-Renew Info */}
+                                  {purchase.actualExpiryDate && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Expires: {formatDate(purchase.actualExpiryDate)}
+                                      {purchase.autoRenew && (
+                                        <span className="ml-2 text-blue-600 font-medium">🔄 Auto-Renew</span>
+                                      )}
+                                    </p>
+                                  )}
                                 </div>
                                 <Button
                                   onClick={() => handleCheckOut(displayCustomer, activeSessions[activeSessions.length - 1].id)}
@@ -461,8 +470,24 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                 <p className="text-sm text-gray-600">
                                   Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
                                 </p>
-                                {!purchase.firstUseDate && (
-                                  <p className="text-xs text-blue-600 mt-1">Ready to activate!</p>
+                                {!purchase.firstUseDate ? (
+                                  <div className="mt-1">
+                                    <p className="text-xs text-blue-600">Ready to activate!</p>
+                                    {purchase.autoRenew && (
+                                      <p className="text-xs text-gray-500">🔄 Auto-Renew enabled</p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="mt-1">
+                                    {purchase.actualExpiryDate && (
+                                      <p className="text-xs text-gray-500">
+                                        Expires: {formatDate(purchase.actualExpiryDate)}
+                                        {purchase.autoRenew && (
+                                          <span className="ml-2 text-blue-600 font-medium">🔄 Auto-Renew</span>
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               <Button
