@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PhoneLogin } from '@/components/pos/PhoneLogin';
 import { CustomerDashboard } from '@/components/pos/CustomerDashboard';
 import { CheckIn } from '@/components/pos/CheckIn';
@@ -114,9 +114,7 @@ export default function POSPage() {
     }
   };
 
-  const handleCheckIn = () => {
-    setCurrentView('checkin');
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 pos-page-static">

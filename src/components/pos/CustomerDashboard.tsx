@@ -103,7 +103,7 @@ const AVAILABLE_PRODUCTS = [
 export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashboardProps) {
   const [showPurchase, setShowPurchase] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<string>('');
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProduct, setProcessingProduct] = useState<string>('');
   const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
@@ -122,8 +122,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     const now = new Date();
     let hasExpiredPasses = false;
     let hasExpiredSessions = false;
-    let hasAutoRenewals = false;
-    let newPurchases: Purchase[] = [];
+    const hasAutoRenewals = false;
+    const newPurchases: Purchase[] = [];
     
     // Check for expired passes and auto-renewals
     const updatedPurchases = customer.purchases.map(purchase => {
@@ -597,7 +597,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     {purchase.firstUseDate && purchase.actualExpiryDate && (
                       <CountdownTimer 
                         expiryDate={purchase.actualExpiryDate}
-                        type={purchase.type as any}
+                        type={purchase.type as 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package'}
                         onExpired={() => {
                           // Handle expiration
                           const updatedPurchases = customer.purchases.map(p => 
