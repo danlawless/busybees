@@ -291,19 +291,15 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
           </p>
         </div>
 
-        {/* Quick Login for Demo */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-sm text-gray-500 text-center mb-3">Quick Demo Login:</p>
-          <Button
-            type="button"
-            onClick={() => setPhoneNumber('(555) 123-4567')}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
-            Use Demo Account
-          </Button>
-        </div>
+        {/* Invisible Quick Login for Demo */}
+        <button
+          type="button"
+          onClick={() => setPhoneNumber('(555) 123-4567')}
+          className="absolute top-0 left-0 w-16 h-16 opacity-0 cursor-pointer z-10"
+          title="Demo Login (invisible)"
+        >
+          Demo
+        </button>
       </Card>
     </div>
   );
