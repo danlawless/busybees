@@ -321,31 +321,8 @@ export default function POSPage() {
 
       // Set 30-second timer for warning
       activityTimer = setTimeout(() => {
-        // Show warning modal
+        // Show warning modal (countdown will be handled by separate useEffect)
         setShowInactivityWarning(true);
-        
-        // Start logout countdown immediately when warning shows
-        let seconds = 30;
-        setCountdownSeconds(seconds);
-        
-        // Create countdown function that can be called immediately and in interval
-        const countdownTick = () => {
-          seconds--;
-          setCountdownSeconds(seconds);
-          
-          if (seconds <= 0) {
-            if (warningCountdown) clearInterval(warningCountdown);
-            handleAutoLogout();
-            return;
-          }
-        };
-        
-        // Execute first tick immediately (30 -> 29)
-        countdownTick();
-        
-        // Then start interval for remaining ticks (29 -> 28 -> 27 -> ... -> 0)
-        warningCountdown = setInterval(countdownTick, 1000);
-        
       }, 30000); // 30 seconds
     };
 
@@ -376,6 +353,37 @@ export default function POSPage() {
       if (inactivityCountdownTimer) clearInterval(inactivityCountdownTimer);
     };
   }, [currentCustomer, isStaffMode, showInactivityWarning]);
+
+  // Separate useEffect to handle countdown when warning modal appears
+  useEffect(() => {
+    if (!showInactivityWarning) return;
+
+    // Start logout countdown immediately when warning shows
+    let seconds = 30;
+    setCountdownSeconds(seconds);
+    
+    // Create countdown function that can be called immediately and in interval
+    const countdownTick = () => {
+      seconds--;
+      setCountdownSeconds(seconds);
+      
+      if (seconds <= 0) {
+        handleAutoLogout();
+        return;
+      }
+    };
+    
+    // Execute first tick immediately (30 -> 29)
+    countdownTick();
+    
+    // Then start interval for remaining ticks (29 -> 28 -> 27 -> ... -> 0)
+    const warningInterval = setInterval(countdownTick, 1000);
+    
+    // Cleanup function
+    return () => {
+      clearInterval(warningInterval);
+    };
+  }, [showInactivityWarning]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
