@@ -25,6 +25,7 @@ interface PartySchedulingModalProps {
     partyGuests?: number;
     partyNotes?: string;
   };
+  forceCalendarStep?: boolean;
 }
 
 interface TimeSlot {
@@ -40,7 +41,8 @@ export function PartySchedulingModal({
   onSchedule, 
   partyPackageName,
   customerName,
-  existingPartyData 
+  existingPartyData,
+  forceCalendarStep = false
 }: PartySchedulingModalProps) {
   const [step, setStep] = useState<'calendar' | 'details'>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>(existingPartyData?.partyDate || '');
@@ -76,8 +78,12 @@ export function PartySchedulingModal({
       );
       setPartyGuests(existingPartyData.partyGuests || 15);
       setPartyNotes(existingPartyData.partyNotes || '');
-      // If rescheduling and we have existing data, skip to details step
-      if (existingPartyData.partyDate && existingPartyData.partyStartTime) {
+      
+      // If forceCalendarStep is true (rescheduling from modal), always go to calendar
+      if (forceCalendarStep) {
+        setStep('calendar');
+      } else if (existingPartyData.partyDate && existingPartyData.partyStartTime) {
+        // If rescheduling and we have existing data, skip to details step
         setStep('details');
       }
     } else if (isOpen && !existingPartyData) {
@@ -88,7 +94,7 @@ export function PartySchedulingModal({
       setPartyGuests(15);
       setPartyNotes('');
     }
-  }, [isOpen, existingPartyData]);
+  }, [isOpen, existingPartyData, forceCalendarStep]);
 
   const handleDateSelect = (date: string, timeSlot: TimeSlot) => {
     setSelectedDate(date);

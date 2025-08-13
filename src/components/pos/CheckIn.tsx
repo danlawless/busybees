@@ -88,6 +88,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     details: {} as any
   });
   const [activeTab, setActiveTab] = useState<'passes' | 'parties'>('passes');
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -1503,6 +1504,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     <Button
                       onClick={() => {
                         setShowPartyModal(false);
+                        setIsRescheduling(true);
                         setShowPartyScheduling(true);
                       }}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-lg py-3"
@@ -1515,6 +1517,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     <Button
                       onClick={() => {
                         setShowPartyModal(false);
+                        setIsRescheduling(false);
                         setShowPartyScheduling(true);
                       }}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-lg py-3"
@@ -1536,6 +1539,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           onClose={() => {
             setShowPartyScheduling(false);
             setSelectedParty(null);
+            setIsRescheduling(false);
           }}
           onSchedule={handlePartySchedule}
           partyPackageName={selectedParty.name}
@@ -1547,6 +1551,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             partyGuests: selectedParty.partyGuests,
             partyNotes: selectedParty.partyNotes
           }}
+          forceCalendarStep={isRescheduling}
         />
       )}
 
