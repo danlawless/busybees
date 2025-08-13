@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from './CountdownTimer';
+
 
 interface Customer {
   id: string;
@@ -65,6 +66,55 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmingPurchase, setConfirmingPurchase] = useState<Purchase | null>(null);
+  const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
+  const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
+  const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmTimeout) {
+        clearTimeout(confirmTimeout);
+      }
+    };
+  }, [confirmTimeout]);
+
+  // Available products for quick purchase
+  const AVAILABLE_PRODUCTS = [
+    {
+      id: 'day_pass',
+      name: 'Single Day Pass',
+      price: 15.99,
+      description: '1 day of unlimited play',
+      sessions: 1,
+      validity: '1 day'
+    },
+    {
+      id: 'weekly_pass',
+      name: 'Weekly Pass',
+      price: 49.99,
+      description: '7 days of unlimited play',
+      sessions: 999,
+      validity: '7 days'
+    },
+    {
+      id: 'monthly_pass',
+      name: 'Monthly Unlimited Pass',
+      price: 89.99,
+      description: '30 days of unlimited play',
+      sessions: 999,
+      validity: '30 days'
+    },
+    {
+      id: 'party_package',
+      name: 'Party Package',
+      price: 199.99,
+      description: 'Special event package',
+      sessions: 1,
+      validity: '1 day'
+    }
+  ];
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');
@@ -240,6 +290,103 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     setConfirmingPurchase(null);
   };
 
+  const handleQuickPurchase = (productId: string) => {
+    // Clear any existing timeout
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingProduct(productId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingProduct(null);
+    }, 5000);
+    
+    setConfirmTimeout(timeout);
+  };
+
+  const handleConfirmPurchase = async (productId: string) => {
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    const product = AVAILABLE_PRODUCTS.find(p => p.id === productId);
+    if (!product) return;
+
+    // Clear confirmation state and timeout
+    setConfirmingProduct(null);
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout);
+      setConfirmTimeout(null);
+    }
+
+    setPurchasingProduct(productId);
+
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Create unique purchase ID
+      const purchaseId = `p${Date.now()}_${productId}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Map product type correctly
+      let purchaseType: Purchase['type'];
+      if (productId.includes('party')) {
+        purchaseType = 'party_package';
+      } else if (productId.includes('day')) {
+        purchaseType = 'day_pass';
+      } else if (productId.includes('weekly')) {
+        purchaseType = 'weekly_pass';
+      } else {
+        purchaseType = 'monthly_pass';
+      }
+
+      // Set initial expiry date (for booking/purchase validity)
+      let expiryDate: string | undefined;
+      if (productId.includes('monthly')) {
+        expiryDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year to start using
+      } else if (productId.includes('weekly')) {
+        expiryDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(); // 90 days to start using
+      } else if (productId.includes('day')) {
+        expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days to start using
+      } else if (productId.includes('party')) {
+        expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days to book
+      }
+
+      const newPurchase: Purchase = {
+        id: purchaseId,
+        type: purchaseType,
+        name: product.name,
+        price: product.price,
+        purchaseDate: new Date().toISOString(),
+        expiryDate,
+        usedSessions: 0,
+        totalSessions: product.sessions,
+        status: 'active',
+        // Explicitly ensure new purchases have no firstUseDate
+        firstUseDate: undefined,
+        actualExpiryDate: undefined
+      };
+
+      const updatedCustomer = {
+        ...customer,
+        purchases: [...customer.purchases, newPurchase]
+      };
+
+      onUpdateCustomer(updatedCustomer);
+      setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setPurchaseSuccess(''), 3000);
+      
+    } catch (error) {
+      console.error('Purchase failed:', error);
+    } finally {
+      setPurchasingProduct(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -361,6 +508,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       {/* Customer Check-in Interface */}
       {displayCustomer && (
         <div className="space-y-6">
+          {/* Success Message */}
+          {purchaseSuccess && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg text-center">
+              <p className="text-lg font-semibold">{purchaseSuccess}</p>
+            </div>
+          )}
           {/* Customer Header */}
           <Card className="p-8 bg-gradient-to-r from-yellow-50 to-orange-50">
             <div className="flex items-center justify-between">
@@ -503,44 +656,140 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                       </div>
                     ) : (
                       <Card className="p-8 text-center border-l-8 border-l-gray-300 bg-gray-50">
-                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-3xl">🛒</span>
-                        </div>
                         <h4 className="text-xl font-bold mb-4">No More Available Passes</h4>
                         <p className="text-lg text-gray-600 mb-6">
                           Purchase more passes to continue enjoying Busy Bees!
                         </p>
                         
                         <div className="space-y-3">
-                          <h5 className="text-lg font-semibold text-gray-800 mb-4">Available Products:</h5>
-                          <div className="grid gap-3 text-left">
-                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
-                              <div>
-                                <span className="font-medium text-gray-900">🎫 Single Day Pass</span>
+                          <div className="grid gap-4 text-left">
+                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                              <div className="flex-1">
+                                <span className="font-medium text-gray-900 text-lg">🎫 Single Day Pass</span>
                                 <p className="text-sm text-gray-600">1 day of unlimited play</p>
+                                <p className="text-lg font-bold text-gray-900 mt-1">$15.99</p>
                               </div>
-                              <span className="text-lg font-bold text-gray-900">$15.99</span>
+                              <Button
+                                onClick={() => {
+                                  if (confirmingProduct === 'day_pass') {
+                                    handleConfirmPurchase('day_pass');
+                                  } else {
+                                    handleQuickPurchase('day_pass');
+                                  }
+                                }}
+                                size="lg"
+                                disabled={purchasingProduct === 'day_pass'}
+                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                  confirmingProduct === 'day_pass'
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : purchasingProduct === 'day_pass'
+                                    ? 'bg-blue-600'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                              >
+                                {purchasingProduct === 'day_pass' 
+                                  ? 'Processing...' 
+                                  : confirmingProduct === 'day_pass' 
+                                  ? '✓ Confirm Purchase' 
+                                  : 'Buy Now'
+                                }
+                              </Button>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
-                              <div>
-                                <span className="font-medium text-gray-900">📅 Weekly Pass</span>
+                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                              <div className="flex-1">
+                                <span className="font-medium text-gray-900 text-lg">📅 Weekly Pass</span>
                                 <p className="text-sm text-gray-600">7 days of unlimited play</p>
+                                <p className="text-lg font-bold text-gray-900 mt-1">$49.99</p>
                               </div>
-                              <span className="text-lg font-bold text-gray-900">$49.99</span>
+                              <Button
+                                onClick={() => {
+                                  if (confirmingProduct === 'weekly_pass') {
+                                    handleConfirmPurchase('weekly_pass');
+                                  } else {
+                                    handleQuickPurchase('weekly_pass');
+                                  }
+                                }}
+                                size="lg"
+                                disabled={purchasingProduct === 'weekly_pass'}
+                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                  confirmingProduct === 'weekly_pass'
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : purchasingProduct === 'weekly_pass'
+                                    ? 'bg-blue-600'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                              >
+                                {purchasingProduct === 'weekly_pass' 
+                                  ? 'Processing...' 
+                                  : confirmingProduct === 'weekly_pass' 
+                                  ? '✓ Confirm Purchase' 
+                                  : 'Buy Now'
+                                }
+                              </Button>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
-                              <div>
-                                <span className="font-medium text-gray-900">🗓️ Monthly Unlimited Pass</span>
+                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                              <div className="flex-1">
+                                <span className="font-medium text-gray-900 text-lg">🗓️ Monthly Unlimited Pass</span>
                                 <p className="text-sm text-gray-600">30 days of unlimited play</p>
+                                <p className="text-lg font-bold text-gray-900 mt-1">$89.99</p>
                               </div>
-                              <span className="text-lg font-bold text-gray-900">$89.99</span>
+                              <Button
+                                onClick={() => {
+                                  if (confirmingProduct === 'monthly_pass') {
+                                    handleConfirmPurchase('monthly_pass');
+                                  } else {
+                                    handleQuickPurchase('monthly_pass');
+                                  }
+                                }}
+                                size="lg"
+                                disabled={purchasingProduct === 'monthly_pass'}
+                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                  confirmingProduct === 'monthly_pass'
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : purchasingProduct === 'monthly_pass'
+                                    ? 'bg-blue-600'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                              >
+                                {purchasingProduct === 'monthly_pass' 
+                                  ? 'Processing...' 
+                                  : confirmingProduct === 'monthly_pass' 
+                                  ? '✓ Confirm Purchase' 
+                                  : 'Buy Now'
+                                }
+                              </Button>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
-                              <div>
-                                <span className="font-medium text-gray-900">🎉 Party Package</span>
+                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                              <div className="flex-1">
+                                <span className="font-medium text-gray-900 text-lg">🎉 Party Package</span>
                                 <p className="text-sm text-gray-600">Special event package</p>
+                                <p className="text-lg font-bold text-gray-900 mt-1">$199.99</p>
                               </div>
-                              <span className="text-lg font-bold text-gray-900">$199.99</span>
+                              <Button
+                                onClick={() => {
+                                  if (confirmingProduct === 'party_package') {
+                                    handleConfirmPurchase('party_package');
+                                  } else {
+                                    handleQuickPurchase('party_package');
+                                  }
+                                }}
+                                size="lg"
+                                disabled={purchasingProduct === 'party_package'}
+                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                  confirmingProduct === 'party_package'
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : purchasingProduct === 'party_package'
+                                    ? 'bg-blue-600'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                              >
+                                {purchasingProduct === 'party_package' 
+                                  ? 'Processing...' 
+                                  : confirmingProduct === 'party_package' 
+                                  ? '✓ Confirm Purchase' 
+                                  : 'Buy Now'
+                                }
+                              </Button>
                             </div>
                           </div>
                         </div>
