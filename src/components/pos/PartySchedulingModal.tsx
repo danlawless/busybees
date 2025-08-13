@@ -147,8 +147,9 @@ export function PartySchedulingModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <Card className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-6 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -333,8 +334,9 @@ export function PartySchedulingModal({
               </div>
             </div>
           )}
-        </div>
-      </Card>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

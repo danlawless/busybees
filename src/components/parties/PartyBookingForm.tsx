@@ -139,8 +139,9 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <Card className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-6 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">🎉 Book Your Party</h2>
@@ -349,8 +350,9 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
               You'll receive a confirmation email with payment instructions.
             </p>
           </form>
-        </div>
-      </Card>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
