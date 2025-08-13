@@ -157,8 +157,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
 
   if (isNewCustomer) {
     return (
-      <div className="max-w-md mx-auto">
-        <Card className="p-8">
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-full max-w-md">
+          <Card className="p-8">
           <div className="text-center mb-6">
             <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🐝</span>
@@ -235,14 +236,16 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
               </Button>
             </div>
           </form>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <Card className="p-8">
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-md">
+        <Card className="p-8">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">🐝</span>
@@ -300,7 +303,8 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
         >
           Demo
         </button>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
