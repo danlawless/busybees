@@ -252,7 +252,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+          <div className="text-center">
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
               Phone Number
             </label>
@@ -262,7 +262,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
               value={phoneNumber}
               onChange={handlePhoneChange}
               placeholder="(555) 123-4567"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg text-center"
               maxLength={14}
               required
             />
@@ -287,7 +287,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
           <p className="text-sm text-gray-600">
             New to Busy Bees? No problem! 
             <br />
-            Just enter your phone number and we'll create your account.
+            Enter your phone number and we'll get started.
           </p>
         </div>
 
