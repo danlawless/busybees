@@ -157,7 +157,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
 
   if (isNewCustomer) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="w-full max-w-md">
           <Card className="p-8">
           <div className="text-center mb-6">
@@ -243,7 +243,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="w-full max-w-md">
         <Card className="p-8">
         <div className="text-center mb-6">

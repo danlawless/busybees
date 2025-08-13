@@ -408,8 +408,9 @@ export default function POSPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 pos-page-static">
-      {/* Header */}
-      <div className="bg-white shadow-lg border-b-4 border-yellow-400">
+      {/* Header - Hidden on login screen */}
+      {currentView !== 'login' && (
+        <div className="bg-white shadow-lg border-b-4 border-yellow-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <button 
@@ -582,7 +583,8 @@ export default function POSPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
