@@ -163,49 +163,6 @@ export function PartyPackages() {
           })}
         </motion.div>
         
-        {/* Add-Ons Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <div className="text-center mb-12">
-            <h3 className="text-2xl font-bold text-charcoal-800 mb-4">
-              Make It Even More <span className="text-honey-gradient">Special</span>
-            </h3>
-            <p className="text-charcoal-600">
-              Add these amazing extras to create the ultimate birthday experience
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {addOns.map((addon, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <Card className="card-pastel group hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-3xl">{addon.icon}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-charcoal-800">{addon.name}</h4>
-                          <span className="text-lg font-bold text-honey-gradient">+${addon.price}</span>
-                        </div>
-                        <p className="text-sm text-charcoal-600">{addon.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
         
         {/* Special Offer Banner */}
         <motion.div

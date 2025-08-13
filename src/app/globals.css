@@ -24,12 +24,7 @@
   --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #171717;
-    --foreground: #fafafa;
-  }
-}
+/* Removed dark mode override to prevent white text on light backgrounds */
 
 /* Busy Bees Brand Enhancements */
 html {
@@ -44,7 +39,7 @@ body {
     var(--pastel-gold) 75%,
     #f5f5f5 100%);
   background-attachment: fixed;
-  color: var(--foreground);
+  color: var(--charcoal-soft);
   font-family: 'Inter', system-ui, sans-serif;
   min-height: 100vh;
   position: relative;
