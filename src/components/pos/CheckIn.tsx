@@ -457,10 +457,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   !(displayCustomer.activeSessions || []).some(session => session.purchaseId === p.id)
                 );
                 
-                if (availablePasses.length > 0) {
-                  return (
-                    <div>
-                      <h3 className="text-2xl font-bold mb-6">🎫 Available Passes</h3>
+                return (
+                  <div>
+                    <h3 className="text-2xl font-bold mb-6">🎫 Available Passes</h3>
+                    {availablePasses.length > 0 ? (
                       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                         {availablePasses.map((purchase) => (
                           <Card key={purchase.id} className="p-6 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
@@ -501,10 +501,59 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           </Card>
                         ))}
                       </div>
-                    </div>
-                  );
-                }
-                return null;
+                    ) : (
+                      <Card className="p-8 text-center border-l-8 border-l-gray-300 bg-gray-50">
+                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-3xl">🛒</span>
+                        </div>
+                        <h4 className="text-xl font-bold mb-4">No More Available Passes</h4>
+                        <p className="text-lg text-gray-600 mb-6">
+                          Purchase more passes to continue enjoying Busy Bees!
+                        </p>
+                        
+                        <div className="space-y-3">
+                          <h5 className="text-lg font-semibold text-gray-800 mb-4">Available Products:</h5>
+                          <div className="grid gap-3 text-left">
+                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
+                              <div>
+                                <span className="font-medium text-gray-900">🎫 Single Day Pass</span>
+                                <p className="text-sm text-gray-600">1 day of unlimited play</p>
+                              </div>
+                              <span className="text-lg font-bold text-gray-900">$15.99</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
+                              <div>
+                                <span className="font-medium text-gray-900">📅 Weekly Pass</span>
+                                <p className="text-sm text-gray-600">7 days of unlimited play</p>
+                              </div>
+                              <span className="text-lg font-bold text-gray-900">$49.99</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
+                              <div>
+                                <span className="font-medium text-gray-900">🗓️ Monthly Unlimited Pass</span>
+                                <p className="text-sm text-gray-600">30 days of unlimited play</p>
+                              </div>
+                              <span className="text-lg font-bold text-gray-900">$89.99</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border">
+                              <div>
+                                <span className="font-medium text-gray-900">🎉 Party Package</span>
+                                <p className="text-sm text-gray-600">Special event package</p>
+                              </div>
+                              <span className="text-lg font-bold text-gray-900">$199.99</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6">
+                          <p className="text-base text-gray-600">
+                            Visit <strong>My Account</strong> to purchase new passes
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                );
               })()}
 
               {/* No Passes Message */}
