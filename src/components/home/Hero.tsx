@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Star, Shield, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
-import { BeeIcon, HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
+import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const features = [
@@ -27,7 +27,6 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
-      <FloatingHoneycombs />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -39,7 +38,7 @@ export function Hero() {
           {/* Main Hero Content */}
           <motion.div variants={fadeInUp} className="mb-8">
             <div className="flex justify-center mb-6">
-              <Logo size="xl" animate={true} showText={false} />
+              <Logo size="xl" animate={false} showText={false} />
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
               <span className="text-honey-600">Busy Bees</span>
@@ -164,13 +163,13 @@ export function Hero() {
 
       {/* Decorative Elements */}
       <div className="absolute top-20 left-10 opacity-15">
-        <Logo size="md" showText={false} animate={true} />
+        <Logo size="md" showText={false} animate={false} />
       </div>
       <div className="absolute bottom-20 right-10 opacity-20">
-        <BeeIcon size="md" />
+        <BeeIcon size="md" animate={false} />
       </div>
       <div className="absolute top-1/2 right-20 opacity-10">
-        <Logo size="lg" showText={false} animate={true} />
+        <Logo size="lg" showText={false} animate={false} />
       </div>
     </section>
   )
