@@ -43,7 +43,7 @@ const features = [
 export function Features() {
   return (
     <section className="relative py-20 section-hexagon-light hexagon-overlay overflow-hidden">
-      <HoneycombPattern variant="scattered" size="lg" animated />
+      <HoneycombPattern variant="scattered" size="lg" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16"

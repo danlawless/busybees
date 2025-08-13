@@ -42,7 +42,7 @@ const importantInfo = [
 export function ImportantInfo() {
   return (
     <section className="relative py-16 section-hexagon-light overflow-hidden">
-      <HoneycombPattern variant="subtle" size="md" animated />
+      <HoneycombPattern variant="subtle" size="md" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

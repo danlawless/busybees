@@ -97,7 +97,7 @@ const partyStats = [
 export function PartyGallery() {
   return (
     <section className="relative py-20 section-hexagon-medium hexagon-overlay overflow-hidden">
-      <HoneycombPattern variant="medium" size="lg" animated />
+      <HoneycombPattern variant="medium" size="lg" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

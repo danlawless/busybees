@@ -103,7 +103,7 @@ export function PartyFAQ() {
 
   return (
     <section className="relative py-20 section-hexagon-light overflow-hidden">
-      <HoneycombPattern variant="subtle" size="lg" animated />
+      <HoneycombPattern variant="subtle" size="lg" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

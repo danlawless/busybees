@@ -49,7 +49,7 @@ const achievements = [
 export function TeamSection() {
   return (
     <section className="relative py-20 section-hexagon-light overflow-hidden">
-      <HoneycombPattern variant="scattered" size="md" animated />
+      <HoneycombPattern variant="scattered" size="md" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

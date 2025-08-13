@@ -17,7 +17,7 @@ const stats = [
 export function AboutHero() {
   return (
     <section className="relative overflow-hidden section-hexagon-dense hexagon-overlay py-20 sm:py-24">
-      <HoneycombPattern variant="dense" size="xl" animated />
+      <HoneycombPattern variant="dense" size="xl" />
       <FloatingHoneycombs />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
