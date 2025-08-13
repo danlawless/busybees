@@ -96,7 +96,7 @@ const AVAILABLE_PARTY_PRODUCTS = [
   {
     id: 'party_basic',
     name: 'Semi-Private Party Package',
-    price: 199.99,
+    price: 350.00,
     description: 'Party for up to 12 kids, 2 hours',
     sessions: 1,
     validity: '90 days to book'
@@ -104,7 +104,7 @@ const AVAILABLE_PARTY_PRODUCTS = [
   {
     id: 'party_premium',
     name: 'Private Party Package',
-    price: 299.99,
+    price: 425.00,
     description: 'Party for up to 15 kids, 3 hours, decorations',
     sessions: 1,
     validity: '90 days to book'
