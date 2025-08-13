@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { X, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
@@ -18,6 +18,13 @@ interface PartySchedulingModalProps {
   }) => void;
   partyPackageName: string;
   customerName: string;
+  existingPartyData?: {
+    partyDate?: string;
+    partyStartTime?: string;
+    partyEndTime?: string;
+    partyGuests?: number;
+    partyNotes?: string;
+  };
 }
 
 interface TimeSlot {
@@ -32,14 +39,56 @@ export function PartySchedulingModal({
   onClose, 
   onSchedule, 
   partyPackageName,
-  customerName 
+  customerName,
+  existingPartyData 
 }: PartySchedulingModalProps) {
   const [step, setStep] = useState<'calendar' | 'details'>('calendar');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
-  const [partyGuests, setPartyGuests] = useState(15);
-  const [partyNotes, setPartyNotes] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>(existingPartyData?.partyDate || '');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
+    existingPartyData?.partyStartTime && existingPartyData?.partyEndTime 
+      ? {
+          startTime: existingPartyData.partyStartTime,
+          endTime: existingPartyData.partyEndTime,
+          duration: 2,
+          available: true
+        }
+      : null
+  );
+  const [partyGuests, setPartyGuests] = useState(existingPartyData?.partyGuests || 15);
+  const [partyNotes, setPartyNotes] = useState(existingPartyData?.partyNotes || '');
   const [isScheduling, setIsScheduling] = useState(false);
+
+  const isRescheduling = !!existingPartyData?.partyDate;
+
+  // Reset state when modal opens/closes or existing data changes
+  React.useEffect(() => {
+    if (isOpen && existingPartyData) {
+      setSelectedDate(existingPartyData.partyDate || '');
+      setSelectedTimeSlot(
+        existingPartyData.partyStartTime && existingPartyData.partyEndTime 
+          ? {
+              startTime: existingPartyData.partyStartTime,
+              endTime: existingPartyData.partyEndTime,
+              duration: 2,
+              available: true
+            }
+          : null
+      );
+      setPartyGuests(existingPartyData.partyGuests || 15);
+      setPartyNotes(existingPartyData.partyNotes || '');
+      // If rescheduling and we have existing data, skip to details step
+      if (existingPartyData.partyDate && existingPartyData.partyStartTime) {
+        setStep('details');
+      }
+    } else if (isOpen && !existingPartyData) {
+      // Fresh scheduling - reset everything
+      setStep('calendar');
+      setSelectedDate('');
+      setSelectedTimeSlot(null);
+      setPartyGuests(15);
+      setPartyNotes('');
+    }
+  }, [isOpen, existingPartyData]);
 
   const handleDateSelect = (date: string, timeSlot: TimeSlot) => {
     setSelectedDate(date);
@@ -103,7 +152,9 @@ export function PartySchedulingModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">🎉 Schedule Party</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                🎉 {isRescheduling ? 'Reschedule Party' : 'Schedule Party'}
+              </h2>
               <p className="text-gray-600">
                 {partyPackageName} for {customerName}
               </p>
@@ -112,6 +163,39 @@ export function PartySchedulingModal({
               <X className="w-4 h-4" />
             </Button>
           </div>
+
+          {/* Current Party Details (when rescheduling) */}
+          {isRescheduling && existingPartyData && (
+            <Card className="mb-6 p-4 bg-yellow-50 border-yellow-200">
+              <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Current Party Details
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-yellow-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-600">📅</span>
+                  <span>{formatDate(existingPartyData.partyDate!)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-600">⏰</span>
+                  <span>{formatTime(existingPartyData.partyStartTime!)} - {formatTime(existingPartyData.partyEndTime!)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-600">👥</span>
+                  <span>{existingPartyData.partyGuests} guests</span>
+                </div>
+                {existingPartyData.partyNotes && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-600">🎨</span>
+                    <span>{existingPartyData.partyNotes}</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                💡 Select a new date and time below to reschedule your party
+              </div>
+            </Card>
+          )}
 
           {/* Step Indicator */}
           <div className="flex items-center justify-center mb-8">
@@ -241,7 +325,10 @@ export function PartySchedulingModal({
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={isScheduling}
                 >
-                  {isScheduling ? 'Scheduling...' : 'Schedule Party 🎉'}
+                  {isScheduling 
+                    ? (isRescheduling ? 'Rescheduling...' : 'Scheduling...') 
+                    : (isRescheduling ? 'Reschedule Party 📅' : 'Schedule Party 🎉')
+                  }
                 </Button>
               </div>
             </div>

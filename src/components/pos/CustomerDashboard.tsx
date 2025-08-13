@@ -806,30 +806,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   </div>
                 </div>
                 
-                {/* Status Information */}
-                <div className="mb-4">
-                  {!purchase.firstUseDate ? (
-                    <div className="flex items-center space-x-2 text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-                      <span>🎫</span>
-                      <span className="text-sm font-medium">
-                        Ready to use! Pass activates on first check-in.
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>First used:</span>
-                        <span>{formatDate(purchase.firstUseDate)}</span>
-                      </div>
-                      {purchase.actualExpiryDate && (
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span>Expires:</span>
-                          <span>{formatDate(purchase.actualExpiryDate)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+              
 
                 <div className="space-y-3">
                   {/* Show active sessions for this pass */}
@@ -1058,51 +1035,62 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         )}
                       </div>
                     )}
+                    </div>
+                  )}
 
-                    {/* Party Scheduling Information */}
-                    {purchase.type === 'party_package' && purchase.partyDate && (
-                      <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
+                  {/* Party Scheduling Information */}
+                  {purchase.type === 'party_package' && purchase.partyDate && (
+                    <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-purple-600">🎉</span>
                           <span className="font-medium text-purple-800">Party Scheduled</span>
                         </div>
-                        <div className="text-sm text-purple-700 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-purple-500">📅</span>
-                            <span>{formatDate(purchase.partyDate)}</span>
-                          </div>
-                          {purchase.partyStartTime && purchase.partyEndTime && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-purple-500">⏰</span>
-                              <span>
-                                {(() => {
-                                  const formatTime = (time: string) => {
-                                    const [hours, minutes] = time.split(':');
-                                    const hour = parseInt(hours);
-                                    const ampm = hour >= 12 ? 'PM' : 'AM';
-                                    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-                                    return `${displayHour}:${minutes} ${ampm}`;
-                                  };
-                                  return `${formatTime(purchase.partyStartTime)} - ${formatTime(purchase.partyEndTime)}`;
-                                })()}
-                              </span>
-                            </div>
-                          )}
-                          {purchase.partyGuests && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-purple-500">👥</span>
-                              <span>{purchase.partyGuests} guests</span>
-                            </div>
-                          )}
-                          {purchase.partyNotes && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-purple-500">🎨</span>
-                              <span>{purchase.partyNotes}</span>
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => {
+                            setSchedulingParty(purchase);
+                            setShowPartyScheduling(true);
+                          }}
+                          className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded-md transition-colors"
+                        >
+                          📅 Reschedule
+                        </button>
                       </div>
-                    )}
+                      <div className="text-sm text-purple-700 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-purple-500">📅</span>
+                          <span>{formatDate(purchase.partyDate)}</span>
+                        </div>
+                        {purchase.partyStartTime && purchase.partyEndTime && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-500">⏰</span>
+                            <span>
+                              {(() => {
+                                const formatTime = (time: string) => {
+                                  const [hours, minutes] = time.split(':');
+                                  const hour = parseInt(hours);
+                                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                                  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                  return `${displayHour}:${minutes} ${ampm}`;
+                                };
+                                return `${formatTime(purchase.partyStartTime)} - ${formatTime(purchase.partyEndTime)}`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                        {purchase.partyGuests && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-500">👥</span>
+                            <span>{purchase.partyGuests} guests</span>
+                          </div>
+                        )}
+                        {purchase.partyNotes && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-500">🎨</span>
+                            <span>{purchase.partyNotes}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1474,18 +1462,25 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       )}
 
       {/* Party Scheduling Modal */}
-      {showPartyScheduling && schedulingParty && (
-        <PartySchedulingModal
-          isOpen={showPartyScheduling}
-          onClose={() => {
-            setShowPartyScheduling(false);
-            setSchedulingParty(null);
-          }}
-          onSchedule={handlePartySchedule}
-          partyPackageName={schedulingParty.name}
-          customerName={customer.name}
-        />
-      )}
+                  {showPartyScheduling && schedulingParty && (
+              <PartySchedulingModal
+                isOpen={showPartyScheduling}
+                onClose={() => {
+                  setShowPartyScheduling(false);
+                  setSchedulingParty(null);
+                }}
+                onSchedule={handlePartySchedule}
+                partyPackageName={schedulingParty.name}
+                customerName={customer.name}
+                existingPartyData={{
+                  partyDate: schedulingParty.partyDate,
+                  partyStartTime: schedulingParty.partyStartTime,
+                  partyEndTime: schedulingParty.partyEndTime,
+                  partyGuests: schedulingParty.partyGuests,
+                  partyNotes: schedulingParty.partyNotes
+                }}
+              />
+            )}
 
       {/* Success Modal */}
       <SuccessModal
