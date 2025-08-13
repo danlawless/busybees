@@ -269,6 +269,55 @@ body::before {
   animation: hexagon-rotate 20s linear infinite;
 }
 
+/* Disable all animations on POS page for better usability and focus */
+.pos-page-static *,
+.pos-page-static *::before,
+.pos-page-static *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Specifically disable all honeycomb and decorative animations */
+.pos-page-static .hexagon-float,
+.pos-page-static .hexagon-pulse,
+.pos-page-static .hexagon-rotate,
+.pos-page-static .float-gentle,
+.pos-page-static .shimmer,
+.pos-page-static .pulse-honey,
+.pos-page-static .bounce-subtle {
+  animation: none !important;
+  transform: none !important;
+}
+
+.pos-page-static .honeycomb-hover::before {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* Disable any background pattern animations */
+.pos-page-static [class*="honeycomb"],
+.pos-page-static [class*="hexagon"],
+.pos-page-static [class*="float"],
+.pos-page-static [class*="animate"] {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Allow only essential transitions for interactive elements on POS page */
+.pos-page-static button,
+.pos-page-static input,
+.pos-page-static select,
+.pos-page-static textarea,
+.pos-page-static [role="button"] {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease !important;
+}
+
+/* Ensure hover effects still work but without distracting animations */
+.pos-page-static button:hover,
+.pos-page-static [role="button"]:hover {
+  transform: none !important;
+}
+
 /* Enhanced button and interactive elements */
 .btn-pastel-primary {
   background: linear-gradient(135deg, var(--honey-primary), var(--honey-medium));

@@ -218,69 +218,6 @@ export function PricingDetails() {
             ))}
           </div>
         </motion.div>
-
-        {/* Additional Services */}
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">
-            Special Offers & Group Rates
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {additionalServices.map((service, index) => {
-              const Icon = service.icon
-              return (
-                <motion.div key={index} variants={fadeInUp}>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Icon className="w-6 h-6 text-primary-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-neutral-900">{service.title}</h4>
-                            <span className="text-lg font-bold text-primary-600">{service.price}</span>
-                          </div>
-                          <p className="text-neutral-600 mb-2">{service.description}</p>
-                          <p className="text-sm text-neutral-500">{service.note}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.div>
-
-        {/* Payment Methods */}
-        <motion.div
-          className="mt-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Card className="max-w-2xl mx-auto bg-primary-50 border-primary-200">
-            <CardContent className="p-6">
-              <h4 className="font-semibold text-neutral-900 mb-3">We Accept</h4>
-              <div className="flex flex-wrap justify-center items-center gap-4 text-sm text-neutral-600">
-                <span>💳 All Major Credit Cards</span>
-                <span>•</span>
-                <span>💵 Cash</span>
-                <span>•</span>
-                <span>📱 Mobile Payments</span>
-              </div>
-              <p className="text-xs text-neutral-500 mt-3">
-                All prices subject to applicable taxes
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </section>
   )
