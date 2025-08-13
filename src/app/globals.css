@@ -330,7 +330,7 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg stroke='%23f5d565' stroke-width='1' fill='%23fff9e6' fill-opacity='0.05'%3E%3Cpolygon points='40,10 55,20 55,35 40,45 25,35 25,20'/%3E%3Cpolygon points='15,25 30,35 30,50 15,60 0,50 0,35'/%3E%3Cpolygon points='65,25 80,35 80,50 65,60 50,50 50,35'/%3E%3Cpolygon points='40,55 55,65 55,80 40,90 25,80 25,65'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   opacity: 0.3;
   pointer-events: none;
-  animation: hexagon-float 8s ease-in-out infinite;
+  /* animation: hexagon-float 8s ease-in-out infinite; */
 }
 
 /* Hexagonal elements */
