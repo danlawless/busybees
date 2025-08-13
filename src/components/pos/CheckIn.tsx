@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { PartySchedulingModal } from './PartySchedulingModal';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 
 
 
@@ -76,6 +78,15 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showPartyModal, setShowPartyModal] = useState(false);
+  const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
+  const [showPartyScheduling, setShowPartyScheduling] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState({
+    title: '',
+    message: '',
+    details: {} as any
+  });
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -275,7 +286,9 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     // Handle party packages specially
     if (purchase.type === 'party_package') {
       if (!purchase.partyDate || !purchase.partyStartTime) {
-        alert('⚠️ Party Not Scheduled\n\nThis party package needs to be scheduled first. Please go to "My Account" to schedule your party date and time.');
+        // Show party scheduling modal for unscheduled parties
+        setSelectedParty(purchase);
+        setShowPartyScheduling(true);
         return;
       }
       
@@ -286,43 +299,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       const thirtyMinutes = 30 * 60 * 1000;
       
       if (Math.abs(timeDifference) > thirtyMinutes) {
-        const formatTime = (time: string) => {
-          const [hours, minutes] = time.split(':');
-          const hour = parseInt(hours);
-          const ampm = hour >= 12 ? 'PM' : 'AM';
-          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-          return `${displayHour}:${minutes} ${ampm}`;
-        };
-        
-        const formatDate = (dateString: string) => {
-          return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        };
-        
-        if (timeDifference > thirtyMinutes) {
-          const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
-          const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
-          
-          let timeText;
-          if (hoursUntil >= 24) {
-            const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
-            timeText = `${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
-          } else if (hoursUntil >= 1) {
-            timeText = `${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}`;
-          } else {
-            timeText = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
-          }
-          
-          alert(`⏰ Too Early to Check In\n\nYour party is scheduled for ${formatDate(purchase.partyDate)} at ${formatTime(purchase.partyStartTime)}.\n\nCheck-in opens 30 minutes before your party time (in ${timeText}). Please return closer to your party time!`);
-          return;
-        } else {
-          alert(`❌ Party Check-In Window Closed\n\nYour party was scheduled for ${formatDate(purchase.partyDate)} at ${formatTime(purchase.partyStartTime)}.\n\nThe check-in window has closed (30 minutes after party time). Please contact staff for assistance.`);
-          return;
-        }
+        // Show party details modal with timing information
+        setSelectedParty(purchase);
+        setShowPartyModal(true);
+        return;
       }
       
       // Within check-in window, show confirmation
@@ -353,6 +333,73 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const handleCancelUse = () => {
     setShowConfirmDialog(false);
     setConfirmingPurchase(null);
+  };
+
+  const handlePartySchedule = (partyData: {
+    partyDate: string;
+    partyStartTime: string;
+    partyEndTime: string;
+    partyGuests: number;
+    partyNotes: string;
+  }) => {
+    if (!selectedParty) return;
+    
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    // Calculate new price if guests exceed 15
+    let newPrice = selectedParty.price;
+    if (partyData.partyGuests > 15) {
+      const basePrice = selectedParty.name.includes('Private') ? 425 : 350;
+      newPrice = basePrice + (partyData.partyGuests - 15) * 12;
+    }
+
+    const updatedPurchases = customer.purchases.map(p => {
+      if (p.id === selectedParty.id) {
+        return {
+          ...p,
+          partyDate: partyData.partyDate,
+          partyStartTime: partyData.partyStartTime,
+          partyEndTime: partyData.partyEndTime,
+          partyGuests: partyData.partyGuests,
+          partyNotes: partyData.partyNotes,
+          price: newPrice
+        };
+      }
+      return p;
+    });
+
+    const updatedCustomer = {
+      ...customer,
+      purchases: updatedPurchases
+    };
+
+    onUpdateCustomer(updatedCustomer);
+    
+    // Close scheduling modal and show success
+    setShowPartyScheduling(false);
+    setSelectedParty(null);
+    
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+
+    setSuccessDetails({
+      title: '🎉 Party Scheduled Successfully!',
+      message: `Your ${selectedParty.name} has been scheduled and is ready for check-in when the time arrives.`,
+      details: {
+        date: partyData.partyDate,
+        time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
+        guests: partyData.partyGuests,
+        price: newPrice,
+        type: selectedParty.name
+      }
+    });
+    setShowSuccessModal(true);
   };
 
   const handleQuickPurchase = (productId: string) => {
@@ -1159,6 +1206,224 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           </Card>
         </div>
       )}
+
+      {/* Party Details Modal */}
+      {showPartyModal && selectedParty && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <Card className="flex-1 overflow-hidden flex flex-col">
+              <div className="p-8 flex-1 overflow-y-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">🎉 {selectedParty.name}</h2>
+                    <p className="text-lg text-gray-600 mt-1">Party Details & Check-In Status</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setShowPartyModal(false);
+                      setSelectedParty(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                {/* Party Information */}
+                {selectedParty.partyDate && (
+                  <Card className="p-6 mb-6 bg-purple-50 border-purple-200">
+                    <h3 className="text-xl font-bold text-purple-900 mb-4 flex items-center gap-2">
+                      📅 Scheduled Party Details
+                    </h3>
+                    <div className="grid md:grid-cols-2 gap-4 text-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-600">📅</span>
+                        <div>
+                          <p className="font-medium text-purple-800">Date</p>
+                          <p className="text-purple-700">{formatDate(selectedParty.partyDate)}</p>
+                        </div>
+                      </div>
+                      {selectedParty.partyStartTime && selectedParty.partyEndTime && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-purple-600">⏰</span>
+                          <div>
+                            <p className="font-medium text-purple-800">Time</p>
+                            <p className="text-purple-700">
+                              {(() => {
+                                const formatTime = (time: string) => {
+                                  const [hours, minutes] = time.split(':');
+                                  const hour = parseInt(hours);
+                                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                                  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                  return `${displayHour}:${minutes} ${ampm}`;
+                                };
+                                return `${formatTime(selectedParty.partyStartTime)} - ${formatTime(selectedParty.partyEndTime)}`;
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedParty.partyGuests && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-purple-600">👥</span>
+                          <div>
+                            <p className="font-medium text-purple-800">Guests</p>
+                            <p className="text-purple-700">{selectedParty.partyGuests} people</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-600">💰</span>
+                        <div>
+                          <p className="font-medium text-purple-800">Total Price</p>
+                          <p className="text-purple-700">${selectedParty.price.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      {selectedParty.partyNotes && (
+                        <div className="md:col-span-2 flex items-start gap-3">
+                          <span className="text-purple-600">🎨</span>
+                          <div>
+                            <p className="font-medium text-purple-800">Theme/Notes</p>
+                            <p className="text-purple-700">{selectedParty.partyNotes}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Check-In Status */}
+                {(() => {
+                  const partyStatus = getPartyCheckInStatus(selectedParty);
+                  const now = new Date();
+                  const partyDateTime = selectedParty.partyStartTime && selectedParty.partyDate 
+                    ? new Date(`${selectedParty.partyDate}T${selectedParty.partyStartTime}`)
+                    : null;
+                  const timeDifference = partyDateTime ? partyDateTime.getTime() - now.getTime() : 0;
+                  
+                  if (partyStatus === 'needs_scheduling') {
+                    return (
+                      <Card className="p-6 mb-6 bg-orange-50 border-orange-200">
+                        <h3 className="text-xl font-bold text-orange-900 mb-3">🗓️ Party Not Scheduled</h3>
+                        <p className="text-orange-800 mb-4">
+                          This party package needs to be scheduled before it can be used for check-in.
+                        </p>
+                      </Card>
+                    );
+                  } else if (partyStatus?.startsWith('too_early')) {
+                    const [type, value] = partyStatus.split(':');
+                    const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                    type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                    `${value} minute${value !== '1' ? 's' : ''}`;
+                    
+                    return (
+                      <Card className="p-6 mb-6 bg-orange-50 border-orange-200">
+                        <h3 className="text-xl font-bold text-orange-900 mb-3">⏰ Too Early to Check In</h3>
+                        <p className="text-orange-800 mb-2">
+                          Check-in opens 30 minutes before your party time.
+                        </p>
+                        <p className="text-orange-700 text-lg font-medium">
+                          Check-in available in: <span className="text-orange-900">{timeText}</span>
+                        </p>
+                      </Card>
+                    );
+                  } else if (partyStatus === 'expired') {
+                    return (
+                      <Card className="p-6 mb-6 bg-red-50 border-red-200">
+                        <h3 className="text-xl font-bold text-red-900 mb-3">❌ Check-In Window Closed</h3>
+                        <p className="text-red-800">
+                          The check-in window has closed (30 minutes after party time). Please contact staff for assistance.
+                        </p>
+                      </Card>
+                    );
+                  } else if (partyStatus === 'available') {
+                    return (
+                      <Card className="p-6 mb-6 bg-green-50 border-green-200">
+                        <h3 className="text-xl font-bold text-green-900 mb-3">🎉 Ready to Check In!</h3>
+                        <p className="text-green-800">
+                          Your party check-in window is now open. You can check in anytime within 30 minutes of your party time.
+                        </p>
+                      </Card>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowPartyModal(false);
+                      setSelectedParty(null);
+                    }}
+                    variant="outline"
+                    className="flex-1 text-lg py-3"
+                  >
+                    Close
+                  </Button>
+                  
+                  {selectedParty.partyDate && (
+                    <Button
+                      onClick={() => {
+                        setShowPartyModal(false);
+                        setShowPartyScheduling(true);
+                      }}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-lg py-3"
+                    >
+                      📅 Reschedule Party
+                    </Button>
+                  )}
+                  
+                  {!selectedParty.partyDate && (
+                    <Button
+                      onClick={() => {
+                        setShowPartyModal(false);
+                        setShowPartyScheduling(true);
+                      }}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-lg py-3"
+                    >
+                      🗓️ Schedule Party
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Party Scheduling Modal */}
+      {showPartyScheduling && selectedParty && (
+        <PartySchedulingModal
+          isOpen={showPartyScheduling}
+          onClose={() => {
+            setShowPartyScheduling(false);
+            setSelectedParty(null);
+          }}
+          onSchedule={handlePartySchedule}
+          partyPackageName={selectedParty.name}
+          customerName={(selectedCustomer || currentCustomer)?.name || 'Customer'}
+          existingPartyData={{
+            partyDate: selectedParty.partyDate,
+            partyStartTime: selectedParty.partyStartTime,
+            partyEndTime: selectedParty.partyEndTime,
+            partyGuests: selectedParty.partyGuests,
+            partyNotes: selectedParty.partyNotes
+          }}
+        />
+      )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={successDetails.title}
+        message={successDetails.message}
+        details={successDetails.details}
+      />
     </div>
   );
 }
