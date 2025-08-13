@@ -32,6 +32,12 @@ interface Purchase {
   status: 'active' | 'expired' | 'used';
   autoRenew?: boolean;
   nextRenewalDate?: string;
+  // Party scheduling fields
+  partyDate?: string;
+  partyStartTime?: string;
+  partyEndTime?: string;
+  partyGuests?: number;
+  partyNotes?: string;
 }
 
 interface Session {
@@ -266,6 +272,65 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const purchase = customer.purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
 
+    // Handle party packages specially
+    if (purchase.type === 'party_package') {
+      if (!purchase.partyDate || !purchase.partyStartTime) {
+        alert('⚠️ Party Not Scheduled\n\nThis party package needs to be scheduled first. Please go to "My Account" to schedule your party date and time.');
+        return;
+      }
+      
+      // Check if party is within ±30 minute check-in window
+      const now = new Date();
+      const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+      const timeDifference = partyDateTime.getTime() - now.getTime();
+      const thirtyMinutes = 30 * 60 * 1000;
+      
+      if (Math.abs(timeDifference) > thirtyMinutes) {
+        const formatTime = (time: string) => {
+          const [hours, minutes] = time.split(':');
+          const hour = parseInt(hours);
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+          return `${displayHour}:${minutes} ${ampm}`;
+        };
+        
+        const formatDate = (dateString: string) => {
+          return new Date(dateString).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        };
+        
+        if (timeDifference > thirtyMinutes) {
+          const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
+          const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
+          
+          let timeText;
+          if (hoursUntil >= 24) {
+            const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
+            timeText = `${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
+          } else if (hoursUntil >= 1) {
+            timeText = `${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}`;
+          } else {
+            timeText = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+          }
+          
+          alert(`⏰ Too Early to Check In\n\nYour party is scheduled for ${formatDate(purchase.partyDate)} at ${formatTime(purchase.partyStartTime)}.\n\nCheck-in opens 30 minutes before your party time (in ${timeText}). Please return closer to your party time!`);
+          return;
+        } else {
+          alert(`❌ Party Check-In Window Closed\n\nYour party was scheduled for ${formatDate(purchase.partyDate)} at ${formatTime(purchase.partyStartTime)}.\n\nThe check-in window has closed (30 minutes after party time). Please contact staff for assistance.`);
+          return;
+        }
+      }
+      
+      // Within check-in window, show confirmation
+      setConfirmingPurchase(purchase);
+      setShowConfirmDialog(true);
+      return;
+    }
+
     if (purchase.totalSessions === 1 && !purchase.firstUseDate) {
       // Show confirmation for single-use passes
       setConfirmingPurchase(purchase);
@@ -413,6 +478,50 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       const hours = Math.floor(diffInMinutes / 60);
       const minutes = diffInMinutes % 60;
       return `${hours}h ${minutes}m`;
+    }
+  };
+
+  const isPartyCheckInAvailable = (purchase: Purchase) => {
+    if (purchase.type !== 'party_package' || !purchase.partyDate || !purchase.partyStartTime) {
+      return false;
+    }
+    
+    const now = new Date();
+    const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+    const timeDifference = partyDateTime.getTime() - now.getTime();
+    const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+    
+    // Allow check-in within ±30 minutes of party start time
+    return Math.abs(timeDifference) <= thirtyMinutes;
+  };
+
+  const getPartyCheckInStatus = (purchase: Purchase) => {
+    if (purchase.type !== 'party_package') return null;
+    
+    if (!purchase.partyDate || !purchase.partyStartTime) return 'needs_scheduling';
+    
+    const now = new Date();
+    const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+    const timeDifference = partyDateTime.getTime() - now.getTime();
+    const thirtyMinutes = 30 * 60 * 1000;
+    
+    if (Math.abs(timeDifference) <= thirtyMinutes) {
+      return 'available'; // Within ±30 minutes
+    } else if (timeDifference > thirtyMinutes) {
+      const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
+      const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
+      
+      if (hoursUntil >= 24) {
+        const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
+        return `too_early_days:${daysUntil}`;
+      } else if (hoursUntil >= 1) {
+        return `too_early_hours:${hoursUntil}`;
+      } else {
+        return `too_early_minutes:${minutesUntil}`;
+      }
+    } else {
+      // Party time has passed by more than 30 minutes
+      return 'expired';
     }
   };
 
@@ -623,7 +732,24 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                 <p className="text-lg text-gray-700 mb-1">
                                   Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
                                 </p>
-                                {!purchase.firstUseDate ? (
+                                {purchase.type === 'party_package' && purchase.partyDate ? (
+                                  <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
+                                    <p className="text-sm text-purple-700 font-medium">🎉 Party Scheduled</p>
+                                    <p className="text-xs text-purple-600">
+                                      {formatDate(purchase.partyDate)}
+                                      {purchase.partyStartTime && ` • ${(() => {
+                                        const [hours, minutes] = purchase.partyStartTime.split(':');
+                                        const hour = parseInt(hours);
+                                        const ampm = hour >= 12 ? 'PM' : 'AM';
+                                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                        return `${displayHour}:${minutes} ${ampm}`;
+                                      })()}`}
+                                    </p>
+                                    {purchase.partyGuests && (
+                                      <p className="text-xs text-purple-600">👥 {purchase.partyGuests} guests</p>
+                                    )}
+                                  </div>
+                                ) : !purchase.firstUseDate ? (
                                   <div className="mt-2">
                                     <p className="text-sm text-blue-600 font-medium">Ready to activate!</p>
                                     {purchase.autoRenew && (
@@ -643,13 +769,69 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                   </div>
                                 )}
                               </div>
-                              <Button
-                                onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
-                                size="lg"
-                                className="text-lg px-8 py-4 min-w-[140px] bg-blue-600 hover:bg-blue-700"
-                              >
-                                Check In
-                              </Button>
+                              {(() => {
+                                if (purchase.type === 'party_package') {
+                                  const partyStatus = getPartyCheckInStatus(purchase);
+                                  
+                                  if (partyStatus === 'needs_scheduling') {
+                                    return (
+                                      <Button
+                                        onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                        size="lg"
+                                        className="text-lg px-8 py-4 min-w-[140px] bg-purple-600 hover:bg-purple-700"
+                                      >
+                                        🗓️ Need Scheduling
+                                      </Button>
+                                    );
+                                  } else if (partyStatus === 'available') {
+                                    return (
+                                      <Button
+                                        onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                        size="lg"
+                                        className="text-lg px-8 py-4 min-w-[140px] bg-green-600 hover:bg-green-700"
+                                      >
+                                        🎉 Check In Party
+                                      </Button>
+                                    );
+                                  } else if (partyStatus?.startsWith('too_early')) {
+                                    const [type, value] = partyStatus.split(':');
+                                    const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                                    type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                                    `${value} minute${value !== '1' ? 's' : ''}`;
+                                    
+                                    return (
+                                      <Button
+                                        onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                        size="lg"
+                                        className="text-lg px-6 py-4 min-w-[140px] bg-orange-500 hover:bg-orange-600"
+                                        disabled={false}
+                                      >
+                                        ⏰ In {timeText}
+                                      </Button>
+                                    );
+                                  } else if (partyStatus === 'expired') {
+                                    return (
+                                      <Button
+                                        disabled
+                                        size="lg"
+                                        className="text-lg px-8 py-4 min-w-[140px] bg-gray-400 cursor-not-allowed"
+                                      >
+                                        ❌ Window Closed
+                                      </Button>
+                                    );
+                                  }
+                                }
+                                
+                                return (
+                                  <Button
+                                    onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                    size="lg"
+                                    className="text-lg px-8 py-4 min-w-[140px] bg-blue-600 hover:bg-blue-700"
+                                  >
+                                    Check In
+                                  </Button>
+                                );
+                              })()}
                             </div>
                           </Card>
                         ))}
