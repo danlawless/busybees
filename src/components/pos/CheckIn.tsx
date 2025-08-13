@@ -671,33 +671,38 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         {checkedInPasses.map((purchase) => {
                           const activeSessions = (displayCustomer.activeSessions || []).filter(session => session.purchaseId === purchase.id);
                           return (
-                            <Card key={purchase.id} className="p-6 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors">
-                              <div className="flex items-center justify-between">
+                            <Card key={purchase.id} className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors">
+                              <div className="flex flex-col items-center text-center space-y-4">
                                 <div className="flex-1">
-                                  <h4 className="text-xl font-bold text-gray-900 mb-2">{purchase.name}</h4>
-                                  <p className="text-lg text-gray-700 mb-1">
-                                    Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
-                                  </p>
+                                  <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
                                   {activeSessions.length > 0 && (
-                                    <p className="text-sm text-green-700 font-medium">
-                                      Since {new Date(activeSessions[0].startTime).toLocaleTimeString()}
-                                    </p>
+                                    <div className="p-3 bg-green-100 border border-green-300 rounded-lg mb-4">
+                                      <p className="text-lg text-green-800 font-bold">✅ Checked In</p>
+                                      <p className="text-sm text-green-700 mt-1">
+                                        Since {new Date(activeSessions[0].startTime).toLocaleTimeString()}
+                                      </p>
+                                      <p className="text-sm text-green-700">
+                                        Duration: {getSessionDuration(activeSessions[0].startTime)}
+                                      </p>
+                                    </div>
                                   )}
                                   {/* Expiration & Auto-Renew Info */}
                                   {purchase.actualExpiryDate && (
-                                    <p className="text-sm text-gray-600 mt-2">
-                                      Expires: {formatDate(purchase.actualExpiryDate)}
-                                      {purchase.autoRenew && (
-                                        <span className="ml-2 text-blue-600 font-bold">🔄 Auto-Renew</span>
-                                      )}
-                                    </p>
+                                    <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                      <p className="text-sm text-gray-600">
+                                        Expires: {formatDate(purchase.actualExpiryDate)}
+                                        {purchase.autoRenew && (
+                                          <span className="ml-2 text-blue-600 font-bold">🔄 Auto-Renew</span>
+                                        )}
+                                      </p>
+                                    </div>
                                   )}
                                 </div>
                                 <Button
                                   onClick={() => handleCheckOut(displayCustomer, activeSessions[activeSessions.length - 1].id)}
                                   size="lg"
                                   variant="outline"
-                                  className="bg-white hover:bg-gray-50 text-lg px-6 py-3 min-w-[120px]"
+                                  className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
                                 >
                                   Check Out
                                 </Button>
@@ -725,46 +730,55 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     {availablePasses.length > 0 ? (
                       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                         {availablePasses.map((purchase) => (
-                          <Card key={purchase.id} className="p-6 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
-                            <div className="flex items-center justify-between">
+                          <Card key={purchase.id} className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
+                            <div className="flex flex-col items-center text-center space-y-4">
                               <div className="flex-1">
-                                <h4 className="text-xl font-bold text-gray-900 mb-2">{purchase.name}</h4>
-                                <p className="text-lg text-gray-700 mb-1">
-                                  Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
-                                </p>
+                                <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
                                 {purchase.type === 'party_package' && purchase.partyDate ? (
-                                  <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
-                                    <p className="text-sm text-purple-700 font-medium">🎉 Party Scheduled</p>
-                                    <p className="text-xs text-purple-600">
-                                      {formatDate(purchase.partyDate)}
-                                      {purchase.partyStartTime && ` • ${(() => {
-                                        const [hours, minutes] = purchase.partyStartTime.split(':');
-                                        const hour = parseInt(hours);
-                                        const ampm = hour >= 12 ? 'PM' : 'AM';
-                                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-                                        return `${displayHour}:${minutes} ${ampm}`;
-                                      })()}`}
+                                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <p className="text-lg text-purple-700 font-bold mb-2">🎉 Party Scheduled</p>
+                                    <p className="text-sm text-purple-600 mb-1">
+                                      📅 {formatDate(purchase.partyDate)}
                                     </p>
+                                    {purchase.partyStartTime && (
+                                      <p className="text-sm text-purple-600 mb-1">
+                                        ⏰ {(() => {
+                                          const [hours, minutes] = purchase.partyStartTime.split(':');
+                                          const hour = parseInt(hours);
+                                          const ampm = hour >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                          return `${displayHour}:${minutes} ${ampm}`;
+                                        })()}
+                                        {purchase.partyEndTime && ` - ${(() => {
+                                          const [hours, minutes] = purchase.partyEndTime.split(':');
+                                          const hour = parseInt(hours);
+                                          const ampm = hour >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                          return `${displayHour}:${minutes} ${ampm}`;
+                                        })()}`}
+                                      </p>
+                                    )}
                                     {purchase.partyGuests && (
-                                      <p className="text-xs text-purple-600">👥 {purchase.partyGuests} guests</p>
+                                      <p className="text-sm text-purple-600">👥 {purchase.partyGuests} guests</p>
                                     )}
                                   </div>
                                 ) : !purchase.firstUseDate ? (
-                                  <div className="mt-2">
-                                    <p className="text-sm text-blue-600 font-medium">Ready to activate!</p>
+                                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-lg text-blue-600 font-bold">✨ Ready to Use!</p>
                                     {purchase.autoRenew && (
-                                      <p className="text-sm text-gray-600">🔄 Auto-Renew enabled</p>
+                                      <p className="text-sm text-blue-600 mt-1">🔄 Auto-Renew enabled</p>
                                     )}
                                   </div>
                                 ) : (
-                                  <div className="mt-2">
+                                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-lg text-green-600 font-bold">✅ Active Pass</p>
                                     {purchase.actualExpiryDate && (
-                                      <p className="text-sm text-gray-600">
+                                      <p className="text-sm text-green-600 mt-1">
                                         Expires: {formatDate(purchase.actualExpiryDate)}
-                                        {purchase.autoRenew && (
-                                          <span className="ml-2 text-blue-600 font-bold">🔄 Auto-Renew</span>
-                                        )}
                                       </p>
+                                    )}
+                                    {purchase.autoRenew && (
+                                      <p className="text-sm text-green-600 mt-1">🔄 Auto-Renew enabled</p>
                                     )}
                                   </div>
                                 )}
@@ -778,7 +792,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                       <Button
                                         onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
                                         size="lg"
-                                        className="text-lg px-8 py-4 min-w-[140px] bg-purple-600 hover:bg-purple-700"
+                                        className="text-xl px-10 py-5 min-w-[200px] bg-purple-600 hover:bg-purple-700 font-bold"
                                       >
                                         🗓️ Need Scheduling
                                       </Button>
@@ -788,7 +802,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                       <Button
                                         onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
                                         size="lg"
-                                        className="text-lg px-8 py-4 min-w-[140px] bg-green-600 hover:bg-green-700"
+                                        className="text-xl px-10 py-5 min-w-[200px] bg-green-600 hover:bg-green-700 font-bold"
                                       >
                                         🎉 Check In Party
                                       </Button>
@@ -803,7 +817,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                       <Button
                                         onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
                                         size="lg"
-                                        className="text-lg px-6 py-4 min-w-[140px] bg-orange-500 hover:bg-orange-600"
+                                        className="text-xl px-8 py-5 min-w-[200px] bg-orange-500 hover:bg-orange-600 font-bold"
                                         disabled={false}
                                       >
                                         ⏰ In {timeText}
@@ -814,7 +828,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                       <Button
                                         disabled
                                         size="lg"
-                                        className="text-lg px-8 py-4 min-w-[140px] bg-gray-400 cursor-not-allowed"
+                                        className="text-xl px-10 py-5 min-w-[200px] bg-gray-400 cursor-not-allowed font-bold"
                                       >
                                         ❌ Window Closed
                                       </Button>
@@ -826,7 +840,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                   <Button
                                     onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
                                     size="lg"
-                                    className="text-lg px-8 py-4 min-w-[140px] bg-blue-600 hover:bg-blue-700"
+                                    className="text-xl px-10 py-5 min-w-[200px] bg-blue-600 hover:bg-blue-700 font-bold"
                                   >
                                     Check In
                                   </Button>
