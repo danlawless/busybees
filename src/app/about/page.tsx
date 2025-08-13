@@ -6,15 +6,17 @@ import { OurStory } from '@/components/about/OurStory'
 import { TeamSection } from '@/components/about/TeamSection'
 import { ValuesSection } from '@/components/about/ValuesSection'
 import { CommunitySection } from '@/components/about/CommunitySection'
+import { PartyFAQ } from '@/components/parties/PartyFAQ'
 
 export default function AboutPage() {
   return (
     <Layout>
       <AboutHero />
       <OurStory />
-      <ValuesSection />
-      <TeamSection />
+      {/* <ValuesSection /> */}
+      {/* <TeamSection /> */}
       <CommunitySection />
+      <PartyFAQ />
     </Layout>
   )
 }

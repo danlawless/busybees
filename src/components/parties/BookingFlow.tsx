@@ -47,7 +47,7 @@ const contactMethods = [
     icon: Phone,
     title: 'Call Us',
     description: 'Speak directly with our party coordinators',
-    action: '(555) 123-BEES',
+    action: 'Call Us',
     color: 'from-blue-200 to-blue-300',
     available: 'Mon-Fri 9AM-6PM'
   },
@@ -55,7 +55,7 @@ const contactMethods = [
     icon: MessageCircle,
     title: 'Text Us',
     description: 'Quick questions? Send us a text message',
-    action: '(555) 123-4567',
+    action: 'Text Us',
     color: 'from-green-200 to-green-300',
     available: 'Response within 1 hour'
   },

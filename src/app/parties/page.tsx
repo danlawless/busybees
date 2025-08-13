@@ -5,7 +5,6 @@ import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackages } from '@/components/parties/PartyPackages'
 import { BookingFlow } from '@/components/parties/BookingFlow'
 import { PartyGallery } from '@/components/parties/PartyGallery'
-import { PartyFAQ } from '@/components/parties/PartyFAQ'
 
 export default function PartiesPage() {
   return (
@@ -14,7 +13,6 @@ export default function PartiesPage() {
       <PartyPackages />
       <BookingFlow />
       <PartyGallery />
-      <PartyFAQ />
     </Layout>
   )
 }
