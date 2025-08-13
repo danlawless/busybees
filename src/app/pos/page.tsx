@@ -321,6 +321,7 @@ export default function POSPage() {
 
       // Set 30-second timer for warning
       activityTimer = setTimeout(() => {
+        // Show warning modal
         setShowInactivityWarning(true);
         
         // Start logout countdown immediately when warning shows
@@ -335,6 +336,7 @@ export default function POSPage() {
           if (seconds <= 0) {
             if (warningCountdown) clearInterval(warningCountdown);
             handleAutoLogout();
+            return;
           }
         };
         
