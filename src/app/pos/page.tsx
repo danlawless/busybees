@@ -240,6 +240,11 @@ export default function POSPage() {
       // Show success modal
       setShowPaymentSuccessModal(true);
 
+      // Auto-close success modal after 5 seconds
+      setTimeout(() => {
+        setShowPaymentSuccessModal(false);
+      }, 5000);
+
     } catch (error) {
       setProcessingPayment(false);
       alert('Error processing payment method. Please try again.');

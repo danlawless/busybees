@@ -126,6 +126,51 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     }));
   };
 
+  // Calculate discounted total price (50% off for 2nd+ items)
+  const calculateDiscountedTotal = (basePrice: number, quantity: number) => {
+    if (quantity === 1) {
+      return basePrice;
+    }
+    
+    const fullPriceItems = 1;
+    const discountedItems = quantity - 1;
+    const discountedPrice = basePrice * 0.5;
+    
+    return (fullPriceItems * basePrice) + (discountedItems * discountedPrice);
+  };
+
+  // Get pricing breakdown for display
+  const getPricingBreakdown = (basePrice: number, quantity: number) => {
+    if (quantity === 1) {
+      return {
+        total: basePrice,
+        breakdown: `$${basePrice.toFixed(2)}`,
+        savings: 0
+      };
+    }
+    
+    const regularTotal = basePrice * quantity;
+    const discountedTotal = calculateDiscountedTotal(basePrice, quantity);
+    const savings = regularTotal - discountedTotal;
+    const discountedPrice = basePrice * 0.5;
+    
+    return {
+      total: discountedTotal,
+      breakdown: `$${basePrice.toFixed(2)} + ${quantity - 1} × $${discountedPrice.toFixed(2)}`,
+      savings: savings
+    };
+  };
+
+  // Reset all quantities to 1 after purchase
+  const resetAllQuantities = () => {
+    setQuantities({
+      day_pass: 1,
+      weekly_pass: 1,
+      monthly_pass: 1,
+      party_package: 1
+    });
+  };
+
 
 
   // Cleanup timeouts on unmount
@@ -1218,11 +1263,29 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           <p className="text-sm text-gray-600">{product.description}</p>
                           <p className="text-lg font-bold text-gray-900 mt-1">
                             ${product.price.toFixed(2)} each
-                            {quantities[product.id] > 1 && (
-                              <span className="text-green-600 ml-2">
-                                (${(product.price * quantities[product.id]).toFixed(2)} total)
-                              </span>
-                            )}
+                            {quantities[product.id] > 1 && (() => {
+                              const pricing = getPricingBreakdown(product.price, quantities[product.id]);
+                              return (
+                                <div className="mt-1">
+                                  <div className="text-green-600 text-base">
+                                    Total: ${pricing.total.toFixed(2)}
+                                    {pricing.savings > 0 && (
+                                      <span className="text-orange-600 ml-2 font-semibold">
+                                        (Save ${pricing.savings.toFixed(2)}!)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {pricing.breakdown}
+                                  </div>
+                                  {pricing.savings > 0 && (
+                                    <div className="text-xs text-orange-500 font-medium">
+                                      🎉 50% off 2nd+ items!
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </p>
                         </div>
                         
@@ -1449,11 +1512,29 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           <p className="text-sm text-gray-600">{product.description}</p>
                           <p className="text-lg font-bold text-gray-900 mt-1">
                             ${product.price.toFixed(2)} each
-                            {quantities[product.id] > 1 && (
-                              <span className="text-purple-600 ml-2">
-                                (${(product.price * quantities[product.id]).toFixed(2)} total)
-                              </span>
-                            )}
+                            {quantities[product.id] > 1 && (() => {
+                              const pricing = getPricingBreakdown(product.price, quantities[product.id]);
+                              return (
+                                <div className="mt-1">
+                                  <div className="text-purple-600 text-base">
+                                    Total: ${pricing.total.toFixed(2)}
+                                    {pricing.savings > 0 && (
+                                      <span className="text-orange-600 ml-2 font-semibold">
+                                        (Save ${pricing.savings.toFixed(2)}!)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {pricing.breakdown}
+                                  </div>
+                                  {pricing.savings > 0 && (
+                                    <div className="text-xs text-orange-500 font-medium">
+                                      🎉 50% off 2nd+ items!
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </p>
                         </div>
                         
