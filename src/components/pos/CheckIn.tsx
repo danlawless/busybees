@@ -362,15 +362,15 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       {displayCustomer && (
         <div className="space-y-6">
           {/* Customer Header */}
-          <Card className="p-6">
+          <Card className="p-8 bg-gradient-to-r from-yellow-50 to-orange-50">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{displayCustomer.name}</h2>
-                <p className="text-gray-600">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">{displayCustomer.name}</h2>
+                <p className="text-lg text-gray-700 mb-1">
                   {formatPhoneNumber(displayCustomer.phone)}
                   {displayCustomer.email && ` • ${displayCustomer.email}`}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-base text-gray-600">
                   Member since {formatDate(displayCustomer.createdAt)}
                   {displayCustomer.lastVisit && ` • Last visit: ${formatDate(displayCustomer.lastVisit)}`}
                 </p>
@@ -393,7 +393,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           </Card>
 
           {/* Pass Management */}
-            <div className="space-y-6">
+            <div className="space-y-10">
               {/* Currently Checked In Passes */}
               {(() => {
                 const checkedInPasses = displayCustomer.purchases.filter(p => 
@@ -404,38 +404,38 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 if (checkedInPasses.length > 0) {
                   return (
                     <div>
-                      <h3 className="text-xl font-semibold mb-4 text-green-700">✅ Currently Checked In</h3>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <h3 className="text-2xl font-bold mb-6 text-green-700">✅ Currently Checked In</h3>
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                         {checkedInPasses.map((purchase) => {
                           const activeSessions = (displayCustomer.activeSessions || []).filter(session => session.purchaseId === purchase.id);
                           return (
-                            <Card key={purchase.id} className="p-4 border-l-4 border-l-green-500 bg-green-50">
+                            <Card key={purchase.id} className="p-6 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors">
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                  <h4 className="font-semibold text-gray-900">{purchase.name}</h4>
-                                  <p className="text-sm text-gray-600">
+                                  <h4 className="text-xl font-bold text-gray-900 mb-2">{purchase.name}</h4>
+                                  <p className="text-lg text-gray-700 mb-1">
                                     Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
                                   </p>
                                   {activeSessions.length > 0 && (
-                                    <p className="text-xs text-green-600 mt-1">
+                                    <p className="text-sm text-green-700 font-medium">
                                       Since {new Date(activeSessions[0].startTime).toLocaleTimeString()}
                                     </p>
                                   )}
                                   {/* Expiration & Auto-Renew Info */}
                                   {purchase.actualExpiryDate && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-sm text-gray-600 mt-2">
                                       Expires: {formatDate(purchase.actualExpiryDate)}
                                       {purchase.autoRenew && (
-                                        <span className="ml-2 text-blue-600 font-medium">🔄 Auto-Renew</span>
+                                        <span className="ml-2 text-blue-600 font-bold">🔄 Auto-Renew</span>
                                       )}
                                     </p>
                                   )}
                                 </div>
                                 <Button
                                   onClick={() => handleCheckOut(displayCustomer, activeSessions[activeSessions.length - 1].id)}
-                                  size="sm"
+                                  size="lg"
                                   variant="outline"
-                                  className="bg-white hover:bg-gray-50"
+                                  className="bg-white hover:bg-gray-50 text-lg px-6 py-3 min-w-[120px]"
                                 >
                                   Check Out
                                 </Button>
@@ -460,30 +460,30 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 if (availablePasses.length > 0) {
                   return (
                     <div>
-                      <h3 className="text-xl font-semibold mb-4">🎫 Available Passes</h3>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <h3 className="text-2xl font-bold mb-6">🎫 Available Passes</h3>
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                         {availablePasses.map((purchase) => (
-                          <Card key={purchase.id} className="p-4 border-l-4 border-l-blue-400">
+                          <Card key={purchase.id} className="p-6 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900">{purchase.name}</h4>
-                                <p className="text-sm text-gray-600">
+                                <h4 className="text-xl font-bold text-gray-900 mb-2">{purchase.name}</h4>
+                                <p className="text-lg text-gray-700 mb-1">
                                   Sessions: {purchase.totalSessions === 999 ? '∞ Unlimited' : `${purchase.usedSessions}/${purchase.totalSessions}`}
                                 </p>
                                 {!purchase.firstUseDate ? (
-                                  <div className="mt-1">
-                                    <p className="text-xs text-blue-600">Ready to activate!</p>
+                                  <div className="mt-2">
+                                    <p className="text-sm text-blue-600 font-medium">Ready to activate!</p>
                                     {purchase.autoRenew && (
-                                      <p className="text-xs text-gray-500">🔄 Auto-Renew enabled</p>
+                                      <p className="text-sm text-gray-600">🔄 Auto-Renew enabled</p>
                                     )}
                                   </div>
                                 ) : (
-                                  <div className="mt-1">
+                                  <div className="mt-2">
                                     {purchase.actualExpiryDate && (
-                                      <p className="text-xs text-gray-500">
+                                      <p className="text-sm text-gray-600">
                                         Expires: {formatDate(purchase.actualExpiryDate)}
                                         {purchase.autoRenew && (
-                                          <span className="ml-2 text-blue-600 font-medium">🔄 Auto-Renew</span>
+                                          <span className="ml-2 text-blue-600 font-bold">🔄 Auto-Renew</span>
                                         )}
                                       </p>
                                     )}
@@ -492,7 +492,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               </div>
                               <Button
                                 onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
-                                size="sm"
+                                size="lg"
+                                className="text-lg px-8 py-4 min-w-[140px] bg-blue-600 hover:bg-blue-700"
                               >
                                 Check In
                               </Button>
