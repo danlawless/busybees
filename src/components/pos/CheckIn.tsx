@@ -102,6 +102,31 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [paymentSuccessDetails, setPaymentSuccessDetails] = useState({ cardBrand: '', last4: '', saved: false });
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
   const [confirmingAutoRenewFor, setConfirmingAutoRenewFor] = useState<string | null>(null);
+  
+  // Quantity state for purchases
+  const [quantities, setQuantities] = useState<Record<string, number>>({
+    day_pass: 1,
+    weekly_pass: 1,
+    monthly_pass: 1,
+    party_package: 1
+  });
+
+  // Quantity management functions
+  const increaseQuantity = (productId: string) => {
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: Math.min(prev[productId] + 1, 10) // Max 10 items
+    }));
+  };
+
+  const decreaseQuantity = (productId: string) => {
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: Math.max(prev[productId] - 1, 1) // Min 1 item
+    }));
+  };
+
+
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -1191,8 +1216,37 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
                           </span>
                           <p className="text-sm text-gray-600">{product.description}</p>
-                          <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">
+                            ${product.price.toFixed(2)} each
+                            {quantities[product.id] > 1 && (
+                              <span className="text-green-600 ml-2">
+                                (${(product.price * quantities[product.id]).toFixed(2)} total)
+                              </span>
+                            )}
+                          </p>
                         </div>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center space-x-3 mr-4">
+                          <button
+                            onClick={() => decreaseQuantity(product.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[product.id] <= 1}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-semibold text-lg">
+                            {quantities[product.id]}
+                          </span>
+                          <button
+                            onClick={() => increaseQuantity(product.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[product.id] >= 10}
+                          >
+                            +
+                          </button>
+                        </div>
+
                         <Button
                           onClick={() => {
                             const customer = selectedCustomer || currentCustomer;
@@ -1393,8 +1447,37 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             🎉 {product.name}
                           </span>
                           <p className="text-sm text-gray-600">{product.description}</p>
-                          <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">
+                            ${product.price.toFixed(2)} each
+                            {quantities[product.id] > 1 && (
+                              <span className="text-purple-600 ml-2">
+                                (${(product.price * quantities[product.id]).toFixed(2)} total)
+                              </span>
+                            )}
+                          </p>
                         </div>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center space-x-3 mr-4">
+                          <button
+                            onClick={() => decreaseQuantity(product.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[product.id] <= 1}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-semibold text-lg">
+                            {quantities[product.id]}
+                          </span>
+                          <button
+                            onClick={() => increaseQuantity(product.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[product.id] >= 10}
+                          >
+                            +
+                          </button>
+                        </div>
+
                         <Button
                           onClick={() => {
                             const customer = selectedCustomer || currentCustomer;
@@ -1981,7 +2064,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 onClick={() => setShowPaymentSuccessModal(false)}
                 className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
               >
-                Continue Shopping
+                Welcome to the Busy Bees Family!
               </button>
               
               <div className="mt-4 text-xs text-gray-400 text-center">

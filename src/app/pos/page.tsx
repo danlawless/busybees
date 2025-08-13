@@ -920,7 +920,7 @@ export default function POSPage() {
                 onClick={() => setShowPaymentSuccessModal(false)}
                 className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
               >
-                Welcome to Busy Bees!
+                Welcome to the Busy Bees Family!
               </button>
               
               <div className="mt-4 text-xs text-gray-400 text-center">
