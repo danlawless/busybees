@@ -110,6 +110,17 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmingPurchase, setConfirmingPurchase] = useState<Purchase | null>(null);
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState<{purchaseId: string, passName: string, price: number, type: string} | null>(null);
+  const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
+  const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmTimeout) {
+        clearTimeout(confirmTimeout);
+      }
+    };
+  }, [confirmTimeout]);
 
   // Mock payment form state
   const [cardNumber, setCardNumber] = useState('');
@@ -224,7 +235,31 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     return brand.charAt(0).toUpperCase() + brand.slice(1);
   };
 
-  const handlePurchase = async (productId: string) => {
+  const handlePurchase = (productId: string) => {
+    // Clear any existing timeout
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingProduct(productId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingProduct(null);
+    }, 5000);
+    
+    setConfirmTimeout(timeout);
+  };
+
+  const handleConfirmPurchase = async (productId: string) => {
+    // Clear confirmation state and timeout
+    setConfirmingProduct(null);
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout);
+      setConfirmTimeout(null);
+    }
+
     // Prevent multiple simultaneous purchases
     if (isProcessing || processingProduct) return;
     
@@ -811,13 +846,27 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 </div>
                 
                 <Button
-                  onClick={() => handlePurchase(product.id)}
-                  className="w-full"
+                  onClick={() => {
+                    if (customer.savedCards.length === 0) return;
+                    if (confirmingProduct === product.id) {
+                      handleConfirmPurchase(product.id);
+                    } else {
+                      handlePurchase(product.id);
+                    }
+                  }}
+                  className={`w-full transition-colors ${
+                    confirmingProduct === product.id
+                      ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                      : processingProduct === product.id
+                      ? 'bg-blue-600'
+                      : 'bg-primary hover:bg-primary/90'
+                  }`}
                   disabled={isProcessing || customer.savedCards.length === 0}
                 >
                   {processingProduct === product.id ? 'Processing...' : 
                    isProcessing ? 'Please wait...' :
-                   customer.savedCards.length === 0 ? 'Add Payment Method First' : 'Buy Now'}
+                   customer.savedCards.length === 0 ? 'Add Payment Method First' :
+                   confirmingProduct === product.id ? '✓ Confirm Purchase' : 'Buy Now'}
                 </Button>
               </Card>
             ))}
