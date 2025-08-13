@@ -61,6 +61,16 @@ export default function POSPage() {
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [cardholderName, setCardholderName] = useState('');
+  const [saveCard, setSaveCard] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessDetails, setPaymentSuccessDetails] = useState({ cardBrand: '', last4: '', saved: false });
   
   // Inactivity timeout states
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
@@ -161,9 +171,111 @@ export default function POSPage() {
 
   // Resume session (dismiss warning and restart timer)
   const handleResumeSession = () => {
+    // Clear the warning modal
     setShowInactivityWarning(false);
     setCountdownSeconds(30);
     setInactivityCountdown(30);
+    
+    // Trigger a synthetic activity event to restart the timer system
+    // This ensures the useEffect detects activity and restarts everything
+    setTimeout(() => {
+      const syntheticEvent = new MouseEvent('mousedown', { bubbles: true });
+      document.dispatchEvent(syntheticEvent);
+    }, 10);
+  };
+
+  // Payment method management
+  const handleAddPaymentMethod = async () => {
+    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
+      alert('Please fill in all card details.');
+      return;
+    }
+
+    if (!currentCustomer) return;
+
+    setProcessingPayment(true);
+
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const cardBrand = cardNumber.startsWith('4') ? 'Visa' : cardNumber.startsWith('5') ? 'Mastercard' : 'Card';
+      const last4 = cardNumber.slice(-4);
+
+      if (saveCard) {
+        // Create new saved card
+        const newCard = {
+          id: `card_${Date.now()}`,
+          last4: last4,
+          brand: cardBrand,
+          expiryMonth: parseInt(expiryDate.split('/')[0]),
+          expiryYear: parseInt('20' + expiryDate.split('/')[1]),
+          isDefault: currentCustomer.savedCards.length === 0, // Make it default if it's the first card
+        };
+
+        const updatedCustomer = {
+          ...currentCustomer,
+          savedCards: [...currentCustomer.savedCards, newCard]
+        };
+
+        setCurrentCustomer(updatedCustomer);
+      }
+
+      // Set success details for modal
+      setPaymentSuccessDetails({
+        cardBrand: cardBrand,
+        last4: last4,
+        saved: saveCard
+      });
+
+      // Reset form
+      setCardNumber('');
+      setExpiryDate('');
+      setCvv('');
+      setCardholderName('');
+      setShowPaymentModal(false);
+      setProcessingPayment(false);
+
+      // Show success modal
+      setShowPaymentSuccessModal(true);
+
+    } catch (error) {
+      setProcessingPayment(false);
+      alert('Error processing payment method. Please try again.');
+    }
+  };
+
+  const handleSetDefaultCard = (cardId: string) => {
+    if (!currentCustomer) return;
+
+    const updatedCards = currentCustomer.savedCards.map(card => ({
+      ...card,
+      isDefault: card.id === cardId
+    }));
+
+    const updatedCustomer = {
+      ...currentCustomer,
+      savedCards: updatedCards
+    };
+
+    setCurrentCustomer(updatedCustomer);
+    setShowPaymentDropdown(false);
+  };
+
+  const handleClosePaymentModal = () => {
+    if (processingPayment) return; // Prevent closing during processing
+    
+    setShowPaymentModal(false);
+    setCardNumber('');
+    setExpiryDate('');
+    setCvv('');
+    setCardholderName('');
+    setSaveCard(true);
+  };
+
+  const getDefaultCard = () => {
+    if (!currentCustomer) return null;
+    return currentCustomer.savedCards.find(card => card.isDefault) || currentCustomer.savedCards[0] || null;
   };
 
   // Inactivity management
@@ -192,6 +304,12 @@ export default function POSPage() {
       if (activityTimer) clearTimeout(activityTimer);
       if (warningCountdown) clearTimeout(warningCountdown);
       if (inactivityCountdownTimer) clearTimeout(inactivityCountdownTimer);
+
+      // Clear warning state if it was showing
+      if (showInactivityWarning) {
+        setShowInactivityWarning(false);
+        setCountdownSeconds(30);
+      }
 
       // Start inactivity countdown from 30 seconds
       let inactivitySeconds = 30;
@@ -235,9 +353,8 @@ export default function POSPage() {
     };
 
     const handleActivity = () => {
-      if (!showInactivityWarning) {
-        startInactivityTimer();
-      }
+      // Always restart the timer on activity, regardless of warning state
+      startInactivityTimer();
     };
 
     // Add event listeners for user activity
@@ -260,23 +377,26 @@ export default function POSPage() {
     };
   }, [currentCustomer, isStaffMode, showInactivityWarning]);
 
-  // Close settings dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (showSettingsDropdown && !target.closest('.settings-dropdown')) {
         setShowSettingsDropdown(false);
       }
+      if (showPaymentDropdown && !target.closest('.payment-dropdown')) {
+        setShowPaymentDropdown(false);
+      }
     };
 
-    if (showSettingsDropdown) {
+    if (showSettingsDropdown || showPaymentDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showSettingsDropdown]);
+  }, [showSettingsDropdown, showPaymentDropdown]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 pos-page-static">
@@ -313,8 +433,86 @@ export default function POSPage() {
             <div className="flex items-center space-x-4">
               
               {currentCustomer && !isStaffMode && (
-                <div className="relative settings-dropdown">
-                  <div className="text-center">
+                <>
+                  {/* Inactivity Timer */}
+                  <div className="text-xs text-gray-400 font-mono">
+                    {inactivityCountdown}s
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div className="relative payment-dropdown">
+                    <button
+                      onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                    >
+                      <span>💳</span>
+                      <span>
+                        {(() => {
+                          const defaultCard = getDefaultCard();
+                          return defaultCard 
+                            ? `${defaultCard.brand} •••• ${defaultCard.last4}`
+                            : 'Add Payment';
+                        })()}
+                      </span>
+                      <span className={`transform transition-transform ${showPaymentDropdown ? 'rotate-180' : ''}`}>▼</span>
+                    </button>
+                    
+                    {/* Payment Dropdown */}
+                    {showPaymentDropdown && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <div className="py-2">
+                          {/* Existing Cards */}
+                          {currentCustomer.savedCards.length > 0 && (
+                            <>
+                              <div className="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                Saved Cards
+                              </div>
+                              {currentCustomer.savedCards.map((card) => (
+                                <button
+                                  key={card.id}
+                                  onClick={() => handleSetDefaultCard(card.id)}
+                                  className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-100 flex items-center justify-between ${
+                                    card.isDefault ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <span>💳</span>
+                                    <div>
+                                      <div className="font-medium">
+                                        {card.brand} •••• {card.last4}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Expires {card.expiryMonth.toString().padStart(2, '0')}/{card.expiryYear.toString().slice(-2)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {card.isDefault && (
+                                    <span className="text-blue-600 text-xs font-medium">DEFAULT</span>
+                                  )}
+                                </button>
+                              ))}
+                              <hr className="my-2 border-gray-200" />
+                            </>
+                          )}
+                          
+                          {/* Add New Card */}
+                          <button
+                            onClick={() => {
+                              setShowPaymentDropdown(false);
+                              setShowPaymentModal(true);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-3"
+                          >
+                            <span>➕</span>
+                            <span>Add New Payment Method</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Settings Dropdown */}
+                  <div className="relative settings-dropdown">
                     <button
                       onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
                       className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
@@ -323,10 +521,6 @@ export default function POSPage() {
                       <span>Settings</span>
                       <span className={`transform transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`}>▼</span>
                     </button>
-                    <div className="text-xs text-gray-400 mt-1 font-mono">
-                      {inactivityCountdown}s
-                    </div>
-                  </div>
                   
                   {/* Settings Dropdown */}
                   {showSettingsDropdown && (
@@ -375,6 +569,7 @@ export default function POSPage() {
                     </div>
                   )}
                 </div>
+                </>
               )}
             </div>
           </div>
@@ -552,6 +747,196 @@ export default function POSPage() {
                   <div className="mt-2 text-xs text-gray-500 text-center">
                     Self-serve mode • Automatic session management
                   </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">💳</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add Payment Method</h2>
+              <p className="text-gray-600">Enter your card details to make purchases</p>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleAddPaymentMethod(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cardholder Name
+                </label>
+                <input
+                  type="text"
+                  value={cardholderName}
+                  onChange={(e) => setCardholderName(e.target.value)}
+                  placeholder="John Smith"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={processingPayment}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Card Number
+                </label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 16) {
+                      setCardNumber(value);
+                    }
+                  }}
+                  placeholder="1234 5678 9012 3456"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                  disabled={processingPayment}
+                  maxLength={19}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="text"
+                    value={expiryDate}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length >= 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                      }
+                      if (value.length <= 5) {
+                        setExpiryDate(value);
+                      }
+                    }}
+                    placeholder="MM/YY"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    disabled={processingPayment}
+                    maxLength={5}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CVV
+                  </label>
+                  <input
+                    type="text"
+                    value={cvv}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 4) {
+                        setCvv(value);
+                      }
+                    }}
+                    placeholder="123"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    disabled={processingPayment}
+                    maxLength={4}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="saveCard"
+                  checked={saveCard}
+                  onChange={(e) => setSaveCard(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  disabled={processingPayment}
+                />
+                <label htmlFor="saveCard" className="text-sm text-gray-700">
+                  I'd like to store this card for future payments
+                </label>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleClosePaymentModal}
+                  disabled={processingPayment}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={processingPayment || !cardNumber || !expiryDate || !cvv || !cardholderName}
+                  className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {processingPayment ? '💳 Processing...' : saveCard ? '💾 Save Card' : '✓ Add Payment'}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-6 text-xs text-gray-500 text-center">
+              🔒 Your payment information is secure and encrypted
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Success Modal */}
+      {showPaymentSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">✅</span>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                {paymentSuccessDetails.saved ? 'Payment Method Added!' : 'Payment Processed!'}
+              </h2>
+              
+              <div className="mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-center space-x-2 text-blue-800">
+                    <span className="text-xl">💳</span>
+                    <span className="font-medium">
+                      {paymentSuccessDetails.cardBrand} •••• {paymentSuccessDetails.last4}
+                    </span>
+                  </div>
+                  {paymentSuccessDetails.saved && (
+                    <p className="text-sm text-blue-600 mt-2">
+                      Saved as {currentCustomer?.savedCards.length === 1 ? 'your default' : 'a new'} payment method
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-gray-600 mb-2">
+                  {paymentSuccessDetails.saved 
+                    ? 'Thank you for adding your payment method! You can now make purchases quickly and easily.'
+                    : 'Thank you for your payment! Your transaction has been processed successfully.'
+                  }
+                </p>
+                
+                <p className="text-sm text-gray-500">
+                  🐝 We appreciate your business at Busy Bees!
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowPaymentSuccessModal(false)}
+                className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+              >
+                Welcome to Busy Bees!
+              </button>
+              
+              <div className="mt-4 text-xs text-gray-400 text-center">
+                🔒 Your payment information is secure and encrypted
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -128,6 +128,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
   const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
   const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [deleteTimeout, setDeleteTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
   const [schedulingParty, setSchedulingParty] = useState<Purchase | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -146,8 +148,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       if (checkInTimeout) {
         clearTimeout(checkInTimeout);
       }
+      if (deleteTimeout) {
+        clearTimeout(deleteTimeout);
+      }
     };
-  }, [confirmTimeout, checkInTimeout]);
+  }, [confirmTimeout, checkInTimeout, deleteTimeout]);
 
   // Mock payment form state
   const [cardNumber, setCardNumber] = useState('');
@@ -348,6 +353,49 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Proceed with the actual check-in
     handleCheckIn(purchaseId);
+  };
+
+  const handleDeleteCardClick = (cardId: string) => {
+    // Clear any existing timeout
+    if (deleteTimeout) {
+      clearTimeout(deleteTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingDelete(cardId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingDelete(null);
+    }, 5000);
+    
+    setDeleteTimeout(timeout);
+  };
+
+  const handleConfirmDelete = (cardId: string) => {
+    // Clear confirmation state and timeout
+    setConfirmingDelete(null);
+    if (deleteTimeout) {
+      clearTimeout(deleteTimeout);
+      setDeleteTimeout(null);
+    }
+
+    // Check if this is the only card or the default card
+    const cardToDelete = customer.savedCards.find(card => card.id === cardId);
+    const remainingCards = customer.savedCards.filter(card => card.id !== cardId);
+    
+    if (cardToDelete?.isDefault && remainingCards.length > 0) {
+      // If deleting the default card and there are others, make the first remaining card default
+      remainingCards[0].isDefault = true;
+    }
+
+    // Update customer with the card removed
+    const updatedCustomer = {
+      ...customer,
+      savedCards: remainingCards
+    };
+
+    onUpdateCustomer(updatedCustomer);
   };
 
   const handleConfirmPurchase = async (productId: string) => {
@@ -1603,11 +1651,36 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       </p>
                     </div>
                   </div>
-                  {card.isDefault && (
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                      Default
-                    </span>
-                  )}
+                  
+                  <div className="flex items-center space-x-2">
+                    {card.isDefault && (
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                        Default
+                      </span>
+                    )}
+                    
+                    {/* Delete Button with 5-second confirmation */}
+                    <button
+                      onClick={() => {
+                        if (confirmingDelete === card.id) {
+                          handleConfirmDelete(card.id);
+                        } else {
+                          handleDeleteCardClick(card.id);
+                        }
+                      }}
+                      disabled={customer.savedCards.length === 1} // Don't allow deleting the last card
+                      className={`p-2 rounded-lg transition-colors ${
+                        customer.savedCards.length === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : confirmingDelete === card.id
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200 animate-pulse'
+                          : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'
+                      }`}
+                      title={customer.savedCards.length === 1 ? 'Cannot delete your only payment method' : 'Delete payment method'}
+                    >
+                      {confirmingDelete === card.id ? '✓' : '🗑️'}
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}

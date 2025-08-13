@@ -91,6 +91,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   });
   const [activeTab, setActiveTab] = useState<'passes' | 'parties'>('passes');
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [cardholderName, setCardholderName] = useState('');
+  const [saveCard, setSaveCard] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessDetails, setPaymentSuccessDetails] = useState({ cardBrand: '', last4: '', saved: false });
+  const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
+  const [confirmingAutoRenewFor, setConfirmingAutoRenewFor] = useState<string | null>(null);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -468,6 +479,134 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     if (customer) {
       handleCheckIn(customer, purchaseId);
     }
+  };
+
+  const handleAddPaymentMethod = async () => {
+    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
+      alert('Please fill in all card details.');
+      return;
+    }
+
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    setProcessingPayment(true);
+
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const cardBrand = cardNumber.startsWith('4') ? 'Visa' : cardNumber.startsWith('5') ? 'Mastercard' : 'Card';
+      const last4 = cardNumber.slice(-4);
+
+      if (saveCard) {
+        // Create new saved card
+        const newCard: SavedCard = {
+          id: `card_${Date.now()}`,
+          last4: last4,
+          brand: cardBrand,
+          expiryMonth: parseInt(expiryDate.split('/')[0]),
+          expiryYear: parseInt('20' + expiryDate.split('/')[1]),
+          isDefault: customer.savedCards.length === 0, // Make it default if it's the first card
+        };
+
+        const updatedCustomer = {
+          ...customer,
+          savedCards: [...customer.savedCards, newCard]
+        };
+
+        onUpdateCustomer(updatedCustomer);
+      }
+
+      // Set success details for modal
+      setPaymentSuccessDetails({
+        cardBrand: cardBrand,
+        last4: last4,
+        saved: saveCard
+      });
+
+      // Reset form
+      setCardNumber('');
+      setExpiryDate('');
+      setCvv('');
+      setCardholderName('');
+      setShowPaymentModal(false);
+      setProcessingPayment(false);
+
+      // Show success modal
+      setShowPaymentSuccessModal(true);
+
+    } catch (error) {
+      setProcessingPayment(false);
+      alert('Error processing payment method. Please try again.');
+    }
+  };
+
+  const handleClosePaymentModal = () => {
+    if (processingPayment) return; // Prevent closing during processing
+    
+    setShowPaymentModal(false);
+    setCardNumber('');
+    setExpiryDate('');
+    setCvv('');
+    setCardholderName('');
+    setSaveCard(true);
+  };
+
+  const handleAutoRenewToggle = (purchaseId: string, currentAutoRenew: boolean) => {
+    if (!currentAutoRenew) {
+      // Enabling auto-renew, show confirmation
+      setConfirmingAutoRenewFor(purchaseId);
+      setShowAutoRenewConfirm(true);
+    } else {
+      // Disabling auto-renew, do it immediately
+      updateAutoRenewStatus(purchaseId, false);
+    }
+  };
+
+  const handleConfirmAutoRenew = () => {
+    if (confirmingAutoRenewFor) {
+      updateAutoRenewStatus(confirmingAutoRenewFor, true);
+    }
+    setShowAutoRenewConfirm(false);
+    setConfirmingAutoRenewFor(null);
+  };
+
+  const updateAutoRenewStatus = (purchaseId: string, autoRenew: boolean) => {
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    const updatedPurchases = customer.purchases.map(p => {
+      if (p.id === purchaseId) {
+        let nextRenewalDate = p.nextRenewalDate;
+        
+        if (autoRenew && p.firstUseDate) {
+          // Calculate next renewal date based on pass type
+          const firstUse = new Date(p.firstUseDate);
+          if (p.type === 'weekly_pass') {
+            nextRenewalDate = new Date(firstUse.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          } else if (p.type === 'monthly_pass') {
+            nextRenewalDate = new Date(firstUse.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          }
+        } else if (!autoRenew) {
+          nextRenewalDate = '';
+        }
+
+        return {
+          ...p,
+          autoRenew,
+          nextRenewalDate
+        };
+      }
+      return p;
+    });
+
+    const updatedCustomer = {
+      ...customer,
+      purchases: updatedPurchases
+    };
+
+    onUpdateCustomer(updatedCustomer);
   };
 
   const handleConfirmPurchase = async (productId: string) => {
@@ -974,23 +1113,49 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                 }
                                 
                                 return (
-                                  <Button
-                                    onClick={() => {
-                                      if (confirmingCheckIn === purchase.id) {
-                                        handleConfirmCheckIn(purchase.id);
-                                      } else {
-                                        handleCheckInClick(purchase.id);
-                                      }
-                                    }}
-                                    size="lg"
-                                    className={`text-xl px-10 py-5 min-w-[200px] font-bold transition-colors ${
-                                      confirmingCheckIn === purchase.id
-                                        ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                        : 'bg-blue-600 hover:bg-blue-700'
-                                    }`}
-                                  >
-                                    {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
-                                  </Button>
+                                  <div className="flex items-center space-x-4">
+                                    <Button
+                                      onClick={() => {
+                                        if (confirmingCheckIn === purchase.id) {
+                                          handleConfirmCheckIn(purchase.id);
+                                        } else {
+                                          handleCheckInClick(purchase.id);
+                                        }
+                                      }}
+                                      size="lg"
+                                      className={`text-xl px-10 py-5 min-w-[200px] font-bold transition-colors ${
+                                        confirmingCheckIn === purchase.id
+                                          ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                          : 'bg-blue-600 hover:bg-blue-700'
+                                      }`}
+                                    >
+                                      {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
+                                    </Button>
+                                    
+                                    {/* Auto-Renew Toggle for Weekly/Monthly Passes */}
+                                    {(purchase.type === 'weekly_pass' || purchase.type === 'monthly_pass') && (
+                                      <div className="flex items-center space-x-2">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            checked={purchase.autoRenew || false}
+                                            onChange={() => handleAutoRenewToggle(purchase.id, purchase.autoRenew || false)}
+                                            className="sr-only"
+                                          />
+                                          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                            purchase.autoRenew ? 'bg-yellow-500' : 'bg-gray-300'
+                                          }`}>
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                              purchase.autoRenew ? 'translate-x-6' : 'translate-x-1'
+                                            }`} />
+                                          </div>
+                                          <span className="text-sm font-medium text-gray-700">
+                                            Auto-Renew
+                                          </span>
+                                        </label>
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })()}
                             </div>
@@ -1028,6 +1193,13 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         </div>
                         <Button
                           onClick={() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              // Show payment modal instead of alert
+                              setShowPaymentModal(true);
+                              return;
+                            }
+                            
                             if (confirmingProduct === product.id) {
                               handleConfirmPurchase(product.id);
                             } else {
@@ -1037,19 +1209,30 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           size="lg"
                           disabled={purchasingProduct === product.id}
                           className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                            confirmingProduct === product.id
-                              ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                              : purchasingProduct === product.id
-                              ? 'bg-blue-600'
-                              : 'bg-green-600 hover:bg-green-700'
+                            (() => {
+                              const customer = selectedCustomer || currentCustomer;
+                              if (customer && customer.savedCards.length === 0) {
+                                return 'bg-yellow-500 hover:bg-yellow-600';
+                              }
+                              return confirmingProduct === product.id
+                                ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                : purchasingProduct === product.id
+                                ? 'bg-blue-600'
+                                : 'bg-green-600 hover:bg-green-700';
+                            })()
                           }`}
                         >
-                          {purchasingProduct === product.id 
-                            ? 'Processing...' 
-                            : confirmingProduct === product.id 
-                            ? '✓ Confirm Purchase' 
-                            : 'Buy Now'
-                          }
+                          {(() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              return '💳 Add Payment First';
+                            }
+                            return purchasingProduct === product.id 
+                              ? 'Processing...' 
+                              : confirmingProduct === product.id 
+                              ? '✓ Confirm Purchase' 
+                              : 'Buy Now';
+                          })()}
                         </Button>
                       </div>
                     ))}
@@ -1212,6 +1395,13 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         </div>
                         <Button
                           onClick={() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              // Show payment modal instead of alert
+                              setShowPaymentModal(true);
+                              return;
+                            }
+                            
                             if (confirmingProduct === product.id) {
                               handleConfirmPurchase(product.id);
                             } else {
@@ -1221,19 +1411,30 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           size="lg"
                           disabled={purchasingProduct === product.id}
                           className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                            confirmingProduct === product.id
-                              ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
-                              : purchasingProduct === product.id
-                              ? 'bg-purple-500'
-                              : 'bg-purple-600 hover:bg-purple-700'
+                            (() => {
+                              const customer = selectedCustomer || currentCustomer;
+                              if (customer && customer.savedCards.length === 0) {
+                                return 'bg-yellow-500 hover:bg-yellow-600';
+                              }
+                              return confirmingProduct === product.id
+                                ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
+                                : purchasingProduct === product.id
+                                ? 'bg-purple-500'
+                                : 'bg-purple-600 hover:bg-purple-700';
+                            })()
                           }`}
                         >
-                          {purchasingProduct === product.id 
-                            ? 'Processing...' 
-                            : confirmingProduct === product.id 
-                            ? '✓ Confirm Purchase' 
-                            : 'Buy Now'
-                          }
+                          {(() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              return '💳 Add Payment First';
+                            }
+                            return purchasingProduct === product.id 
+                              ? 'Processing...' 
+                              : confirmingProduct === product.id 
+                              ? '✓ Confirm Purchase' 
+                              : 'Buy Now';
+                          })()}
                         </Button>
                       </div>
                     ))}
@@ -1594,6 +1795,261 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           }}
           forceCalendarStep={isRescheduling}
         />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">💳</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Add Payment Method</h2>
+              <p className="text-gray-600">Enter your card details to make purchases</p>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleAddPaymentMethod(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cardholder Name
+                </label>
+                <input
+                  type="text"
+                  value={cardholderName}
+                  onChange={(e) => setCardholderName(e.target.value)}
+                  placeholder="John Smith"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  disabled={processingPayment}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Card Number
+                </label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 16) {
+                      setCardNumber(value);
+                    }
+                  }}
+                  placeholder="1234 5678 9012 3456"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
+                  disabled={processingPayment}
+                  maxLength={19}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="text"
+                    value={expiryDate}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length >= 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                      }
+                      if (value.length <= 5) {
+                        setExpiryDate(value);
+                      }
+                    }}
+                    placeholder="MM/YY"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
+                    disabled={processingPayment}
+                    maxLength={5}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CVV
+                  </label>
+                  <input
+                    type="text"
+                    value={cvv}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 4) {
+                        setCvv(value);
+                      }
+                    }}
+                    placeholder="123"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
+                    disabled={processingPayment}
+                    maxLength={4}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="saveCard"
+                  checked={saveCard}
+                  onChange={(e) => setSaveCard(e.target.checked)}
+                  className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                  disabled={processingPayment}
+                />
+                <label htmlFor="saveCard" className="text-sm text-gray-700">
+                  I'd like to store this card for future payments
+                </label>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleClosePaymentModal}
+                  disabled={processingPayment}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={processingPayment || !cardNumber || !expiryDate || !cvv || !cardholderName}
+                  className="flex-1 px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {processingPayment ? '💳 Processing...' : saveCard ? '💾 Save Card' : '✓ Add Payment'}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-6 text-xs text-gray-500 text-center">
+              🔒 Your payment information is secure and encrypted
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Success Modal */}
+      {showPaymentSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">✅</span>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                {paymentSuccessDetails.saved ? 'Payment Method Added!' : 'Payment Processed!'}
+              </h2>
+              
+              <div className="mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-center space-x-2 text-blue-800">
+                    <span className="text-xl">💳</span>
+                    <span className="font-medium">
+                      {paymentSuccessDetails.cardBrand} •••• {paymentSuccessDetails.last4}
+                    </span>
+                  </div>
+                  {paymentSuccessDetails.saved && (
+                    <p className="text-sm text-blue-600 mt-2">
+                      Saved as {(() => {
+                        const customer = selectedCustomer || currentCustomer;
+                        return customer?.savedCards.length === 1 ? 'your default' : 'a new';
+                      })()} payment method
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-gray-600 mb-2">
+                  {paymentSuccessDetails.saved 
+                    ? 'Thank you for adding your payment method! You can now make purchases quickly and easily.'
+                    : 'Thank you for your payment! Your transaction has been processed successfully.'
+                  }
+                </p>
+                
+                <p className="text-sm text-gray-500">
+                  🐝 We appreciate your business at Busy Bees!
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowPaymentSuccessModal(false)}
+                className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+              >
+                Continue Shopping
+              </button>
+              
+              <div className="mt-4 text-xs text-gray-400 text-center">
+                🔒 Your payment information is secure and encrypted
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-Renew Confirmation Modal */}
+      {showAutoRenewConfirm && confirmingAutoRenewFor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-3xl">🔄</span>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Enable Auto-Renew?</h2>
+              
+              <div className="mb-6">
+                {(() => {
+                  const purchase = (selectedCustomer || currentCustomer)?.purchases.find(p => p.id === confirmingAutoRenewFor);
+                  const passType = purchase?.type === 'weekly_pass' ? 'weekly' : 'monthly';
+                  const price = purchase?.price || 0;
+                  
+                  return (
+                    <>
+                      <p className="text-gray-600 mb-4">
+                        Your {passType} pass will automatically renew when it expires.
+                      </p>
+                      
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-800 font-medium">
+                          💰 ${price.toFixed(2)} will be charged automatically
+                        </p>
+                        <p className="text-sm text-yellow-600 mt-1">
+                          You can disable this anytime in your account
+                        </p>
+                      </div>
+                      
+                      <p className="text-sm text-gray-500">
+                        🐝 Never worry about your pass expiring again!
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAutoRenewConfirm(false);
+                    setConfirmingAutoRenewFor(null);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmAutoRenew}
+                  className="flex-1 px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
+                >
+                  ✅ Enable Auto-Renew
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Success Modal */}
