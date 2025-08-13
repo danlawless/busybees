@@ -327,23 +327,22 @@ export default function POSPage() {
         let seconds = 30;
         setCountdownSeconds(seconds);
         
-        // Start countdown immediately - first tick happens right away
-        const countdownTick = () => {
+        // Start countdown with immediate first tick
+        warningCountdown = setInterval(() => {
           seconds--;
           setCountdownSeconds(seconds);
           
           if (seconds <= 0) {
             if (warningCountdown) clearInterval(warningCountdown);
             handleAutoLogout();
-            return;
           }
-        };
+        }, 1000);
         
-        // Execute first tick immediately
-        countdownTick();
-        
-        // Then continue with regular interval
-        warningCountdown = setInterval(countdownTick, 1000);
+        // Execute first tick immediately to start countdown right away
+        setTimeout(() => {
+          seconds--;
+          setCountdownSeconds(seconds);
+        }, 0);
         
       }, 30000); // 30 seconds
     };
