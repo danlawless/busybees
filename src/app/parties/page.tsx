@@ -25,8 +25,10 @@ export default function PartiesPage() {
   const [bookings, setBookings] = useState<PartyBooking[]>([]);
 
   const handleBookingSelect = (date: string, timeSlot: TimeSlot) => {
+    console.log('handleBookingSelect called:', { date, timeSlot });
     setSelectedBooking({ date, timeSlot });
     setShowBookingForm(true);
+    console.log('Booking form should show now');
   };
 
   const handleBookingSubmit = (newBooking: Omit<PartyBooking, 'id' | 'createdAt'>) => {
@@ -76,6 +78,14 @@ export default function PartiesPage() {
 
       <BookingFlow />
       <PartyGallery />
+
+      {/* Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs z-50">
+          showBookingForm: {showBookingForm.toString()}<br/>
+          selectedBooking: {selectedBooking ? 'yes' : 'no'}
+        </div>
+      )}
 
       {/* Booking Form Modal */}
       {showBookingForm && selectedBooking && (

@@ -220,8 +220,12 @@ export function PartyCalendar({
   };
 
   const handleTimeSlotClick = (date: string, timeSlot: TimeSlot) => {
+    console.log('Time slot clicked:', { date, timeSlot, readOnly, onBookingSelect: !!onBookingSelect });
     if (!readOnly && timeSlot.available && onBookingSelect) {
+      console.log('Calling onBookingSelect');
       onBookingSelect(date, timeSlot);
+    } else {
+      console.log('Click blocked:', { readOnly, available: timeSlot.available, hasCallback: !!onBookingSelect });
     }
   };
 
