@@ -171,13 +171,14 @@ export default function POSPage() {
 
   // Resume session (dismiss warning and restart timer)
   const handleResumeSession = () => {
-    // Clear the warning modal first
+    // Clear the warning modal and reset counters
     setShowInactivityWarning(false);
     setCountdownSeconds(30);
     setInactivityCountdown(30);
     
     // Trigger a synthetic activity event after the warning is cleared
     // This will cause handleActivity to restart the timer since warning is now false
+    // The startInactivityTimer function will clear all existing timers including warningCountdown
     setTimeout(() => {
       const syntheticEvent = new MouseEvent('mousedown', { bubbles: true });
       document.dispatchEvent(syntheticEvent);
@@ -326,22 +327,16 @@ export default function POSPage() {
         let seconds = 30;
         setCountdownSeconds(seconds);
         
-        // Start countdown immediately - first tick happens right away
-        const countdownTick = () => {
+        // Use a proper interval that can be cleared
+        warningCountdown = setInterval(() => {
           seconds--;
           setCountdownSeconds(seconds);
           
           if (seconds <= 0) {
+            clearInterval(warningCountdown);
             handleAutoLogout();
-            return;
           }
-          
-          // Schedule next tick
-          setTimeout(countdownTick, 1000);
-        };
-        
-        // Start first tick immediately
-        setTimeout(countdownTick, 0);
+        }, 1000);
         
       }, 30000); // 30 seconds
     };
