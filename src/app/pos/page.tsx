@@ -327,8 +327,8 @@ export default function POSPage() {
         let seconds = 30;
         setCountdownSeconds(seconds);
         
-        // Start countdown with immediate first tick
-        warningCountdown = setInterval(() => {
+        // Create countdown function that can be called immediately and in interval
+        const countdownTick = () => {
           seconds--;
           setCountdownSeconds(seconds);
           
@@ -336,13 +336,13 @@ export default function POSPage() {
             if (warningCountdown) clearInterval(warningCountdown);
             handleAutoLogout();
           }
-        }, 1000);
+        };
         
-        // Execute first tick immediately to start countdown right away
-        setTimeout(() => {
-          seconds--;
-          setCountdownSeconds(seconds);
-        }, 0);
+        // Execute first tick immediately (30 -> 29)
+        countdownTick();
+        
+        // Then start interval for remaining ticks (29 -> 28 -> 27 -> ... -> 0)
+        warningCountdown = setInterval(countdownTick, 1000);
         
       }, 30000); // 30 seconds
     };
