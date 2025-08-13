@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   description: 'Modern, safe and engaging indoor play space for children ages 0-6. Creating a go-to destination for families to play, socialize and celebrate.',
   keywords: 'indoor playground, kids play center, birthday parties, toddler activities, family fun, safe play space',
   authors: [{ name: 'Busy Bees Indoor Play Center' }],
+  icons: {
+    icon: '/icon.png',
+    apple: '/apple-icon.png',
+  },
   openGraph: {
     title: 'Busy Bees Indoor Play Center',
     description: 'Safe, fun indoor play space for children ages 0-6',

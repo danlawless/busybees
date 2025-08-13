@@ -55,15 +55,19 @@ interface PhoneLoginProps {
   customers: Customer[];
   onLogin: (customer: Customer) => void;
   onNewCustomer: (customer: Customer) => void;
+  onAdminAccess?: () => void;
 }
 
-export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProps) {
+export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
 
   const formatPhoneNumber = (value: string) => {
     // Remove all non-numeric characters
@@ -155,15 +159,47 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer }: PhoneLoginProp
     setError('');
   };
 
+  const handleBeeLogoClick = () => {
+    setShowAdminModal(true);
+    setAdminPassword('');
+    setAdminError('');
+  };
+
+  const handleAdminPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminPassword === '1234') {
+      setShowAdminModal(false);
+      setAdminPassword('');
+      setAdminError('');
+      if (onAdminAccess) {
+        onAdminAccess();
+      }
+    } else {
+      setAdminError('Incorrect password. Please try again.');
+      setAdminPassword('');
+    }
+  };
+
+  const handleCloseAdminModal = () => {
+    setShowAdminModal(false);
+    setAdminPassword('');
+    setAdminError('');
+  };
+
   if (isNewCustomer) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-full max-w-md">
           <Card className="p-8">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <button 
+              type="button"
+              onClick={handleBeeLogoClick}
+              className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 hover:bg-yellow-500 transition-colors cursor-pointer"
+              title="Admin Access"
+            >
               <span className="text-3xl">🐝</span>
-            </div>
+            </button>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Busy Bees!</h2>
             <p className="text-gray-600">Let's create your account</p>
           </div>
