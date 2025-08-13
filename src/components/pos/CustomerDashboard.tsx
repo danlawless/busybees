@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from './CountdownTimer';
+import { PartySchedulingModal } from './PartySchedulingModal';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 
 interface Customer {
   id: string;
@@ -31,6 +33,12 @@ interface Purchase {
   status: 'active' | 'expired' | 'used';
   autoRenew?: boolean;
   nextRenewalDate?: string;
+  // Party scheduling fields
+  partyDate?: string; // Scheduled party date
+  partyStartTime?: string; // Scheduled party start time
+  partyEndTime?: string; // Scheduled party end time
+  partyGuests?: number; // Number of party guests
+  partyNotes?: string; // Special party notes/theme
 }
 
 interface Session {
@@ -112,6 +120,14 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState<{purchaseId: string, passName: string, price: number, type: string} | null>(null);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showPartyScheduling, setShowPartyScheduling] = useState(false);
+  const [schedulingParty, setSchedulingParty] = useState<Purchase | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState<{
+    title: string;
+    message: string;
+    details?: any;
+  }>({ title: '', message: '' });
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -371,7 +387,22 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     const purchase = customer.purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
 
-    // Check if it's a single-use pass (day pass or party package with 1 session)
+    // Handle party packages specially
+    if (purchase.type === 'party_package') {
+      if (!purchase.partyDate) {
+        // Party not scheduled yet, open scheduling modal
+        setSchedulingParty(purchase);
+        setShowPartyScheduling(true);
+        return;
+      } else {
+        // Party already scheduled, show confirmation
+        setConfirmingPurchase(purchase);
+        setShowConfirmDialog(true);
+        return;
+      }
+    }
+
+    // Check if it's a single-use pass (day pass)
     const isSingleUse = purchase.totalSessions === 1;
     
     if (isSingleUse) {
@@ -582,6 +613,63 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setConfirmingPurchase(null);
   };
 
+  const handlePartySchedule = (partyData: {
+    partyDate: string;
+    partyStartTime: string;
+    partyEndTime: string;
+    partyGuests: number;
+    partyNotes: string;
+  }) => {
+    if (!schedulingParty) return;
+
+    // Update the party package with scheduling information
+    const updatedPurchases = customer.purchases.map(p => 
+      p.id === schedulingParty.id 
+        ? { 
+            ...p, 
+            ...partyData,
+            // Update price if more guests
+            price: partyData.partyGuests > 15 
+              ? p.price + ((partyData.partyGuests - 15) * 12)
+              : p.price
+          }
+        : p
+    );
+
+    const updatedCustomer = {
+      ...customer,
+      purchases: updatedPurchases
+    };
+
+    onUpdateCustomer(updatedCustomer);
+    setShowPartyScheduling(false);
+    setSchedulingParty(null);
+
+    // Show success modal
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+
+    setSuccessDetails({
+      title: '🎉 Party Scheduled!',
+      message: 'Your party has been successfully scheduled! All the details have been saved and you\'re all set for the big day.',
+      details: {
+        date: partyData.partyDate,
+        time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
+        guests: partyData.partyGuests,
+        price: partyData.partyGuests > 15 
+          ? schedulingParty.price + ((partyData.partyGuests - 15) * 12)
+          : schedulingParty.price,
+        type: schedulingParty.name
+      }
+    });
+    setShowSuccessModal(true);
+  };
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -702,7 +790,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           onClick={() => handleUsePassClick(purchase.id)}
                           className="w-full"
                         >
-                          Check In
+                          {purchase.type === 'party_package' 
+                            ? (purchase.partyDate ? 'Check In Party' : 'Schedule Party')
+                            : 'Check In'
+                          }
                         </Button>
                       );
                     }
@@ -727,7 +818,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                             onClick={() => handleUsePassClick(purchase.id)}
                             className="w-full"
                           >
-                            Check In
+                            {purchase.type === 'party_package' 
+                              ? (purchase.partyDate ? 'Check In Party' : 'Schedule Party')
+                              : 'Check In'
+                            }
                           </Button>
                         );
                       }
@@ -1166,6 +1260,29 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           </Card>
         </div>
       )}
+
+      {/* Party Scheduling Modal */}
+      {showPartyScheduling && schedulingParty && (
+        <PartySchedulingModal
+          isOpen={showPartyScheduling}
+          onClose={() => {
+            setShowPartyScheduling(false);
+            setSchedulingParty(null);
+          }}
+          onSchedule={handlePartySchedule}
+          partyPackageName={schedulingParty.name}
+          customerName={customer.name}
+        />
+      )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={successDetails.title}
+        message={successDetails.message}
+        details={successDetails.details}
+      />
     </div>
   );
 }
