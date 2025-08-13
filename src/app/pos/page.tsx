@@ -587,53 +587,53 @@ export default function POSPage() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === 'login' && !isStaffMode && (
-          <PhoneLogin 
-            customers={customers}
-            onLogin={handleLogin}
-            onNewCustomer={(customer) => {
-              setCustomers([...customers, customer]);
-              handleLogin(customer);
-            }}
-          />
-        )}
-
-        {currentView === 'customer' && currentCustomer && (
-          <CustomerDashboard 
-            customer={currentCustomer}
-            onUpdateCustomer={(updatedCustomer) => {
-              setCurrentCustomer(updatedCustomer);
-              setCustomers(customers.map(c => 
-                c.id === updatedCustomer.id ? updatedCustomer : c
-              ));
-            }}
-          />
-        )}
-
-        {currentView === 'checkin' && (
-          <CheckIn 
-            customers={customers}
-            currentCustomer={currentCustomer}
-            isStaffMode={isStaffMode}
-            onUpdateCustomer={(updatedCustomer) => {
-              if (currentCustomer?.id === updatedCustomer.id) {
+      {currentView === 'login' && !isStaffMode ? (
+        <PhoneLogin 
+          customers={customers}
+          onLogin={handleLogin}
+          onNewCustomer={(customer) => {
+            setCustomers([...customers, customer]);
+            handleLogin(customer);
+          }}
+        />
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {currentView === 'customer' && currentCustomer && (
+            <CustomerDashboard 
+              customer={currentCustomer}
+              onUpdateCustomer={(updatedCustomer) => {
                 setCurrentCustomer(updatedCustomer);
-              }
-              setCustomers(customers.map(c => 
-                c.id === updatedCustomer.id ? updatedCustomer : c
-              ));
-            }}
-          />
-        )}
+                setCustomers(customers.map(c => 
+                  c.id === updatedCustomer.id ? updatedCustomer : c
+                ));
+              }}
+            />
+          )}
 
-        {currentView === 'admin' && isStaffMode && (
-          <AdminPanel 
-            customers={customers}
-            onUpdateCustomers={setCustomers}
-          />
-        )}
-      </div>
+          {currentView === 'checkin' && (
+            <CheckIn 
+              customers={customers}
+              currentCustomer={currentCustomer}
+              isStaffMode={isStaffMode}
+              onUpdateCustomer={(updatedCustomer) => {
+                if (currentCustomer?.id === updatedCustomer.id) {
+                  setCurrentCustomer(updatedCustomer);
+                }
+                setCustomers(customers.map(c => 
+                  c.id === updatedCustomer.id ? updatedCustomer : c
+                ));
+              }}
+            />
+          )}
+
+          {currentView === 'admin' && isStaffMode && (
+            <AdminPanel 
+              customers={customers}
+              onUpdateCustomers={setCustomers}
+            />
+          )}
+        </div>
+      )}
 
       {/* PIN Authentication Modal */}
       {showPinModal && (
