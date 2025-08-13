@@ -160,6 +160,11 @@ export default function POSPage() {
     setPinError('');
   };
 
+  const handleAdminAccessFromWelcome = () => {
+    setIsStaffMode(true);
+    setCurrentView('admin');
+  };
+
   // Handle auto-logout
   const handleAutoLogout = () => {
     setCurrentCustomer(null);
@@ -239,11 +244,6 @@ export default function POSPage() {
 
       // Show success modal
       setShowPaymentSuccessModal(true);
-
-      // Auto-close success modal after 5 seconds
-      setTimeout(() => {
-        setShowPaymentSuccessModal(false);
-      }, 5000);
 
     } catch (error) {
       setProcessingPayment(false);
@@ -421,7 +421,6 @@ export default function POSPage() {
             <button 
               onClick={handleStaffToggle}
               className="flex items-center space-x-4 hover:bg-gray-50 rounded-lg p-2 transition-colors group"
-              title={isStaffMode ? "Exit Staff Mode" : "Click to enable Staff Mode"}
             >
               <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
                 isStaffMode 
@@ -600,6 +599,7 @@ export default function POSPage() {
             setCustomers([...customers, customer]);
             handleLogin(customer);
           }}
+          onAdminAccess={handleAdminAccessFromWelcome}
         />
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -195,8 +195,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             <button 
               type="button"
               onClick={handleBeeLogoClick}
-              className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 hover:bg-yellow-500 transition-colors cursor-pointer"
-              title="Admin Access"
+              className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
             >
               <span className="text-3xl">🐝</span>
             </button>
@@ -283,9 +282,13 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       <div className="w-full max-w-md">
         <Card className="p-8">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+          <button 
+            type="button"
+            onClick={handleBeeLogoClick}
+            className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
             <span className="text-3xl">🐝</span>
-          </div>
+          </button>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
           <p className="text-gray-600">Enter your phone number to access your account</p>
         </div>
@@ -341,6 +344,62 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         </button>
         </Card>
       </div>
+
+      {/* Admin Password Modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🔒</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Admin Access</h2>
+              <p className="text-gray-600">Enter password to access admin dashboard</p>
+            </div>
+
+            <form onSubmit={handleAdminPasswordSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 tracking-widest"
+                  maxLength={20}
+                  autoFocus
+                />
+              </div>
+              
+              {adminError && (
+                <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
+                  {adminError}
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={handleCloseAdminModal}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!adminPassword}
+                  className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  Access Admin
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              Admin access only • Authorized personnel
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
