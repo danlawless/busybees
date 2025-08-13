@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PhoneLogin } from '@/components/pos/PhoneLogin';
 import { CustomerDashboard } from '@/components/pos/CustomerDashboard';
 import { CheckIn } from '@/components/pos/CheckIn';
-import { AdminPanel } from '@/components/pos/AdminPanel';
+import { AdminPanel } from '../../components/pos/AdminPanel';
 
 interface Customer {
   id: string;
@@ -296,15 +296,15 @@ export default function POSPage() {
       return;
     }
 
-    let activityTimer: NodeJS.Timeout;
-    let warningCountdown: NodeJS.Timeout;
-    let inactivityCountdownTimer: NodeJS.Timeout;
+    let activityTimer: NodeJS.Timeout | undefined;
+    let warningCountdown: NodeJS.Timeout | undefined;
+    let inactivityCountdownTimer: NodeJS.Timeout | undefined;
 
     const startInactivityTimer = () => {
       // Clear any existing timers
       if (activityTimer) clearTimeout(activityTimer);
       if (warningCountdown) clearTimeout(warningCountdown);
-      if (inactivityCountdownTimer) clearTimeout(inactivityCountdownTimer);
+      if (inactivityCountdownTimer) clearInterval(inactivityCountdownTimer);
 
       // Start inactivity countdown from 30 seconds
       let inactivitySeconds = 30;
@@ -349,7 +349,7 @@ export default function POSPage() {
         document.removeEventListener(event, handleActivity, true);
       });
       if (activityTimer) clearTimeout(activityTimer);
-      if (warningCountdown) clearInterval(warningCountdown);
+      if (warningCountdown) clearTimeout(warningCountdown);
       if (inactivityCountdownTimer) clearInterval(inactivityCountdownTimer);
     };
   }, [currentCustomer, isStaffMode, showInactivityWarning]);
@@ -583,26 +583,6 @@ export default function POSPage() {
           </div>
         </div>
       </div>
-
-      {/* Navigation - Hidden for customer mode, only show admin panel for staff */}
-      {isStaffMode && (
-        <div className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex space-x-8 py-3">
-              <button
-                onClick={() => setCurrentView('admin')}
-                className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  currentView === 'admin'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Admin Panel
-              </button>
-            </nav>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
