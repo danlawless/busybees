@@ -247,6 +247,48 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     });
   };
 
+  const isPartyCheckInAvailable = (purchase: Purchase) => {
+    if (purchase.type !== 'party_package' || !purchase.partyDate || !purchase.partyStartTime) {
+      return false;
+    }
+    
+    const now = new Date();
+    const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+    const timeDifference = partyDateTime.getTime() - now.getTime();
+    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    return timeDifference <= oneHour && timeDifference >= -2 * oneHour; // 1 hour before to 2 hours after
+  };
+
+  const getPartyCheckInStatus = (purchase: Purchase) => {
+    if (purchase.type !== 'party_package') return null;
+    
+    if (!purchase.partyDate) return 'needs_scheduling';
+    
+    const now = new Date();
+    const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+    const timeDifference = partyDateTime.getTime() - now.getTime();
+    const oneHour = 60 * 60 * 1000;
+    
+    if (timeDifference > oneHour) {
+      const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
+      const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
+      
+      if (hoursUntil >= 24) {
+        const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
+        return `too_early_days:${daysUntil}`;
+      } else if (hoursUntil > 1) {
+        return `too_early_hours:${hoursUntil}`;
+      } else {
+        return `too_early_minutes:${minutesUntil}`;
+      }
+    } else if (timeDifference >= -2 * oneHour) {
+      return 'available';
+    } else {
+      return 'expired';
+    }
+  };
+
   const formatCardBrand = (brand: string) => {
     return brand.charAt(0).toUpperCase() + brand.slice(1);
   };
@@ -395,7 +437,38 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         setShowPartyScheduling(true);
         return;
       } else {
-        // Party already scheduled, show confirmation
+        // Check if party is within 1-hour check-in window
+        const now = new Date();
+        const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
+        const timeDifference = partyDateTime.getTime() - now.getTime();
+        const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+        
+        if (timeDifference > oneHour) {
+          // Too early to check in
+          const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
+          const formatTime = (time: string) => {
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+            return `${displayHour}:${minutes} ${ampm}`;
+          };
+          
+          setSuccessDetails({
+            title: '⏰ Too Early to Check In',
+            message: `Your party is scheduled for ${formatTime(purchase.partyStartTime || '')} and check-in opens 1 hour before. Please return closer to your party time!`,
+            details: {
+              date: purchase.partyDate,
+              time: `${formatTime(purchase.partyStartTime || '')} - ${formatTime(purchase.partyEndTime || '')}`,
+              guests: purchase.partyGuests,
+              type: purchase.name
+            }
+          });
+          setShowSuccessModal(true);
+          return;
+        }
+        
+        // Within check-in window, show confirmation
         setConfirmingPurchase(purchase);
         setShowConfirmDialog(true);
         return;
@@ -785,17 +858,64 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     
                     // For single-use passes that haven't been used yet
                     if (purchase.totalSessions === 1 && !purchase.firstUseDate) {
-                      return (
-                        <Button
-                          onClick={() => handleUsePassClick(purchase.id)}
-                          className="w-full"
-                        >
-                          {purchase.type === 'party_package' 
-                            ? (purchase.partyDate ? 'Check In Party' : 'Schedule Party')
-                            : 'Check In'
+                      return (() => {
+                          if (purchase.type === 'party_package') {
+                            const partyStatus = getPartyCheckInStatus(purchase);
+                            
+                            if (partyStatus === 'needs_scheduling') {
+                              return (
+                                <Button
+                                  onClick={() => handleUsePassClick(purchase.id)}
+                                  className="w-full bg-purple-600 hover:bg-purple-700"
+                                >
+                                  🗓️ Schedule Party
+                                </Button>
+                              );
+                            } else if (partyStatus === 'available') {
+                              return (
+                                <Button
+                                  onClick={() => handleUsePassClick(purchase.id)}
+                                  className="w-full bg-green-600 hover:bg-green-700"
+                                >
+                                  🎉 Check In Party
+                                </Button>
+                              );
+                            } else if (partyStatus?.startsWith('too_early')) {
+                              const [type, value] = partyStatus.split(':');
+                              const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                              type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                              `${value} minute${value !== '1' ? 's' : ''}`;
+                              
+                              return (
+                                <Button
+                                  onClick={() => handleUsePassClick(purchase.id)}
+                                  className="w-full bg-orange-500 hover:bg-orange-600"
+                                  disabled={false}
+                                >
+                                  ⏰ Check-in in {timeText}
+                                </Button>
+                              );
+                            } else if (partyStatus === 'expired') {
+                              return (
+                                <Button
+                                  disabled
+                                  className="w-full bg-gray-400 cursor-not-allowed"
+                                >
+                                  ❌ Party Time Passed
+                                </Button>
+                              );
+                            }
                           }
-                        </Button>
-                      );
+                          
+                          return (
+                            <Button
+                              onClick={() => handleUsePassClick(purchase.id)}
+                              className="w-full"
+                            >
+                              Check In
+                            </Button>
+                          );
+                        })();
                     }
                     
                     // For multi-use passes or passes with active sessions
@@ -813,17 +933,64 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         );
                       } else {
                         // Show check in button if no active sessions
-                        return (
-                          <Button
-                            onClick={() => handleUsePassClick(purchase.id)}
-                            className="w-full"
-                          >
-                            {purchase.type === 'party_package' 
-                              ? (purchase.partyDate ? 'Check In Party' : 'Schedule Party')
-                              : 'Check In'
+                        return (() => {
+                            if (purchase.type === 'party_package') {
+                              const partyStatus = getPartyCheckInStatus(purchase);
+                              
+                              if (partyStatus === 'needs_scheduling') {
+                                return (
+                                  <Button
+                                    onClick={() => handleUsePassClick(purchase.id)}
+                                    className="w-full bg-purple-600 hover:bg-purple-700"
+                                  >
+                                    🗓️ Schedule Party
+                                  </Button>
+                                );
+                              } else if (partyStatus === 'available') {
+                                return (
+                                  <Button
+                                    onClick={() => handleUsePassClick(purchase.id)}
+                                    className="w-full bg-green-600 hover:bg-green-700"
+                                  >
+                                    🎉 Check In Party
+                                  </Button>
+                                );
+                              } else if (partyStatus?.startsWith('too_early')) {
+                                const [type, value] = partyStatus.split(':');
+                                const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                                type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                                `${value} minute${value !== '1' ? 's' : ''}`;
+                                
+                                return (
+                                  <Button
+                                    onClick={() => handleUsePassClick(purchase.id)}
+                                    className="w-full bg-orange-500 hover:bg-orange-600"
+                                    disabled={false}
+                                  >
+                                    ⏰ Check-in in {timeText}
+                                  </Button>
+                                );
+                              } else if (partyStatus === 'expired') {
+                                return (
+                                  <Button
+                                    disabled
+                                    className="w-full bg-gray-400 cursor-not-allowed"
+                                  >
+                                    ❌ Party Time Passed
+                                  </Button>
+                                );
+                              }
                             }
-                          </Button>
-                        );
+                            
+                            return (
+                              <Button
+                                onClick={() => handleUsePassClick(purchase.id)}
+                                className="w-full"
+                              >
+                                Check In
+                              </Button>
+                            );
+                          })();
                       }
                     }
                     
@@ -876,21 +1043,66 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           />
                         </button>
                       </div>
-                      {purchase.autoRenew && (
-                        <div className="mt-2 text-xs text-gray-600">
-                          {purchase.firstUseDate ? (
-                            <>
-                              Auto-renew enabled: ${purchase.price.toFixed(2)} scheduled for {
-                                purchase.actualExpiryDate 
-                                  ? formatDate(purchase.actualExpiryDate)
-                                  : 'TBD'
-                              }
-                            </>
-                          ) : (
-                            <>Auto-renew enabled: Will activate on first use, then renew for ${purchase.price.toFixed(2)}</>
+                                          {purchase.autoRenew && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        {purchase.firstUseDate ? (
+                          <>
+                            Auto-renew enabled: ${purchase.price.toFixed(2)} scheduled for {
+                              purchase.actualExpiryDate
+                                ? formatDate(purchase.actualExpiryDate)
+                                : 'TBD'
+                            }
+                          </>
+                        ) : (
+                          <>Auto-renew enabled: Will activate on first use, then renew for ${purchase.price.toFixed(2)}</>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Party Scheduling Information */}
+                    {purchase.type === 'party_package' && purchase.partyDate && (
+                      <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-purple-600">🎉</span>
+                          <span className="font-medium text-purple-800">Party Scheduled</span>
+                        </div>
+                        <div className="text-sm text-purple-700 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-500">📅</span>
+                            <span>{formatDate(purchase.partyDate)}</span>
+                          </div>
+                          {purchase.partyStartTime && purchase.partyEndTime && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-500">⏰</span>
+                              <span>
+                                {(() => {
+                                  const formatTime = (time: string) => {
+                                    const [hours, minutes] = time.split(':');
+                                    const hour = parseInt(hours);
+                                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                                    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                    return `${displayHour}:${minutes} ${ampm}`;
+                                  };
+                                  return `${formatTime(purchase.partyStartTime)} - ${formatTime(purchase.partyEndTime)}`;
+                                })()}
+                              </span>
+                            </div>
+                          )}
+                          {purchase.partyGuests && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-500">👥</span>
+                              <span>{purchase.partyGuests} guests</span>
+                            </div>
+                          )}
+                          {purchase.partyNotes && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-500">🎨</span>
+                              <span>{purchase.partyNotes}</span>
+                            </div>
                           )}
                         </div>
-                      )}
+                      </div>
+                    )}
                     </div>
                   )}
                 </div>
