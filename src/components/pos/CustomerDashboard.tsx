@@ -65,7 +65,7 @@ interface CustomerDashboardProps {
   onUpdateCustomer: (customer: Customer) => void;
 }
 
-const AVAILABLE_PRODUCTS = [
+const AVAILABLE_PASS_PRODUCTS = [
   {
     id: 'day_pass',
     name: 'Single Day Pass',
@@ -76,7 +76,7 @@ const AVAILABLE_PRODUCTS = [
   },
   {
     id: 'weekly_pass',
-    name: 'Weekly Pass',
+    name: 'Weekly Unlimited Pass',
     price: 49.99,
     description: '7 days of unlimited play',
     sessions: 999,
@@ -89,7 +89,10 @@ const AVAILABLE_PRODUCTS = [
     description: '30 days of unlimited play',
     sessions: 999,
     validity: '30 days'
-  },
+  }
+];
+
+const AVAILABLE_PARTY_PRODUCTS = [
   {
     id: 'party_basic',
     name: 'Semi-Private Party Package',
@@ -108,7 +111,10 @@ const AVAILABLE_PRODUCTS = [
   }
 ];
 
+const AVAILABLE_PRODUCTS = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS];
+
 export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'passes' | 'parties' | 'payments'>('passes');
   const [showPurchase, setShowPurchase] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
 
@@ -120,6 +126,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState<{purchaseId: string, passName: string, price: number, type: string} | null>(null);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
+  const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
   const [schedulingParty, setSchedulingParty] = useState<Purchase | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -129,14 +137,17 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     details?: any;
   }>({ title: '', message: '' });
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (confirmTimeout) {
         clearTimeout(confirmTimeout);
       }
+      if (checkInTimeout) {
+        clearTimeout(checkInTimeout);
+      }
     };
-  }, [confirmTimeout]);
+  }, [confirmTimeout, checkInTimeout]);
 
   // Mock payment form state
   const [cardNumber, setCardNumber] = useState('');
@@ -310,6 +321,35 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setConfirmTimeout(timeout);
   };
 
+  const handleCheckInClick = (purchaseId: string) => {
+    // Clear any existing timeout
+    if (checkInTimeout) {
+      clearTimeout(checkInTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingCheckIn(purchaseId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingCheckIn(null);
+    }, 5000);
+    
+    setCheckInTimeout(timeout);
+  };
+
+  const handleConfirmCheckIn = (purchaseId: string) => {
+    // Clear confirmation state and timeout
+    setConfirmingCheckIn(null);
+    if (checkInTimeout) {
+      clearTimeout(checkInTimeout);
+      setCheckInTimeout(null);
+    }
+
+    // Proceed with the actual check-in
+    handleCheckIn(purchaseId);
+  };
+
   const handleConfirmPurchase = async (productId: string) => {
     // Clear confirmation state and timeout
     setConfirmingProduct(null);
@@ -468,9 +508,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           return;
         }
         
-        // Within check-in window, show confirmation
-        setConfirmingPurchase(purchase);
-        setShowConfirmDialog(true);
+        // Within check-in window, use the 5-second confirmation system
+        if (confirmingCheckIn === purchaseId) {
+          handleConfirmCheckIn(purchaseId);
+        } else {
+          handleCheckInClick(purchaseId);
+        }
         return;
       }
     }
@@ -482,8 +525,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       setConfirmingPurchase(purchase);
       setShowConfirmDialog(true);
     } else {
-      // Multi-use pass, check in immediately
-      handleCheckIn(purchaseId);
+      // Multi-use pass, use the confirmation system
+      if (confirmingCheckIn === purchaseId) {
+        handleConfirmCheckIn(purchaseId);
+      } else {
+        handleCheckInClick(purchaseId);
+      }
     }
   };
 
@@ -743,6 +790,14 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setShowSuccessModal(true);
   };
 
+  // Filter purchases by type
+  const passPurchases = customer.purchases.filter(p => p.type !== 'party_package');
+  const partyPurchases = customer.purchases.filter(p => p.type === 'party_package');
+  const activePassPurchases = passPurchases.filter(p => p.status === 'active');
+  const pastPassPurchases = passPurchases.filter(p => p.status !== 'active');
+  const activePartyPurchases = partyPurchases.filter(p => p.status === 'active');
+  const pastPartyPurchases = partyPurchases.filter(p => p.status !== 'active');
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -771,12 +826,60 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         </Card>
       )}
 
-      {/* Active Passes */}
-      {activePurchases.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Your Active Passes</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activePurchases.map((purchase) => (
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 bg-gray-50">
+        <nav className="flex space-x-2 p-2">
+          <button
+            onClick={() => setActiveTab('passes')}
+            className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              activeTab === 'passes'
+                ? 'bg-yellow-500 text-white shadow-lg transform scale-105 border-2 border-yellow-600'
+                : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-2xl">🎫</span>
+              <span>Passes ({activePassPurchases.length})</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('parties')}
+            className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              activeTab === 'parties'
+                ? 'bg-purple-500 text-white shadow-lg transform scale-105 border-2 border-purple-600'
+                : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-2xl">🎉</span>
+              <span>Parties ({activePartyPurchases.length})</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              activeTab === 'payments'
+                ? 'bg-green-500 text-white shadow-lg transform scale-105 border-2 border-green-600'
+                : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-2xl">💳</span>
+              <span>Payments ({customer.savedCards.length})</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Passes Tab */}
+      {activeTab === 'passes' && (
+        <div className="space-y-8">
+          {/* Active Passes */}
+          {activePassPurchases.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Your Active Passes</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activePassPurchases.map((purchase) => (
               <Card key={purchase.id} className="p-6 border-l-4 border-l-green-400">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -884,15 +987,19 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                             }
                           }
                           
-                          return (
-                            <Button
-                              onClick={() => handleUsePassClick(purchase.id)}
-                              className="w-full"
-                            >
-                              Check In
-                            </Button>
-                          );
-                        })();
+                            return (
+                              <Button
+                                onClick={() => handleUsePassClick(purchase.id)}
+                                className={`w-full transition-colors ${
+                                  confirmingCheckIn === purchase.id
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                }`}
+                              >
+                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
+                              </Button>
+                            );
+                          })();
                     }
                     
                     // For multi-use passes or passes with active sessions
@@ -927,9 +1034,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                                 return (
                                   <Button
                                     onClick={() => handleUsePassClick(purchase.id)}
-                                    className="w-full bg-green-600 hover:bg-green-700"
+                                    className={`w-full transition-colors ${
+                                      confirmingCheckIn === purchase.id
+                                        ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                    }`}
                                   >
-                                    🎉 Check In Party
+                                    {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : '🎉 Check In Party'}
                                   </Button>
                                 );
                               } else if (partyStatus?.startsWith('too_early')) {
@@ -962,9 +1073,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                             return (
                               <Button
                                 onClick={() => handleUsePassClick(purchase.id)}
-                                className="w-full"
+                                className={`w-full transition-colors ${
+                                  confirmingCheckIn === purchase.id
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                }`}
                               >
-                                Check In
+                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
                               </Button>
                             );
                           })();
@@ -1100,82 +1215,375 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         </div>
       )}
 
-      {/* Purchase New Passes */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Buy More Passes</h3>
-          <Button onClick={() => setShowPurchase(!showPurchase)}>
-            {showPurchase ? 'Hide Products' : 'View Products'}
-          </Button>
-        </div>
+          {/* Purchase New Passes - Always Visible */}
+          <div>
+            <h3 className="text-xl font-semibold mb-4">🛒 Purchase New Passes</h3>
+            
+            {/* No Payment Methods Warning */}
+            {customer.savedCards.length === 0 && (
+              <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-white">💳</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
+                    <p className="text-yellow-600 text-sm">
+                      You'll need to add a payment method in the Payments tab before you can purchase passes.
+                      <br />
+                      <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
 
-        {/* No Payment Methods Warning */}
-        {showPurchase && customer.savedCards.length === 0 && (
-          <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
-                <span className="text-white">💳</span>
+            <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
+              <div className="grid gap-4 text-left">
+                {AVAILABLE_PASS_PRODUCTS.map((product) => (
+                  <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-lg">
+                        {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
+                      </span>
+                      <p className="text-sm text-gray-600">{product.description}</p>
+                      <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (customer.savedCards.length === 0) {
+                          setActiveTab('payments');
+                          return;
+                        }
+                        if (confirmingProduct === product.id) {
+                          handleConfirmPurchase(product.id);
+                        } else {
+                          handlePurchase(product.id);
+                        }
+                      }}
+                      size="lg"
+                      disabled={processingProduct === product.id}
+                      className={`px-6 py-3 text-white transition-colors ${
+                        confirmingProduct === product.id
+                          ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                          : processingProduct === product.id
+                          ? 'bg-blue-600'
+                          : customer.savedCards.length === 0
+                          ? 'bg-yellow-500 hover:bg-yellow-600'
+                          : 'bg-green-600 hover:bg-green-700'
+                      }`}
+                    >
+                      {processingProduct === product.id 
+                        ? 'Processing...' 
+                        : confirmingProduct === product.id 
+                        ? '✓ Confirm Purchase' 
+                        : customer.savedCards.length === 0
+                        ? '💳 Add Payment First'
+                        : 'Buy Now'
+                      }
+                    </Button>
+                  </div>
+                ))}
               </div>
-              <div>
-                <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
-                <p className="text-yellow-600 text-sm">
-                  You'll need to add a payment method below before you can purchase passes.
-                  <br />
-                  <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
-                </p>
+            </Card>
+          </div>
+
+          {/* Pass Purchase History */}
+          {pastPassPurchases.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Pass Purchase History</h3>
+              <Card className="divide-y">
+                {pastPassPurchases.map((purchase) => (
+                  <div key={purchase.id} className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{purchase.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          Purchased {formatDate(purchase.purchaseDate)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">${purchase.price}</p>
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          purchase.status === 'used' 
+                            ? 'bg-gray-100 text-gray-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {purchase.status === 'used' ? 'Used' : 'Expired'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Parties Tab */}
+      {activeTab === 'parties' && (
+        <div className="space-y-8">
+          {/* Active Parties */}
+          {activePartyPurchases.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Your Active Parties</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activePartyPurchases.map((purchase) => (
+                  <Card key={purchase.id} className="p-6 border-l-4 border-l-purple-400">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-lg">{purchase.name}</h4>
+                        <p className="text-gray-600">Party Package</p>
+                      </div>
+                      <div className="flex flex-col items-end space-y-2">
+                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-sm font-medium">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Dynamic Button: Schedule Party or Check In Party */}
+                      {(() => {
+                        if (purchase.type === 'party_package') {
+                          const partyStatus = getPartyCheckInStatus(purchase);
+                          
+                          if (partyStatus === 'needs_scheduling') {
+                            return (
+                              <Button
+                                onClick={() => handleUsePassClick(purchase.id)}
+                                className="w-full bg-purple-600 hover:bg-purple-700"
+                              >
+                                🗓️ Schedule Party
+                              </Button>
+                            );
+                          } else if (partyStatus === 'available') {
+                            return (
+                              <Button
+                                onClick={() => handleUsePassClick(purchase.id)}
+                                className={`w-full transition-colors ${
+                                  confirmingCheckIn === purchase.id
+                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                    : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                              >
+                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : '🎉 Check In Party'}
+                              </Button>
+                            );
+                          } else if (partyStatus?.startsWith('too_early')) {
+                            const [type, value] = partyStatus.split(':');
+                            const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                            type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                            `${value} minute${value !== '1' ? 's' : ''}`;
+                            
+                            return (
+                              <Button
+                                onClick={() => handleUsePassClick(purchase.id)}
+                                className="w-full bg-orange-500 hover:bg-orange-600"
+                                disabled={false}
+                              >
+                                ⏰ Check-in in {timeText}
+                              </Button>
+                            );
+                          } else if (partyStatus === 'expired') {
+                            return (
+                              <Button
+                                disabled
+                                className="w-full bg-gray-400 cursor-not-allowed"
+                              >
+                                ❌ Party Time Passed
+                              </Button>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
+
+                      {/* Party Scheduling Information */}
+                      {purchase.type === 'party_package' && purchase.partyDate && (
+                        <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-600">🎉</span>
+                              <span className="font-medium text-purple-800">Party Scheduled</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSchedulingParty(purchase);
+                                setShowPartyScheduling(true);
+                              }}
+                              className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded-md transition-colors"
+                            >
+                              📅 Reschedule
+                            </button>
+                          </div>
+                          <div className="text-sm text-purple-700 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-500">📅</span>
+                              <span>{formatDate(purchase.partyDate)}</span>
+                            </div>
+                            {purchase.partyStartTime && purchase.partyEndTime && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-purple-500">⏰</span>
+                                <span>
+                                  {(() => {
+                                    const formatTime = (time: string) => {
+                                      const [hours, minutes] = time.split(':');
+                                      const hour = parseInt(hours);
+                                      const ampm = hour >= 12 ? 'PM' : 'AM';
+                                      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                      return `${displayHour}:${minutes} ${ampm}`;
+                                    };
+                                    return `${formatTime(purchase.partyStartTime)} - ${formatTime(purchase.partyEndTime)}`;
+                                  })()}
+                                </span>
+                              </div>
+                            )}
+                            {purchase.partyGuests && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-purple-500">👥</span>
+                                <span>{purchase.partyGuests} guests</span>
+                              </div>
+                            )}
+                            {purchase.partyNotes && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-purple-500">🎨</span>
+                                <span>{purchase.partyNotes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
               </div>
             </div>
-          </Card>
-        )}
+          )}
 
-        {showPurchase && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {AVAILABLE_PRODUCTS.map((product) => (
-              <Card key={product.id} className="p-6">
-                <div className="mb-4">
-                  <h4 className="font-semibold text-lg">{product.name}</h4>
-                  <p className="text-gray-600 text-sm mb-2">{product.description}</p>
-                  <p className="text-2xl font-bold text-green-600">${product.price}</p>
-                  <p className="text-xs text-gray-500">Valid for {product.validity}</p>
+          {/* Purchase New Party Packages - Always Visible */}
+          <div>
+            <h3 className="text-xl font-semibold mb-4">🛒 Purchase Party Packages</h3>
+            
+            {/* No Payment Methods Warning */}
+            {customer.savedCards.length === 0 && (
+              <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-white">💳</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
+                    <p className="text-yellow-600 text-sm">
+                      You'll need to add a payment method in the Payments tab before you can purchase party packages.
+                      <br />
+                      <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
+                    </p>
+                  </div>
                 </div>
-                
-                <Button
-                  onClick={() => {
-                    if (customer.savedCards.length === 0) return;
-                    if (confirmingProduct === product.id) {
-                      handleConfirmPurchase(product.id);
-                    } else {
-                      handlePurchase(product.id);
-                    }
-                  }}
-                  className={`w-full transition-colors ${
-                    confirmingProduct === product.id
-                      ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                      : processingProduct === product.id
-                      ? 'bg-blue-600'
-                      : 'bg-primary hover:bg-primary/90'
-                  }`}
-                  disabled={isProcessing || customer.savedCards.length === 0}
-                >
-                  {processingProduct === product.id ? 'Processing...' : 
-                   isProcessing ? 'Please wait...' :
-                   customer.savedCards.length === 0 ? 'Add Payment Method First' :
-                   confirmingProduct === product.id ? '✓ Confirm Purchase' : 'Buy Now'}
-                </Button>
               </Card>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
 
-      {/* Payment Methods */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Payment Methods</h3>
-          <Button onClick={() => setShowAddCard(!showAddCard)}>
-            Add New Card
-          </Button>
+            <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
+              <div className="grid gap-4 text-left">
+                {AVAILABLE_PARTY_PRODUCTS.map((product) => (
+                  <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-lg">
+                        🎉 {product.name}
+                      </span>
+                      <p className="text-sm text-gray-600">{product.description}</p>
+                      <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (customer.savedCards.length === 0) {
+                          setActiveTab('payments');
+                          return;
+                        }
+                        if (confirmingProduct === product.id) {
+                          handleConfirmPurchase(product.id);
+                        } else {
+                          handlePurchase(product.id);
+                        }
+                      }}
+                      size="lg"
+                      disabled={processingProduct === product.id}
+                      className={`px-6 py-3 text-white transition-colors ${
+                        confirmingProduct === product.id
+                          ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
+                          : processingProduct === product.id
+                          ? 'bg-purple-500'
+                          : customer.savedCards.length === 0
+                          ? 'bg-yellow-500 hover:bg-yellow-600'
+                          : 'bg-purple-600 hover:bg-purple-700'
+                      }`}
+                    >
+                      {processingProduct === product.id 
+                        ? 'Processing...' 
+                        : confirmingProduct === product.id 
+                        ? '✓ Confirm Purchase' 
+                        : customer.savedCards.length === 0
+                        ? '💳 Add Payment First'
+                        : 'Buy Now'
+                      }
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Party Purchase History */}
+          {pastPartyPurchases.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Party Purchase History</h3>
+              <Card className="divide-y">
+                {pastPartyPurchases.map((purchase) => (
+                  <div key={purchase.id} className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{purchase.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          Purchased {formatDate(purchase.purchaseDate)}
+                        </p>
+                        {purchase.partyDate && (
+                          <p className="text-sm text-purple-600">
+                            Party Date: {formatDate(purchase.partyDate)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">${purchase.price}</p>
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          purchase.status === 'used' 
+                            ? 'bg-gray-100 text-gray-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {purchase.status === 'used' ? 'Used' : 'Expired'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Payments Tab */}
+      {activeTab === 'payments' && (
+        <div className="space-y-8">
+          {/* Payment Methods */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Payment Methods</h3>
+              <Button onClick={() => setShowAddCard(!showAddCard)}>
+                Add New Card
+              </Button>
+            </div>
 
         {customer.savedCards.length > 0 ? (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1326,38 +1734,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 {isProcessing ? 'Adding Card...' : 'Add Card'}
               </Button>
             </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Purchase History */}
-      {pastPurchases.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Purchase History</h3>
-          <Card className="divide-y">
-            {pastPurchases.map((purchase) => (
-              <div key={purchase.id} className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{purchase.name}</h4>
-                    <p className="text-sm text-gray-600">
-                      Purchased {formatDate(purchase.purchaseDate)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">${purchase.price}</p>
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                      purchase.status === 'used' 
-                        ? 'bg-gray-100 text-gray-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {purchase.status === 'used' ? 'Used' : 'Expired'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </Card>
+            </Card>
+          )}
+          </div>
         </div>
       )}
 

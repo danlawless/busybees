@@ -78,6 +78,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
+  const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
@@ -90,14 +92,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [activeTab, setActiveTab] = useState<'passes' | 'parties'>('passes');
   const [isRescheduling, setIsRescheduling] = useState(false);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (confirmTimeout) {
         clearTimeout(confirmTimeout);
       }
+      if (checkInTimeout) {
+        clearTimeout(checkInTimeout);
+      }
     };
-  }, [confirmTimeout]);
+  }, [confirmTimeout, checkInTimeout]);
 
   // Available products for quick purchase (passes only)
   const AVAILABLE_PASS_PRODUCTS = [
@@ -111,7 +116,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     },
     {
       id: 'weekly_pass',
-      name: 'Weekly Pass',
+      name: 'Weekly Unlimited Pass',
       price: 49.99,
       description: '7 days of unlimited play',
       sessions: 999,
@@ -431,6 +436,38 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     }, 5000);
     
     setConfirmTimeout(timeout);
+  };
+
+  const handleCheckInClick = (purchaseId: string) => {
+    // Clear any existing timeout
+    if (checkInTimeout) {
+      clearTimeout(checkInTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingCheckIn(purchaseId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingCheckIn(null);
+    }, 5000);
+    
+    setCheckInTimeout(timeout);
+  };
+
+  const handleConfirmCheckIn = (purchaseId: string) => {
+    // Clear confirmation state and timeout
+    setConfirmingCheckIn(null);
+    if (checkInTimeout) {
+      clearTimeout(checkInTimeout);
+      setCheckInTimeout(null);
+    }
+
+    // Proceed with the actual check-in
+    const customer = selectedCustomer || currentCustomer;
+    if (customer) {
+      handleCheckIn(customer, purchaseId);
+    }
   };
 
   const handleConfirmPurchase = async (productId: string) => {
@@ -756,11 +793,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   return (
                     <div>
                       <h3 className="text-2xl font-bold mb-6 text-green-700">✅ Currently Checked In</h3>
-                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
                         {checkedInPasses.map((purchase) => {
                           const activeSessions = (displayCustomer.activeSessions || []).filter(session => session.purchaseId === purchase.id);
                           return (
-                            <Card key={purchase.id} className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors">
+                            <Card key={purchase.id} className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]">
                               <div className="flex flex-col items-center text-center space-y-4">
                                 <div className="flex-1">
                                   <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
@@ -818,9 +855,9 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   <div>
                     <h3 className="text-2xl font-bold mb-6">🎫 Available Passes</h3>
                     {availablePasses.length > 0 ? (
-                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
                         {availablePasses.map((purchase) => (
-                          <Card key={purchase.id} className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
+                          <Card key={purchase.id} className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer min-w-[300px]">
                             <div className="flex flex-col items-center text-center space-y-4">
                               <div className="flex-1">
                                 <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
@@ -890,11 +927,21 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                   } else if (partyStatus === 'available') {
                                     return (
                                       <Button
-                                        onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                        onClick={() => {
+                                          if (confirmingCheckIn === purchase.id) {
+                                            handleConfirmCheckIn(purchase.id);
+                                          } else {
+                                            handleCheckInClick(purchase.id);
+                                          }
+                                        }}
                                         size="lg"
-                                        className="text-xl px-10 py-5 min-w-[200px] bg-green-600 hover:bg-green-700 font-bold"
+                                        className={`text-xl px-10 py-5 min-w-[200px] font-bold transition-colors ${
+                                          confirmingCheckIn === purchase.id
+                                            ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                            : 'bg-green-600 hover:bg-green-700'
+                                        }`}
                                       >
-                                        🎉 Check In Party
+                                        {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : '🎉 Check In Party'}
                                       </Button>
                                     );
                                   } else if (partyStatus?.startsWith('too_early')) {
@@ -928,11 +975,21 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                 
                                 return (
                                   <Button
-                                    onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                    onClick={() => {
+                                      if (confirmingCheckIn === purchase.id) {
+                                        handleConfirmCheckIn(purchase.id);
+                                      } else {
+                                        handleCheckInClick(purchase.id);
+                                      }
+                                    }}
                                     size="lg"
-                                    className="text-xl px-10 py-5 min-w-[200px] bg-blue-600 hover:bg-blue-700 font-bold"
+                                    className={`text-xl px-10 py-5 min-w-[200px] font-bold transition-colors ${
+                                      confirmingCheckIn === purchase.id
+                                        ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    }`}
                                   >
-                                    Check In
+                                    {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
                                   </Button>
                                 );
                               })()}
@@ -1016,9 +1073,9 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   <div>
                     <h3 className="text-2xl font-bold mb-6">🎉 Your Party Packages</h3>
                     {partyPackages.length > 0 ? (
-                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
                         {partyPackages.map((purchase) => (
-                          <Card key={purchase.id} className="p-8 border-l-8 border-l-purple-400 hover:bg-purple-50 transition-colors cursor-pointer">
+                          <Card key={purchase.id} className="p-8 border-l-8 border-l-purple-400 hover:bg-purple-50 transition-colors cursor-pointer min-w-[300px]">
                             <div className="flex flex-col items-center text-center space-y-4">
                               <div className="flex-1">
                                 <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
