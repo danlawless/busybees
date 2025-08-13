@@ -280,7 +280,15 @@ export function PartyGallery() {
                 <button className="bg-white text-purple-600 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
                   📞 Call (555) 123-BEES
                 </button>
-                <button className="bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                <button 
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300"
+                  onClick={() => {
+                    document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }}
+                >
                   📅 Book Online Now
                 </button>
               </div>

@@ -255,6 +255,12 @@ export function BookingFlow() {
                 <Button 
                   size="lg" 
                   className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  onClick={() => {
+                    document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }}
                 >
                   <Calendar className="w-5 h-5 mr-2" />
                   Start Booking Your Perfect Party

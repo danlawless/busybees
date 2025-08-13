@@ -57,7 +57,7 @@ export default function PartiesPage() {
       <PartyPackages />
       
       {/* Party Calendar Section */}
-      <section className="py-16 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+      <section id="party-calendar-section" className="py-16 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -81,9 +81,34 @@ export default function PartiesPage() {
 
       {/* Debug Info */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs z-50">
-          showBookingForm: {showBookingForm.toString()}<br/>
-          selectedBooking: {selectedBooking ? 'yes' : 'no'}
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 text-sm border-4 border-yellow-400" style={{ zIndex: 10000 }}>
+          <div>showBookingForm: <strong>{showBookingForm.toString()}</strong></div>
+          <div>selectedBooking: <strong>{selectedBooking ? 'yes' : 'no'}</strong></div>
+          {selectedBooking && (
+            <div>
+              <div>Date: {selectedBooking.date}</div>
+              <div>Time: {selectedBooking.timeSlot.startTime}-{selectedBooking.timeSlot.endTime}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fallback test button */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4" style={{ zIndex: 10000 }}>
+          <button
+            onClick={() => {
+              console.log('Test button clicked');
+              setSelectedBooking({
+                date: '2024-12-25',
+                timeSlot: { startTime: '13:00', endTime: '15:00', duration: 2, available: true }
+              });
+              setShowBookingForm(true);
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded font-bold"
+          >
+            TEST BOOKING FORM
+          </button>
         </div>
       )}
 
