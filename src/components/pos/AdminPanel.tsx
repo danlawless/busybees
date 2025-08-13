@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
@@ -62,6 +62,17 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
+  const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
+  const [refundTimeout, setRefundTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refundTimeout) {
+        clearTimeout(refundTimeout);
+      }
+    };
+  }, [refundTimeout]);
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/[^\d]/g, '');
@@ -123,7 +134,32 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
     onUpdateCustomers(updatedCustomers);
   };
 
-  const handleRefundPurchase = (customerId: string, purchaseId: string) => {
+  const handleRefundClick = (purchaseId: string) => {
+    // Clear any existing timeout
+    if (refundTimeout) {
+      clearTimeout(refundTimeout);
+    }
+
+    // Set confirmation state
+    setConfirmingRefund(purchaseId);
+    
+    // Set timeout to reset confirmation after 5 seconds
+    const timeout = setTimeout(() => {
+      setConfirmingRefund(null);
+    }, 5000);
+    
+    setRefundTimeout(timeout);
+  };
+
+  const handleConfirmRefund = (customerId: string, purchaseId: string) => {
+    // Clear confirmation state and timeout
+    setConfirmingRefund(null);
+    if (refundTimeout) {
+      clearTimeout(refundTimeout);
+      setRefundTimeout(null);
+    }
+
+    // Process the refund
     const updatedCustomers = customers.map(customer => {
       if (customer.id === customerId) {
         return {
@@ -242,12 +278,22 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
                   <div className="text-right">
                     <p className="font-semibold">{formatCurrency(purchase.price)}</p>
                     <Button
-                      onClick={() => customer && handleRefundPurchase(customer.id, purchase.id)}
+                      onClick={() => {
+                        if (confirmingRefund === purchase.id && customer) {
+                          handleConfirmRefund(customer.id, purchase.id);
+                        } else {
+                          handleRefundClick(purchase.id);
+                        }
+                      }}
                       size="sm"
                       variant="outline"
-                      className="mt-1"
+                      className={`mt-1 transition-colors ${
+                        confirmingRefund === purchase.id
+                          ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200 animate-pulse'
+                          : 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                      }`}
                     >
-                      Refund
+                      {confirmingRefund === purchase.id ? '✓ Confirm Refund' : 'Refund'}
                     </Button>
                   </div>
                 </div>
