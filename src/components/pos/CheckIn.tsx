@@ -941,81 +941,64 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         ))}
                       </div>
                     ) : (
-                      <Card className="p-8 text-center border-l-8 border-l-gray-300 bg-gray-50">
-                        <h4 className="text-xl font-bold mb-4">No More Available Passes</h4>
-                        <p className="text-lg text-gray-600 mb-6">
-                          Purchase more passes to continue enjoying Busy Bees!
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-3xl">🎫</span>
+                        </div>
+                        <h4 className="text-xl font-bold mb-2">No Available Passes</h4>
+                        <p className="text-gray-600 mb-4">
+                          Purchase passes below to get started!
                         </p>
-                        
-                        <div className="space-y-3">
-                          <div className="grid gap-4 text-left">
-                            {AVAILABLE_PASS_PRODUCTS.map((product) => (
-                              <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                                <div className="flex-1">
-                                  <span className="font-medium text-gray-900 text-lg">
-                                    {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
-                                  </span>
-                                  <p className="text-sm text-gray-600">{product.description}</p>
-                                  <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
-                                </div>
-                                <Button
-                                  onClick={() => {
-                                    if (confirmingProduct === product.id) {
-                                      handleConfirmPurchase(product.id);
-                                    } else {
-                                      handleQuickPurchase(product.id);
-                                    }
-                                  }}
-                                  size="lg"
-                                  disabled={purchasingProduct === product.id}
-                                  className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                    confirmingProduct === product.id
-                                      ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                      : purchasingProduct === product.id
-                                      ? 'bg-blue-600'
-                                      : 'bg-green-600 hover:bg-green-700'
-                                  }`}
-                                >
-                                  {purchasingProduct === product.id 
-                                    ? 'Processing...' 
-                                    : confirmingProduct === product.id 
-                                    ? '✓ Confirm Purchase' 
-                                    : 'Buy Now'
-                                  }
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="mt-6">
-                          <p className="text-base text-gray-600">
-                            Visit <strong>My Account</strong> to purchase new passes
-                          </p>
-                        </div>
-                      </Card>
+                      </div>
                     )}
                   </div>
                 );
               })()}
 
-              {/* No Passes Message */}
-              {displayCustomer.purchases.filter(p => p.status === 'active' && p.type !== 'party_package').length === 0 && (
-                <Card className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-3xl">😔</span>
+              {/* Quick Purchase Passes - Always Visible */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6">🛒 Purchase New Passes</h3>
+                <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
+                  <div className="grid gap-4 text-left">
+                    {AVAILABLE_PASS_PRODUCTS.map((product) => (
+                      <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900 text-lg">
+                            {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
+                          </span>
+                          <p className="text-sm text-gray-600">{product.description}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (confirmingProduct === product.id) {
+                              handleConfirmPurchase(product.id);
+                            } else {
+                              handleQuickPurchase(product.id);
+                            }
+                          }}
+                          size="lg"
+                          disabled={purchasingProduct === product.id}
+                          className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                            confirmingProduct === product.id
+                              ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                              : purchasingProduct === product.id
+                              ? 'bg-blue-600'
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
+                        >
+                          {purchasingProduct === product.id 
+                            ? 'Processing...' 
+                            : confirmingProduct === product.id 
+                            ? '✓ Confirm Purchase' 
+                            : 'Buy Now'
+                          }
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <h4 className="text-lg font-semibold mb-2">No Active Passes</h4>
-                  <p className="text-gray-600 mb-4">
-                    This customer doesn't have any active passes available for check-in.
-                  </p>
-                  {isStaffMode && (
-                    <p className="text-sm text-gray-500">
-                      Customer needs to purchase a day pass or other admission to check in.
-                    </p>
-                  )}
                 </Card>
-              )}
+              </div>
             </div>
           )}
 
@@ -1142,63 +1125,64 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         ))}
                       </div>
                     ) : (
-                      <Card className="p-8 text-center border-l-8 border-l-purple-300 bg-purple-50">
-                        <h4 className="text-xl font-bold mb-4">No Party Packages</h4>
-                        <p className="text-lg text-gray-600 mb-6">
-                          Purchase a party package to celebrate at Busy Bees!
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-3xl">🎉</span>
+                        </div>
+                        <h4 className="text-xl font-bold mb-2">No Party Packages</h4>
+                        <p className="text-gray-600 mb-4">
+                          Purchase party packages below to celebrate!
                         </p>
-                        
-                        <div className="space-y-3">
-                          <div className="grid gap-4 text-left">
-                            {AVAILABLE_PARTY_PRODUCTS.map((product) => (
-                              <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                                <div className="flex-1">
-                                  <span className="font-medium text-gray-900 text-lg">
-                                    🎉 {product.name}
-                                  </span>
-                                  <p className="text-sm text-gray-600">{product.description}</p>
-                                  <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
-                                </div>
-                                <Button
-                                  onClick={() => {
-                                    if (confirmingProduct === product.id) {
-                                      handleConfirmPurchase(product.id);
-                                    } else {
-                                      handleQuickPurchase(product.id);
-                                    }
-                                  }}
-                                  size="lg"
-                                  disabled={purchasingProduct === product.id}
-                                  className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                    confirmingProduct === product.id
-                                      ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
-                                      : purchasingProduct === product.id
-                                      ? 'bg-purple-500'
-                                      : 'bg-purple-600 hover:bg-purple-700'
-                                  }`}
-                                >
-                                  {purchasingProduct === product.id 
-                                    ? 'Processing...' 
-                                    : confirmingProduct === product.id 
-                                    ? '✓ Confirm Purchase' 
-                                    : 'Buy Now'
-                                  }
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="mt-6">
-                          <p className="text-base text-gray-600">
-                            Visit <strong>My Account</strong> to purchase party packages
-                          </p>
-                        </div>
-                      </Card>
+                      </div>
                     )}
                   </div>
                 );
               })()}
+
+              {/* Quick Purchase Party Packages - Always Visible */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6">🛒 Purchase Party Packages</h3>
+                <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
+                  <div className="grid gap-4 text-left">
+                    {AVAILABLE_PARTY_PRODUCTS.map((product) => (
+                      <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900 text-lg">
+                            🎉 {product.name}
+                          </span>
+                          <p className="text-sm text-gray-600">{product.description}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (confirmingProduct === product.id) {
+                              handleConfirmPurchase(product.id);
+                            } else {
+                              handleQuickPurchase(product.id);
+                            }
+                          }}
+                          size="lg"
+                          disabled={purchasingProduct === product.id}
+                          className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                            confirmingProduct === product.id
+                              ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
+                              : purchasingProduct === product.id
+                              ? 'bg-purple-500'
+                              : 'bg-purple-600 hover:bg-purple-700'
+                          }`}
+                        >
+                          {purchasingProduct === product.id 
+                            ? 'Processing...' 
+                            : confirmingProduct === product.id 
+                            ? '✓ Confirm Purchase' 
+                            : 'Buy Now'
+                          }
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             </div>
           )}
 
