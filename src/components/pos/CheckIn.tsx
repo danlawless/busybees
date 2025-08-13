@@ -87,6 +87,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     message: '',
     details: {} as any
   });
+  const [activeTab, setActiveTab] = useState<'passes' | 'parties'>('passes');
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -97,8 +98,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     };
   }, [confirmTimeout]);
 
-  // Available products for quick purchase
-  const AVAILABLE_PRODUCTS = [
+  // Available products for quick purchase (passes only)
+  const AVAILABLE_PASS_PRODUCTS = [
     {
       id: 'day_pass',
       name: 'Single Day Pass',
@@ -122,14 +123,26 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       description: '30 days of unlimited play',
       sessions: 999,
       validity: '30 days'
+    }
+  ];
+
+  // Available party packages
+  const AVAILABLE_PARTY_PRODUCTS = [
+    {
+      id: 'semi_private_party',
+      name: 'Semi-Private Party Package',
+      price: 350.00,
+      description: 'Exclusive party room, shared play area (2 hours)',
+      sessions: 1,
+      validity: '30 days to book'
     },
     {
-      id: 'party_package',
-      name: 'Party Package',
-      price: 199.99,
-      description: 'Special event package',
+      id: 'private_party',
+      name: 'Private Party Package',
+      price: 425.00,
+      description: 'Exclusive use of party room and play area (2 hours)',
       sessions: 1,
-      validity: '1 day'
+      validity: '30 days to book'
     }
   ];
 
@@ -423,7 +436,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const customer = selectedCustomer || currentCustomer;
     if (!customer) return;
 
-    const product = AVAILABLE_PRODUCTS.find(p => p.id === productId);
+    const product = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(p => p.id === productId);
     if (!product) return;
 
     // Clear confirmation state and timeout
@@ -701,12 +714,40 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             </div>
           </Card>
 
+          {/* Tab Navigation */}
+          <Card className="p-2 mb-8">
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('passes')}
+                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                  activeTab === 'passes'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                🎫 Passes
+              </button>
+              <button
+                onClick={() => setActiveTab('parties')}
+                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                  activeTab === 'parties'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                🎉 Parties
+              </button>
+            </div>
+          </Card>
+
           {/* Pass Management */}
+          {activeTab === 'passes' && (
             <div className="space-y-10">
               {/* Currently Checked In Passes */}
               {(() => {
                 const checkedInPasses = displayCustomer.purchases.filter(p => 
                   p.status === 'active' && 
+                  p.type !== 'party_package' &&
                   (displayCustomer.activeSessions || []).some(session => session.purchaseId === p.id)
                 );
                 
@@ -768,6 +809,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               {(() => {
                 const availablePasses = displayCustomer.purchases.filter(p => 
                   p.status === 'active' && 
+                  p.type !== 'party_package' &&
                   !(displayCustomer.activeSessions || []).some(session => session.purchaseId === p.id)
                 );
                 
@@ -906,134 +948,42 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         
                         <div className="space-y-3">
                           <div className="grid gap-4 text-left">
-                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900 text-lg">🎫 Single Day Pass</span>
-                                <p className="text-sm text-gray-600">1 day of unlimited play</p>
-                                <p className="text-lg font-bold text-gray-900 mt-1">$15.99</p>
-                              </div>
-                              <Button
-                                onClick={() => {
-                                  if (confirmingProduct === 'day_pass') {
-                                    handleConfirmPurchase('day_pass');
-                                  } else {
-                                    handleQuickPurchase('day_pass');
+                            {AVAILABLE_PASS_PRODUCTS.map((product) => (
+                              <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-900 text-lg">
+                                    {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
+                                  </span>
+                                  <p className="text-sm text-gray-600">{product.description}</p>
+                                  <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                                </div>
+                                <Button
+                                  onClick={() => {
+                                    if (confirmingProduct === product.id) {
+                                      handleConfirmPurchase(product.id);
+                                    } else {
+                                      handleQuickPurchase(product.id);
+                                    }
+                                  }}
+                                  size="lg"
+                                  disabled={purchasingProduct === product.id}
+                                  className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                    confirmingProduct === product.id
+                                      ? 'bg-green-600 hover:bg-green-700 animate-pulse'
+                                      : purchasingProduct === product.id
+                                      ? 'bg-blue-600'
+                                      : 'bg-green-600 hover:bg-green-700'
+                                  }`}
+                                >
+                                  {purchasingProduct === product.id 
+                                    ? 'Processing...' 
+                                    : confirmingProduct === product.id 
+                                    ? '✓ Confirm Purchase' 
+                                    : 'Buy Now'
                                   }
-                                }}
-                                size="lg"
-                                disabled={purchasingProduct === 'day_pass'}
-                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                  confirmingProduct === 'day_pass'
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : purchasingProduct === 'day_pass'
-                                    ? 'bg-blue-600'
-                                    : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                              >
-                                {purchasingProduct === 'day_pass' 
-                                  ? 'Processing...' 
-                                  : confirmingProduct === 'day_pass' 
-                                  ? '✓ Confirm Purchase' 
-                                  : 'Buy Now'
-                                }
-                              </Button>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900 text-lg">📅 Weekly Pass</span>
-                                <p className="text-sm text-gray-600">7 days of unlimited play</p>
-                                <p className="text-lg font-bold text-gray-900 mt-1">$49.99</p>
+                                </Button>
                               </div>
-                              <Button
-                                onClick={() => {
-                                  if (confirmingProduct === 'weekly_pass') {
-                                    handleConfirmPurchase('weekly_pass');
-                                  } else {
-                                    handleQuickPurchase('weekly_pass');
-                                  }
-                                }}
-                                size="lg"
-                                disabled={purchasingProduct === 'weekly_pass'}
-                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                  confirmingProduct === 'weekly_pass'
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : purchasingProduct === 'weekly_pass'
-                                    ? 'bg-blue-600'
-                                    : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                              >
-                                {purchasingProduct === 'weekly_pass' 
-                                  ? 'Processing...' 
-                                  : confirmingProduct === 'weekly_pass' 
-                                  ? '✓ Confirm Purchase' 
-                                  : 'Buy Now'
-                                }
-                              </Button>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900 text-lg">🗓️ Monthly Unlimited Pass</span>
-                                <p className="text-sm text-gray-600">30 days of unlimited play</p>
-                                <p className="text-lg font-bold text-gray-900 mt-1">$89.99</p>
-                              </div>
-                              <Button
-                                onClick={() => {
-                                  if (confirmingProduct === 'monthly_pass') {
-                                    handleConfirmPurchase('monthly_pass');
-                                  } else {
-                                    handleQuickPurchase('monthly_pass');
-                                  }
-                                }}
-                                size="lg"
-                                disabled={purchasingProduct === 'monthly_pass'}
-                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                  confirmingProduct === 'monthly_pass'
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : purchasingProduct === 'monthly_pass'
-                                    ? 'bg-blue-600'
-                                    : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                              >
-                                {purchasingProduct === 'monthly_pass' 
-                                  ? 'Processing...' 
-                                  : confirmingProduct === 'monthly_pass' 
-                                  ? '✓ Confirm Purchase' 
-                                  : 'Buy Now'
-                                }
-                              </Button>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900 text-lg">🎉 Party Package</span>
-                                <p className="text-sm text-gray-600">Special event package</p>
-                                <p className="text-lg font-bold text-gray-900 mt-1">$199.99</p>
-                              </div>
-                              <Button
-                                onClick={() => {
-                                  if (confirmingProduct === 'party_package') {
-                                    handleConfirmPurchase('party_package');
-                                  } else {
-                                    handleQuickPurchase('party_package');
-                                  }
-                                }}
-                                size="lg"
-                                disabled={purchasingProduct === 'party_package'}
-                                className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
-                                  confirmingProduct === 'party_package'
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : purchasingProduct === 'party_package'
-                                    ? 'bg-blue-600'
-                                    : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                              >
-                                {purchasingProduct === 'party_package' 
-                                  ? 'Processing...' 
-                                  : confirmingProduct === 'party_package' 
-                                  ? '✓ Confirm Purchase' 
-                                  : 'Buy Now'
-                                }
-                              </Button>
-                            </div>
+                            ))}
                           </div>
                         </div>
                         
@@ -1049,7 +999,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               })()}
 
               {/* No Passes Message */}
-              {displayCustomer.purchases.filter(p => p.status === 'active').length === 0 && (
+              {displayCustomer.purchases.filter(p => p.status === 'active' && p.type !== 'party_package').length === 0 && (
                 <Card className="p-8 text-center">
                   <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-3xl">😔</span>
@@ -1066,6 +1016,190 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 </Card>
               )}
             </div>
+          )}
+
+          {/* Party Management */}
+          {activeTab === 'parties' && (
+            <div className="space-y-10">
+              {/* Party Packages */}
+              {(() => {
+                const partyPackages = displayCustomer.purchases.filter(p => 
+                  p.status === 'active' && 
+                  p.type === 'party_package'
+                );
+                
+                return (
+                  <div>
+                    <h3 className="text-2xl font-bold mb-6">🎉 Your Party Packages</h3>
+                    {partyPackages.length > 0 ? (
+                      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                        {partyPackages.map((purchase) => (
+                          <Card key={purchase.id} className="p-8 border-l-8 border-l-purple-400 hover:bg-purple-50 transition-colors cursor-pointer">
+                            <div className="flex flex-col items-center text-center space-y-4">
+                              <div className="flex-1">
+                                <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
+                                {purchase.partyDate ? (
+                                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <p className="text-lg text-purple-700 font-bold mb-2">🎉 Party Scheduled</p>
+                                    <p className="text-sm text-purple-600 mb-1">
+                                      📅 {formatDate(purchase.partyDate)}
+                                    </p>
+                                    {purchase.partyStartTime && (
+                                      <p className="text-sm text-purple-600 mb-1">
+                                        ⏰ {(() => {
+                                          const [hours, minutes] = purchase.partyStartTime.split(':');
+                                          const hour = parseInt(hours);
+                                          const ampm = hour >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                          return `${displayHour}:${minutes} ${ampm}`;
+                                        })()}
+                                        {purchase.partyEndTime && ` - ${(() => {
+                                          const [hours, minutes] = purchase.partyEndTime.split(':');
+                                          const hour = parseInt(hours);
+                                          const ampm = hour >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                          return `${displayHour}:${minutes} ${ampm}`;
+                                        })()}`}
+                                      </p>
+                                    )}
+                                    {purchase.partyGuests && (
+                                      <p className="text-sm text-purple-600">👥 {purchase.partyGuests} guests</p>
+                                    )}
+                                    <p className="text-sm text-purple-600 mt-2">💰 ${purchase.price.toFixed(2)}</p>
+                                  </div>
+                                ) : (
+                                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <p className="text-lg text-orange-700 font-bold">🗓️ Ready to Schedule!</p>
+                                    <p className="text-sm text-orange-600 mt-1">Click to schedule your party</p>
+                                    <p className="text-sm text-orange-600 mt-2">💰 ${purchase.price.toFixed(2)}</p>
+                                  </div>
+                                )}
+                              </div>
+                              {(() => {
+                                const partyStatus = getPartyCheckInStatus(purchase);
+                                
+                                if (partyStatus === 'needs_scheduling') {
+                                  return (
+                                    <Button
+                                      onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                      size="lg"
+                                      className="text-xl px-10 py-5 min-w-[200px] bg-purple-600 hover:bg-purple-700 font-bold"
+                                    >
+                                      🗓️ Schedule Party
+                                    </Button>
+                                  );
+                                } else if (partyStatus === 'available') {
+                                  return (
+                                    <Button
+                                      onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                      size="lg"
+                                      className="text-xl px-10 py-5 min-w-[200px] bg-green-600 hover:bg-green-700 font-bold"
+                                    >
+                                      🎉 Check In Party
+                                    </Button>
+                                  );
+                                } else if (partyStatus?.startsWith('too_early')) {
+                                  const [type, value] = partyStatus.split(':');
+                                  const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
+                                                  type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
+                                                  `${value} minute${value !== '1' ? 's' : ''}`;
+                                  
+                                  return (
+                                    <Button
+                                      onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                      size="lg"
+                                      className="text-xl px-8 py-5 min-w-[200px] bg-orange-500 hover:bg-orange-600 font-bold"
+                                      disabled={false}
+                                    >
+                                      ⏰ In {timeText}
+                                    </Button>
+                                  );
+                                } else if (partyStatus === 'expired') {
+                                  return (
+                                    <Button
+                                      disabled
+                                      size="lg"
+                                      className="text-xl px-10 py-5 min-w-[200px] bg-gray-400 cursor-not-allowed font-bold"
+                                    >
+                                      ❌ Window Closed
+                                    </Button>
+                                  );
+                                }
+                                
+                                return (
+                                  <Button
+                                    onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
+                                    size="lg"
+                                    className="text-xl px-10 py-5 min-w-[200px] bg-purple-600 hover:bg-purple-700 font-bold"
+                                  >
+                                    View Details
+                                  </Button>
+                                );
+                              })()}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="p-8 text-center border-l-8 border-l-purple-300 bg-purple-50">
+                        <h4 className="text-xl font-bold mb-4">No Party Packages</h4>
+                        <p className="text-lg text-gray-600 mb-6">
+                          Purchase a party package to celebrate at Busy Bees!
+                        </p>
+                        
+                        <div className="space-y-3">
+                          <div className="grid gap-4 text-left">
+                            {AVAILABLE_PARTY_PRODUCTS.map((product) => (
+                              <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-900 text-lg">
+                                    🎉 {product.name}
+                                  </span>
+                                  <p className="text-sm text-gray-600">{product.description}</p>
+                                  <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
+                                </div>
+                                <Button
+                                  onClick={() => {
+                                    if (confirmingProduct === product.id) {
+                                      handleConfirmPurchase(product.id);
+                                    } else {
+                                      handleQuickPurchase(product.id);
+                                    }
+                                  }}
+                                  size="lg"
+                                  disabled={purchasingProduct === product.id}
+                                  className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                                    confirmingProduct === product.id
+                                      ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
+                                      : purchasingProduct === product.id
+                                      ? 'bg-purple-500'
+                                      : 'bg-purple-600 hover:bg-purple-700'
+                                  }`}
+                                >
+                                  {purchasingProduct === product.id 
+                                    ? 'Processing...' 
+                                    : confirmingProduct === product.id 
+                                    ? '✓ Confirm Purchase' 
+                                    : 'Buy Now'
+                                  }
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6">
+                          <p className="text-base text-gray-600">
+                            Visit <strong>My Account</strong> to purchase party packages
+                          </p>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Customer Details (Staff Mode) */}
           {isStaffMode && showCustomerDetails && (
