@@ -171,17 +171,17 @@ export default function POSPage() {
 
   // Resume session (dismiss warning and restart timer)
   const handleResumeSession = () => {
-    // Clear the warning modal
+    // Clear the warning modal first
     setShowInactivityWarning(false);
     setCountdownSeconds(30);
     setInactivityCountdown(30);
     
-    // Trigger a synthetic activity event to restart the timer system
-    // This ensures the useEffect detects activity and restarts everything
+    // Trigger a synthetic activity event after the warning is cleared
+    // This will cause handleActivity to restart the timer since warning is now false
     setTimeout(() => {
       const syntheticEvent = new MouseEvent('mousedown', { bubbles: true });
       document.dispatchEvent(syntheticEvent);
-    }, 10);
+    }, 50); // Slightly longer delay to ensure state update
   };
 
   // Payment method management
@@ -305,12 +305,6 @@ export default function POSPage() {
       if (warningCountdown) clearTimeout(warningCountdown);
       if (inactivityCountdownTimer) clearTimeout(inactivityCountdownTimer);
 
-      // Clear warning state if it was showing
-      if (showInactivityWarning) {
-        setShowInactivityWarning(false);
-        setCountdownSeconds(30);
-      }
-
       // Start inactivity countdown from 30 seconds
       let inactivitySeconds = 30;
       setInactivityCountdown(inactivitySeconds);
@@ -353,8 +347,11 @@ export default function POSPage() {
     };
 
     const handleActivity = () => {
-      // Always restart the timer on activity, regardless of warning state
-      startInactivityTimer();
+      // Only restart the timer if the warning is not currently showing
+      // When warning is showing, user must explicitly click Resume or Start New Session
+      if (!showInactivityWarning) {
+        startInactivityTimer();
+      }
     };
 
     // Add event listeners for user activity

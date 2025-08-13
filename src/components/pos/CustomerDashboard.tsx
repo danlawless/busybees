@@ -1157,7 +1157,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   {/* Auto-Renew Toggle for Weekly/Monthly Passes */}
                   {(purchase.type === 'weekly_pass' || purchase.type === 'monthly_pass') && (
                     <div className="border-t pt-3 mt-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-2">
                           <span className="text-sm font-medium text-gray-700">🔄 Auto-Renew</span>
                           {purchase.autoRenew && (
@@ -1172,12 +1172,14 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         </div>
                         <button
                           onClick={() => handleAutoRenewToggle(purchase.id)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ${
-                            purchase.autoRenew ? 'bg-yellow-500' : 'bg-gray-300'
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 border-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ${
+                            purchase.autoRenew 
+                              ? 'bg-yellow-500 border-yellow-400 shadow-sm' 
+                              : 'bg-gray-200 border-gray-300 hover:border-gray-400'
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-sm ${
                               purchase.autoRenew ? 'translate-x-6' : 'translate-x-1'
                             }`}
                           />
