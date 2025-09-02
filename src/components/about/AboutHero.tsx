@@ -89,15 +89,6 @@ export function AboutHero() {
               </div>
               
               {/* Floating overlay images */}
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-2xl shadow-lg overflow-hidden hexagon-shape">
-                <Image
-                  src="/images/team-photo.jpg"
-                  alt="Busy Bees Team"
-                  fill
-                  className="object-cover"
-                  sizes="128px"
-                />
-              </div>
               
               <div className="absolute -top-6 -right-6 w-28 h-28 bg-gradient-to-br from-honey-200 to-honey-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape">
                 <div className="text-center text-charcoal-600">
