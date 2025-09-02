@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram } from 'lucide-react'
+import { MapPin, Clock } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { getBusinessHours } from '@/lib/utils'
@@ -20,16 +20,12 @@ const footerNavigation = {
     { name: 'Terms of Service', href: '/terms' },
     { name: 'Waiver', href: '/waiver' },
   ],
-  social: [
-    { name: 'Facebook', href: '#', icon: Facebook },
-    { name: 'Instagram', href: '#', icon: Instagram },
-  ],
+
 }
 
 const businessHours = [
-  { days: 'Monday - Friday', hours: '10:00 AM - 5:00 PM' },
-  { days: 'Saturday - Sunday', hours: '9:00 AM - 12:00 PM' },
-  { days: 'Saturday - Sunday', hours: '1:00 PM - 6:00 PM (Parties)' },
+  { days: 'Monday - Friday', hours: '10:00 AM - 4:00 PM' },
+  { days: 'Saturday - Sunday', hours: '1:00 PM - 6:00 PM (Private Bookings Only)' },
 ]
 
 export function Footer() {
@@ -54,22 +50,10 @@ export function Footer() {
               <div className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-neutral-900 font-medium">380-432 John Fitch Highway</p>
-                  <p className="text-neutral-600">Suite A-190 and A-200</p>
+                  <p className="text-neutral-900 font-medium">Coming Soon</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-primary-500 flex-shrink-0" />
-                <a href="tel:+1234567890" className="text-neutral-900 hover:text-primary-600 transition-colors">
-                  (123) 456-7890
-                </a>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-primary-500 flex-shrink-0" />
-                <a href="mailto:info@busybeesipc.com" className="text-neutral-900 hover:text-primary-600 transition-colors">
-                  info@busybeesipc.com
-                </a>
-              </div>
+
             </div>
           </div>
 
@@ -107,24 +91,7 @@ export function Footer() {
               ))}
             </div>
 
-            <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider mb-4">
-              Follow Us
-            </h3>
-            <div className="flex space-x-3">
-              {footerNavigation.social.map((item) => {
-                const Icon = item.icon
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="text-neutral-600 hover:text-primary-600 transition-colors duration-200"
-                  >
-                    <span className="sr-only">{item.name}</span>
-                    <Icon className="w-5 h-5" />
-                  </a>
-                )
-              })}
-            </div>
+
           </div>
         </div>
 

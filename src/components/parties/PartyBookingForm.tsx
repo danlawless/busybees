@@ -252,8 +252,8 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   >
-                    <option value="semi-private">Semi-Private ($350)</option>
-                    <option value="private">Private ($425)</option>
+                    <option value="semi-private">Semi-Private (Coming Soon)</option>
+                    <option value="private">Private (Coming Soon)</option>
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     {formData.partyType === 'private' 
@@ -281,7 +281,7 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
                     }`}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    15 guests included, $12 for each additional guest
+                    15 guests included, additional guest pricing available soon
                   </p>
                   {errors.guestCount && (
                     <p className="text-red-500 text-sm mt-1">{errors.guestCount}</p>
@@ -314,7 +314,7 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
                 </div>
                 {formData.guestCount > 15 && (
                   <div className="flex justify-between">
-                    <span>Extra guests ({formData.guestCount - 15} × $12)</span>
+                    <span>Extra guests ({formData.guestCount - 15} guests)</span>
                     <span>${(formData.guestCount - 15) * 12}</span>
                   </div>
                 )}

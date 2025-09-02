@@ -4,11 +4,22 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
+interface Child {
+  id: string;
+  name: string;
+  birthdate: string;
+  age: number; // Calculated from birthdate
+  waiverSigned: boolean;
+  waiverSignedDate?: string;
+  createdAt: string;
+}
+
 interface Customer {
   id: string;
   phone: string;
   name: string;
   email?: string;
+  children: Child[]; // Children registered to this customer
   purchases: Purchase[];
   activeSessions: Session[];
   savedCards: SavedCard[];
@@ -30,6 +41,7 @@ interface Purchase {
   status: 'active' | 'expired' | 'used';
   autoRenew?: boolean;
   nextRenewalDate?: string;
+  childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
 }
 
 interface Session {
@@ -141,6 +153,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       phone: getCleanPhoneNumber(phoneNumber),
       name: customerName.trim(),
       email: customerEmail.trim() || undefined,
+      children: [], // Initialize empty children array
       purchases: [],
       activeSessions: [],
       savedCards: [],

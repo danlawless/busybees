@@ -6,11 +6,11 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
   animate?: boolean
   className?: string
   showText?: boolean
-  textSize?: 'sm' | 'md' | 'lg'
+  textSize?: 'sm' | 'md' | 'lg' | 'xl'
 }
 
 export function Logo({ 
@@ -24,13 +24,16 @@ export function Logo({
     sm: { width: 32, height: 32 },
     md: { width: 48, height: 48 },
     lg: { width: 64, height: 64 },
-    xl: { width: 80, height: 80 }
+    xl: { width: 80, height: 80 },
+    '2xl': { width: 120, height: 120 },
+    '3xl': { width: 160, height: 160 }
   }
 
   const textSizes = {
     sm: 'text-sm',
     md: 'text-lg',
-    lg: 'text-xl'
+    lg: 'text-xl',
+    xl: 'text-2xl'
   }
 
   const logoVariants = {
@@ -74,7 +77,8 @@ export function Logo({
           <span className={cn("text-charcoal-600", 
             textSize === 'sm' ? 'text-xs' : 
             textSize === 'md' ? 'text-sm' : 
-            'text-base'
+            textSize === 'lg' ? 'text-base' :
+            'text-lg'
           )}>
             Indoor Play Center
           </span>

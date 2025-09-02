@@ -64,16 +64,13 @@ export function isOpen(): boolean {
   const day = now.getDay() // 0 = Sunday, 1 = Monday, etc.
   const hour = now.getHours()
   
-  // Mon-Fri: 10 AM - 5 PM
+  // Mon-Fri: 10 AM - 4 PM
   if (day >= 1 && day <= 5) {
-    return hour >= 10 && hour < 17
+    return hour >= 10 && hour < 16
   }
   
-  // Sat-Sun: 9 AM - 12 PM (open play)
-  if (day === 0 || day === 6) {
-    return hour >= 9 && hour < 12
-  }
-  
+  // Weekends: Closed for open play, private bookings only 1-6 PM
+  // Since this is for open play status, weekends are effectively closed
   return false
 }
 
@@ -82,12 +79,12 @@ export function getBusinessHours(day?: number): string {
   
   // Mon-Fri
   if (currentDay >= 1 && currentDay <= 5) {
-    return '10:00 AM - 5:00 PM'
+    return '10:00 AM - 4:00 PM'
   }
   
   // Sat-Sun
   if (currentDay === 0 || currentDay === 6) {
-    return '9:00 AM - 12:00 PM (Open Play)'
+    return '1:00 PM - 6:00 PM (Private Bookings Only)'
   }
   
   return 'Closed'

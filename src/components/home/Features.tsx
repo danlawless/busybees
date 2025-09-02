@@ -73,7 +73,7 @@ export function Features() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card className="h-full text-center group card-pastel">
                   <CardContent className="p-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:from-honey-300 group-hover:to-honey-400 transition-all duration-300 hexagon-pulse">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary-200 to-primary-300 hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:from-primary-300 group-hover:to-primary-400 transition-all duration-300">
                       <Icon className="w-8 h-8 text-charcoal-700" />
                     </div>
                     <h3 className="text-xl font-semibold text-charcoal-800 mb-4">

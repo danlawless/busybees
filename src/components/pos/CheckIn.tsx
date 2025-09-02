@@ -8,11 +8,22 @@ import { SuccessModal } from '@/components/ui/SuccessModal';
 
 
 
+interface Child {
+  id: string;
+  name: string;
+  birthdate: string;
+  age: number; // Calculated from birthdate
+  waiverSigned: boolean;
+  waiverSignedDate?: string;
+  createdAt: string;
+}
+
 interface Customer {
   id: string;
   phone: string;
   name: string;
   email?: string;
+  children: Child[]; // Children registered to this customer
   purchases: Purchase[];
   activeSessions: Session[];
   savedCards: SavedCard[];
@@ -34,6 +45,7 @@ interface Purchase {
   status: 'active' | 'expired' | 'used';
   autoRenew?: boolean;
   nextRenewalDate?: string;
+  childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
   // Party scheduling fields
   partyDate?: string;
   partyStartTime?: string;
@@ -89,7 +101,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     message: '',
     details: {} as any
   });
-  const [activeTab, setActiveTab] = useState<'passes' | 'parties'>('passes');
+  const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties'>('children');
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
@@ -110,6 +122,164 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     monthly_pass: 1,
     party_package: 1
   });
+
+  // Children-related state
+  const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
+  const [showAddChild, setShowAddChild] = useState(false);
+  const [showWaiverModal, setShowWaiverModal] = useState(false);
+  const [waiverChild, setWaiverChild] = useState<Child | null>(null);
+  const [childName, setChildName] = useState('');
+  const [childBirthdate, setChildBirthdate] = useState('');
+  const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
+  const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+
+  // Helper function to get child name by ID
+  const getChildName = (childId: string, customer: Customer): string => {
+    const child = customer.children.find(c => c.id === childId);
+    return child ? child.name : 'Unknown Child';
+  };
+
+  // Helper function to calculate age from birthdate
+  const calculateAge = (birthdate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthdate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  // Children management functions
+  const handleAddChild = () => {
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer || !childName.trim() || !childBirthdate) return;
+
+    const newChild: Child = {
+      id: `child_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: childName.trim(),
+      birthdate: childBirthdate,
+      age: calculateAge(childBirthdate),
+      waiverSigned: false,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedCustomer = {
+      ...customer,
+      children: [...customer.children, newChild]
+    };
+
+    onUpdateCustomer(updatedCustomer);
+    
+    // Reset form
+    setChildName('');
+    setChildBirthdate('');
+    setShowAddChild(false);
+
+    // Show success message for adding the child
+    setSuccessDetails({
+      title: 'Child Added Successfully!',
+      message: `${newChild.name} has been added to the customer's account. Next, you'll need to sign a waiver for them to purchase passes.`,
+      details: {}
+    });
+    setShowSuccessModal(true);
+
+    // After success modal closes, show waiver modal
+    setTimeout(() => {
+      setWaiverChild(newChild);
+      setShowWaiverModal(true);
+    }, 5000); // Wait for success modal auto-close
+  };
+
+  const handleSignWaiver = (child: Child) => {
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    const updatedChildren = customer.children.map(c => 
+      c.id === child.id 
+        ? { ...c, waiverSigned: true, waiverSignedDate: new Date().toISOString() }
+        : c
+    );
+
+    const updatedCustomer = {
+      ...customer,
+      children: updatedChildren
+    };
+
+    onUpdateCustomer(updatedCustomer);
+    setShowWaiverModal(false);
+    setWaiverChild(null);
+
+    setSuccessDetails({
+      title: 'Waiver Signed Successfully',
+      message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`,
+      details: {}
+    });
+    setShowSuccessModal(true);
+  };
+
+  const handleDeleteChild = (childId: string) => {
+    const customer = selectedCustomer || currentCustomer;
+    if (!customer) return;
+
+    // Check if child has any active passes
+    const hasActivePasses = customer.purchases.some(p => 
+      p.childId === childId && p.status === 'active'
+    );
+
+    if (hasActivePasses) {
+      setSuccessDetails({
+        title: 'Cannot Delete Child',
+        message: 'This child has active passes. Please wait for passes to expire or contact management.',
+        details: {}
+      });
+      setShowSuccessModal(true);
+      return;
+    }
+
+    const updatedChildren = customer.children.filter(c => c.id !== childId);
+    const updatedCustomer = {
+      ...customer,
+      children: updatedChildren
+    };
+
+    onUpdateCustomer(updatedCustomer);
+  };
+
+  const handleChildSelectionForPurchase = (childId: string) => {
+    setSelectedChildForPurchase(childId);
+    setShowChildSelectionModal(false);
+    
+    // Now proceed with the purchase using the selected child
+    if (selectedProductForPurchase) {
+      handleQuickPurchase(selectedProductForPurchase);
+    }
+  };
+
+  // Handle escape key for modals
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showAddChild) {
+          setShowAddChild(false);
+          setChildName('');
+          setChildBirthdate('');
+        } else if (showWaiverModal) {
+          setShowWaiverModal(false);
+          setWaiverChild(null);
+        } else if (showChildSelectionModal) {
+          setShowChildSelectionModal(false);
+          setSelectedProductForPurchase('');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showAddChild, showWaiverModal, showChildSelectionModal]);
 
   // Quantity management functions
   const increaseQuantity = (productId: string) => {
@@ -190,24 +360,24 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     {
       id: 'day_pass',
       name: 'Single Day Pass',
-      price: 15.99,
-      description: '1 day of unlimited play',
+      price: 0,
+      description: '1 day of unlimited play - Coming Soon',
       sessions: 1,
       validity: '1 day'
     },
     {
       id: 'weekly_pass',
       name: 'Weekly Unlimited Pass',
-      price: 49.99,
-      description: '7 days of unlimited play',
+      price: 0,
+      description: '7 days of unlimited play - Coming Soon',
       sessions: 999,
       validity: '7 days'
     },
     {
       id: 'monthly_pass',
       name: 'Monthly Unlimited Pass',
-      price: 89.99,
-      description: '30 days of unlimited play',
+      price: 0,
+      description: '30 days of unlimited play - Coming Soon',
       sessions: 999,
       validity: '30 days'
     }
@@ -218,16 +388,16 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     {
       id: 'semi_private_party',
       name: 'Semi-Private Party Package',
-      price: 350.00,
-      description: 'Exclusive party room, shared play area (2 hours)',
+      price: 0,
+      description: 'Exclusive party room, shared play area (2 hours) - Coming Soon',
       sessions: 1,
       validity: '30 days to book'
     },
     {
       id: 'private_party',
       name: 'Private Party Package',
-      price: 425.00,
-      description: 'Exclusive use of party room and play area (2 hours)',
+      price: 0,
+      description: 'Exclusive use of party room and play area (2 hours) - Coming Soon',
       sessions: 1,
       validity: '30 days to book'
     }
@@ -686,6 +856,34 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const product = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(p => p.id === productId);
     if (!product) return;
 
+    // Check if this is a pass purchase and requires child selection
+    const isPassPurchase = !productId.includes('party');
+    
+    if (isPassPurchase) {
+      // For pass purchases, require child selection
+      if (!selectedChildForPurchase) {
+        setSuccessDetails({
+          title: 'Child Selection Required',
+          message: 'Please select which child this pass is for before purchasing.',
+          details: {}
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+
+      // Check if the selected child has a signed waiver
+      const selectedChild = customer.children.find(c => c.id === selectedChildForPurchase);
+      if (!selectedChild || !selectedChild.waiverSigned) {
+        setSuccessDetails({
+          title: 'Waiver Required',
+          message: 'The selected child must have a signed waiver before purchasing a pass.',
+          details: {}
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+    }
+
     // Clear confirmation state and timeout
     setConfirmingProduct(null);
     if (confirmTimeout) {
@@ -738,7 +936,9 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
         status: 'active',
         // Explicitly ensure new purchases have no firstUseDate
         firstUseDate: undefined,
-        actualExpiryDate: undefined
+        actualExpiryDate: undefined,
+        // Add child ID for pass purchases
+        childId: isPassPurchase ? selectedChildForPurchase : undefined
       };
 
       const updatedCustomer = {
@@ -747,6 +947,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       };
 
       onUpdateCustomer(updatedCustomer);
+      
+      // Clear selected child for next purchase
+      if (isPassPurchase) {
+        setSelectedChildForPurchase('');
+      }
+      
       setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
       
       // Clear success message after 3 seconds
@@ -965,6 +1171,16 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           <Card className="p-2 mb-8">
             <div className="flex space-x-1">
               <button
+                onClick={() => setActiveTab('children')}
+                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                  activeTab === 'children'
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                👶 Children ({displayCustomer.children.length})
+              </button>
+              <button
                 onClick={() => setActiveTab('passes')}
                 className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
                   activeTab === 'passes'
@@ -986,6 +1202,278 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               </button>
             </div>
           </Card>
+
+          {/* Children Management */}
+          {activeTab === 'children' && (
+            <div className="space-y-8">
+              {/* Children Header */}
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-bold">Manage Children</h3>
+                <Button
+                  onClick={() => setShowAddChild(true)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                >
+                  <span className="text-lg mr-2">+</span>
+                  Add Child
+                </Button>
+              </div>
+
+              {/* Children List */}
+              {displayCustomer.children.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">👶</div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Children Added</h3>
+                  <p className="text-gray-600 mb-6">Add children to this customer account to purchase passes and track waivers</p>
+                  <Button
+                    onClick={() => setShowAddChild(true)}
+                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg"
+                  >
+                    Add First Child
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {displayCustomer.children.map((child) => (
+                    <Card key={child.id} className="p-6 border-l-4 border-l-green-400">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-lg">{child.name}</h4>
+                          <p className="text-gray-600">Age: {child.age}</p>
+                          <p className="text-sm text-gray-500">
+                            Born: {new Date(child.birthdate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteChild(child.id)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Delete child"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Waiver Status */}
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Waiver Status:</span>
+                          {child.waiverSigned ? (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                              ✅ Signed
+                            </span>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
+                                ❌ Not Signed
+                              </span>
+                              <Button
+                                onClick={() => {
+                                  setWaiverChild(child);
+                                  setShowWaiverModal(true);
+                                }}
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                              >
+                                Sign Waiver
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Active Passes for this child */}
+                        {(() => {
+                          const childPasses = displayCustomer.purchases.filter(p => 
+                            p.childId === child.id && p.status === 'active'
+                          );
+                          return childPasses.length > 0 && (
+                            <div>
+                              <p className="font-medium text-sm text-gray-700 mb-2">Active Passes:</p>
+                              {childPasses.map(pass => (
+                                <div key={pass.id} className="bg-yellow-50 p-2 rounded text-sm">
+                                  <span className="font-medium">{pass.name}</span>
+                                  {pass.totalSessions === 999 ? (
+                                    <span className="text-gray-600 ml-2">- Unlimited</span>
+                                  ) : (
+                                    <span className="text-gray-600 ml-2">
+                                      - {pass.totalSessions - pass.usedSessions} visits left
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {child.waiverSigned && child.waiverSignedDate && (
+                          <p className="text-xs text-gray-500">
+                            Waiver signed: {new Date(child.waiverSignedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Add Child Modal */}
+              {showAddChild && (
+                <div 
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      setShowAddChild(false);
+                      setChildName('');
+                      setChildBirthdate('');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowAddChild(false);
+                      setChildName('');
+                      setChildBirthdate('');
+                    }
+                  }}
+                >
+                  <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
+                    {/* Close Button */}
+                    <button
+                      onClick={() => {
+                        setShowAddChild(false);
+                        setChildName('');
+                        setChildBirthdate('');
+                      }}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                    
+                    <h3 className="text-lg font-semibold mb-4">Add New Child</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Child's Name
+                        </label>
+                        <input
+                          type="text"
+                          value={childName}
+                          onChange={(e) => setChildName(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="Enter child's full name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date of Birth
+                        </label>
+                        <input
+                          type="date"
+                          value={childBirthdate}
+                          onChange={(e) => setChildBirthdate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      {childBirthdate && (
+                        <p className="text-sm text-gray-600">
+                          Age: {calculateAge(childBirthdate)} years old
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-6">
+                      <Button
+                        onClick={() => {
+                          setShowAddChild(false);
+                          setChildName('');
+                          setChildBirthdate('');
+                        }}
+                        variant="secondary"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddChild}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                        disabled={!childName.trim() || !childBirthdate}
+                      >
+                        Add Child
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Waiver Modal */}
+              {showWaiverModal && waiverChild && (
+                <div 
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      setShowWaiverModal(false);
+                      setWaiverChild(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowWaiverModal(false);
+                      setWaiverChild(null);
+                    }
+                  }}
+                >
+                  <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+                    {/* Close Button */}
+                    <button
+                      onClick={() => {
+                        setShowWaiverModal(false);
+                        setWaiverChild(null);
+                      }}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                    >
+                      ✕
+                    </button>
+                    
+                    <h3 className="text-lg font-semibold mb-4">Waiver for {waiverChild.name}</h3>
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
+                      <h4 className="font-medium mb-2">LIABILITY WAIVER AND RELEASE</h4>
+                      <p className="text-sm text-gray-700 mb-2">
+                        I hereby acknowledge that I am the parent/guardian of {waiverChild.name}, 
+                        age {waiverChild.age}, and I understand that participation in activities at 
+                        Busy Bees Indoor Playground involves inherent risks.
+                      </p>
+                      <p className="text-sm text-gray-700 mb-2">
+                        I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground, 
+                        its owners, employees, and agents from any and all liability, claims, demands, 
+                        actions and causes of action whatsoever arising out of or related to any loss, 
+                        damage, or injury that may be sustained by my child while participating in activities.
+                      </p>
+                      <p className="text-sm text-gray-700 mb-2">
+                        I acknowledge that I have read and understood this waiver and that I am signing 
+                        it voluntarily. This waiver shall be binding upon my heirs, executors, 
+                        administrators and assigns.
+                      </p>
+                      <p className="text-sm font-medium text-gray-800">
+                        By clicking "I Agree and Sign", I electronically sign this waiver on behalf of my child.
+                      </p>
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                      <Button
+                        onClick={() => {
+                          setShowWaiverModal(false);
+                          setWaiverChild(null);
+                        }}
+                        variant="secondary"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => handleSignWaiver(waiverChild)}
+                        className="bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        I Agree and Sign
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Pass Management */}
           {activeTab === 'passes' && (
@@ -1010,6 +1498,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               <div className="flex flex-col items-center text-center space-y-4">
                                 <div className="flex-1">
                                   <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
+                                  {purchase.childId && (
+                                    <p className="text-blue-600 font-medium text-lg mb-2">
+                                      👶 {getChildName(purchase.childId, displayCustomer)}
+                                    </p>
+                                  )}
                                   {activeSessions.length > 0 && (
                                     <div className="p-3 bg-green-100 border border-green-300 rounded-lg mb-4">
                                       <p className="text-lg text-green-800 font-bold">✅ Checked In</p>
@@ -1070,6 +1563,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             <div className="flex flex-col items-center text-center space-y-4">
                               <div className="flex-1">
                                 <h4 className="text-2xl font-bold text-gray-900 mb-3">{purchase.name}</h4>
+                                {purchase.childId && (
+                                  <p className="text-green-600 font-medium text-lg mb-3">
+                                    👶 {getChildName(purchase.childId, displayCustomer)}
+                                  </p>
+                                )}
                                 {purchase.type === 'party_package' && purchase.partyDate ? (
                                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
                                     <p className="text-lg text-purple-700 font-bold mb-2">🎉 Party Scheduled</p>
@@ -1252,6 +1750,26 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               {/* Quick Purchase Passes - Always Visible */}
               <div>
                 <h3 className="text-2xl font-bold mb-6">🛒 Purchase New Passes</h3>
+                
+                {/* Child Selection Required */}
+                {displayCustomer.children.length === 0 && (
+                  <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white">👶</span>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-blue-800">Children Required</h4>
+                        <p className="text-blue-600 text-sm">
+                          This customer needs to add children with signed waivers before purchasing passes.
+                          <br />
+                          <strong>💡 Tip:</strong> Have them use their own device to add children in the customer dashboard.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+                
                 <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
                   <div className="grid gap-4 text-left">
                     {AVAILABLE_PASS_PRODUCTS.map((product) => (
@@ -1313,16 +1831,28 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         <Button
                           onClick={() => {
                             const customer = selectedCustomer || currentCustomer;
-                            if (customer && customer.savedCards.length === 0) {
+                            if (!customer) return;
+                            
+                            // Step 1: Add Child (highest priority)
+                            if (customer.children.length === 0) {
+                              setActiveTab('children');
+                              return;
+                            }
+                            
+                            // Step 2: Add Payment Method
+                            if (customer.savedCards.length === 0) {
                               // Show payment modal instead of alert
                               setShowPaymentModal(true);
                               return;
                             }
                             
+                            // Step 3: Show Child Selection Modal
                             if (confirmingProduct === product.id) {
                               handleConfirmPurchase(product.id);
                             } else {
-                              handleQuickPurchase(product.id);
+                              // Show child selection modal
+                              setSelectedProductForPurchase(product.id);
+                              setShowChildSelectionModal(true);
                             }
                           }}
                           size="lg"
@@ -1330,7 +1860,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
                             (() => {
                               const customer = selectedCustomer || currentCustomer;
-                              if (customer && customer.savedCards.length === 0) {
+                              if (!customer) return 'bg-gray-400';
+                              
+                              if (customer.children.length === 0) {
+                                return 'bg-blue-500 hover:bg-blue-600';
+                              }
+                              if (customer.savedCards.length === 0) {
                                 return 'bg-yellow-500 hover:bg-yellow-600';
                               }
                               return confirmingProduct === product.id
@@ -1343,7 +1878,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         >
                           {(() => {
                             const customer = selectedCustomer || currentCustomer;
-                            if (customer && customer.savedCards.length === 0) {
+                            if (!customer) return 'No Customer';
+                            
+                            if (customer.children.length === 0) {
+                              return '👶 Add Child First';
+                            }
+                            if (customer.savedCards.length === 0) {
                               return '💳 Add Payment First';
                             }
                             return purchasingProduct === product.id 
@@ -1582,6 +2122,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="font-medium text-sm">{purchase.name}</p>
+                              {purchase.childId && (
+                                <p className="text-xs text-green-600 font-medium">
+                                  👶 {getChildName(purchase.childId, displayCustomer)}
+                                </p>
+                              )}
                               <p className="text-xs text-gray-600">
                                 {formatDate(purchase.purchaseDate)}
                               </p>
@@ -2169,6 +2714,102 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   ✅ Enable Auto-Renew
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Child Selection Modal */}
+      {showChildSelectionModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowChildSelectionModal(false);
+              setSelectedProductForPurchase('');
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowChildSelectionModal(false);
+              setSelectedProductForPurchase('');
+            }
+          }}
+        >
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowChildSelectionModal(false);
+                setSelectedProductForPurchase('');
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ✕
+            </button>
+            
+            <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
+            <p className="text-gray-600 mb-4">
+              Which child is this {[...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(p => p.id === selectedProductForPurchase)?.name} for?
+            </p>
+            
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {(() => {
+                const customer = selectedCustomer || currentCustomer;
+                if (!customer) return null;
+                
+                return customer.children
+                  .filter(child => child.waiverSigned)
+                  .map(child => (
+                    <button
+                      key={child.id}
+                      onClick={() => handleChildSelectionForPurchase(child.id)}
+                      className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{child.name}</p>
+                          <p className="text-sm text-gray-600">Age: {child.age}</p>
+                        </div>
+                        <div className="text-green-600">
+                          ✅ Waiver Signed
+                        </div>
+                      </div>
+                    </button>
+                  ));
+              })()}
+            </div>
+            
+            {(() => {
+              const customer = selectedCustomer || currentCustomer;
+              return customer && customer.children.some(child => !child.waiverSigned) && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Some children don't have signed waivers and can't be selected. 
+                    <button 
+                      onClick={() => {
+                        setShowChildSelectionModal(false);
+                        setActiveTab('children');
+                      }}
+                      className="text-yellow-700 underline ml-1"
+                    >
+                      Sign waivers in Children tab
+                    </button>
+                  </p>
+                </div>
+              );
+            })()}
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                onClick={() => {
+                  setShowChildSelectionModal(false);
+                  setSelectedProductForPurchase('');
+                }}
+                variant="secondary"
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </div>

@@ -79,7 +79,7 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
     customerEmail: 'mike.chen@email.com',
     partyType: 'private',
     guestCount: 18,
-    totalPrice: 461, // $425 + (3 extra kids × $12)
+    totalPrice: 0, // Pricing coming soon
     status: 'confirmed',
     notes: 'Superhero theme',
     createdAt: new Date().toISOString()
@@ -111,7 +111,7 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
     customerEmail: 'david.rodriguez@email.com',
     partyType: 'semi-private',
     guestCount: 20,
-    totalPrice: 410, // $350 + (5 extra kids × $12)
+    totalPrice: 0, // Pricing coming soon
     status: 'pending',
     notes: 'Dinosaur theme, needs confirmation',
     createdAt: new Date().toISOString()
@@ -474,9 +474,9 @@ export function PartyCalendar({
               <div className="bg-green-50 p-4 rounded-lg">
                 <h4 className="font-medium text-green-900">Party Options</h4>
                 <div className="text-sm text-green-700 mt-1">
-                  <div>Private Party: $425 (2 hours)</div>
-                  <div>Semi-Private: $350 (2 hours)</div>
-                  <div>Extra guests: $12/child</div>
+                  <div>Private Party: Coming Soon (2 hours)</div>
+                  <div>Semi-Private: Coming Soon (2 hours)</div>
+                  <div>Extra guests: Pricing available soon</div>
                 </div>
               </div>
 

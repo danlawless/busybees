@@ -38,7 +38,7 @@ const bookingSteps = [
     title: 'Secure Payment',
     description: 'Complete your booking with our secure payment system',
     color: 'from-green-200 to-green-300',
-    details: ['$50 deposit to book', 'Pay balance day of party', 'All major cards accepted']
+    details: ['Deposit required to book', 'Pay balance day of party', 'All major cards accepted']
   }
 ]
 

@@ -37,9 +37,9 @@ const pricingPlans = [
   {
     name: '10-Visit Punch Card',
     price: 130,
-    description: 'Save $20 with bulk visits',
+    description: 'Save with bulk visits',
     features: [
-      '10 visits for $13 each',
+      '10 visits at discounted rate',
       'Never expires',
       'Transferable to family/friends',
       'All daily pass benefits'
@@ -55,7 +55,7 @@ const partyPackages = [
     price: 425,
     duration: '2 hours',
     includes: '15 kids included',
-    additional: '$12 per additional child',
+    additional: 'Additional guest pricing available soon',
     features: [
       'Exclusive use of party room',
       'Dedicated party host',
@@ -69,7 +69,7 @@ const partyPackages = [
     price: 350,
     duration: '2 hours',
     includes: '15 kids included',
-    additional: '$12 per additional child',
+    additional: 'Additional guest pricing available soon',
     features: [
       'Reserved party area',
       'Dedicated party host',
@@ -122,10 +122,7 @@ export function Pricing() {
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <div className="mt-4">
                     <span className="text-4xl font-bold text-primary-600">
-                      {formatPrice(plan.price)}
-                    </span>
-                    <span className="text-neutral-600 ml-2">
-                      {plan.name.includes('Monthly') ? '/month' : ''}
+                      Coming Soon
                     </span>
                   </div>
                   <p className="text-neutral-600 mt-2">{plan.description}</p>
@@ -182,12 +179,12 @@ export function Pricing() {
                   <CardTitle className="text-2xl text-primary-600">{pkg.name}</CardTitle>
                   <div className="mt-4">
                     <span className="text-4xl font-bold text-neutral-900">
-                      {formatPrice(pkg.price)}
+                      Coming Soon
                     </span>
                   </div>
                   <div className="text-neutral-600 mt-2">
                     <p>{pkg.duration} • {pkg.includes}</p>
-                    <p className="text-sm">{pkg.additional}</p>
+                    <p className="text-sm">Pricing details available soon</p>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">

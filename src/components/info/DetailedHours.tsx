@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const weeklySchedule = [
-  { day: 'Monday', hours: '10:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Tuesday', hours: '10:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Wednesday', hours: '10:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Thursday', hours: '10:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Friday', hours: '10:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Saturday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: '1:00 PM - 6:00 PM (Parties Only)' },
-  { day: 'Sunday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: '1:00 PM - 6:00 PM (Parties Only)' }
+  { day: 'Monday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Tuesday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Wednesday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Thursday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Friday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Saturday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' },
+  { day: 'Sunday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' }
 ]
 
 const specialPrograms = [
@@ -21,13 +21,13 @@ const specialPrograms = [
     icon: Calendar,
     title: 'Open Play Times',
     description: 'Drop-in play sessions where families can enjoy all play areas',
-    schedule: 'Mon-Fri: 10AM-5PM | Sat-Sun: 9AM-12PM'
+    schedule: 'Mon-Fri: 10AM-4PM'
   },
   {
     icon: PartyPopper,
-    title: 'Private Parties',
+    title: 'Private Bookings',
     description: 'Exclusive birthday parties and celebrations',
-    schedule: 'Sat-Sun: 1PM-3PM or 4PM-6PM slots'
+    schedule: 'Sat-Sun: 1PM-6PM (Private Bookings Only)'
   }
 ]
 

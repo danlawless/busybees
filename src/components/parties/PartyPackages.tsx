@@ -22,7 +22,7 @@ const packages = [
       'Access to play area during public play',
       'Paper goods included (plates, napkins, cups)',
       'Table cloth and plastic cutlery',
-      '15 kids included, $12 each additional',
+      '15 kids included, additional guest pricing available soon',
       'Weekdays: 10am - 4pm available',
       'Weekends: 9am - 12pm available',
       'You bring food, drinks & decorations'
@@ -43,7 +43,7 @@ const packages = [
       'No public play during your party',
       'Paper goods included (plates, napkins, cups)',
       'Table cloth and plastic cutlery',
-      '15 kids included, $12 each additional',
+      '15 kids included, additional guest pricing available soon',
       'Weekends: 1pm-3pm or 4pm-6pm',
       'You bring food, drinks & decorations'
     ]
@@ -179,7 +179,7 @@ export function PartyPackages() {
               </div>
               
               <h3 className="text-2xl font-bold mb-4">
-                🎉 Book This Month & Save $50! 🎉
+                🎉 Special Opening Offers Coming Soon! 🎉
               </h3>
               <p className="text-lg mb-6 opacity-90">
                 Limited time offer on all party packages. Use code <span className="font-bold bg-white/20 px-3 py-1 rounded">PARTY50</span>

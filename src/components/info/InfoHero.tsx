@@ -13,14 +13,14 @@ const quickInfo = [
   {
     icon: Clock,
     title: 'Hours',
-    content: 'Mon-Fri: 10AM-5PM\nSat-Sun: 9AM-12PM',
-    subtext: 'Open Play Times'
+    content: 'Mon-Fri: 10AM-4PM\nSat-Sun: 1PM-6PM',
+    subtext: 'Private Bookings Only (Weekends)'
   },
   {
     icon: MapPin,
     title: 'Location',
-    content: '380-432 John Fitch Highway',
-    subtext: 'Suite A-190 & A-200'
+    content: 'Coming Soon',
+    subtext: ''
   },
   {
     icon: Phone,

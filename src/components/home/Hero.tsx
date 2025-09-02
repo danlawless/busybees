@@ -37,11 +37,8 @@ export function Hero() {
         >
           {/* Main Hero Content */}
           <motion.div variants={fadeInUp} className="mb-8">
-            <div className="flex justify-center mb-6">
-              <Logo size="xl" animate={false} showText={false} />
-            </div>
             <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
-              <span className="text-honey-600">Busy Bees</span>
+              <span className="text-primary-600">Busy Bees</span>
               <br />
               <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-charcoal-700">
                 Indoor Play Center
@@ -66,9 +63,9 @@ export function Hero() {
               return (
                 <div
                   key={index}
-                  className="flex items-center space-x-2 card-pastel px-4 py-2 rounded-full shadow-soft pulse-honey"
+                  className="flex items-center space-x-2 card-pastel px-4 py-2 rounded-full shadow-soft"
                 >
-                  <Icon className="w-4 h-4 text-honey-600" />
+                  <Icon className="w-4 h-4 text-primary-600" />
                   <span className="text-sm font-medium text-charcoal-800">{feature.text}</span>
                 </div>
               )
@@ -99,19 +96,17 @@ export function Hero() {
               <div className="p-6 card-pastel rounded-2xl shadow-soft text-center">
                 <p className="text-sm font-medium text-charcoal-600 mb-2">Daily Admission</p>
                 <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-honey-gradient">$15</span>
-                  <span className="text-sm text-charcoal-600">ages 2+</span>
+                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
                 </div>
                 <p className="text-xs text-charcoal-500 mt-1">
-                  Infants under 2: $5
+                  Ages 0-6 welcome
                 </p>
               </div>
               
-              <div className="p-6 card-pastel rounded-2xl shadow-soft text-center border-2 border-honey-300">
+              <div className="p-6 card-pastel rounded-2xl shadow-soft text-center border-2 border-charcoal-200">
                 <p className="text-sm font-medium text-charcoal-600 mb-2">Monthly Membership</p>
                 <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-honey-gradient">$75</span>
-                  <span className="text-sm text-charcoal-600">/month</span>
+                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
                 </div>
                 <p className="text-xs text-charcoal-500 mt-1">
                   Unlimited visits
@@ -121,11 +116,10 @@ export function Hero() {
               <div className="p-6 card-pastel rounded-2xl shadow-soft text-center">
                 <p className="text-sm font-medium text-charcoal-600 mb-2">10-Visit Punch Card</p>
                 <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-honey-gradient">$130</span>
-                  <span className="text-sm text-charcoal-600">saves $20</span>
+                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
                 </div>
                 <p className="text-xs text-charcoal-500 mt-1">
-                  $13 per visit
+                  Bulk visit savings
                 </p>
               </div>
             </div>
@@ -140,19 +134,19 @@ export function Hero() {
               </h3>
               <div className="grid md:grid-cols-2 gap-4 text-sm text-charcoal-600">
                 <div className="flex items-start space-x-2">
-                  <span className="text-honey-600">💳</span>
+                  <span className="text-primary-600">💳</span>
                   <span>Cash-free business - all major cards accepted</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-honey-600">🧦</span>
+                  <span className="text-primary-600">🧦</span>
                   <span>Socks required (we sell them if you forget!)</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-honey-600">📅</span>
+                  <span className="text-primary-600">📅</span>
                   <span>No reservations required - just drop in!</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-honey-600">🥪</span>
+                  <span className="text-primary-600">🥪</span>
                   <span>Outside food welcome in our café area</span>
                 </div>
               </div>

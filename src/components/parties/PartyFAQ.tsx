@@ -77,7 +77,7 @@ const faqCategories = [
       },
       {
         question: 'When do I need to pay?',
-        answer: 'We require a $50 deposit to secure your booking, and the remaining balance is due on the day of your party. We accept all major credit cards and cash.'
+        answer: 'We require a deposit to secure your booking, and the remaining balance is due on the day of your party. We accept all major credit cards and cash. Exact deposit amounts coming soon.'
       },
       {
         question: 'Do you offer any discounts?',
