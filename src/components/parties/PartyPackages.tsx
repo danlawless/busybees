@@ -119,16 +119,9 @@ export function PartyPackages() {
             const Icon = pkg.icon
             return (
               <motion.div key={index} variants={fadeInUp} className="relative">
-                {pkg.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                      <Star className="w-4 h-4 inline mr-2" />
-                      MOST POPULAR
-                    </div>
-                  </div>
-                )}
+
                 
-                <Card className={`h-full card-pastel border-2 ${pkg.borderColor} ${pkg.popular ? 'scale-105 shadow-xl' : 'hover:scale-105'} transition-all duration-300 group`}>
+                <Card className={`h-full card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group`}>
                   <CardContent className="p-8">
                     {/* Package Header */}
                     <div className="text-center mb-6">

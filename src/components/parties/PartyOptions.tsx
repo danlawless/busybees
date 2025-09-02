@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Clock, Users, Crown, Calendar, MapPin, Star, CheckCircle } from 'lucide-react'
+import { Clock, Users, Crown, Calendar, MapPin, CheckCircle } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -35,7 +35,7 @@ const partyTypes = [
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
     accentColor: 'from-purple-500 to-purple-600',
-    popular: true,
+
     schedule: [
       { day: 'Friday', time: '4pm - 6pm', available: true },
       { day: 'Saturday & Sunday', time: '1pm - 3pm or 4pm - 6pm', available: true }
@@ -88,16 +88,7 @@ export function PartyOptions() {
             const Icon = party.icon
             return (
               <motion.div key={index} variants={fadeInUp} className="relative">
-                {party.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                      <Star className="w-4 h-4 inline mr-2" />
-                      MOST EXCLUSIVE
-                    </div>
-                  </div>
-                )}
-                
-                <Card className={`h-full card-pastel border-2 ${party.borderColor} ${party.popular ? 'scale-105 shadow-xl' : 'hover:scale-105'} transition-all duration-300 group`}>
+                <Card className={`h-full card-pastel border-2 ${party.borderColor} hover:scale-105 transition-all duration-300 group`}>
                   <CardContent className="p-8">
                     {/* Header */}
                     <div className="text-center mb-6">
