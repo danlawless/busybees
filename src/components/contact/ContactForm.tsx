@@ -187,7 +187,7 @@ export function ContactForm() {
               <CardHeader>
                 <CardTitle className="text-2xl text-center flex items-center justify-center">
                   <MessageSquare className="w-6 h-6 mr-3 text-primary-600" />
-                  Contact Form
+                  Reach Out to Us
                 </CardTitle>
               </CardHeader>
               <CardContent>
