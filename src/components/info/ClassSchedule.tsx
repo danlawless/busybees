@@ -108,7 +108,7 @@ export function ClassSchedule() {
             variants={fadeInUp}
             className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6"
           >
-            Our <span className="text-gradient bg-gradient-to-r from-primary-500 to-secondary-600 bg-clip-text text-transparent">Classes & Programs</span>
+            Our <span className="text-honey-600">Classes & Programs</span>
           </motion.h2>
           <motion.p 
             variants={fadeInUp}
@@ -128,8 +128,8 @@ export function ClassSchedule() {
           {classes.map((classItem, index) => {
             const Icon = classItem.icon
             return (
-              <motion.div key={index} variants={fadeInUp}>
-                <Card className={`h-full card-pastel border-2 ${classItem.borderColor} hover:scale-105 transition-all duration-300 group overflow-hidden`}>
+              <motion.div key={index} variants={fadeInUp} className="h-full">
+                <Card className={`h-full card-pastel border-2 ${classItem.borderColor} hover:scale-105 transition-all duration-300 group overflow-hidden flex flex-col`}>
                   <CardHeader className="text-center pb-4">
                     <div className={`w-16 h-16 bg-gradient-to-br ${classItem.color} hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
                       <Icon className="w-8 h-8 text-charcoal-700" />
@@ -137,12 +137,14 @@ export function ClassSchedule() {
                     <CardTitle className="text-xl font-bold text-charcoal-800 mb-2">
                       {classItem.name}
                     </CardTitle>
-                    <p className="text-sm text-charcoal-600 leading-relaxed">
-                      {classItem.description}
-                    </p>
+                    <div className="min-h-[60px] flex items-center justify-center">
+                      <p className="text-sm text-charcoal-600 leading-relaxed">
+                        {classItem.description}
+                      </p>
+                    </div>
                   </CardHeader>
                   
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 flex-1 flex flex-col">
                     {/* Class Details */}
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center justify-between text-sm">
@@ -163,24 +165,26 @@ export function ClassSchedule() {
                     </div>
 
                     {/* Highlights */}
-                    <div className="space-y-2 mb-6">
+                    <div className="space-y-2 mb-6 flex-1">
                       <h4 className="text-sm font-semibold text-charcoal-700">What Your Child Will Love:</h4>
                       <div className="grid grid-cols-2 gap-1">
                         {classItem.highlights.map((highlight, idx) => (
-                          <div key={idx} className="flex items-center space-x-1 text-xs text-charcoal-600">
-                            <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full"></div>
-                            <span>{highlight}</span>
+                          <div key={idx} className="flex items-start space-x-1 text-xs text-charcoal-600">
+                            <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full flex-shrink-0 mt-1.5"></div>
+                            <span className="leading-tight">{highlight}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* CTA Button */}
-                    <Button 
-                      className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white font-medium"
-                    >
-                      Register Today
-                    </Button>
+                    {/* CTA Button - Always at bottom */}
+                    <div className="mt-auto">
+                      <Button 
+                        className="w-full bg-gradient-to-r from-honey-500 to-primary-600 hover:from-honey-600 hover:to-primary-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        Coming Soon
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -196,7 +200,7 @@ export function ClassSchedule() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <Card className="bg-gradient-to-r from-primary-500 to-secondary-600 text-white overflow-hidden relative max-w-4xl mx-auto">
+          <Card className="bg-gradient-to-r from-honey-500 to-primary-600 text-white overflow-hidden relative max-w-4xl mx-auto shadow-2xl">
             <CardContent className="p-8 text-center relative z-10">
               <h3 className="text-2xl font-bold mb-4">
                 Ready to Join the Fun?
@@ -206,14 +210,14 @@ export function ClassSchedule() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
-                  className="bg-white text-primary-600 hover:bg-gray-100 font-bold"
+                  className="bg-white text-primary-600 hover:bg-honey-50 hover:text-honey-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300"
                   size="lg"
                 >
                   <Calendar className="w-5 h-5 mr-2" />
                   View Full Schedule
                 </Button>
                 <Button 
-                  className="bg-white/20 text-white border-white hover:bg-white/30 font-bold"
+                  className="bg-white text-honey-600 border-2 border-white hover:bg-honey-50 hover:text-honey-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300"
                   variant="outline"
                   size="lg"
                 >

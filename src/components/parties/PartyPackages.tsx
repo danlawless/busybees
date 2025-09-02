@@ -99,11 +99,11 @@ export function PartyPackages() {
             Party Packages
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-            Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Party</span>
+            Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Package</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            Every package includes everything you need for an unforgettable celebration. 
-            No hidden fees, no stress – just pure birthday magic!
+            Now that you know about our party options, choose your package! Every package is available as both 
+            semi-private and private - no hidden fees, no stress, just pure birthday magic!
           </p>
         </motion.div>
         
@@ -143,12 +143,15 @@ export function PartyPackages() {
                       <div className="text-center mb-4">
                         <div className="flex items-baseline justify-center space-x-2 mb-2">
                           <span className="text-3xl font-bold text-honey-gradient">${pkg.semiPrivatePrice}</span>
-                          <span className="text-sm text-charcoal-600">semi-private</span>
+                          <span className="text-sm text-charcoal-600 bg-blue-50 px-2 py-1 rounded-full">semi-private</span>
                         </div>
                         <div className="flex items-baseline justify-center space-x-2">
                           <span className="text-3xl font-bold text-honey-gradient">${pkg.privatePrice}</span>
-                          <span className="text-sm text-charcoal-600">private</span>
+                          <span className="text-sm text-charcoal-600 bg-purple-50 px-2 py-1 rounded-full">private</span>
                         </div>
+                        <p className="text-xs text-charcoal-500 mt-2">
+                          Choose your party type above, then select this package!
+                        </p>
                       </div>
                       
                       <div className="flex justify-center space-x-4 text-sm text-charcoal-600">
@@ -217,7 +220,7 @@ export function PartyPackages() {
                 🎉 Ready to Book Your Perfect Party? 🎉
               </h3>
               <p className="text-lg mb-6 opacity-90">
-                Choose from our three amazing packages and create unforgettable memories for your little bee!
+                You've learned about our party options and seen our amazing packages. Now pick your perfect combination and create unforgettable memories for your little bee!
               </p>
               
               <Button 

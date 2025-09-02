@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import { Layout } from '@/components/layout/Layout'
 import { PartiesHero } from '@/components/parties/PartiesHero'
+import { PartyOptions } from '@/components/parties/PartyOptions'
 import { PartyPackages } from '@/components/parties/PartyPackages'
-import { BookingFlow } from '@/components/parties/BookingFlow'
-import { PartyGallery } from '@/components/parties/PartyGallery'
-import { PartyCalendar, type PartyBooking } from '@/components/parties/PartyCalendar'
-import { PartyBookingForm } from '@/components/parties/PartyBookingForm'
-import { PartyFAQ } from '@/components/parties/PartyFAQ'
-import { SuccessModal } from '@/components/ui/SuccessModal'
+// Temporarily removed imports for hidden components
+// import { BookingFlow } from '@/components/parties/BookingFlow'
+// import { PartyGallery } from '@/components/parties/PartyGallery'
+import { type PartyBooking } from '@/components/parties/PartyCalendar'
+// import { PartyBookingForm } from '@/components/parties/PartyBookingForm'
+// import { PartyFAQ } from '@/components/parties/PartyFAQ'
+// import { SuccessModal } from '@/components/ui/SuccessModal'
 
 interface TimeSlot {
   startTime: string;
@@ -73,13 +75,16 @@ export default function PartiesPage() {
   return (
     <Layout>
       <PartiesHero />
+      <PartyOptions />
       <PartyPackages />
       
+      {/* Temporarily hidden sections
       <BookingFlow />
       <PartyGallery />
       <PartyFAQ />
+      */}
 
-      {/* Booking Form Modal */}
+      {/* Temporarily hidden booking modals
       {showBookingForm && selectedBooking && (
         <PartyBookingForm
           selectedDate={selectedBooking.date}
@@ -89,7 +94,6 @@ export default function PartiesPage() {
         />
       )}
 
-      {/* Success Modal */}
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
@@ -97,6 +101,7 @@ export default function PartiesPage() {
         message={successDetails.message}
         details={successDetails.details}
       />
+      */}
     </Layout>
   )
 }
