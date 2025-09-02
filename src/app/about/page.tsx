@@ -3,19 +3,16 @@
 import { Layout } from '@/components/layout/Layout'
 import { AboutHero } from '@/components/about/AboutHero'
 import { OurStory } from '@/components/about/OurStory'
-
-import { CommunitySection } from '@/components/about/CommunitySection'
-import { PartyFAQ } from '@/components/parties/PartyFAQ'
+import { RulesAndWaiver } from '@/components/about/RulesAndWaiver'
+import { NewsletterSection } from '@/components/about/CommunitySection'
 
 export default function AboutPage() {
   return (
     <Layout>
       <AboutHero />
       <OurStory />
-      {/* <ValuesSection /> */}
-      {/* <TeamSection /> */}
-      <CommunitySection />
-      <PartyFAQ />
+      <RulesAndWaiver />
+      <NewsletterSection />
     </Layout>
   )
 }

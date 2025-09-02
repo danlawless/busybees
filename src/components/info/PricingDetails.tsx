@@ -9,16 +9,16 @@ import { formatPrice, fadeInUp, staggerContainer } from '@/lib/utils'
 
 const admissionPricing = [
   {
-    category: 'Children (2+ years)',
-    price: 15,
-    description: 'All-day access to all play areas',
-    features: ['Unlimited play time', 'Access to all zones', 'Clean, safe environment']
+    category: 'General Admission (Ages 2+)',
+    price: 17,
+    description: 'All day access for children ages 2+',
+    features: ['All-day access to play areas', 'Age-appropriate zones (2-6 years)', 'Safe, clean environment', 'No time limits']
   },
   {
     category: 'Infants (Under 2)',
-    price: 5,
-    description: 'Dedicated infant play area',
-    features: ['Soft play area', 'Sensory toys', 'FREE with paid sibling'],
+    price: 7,
+    description: 'Special pricing for our littlest visitors',
+    features: ['Access to infant-safe areas', 'Free with paid sibling admission', 'Dedicated infant play space', 'Parent supervision required'],
     highlight: 'Free with sibling'
   }
 ]
@@ -26,42 +26,30 @@ const admissionPricing = [
 const membershipOptions = [
   {
     title: '10-Visit Punch Card',
-    price: 130,
-    savings: 20,
-    description: 'Perfect for regular visitors',
+    price: 150,
+    originalPrice: 170,
+    description: 'Save $20 with bulk visits',
     features: [
-      '$13 per visit (save $2 each time)',
+      '10 visits at $15 each (save $20)',
       'Never expires',
       'Transferable to family/friends',
-      'All daily admission benefits'
+      'All daily pass benefits'
     ],
     popular: false
   },
   {
     title: 'Monthly Membership',
-    price: 75,
-    description: 'Unlimited fun for active families',
+    price: 100,
+    description: 'Best value for regular families',
     features: [
-      'Unlimited visits all month',
-      'Priority party booking',
-      'Member-only special events',
-      '10% discount on snacks',
-      '2 free guest passes per month'
+      'Unlimited visits for 1 child',
+      '10% off birthday bookings',
+      '10% off all classes (Mommy & Me, Story Time, Kids Yoga & more)',
+      'Member exclusive events',
+      '20% off second child ($80)',
+      '30% off third child ($70)'
     ],
     popular: true
-  },
-  {
-    title: 'Summer Special',
-    price: 150,
-    originalPrice: 225,
-    description: '3-month pass (June, July, August)',
-    features: [
-      'Unlimited summer visits',
-      'Beat the heat indoors',
-      'Save $75 over monthly rates',
-      'All membership benefits'
-    ],
-    seasonal: true
   }
 ]
 
@@ -156,7 +144,7 @@ export function PricingDetails() {
           <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">
             Memberships & Packages
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {membershipOptions.map((option, index) => (
               <motion.div key={index} variants={fadeInUp}>
                 <Card className={`h-full relative ${option.popular ? 'ring-2 ring-primary-500 shadow-large' : ''}`}>
@@ -168,13 +156,7 @@ export function PricingDetails() {
                       </div>
                     </div>
                   )}
-                  {option.seasonal && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-accent-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                        Limited Time
-                      </div>
-                    </div>
-                  )}
+
                   <CardHeader className="text-center">
                     <CardTitle className="text-xl">{option.title}</CardTitle>
                     <div className="mt-4">

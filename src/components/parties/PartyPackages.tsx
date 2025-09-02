@@ -9,14 +9,15 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const packages = [
   {
-    name: 'Semi-Private Party',
-    price: 350,
+    name: 'Basic Bee',
+    semiPrivatePrice: 299,
+    privatePrice: 399,
     duration: '2 Hours',
     guests: '15 Kids Included',
     icon: Users,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
-    popular: true,
+    popular: false,
     features: [
       'Exclusive party room access',
       'Access to play area during public play',
@@ -29,8 +30,30 @@ const packages = [
     ]
   },
   {
-    name: 'Private Party',
-    price: 425,
+    name: 'Worker Bee',
+    semiPrivatePrice: 399,
+    privatePrice: 499,
+    duration: '2 Hours',
+    guests: '15 Kids Included',
+    icon: Zap,
+    color: 'from-yellow-200 to-yellow-300',
+    borderColor: 'border-yellow-300',
+    popular: true,
+    features: [
+      'Everything from Basic Bee',
+      'Enhanced party decorations',
+      'Special activity coordinator',
+      'Birthday child gets special crown',
+      'Photo session included',
+      'Weekdays: 10am - 4pm available',
+      'Weekends: 9am - 12pm or 1pm-3pm available',
+      'You bring food, drinks & extra decorations'
+    ]
+  },
+  {
+    name: 'Queen Bee',
+    semiPrivatePrice: 499,
+    privatePrice: 599,
     duration: '2 Hours',
     guests: '15 Kids Included',
     icon: Crown,
@@ -38,14 +61,14 @@ const packages = [
     borderColor: 'border-pink-300',
     popular: false,
     features: [
-      'Exclusive access to entire play area',
-      'Exclusive party room access',
-      'No public play during your party',
-      'Paper goods included (plates, napkins, cups)',
-      'Table cloth and plastic cutlery',
-      '15 kids included, additional guest pricing available soon',
-      'Weekends: 1pm-3pm or 4pm-6pm',
-      'You bring food, drinks & decorations'
+      'Everything from Worker Bee',
+      'Exclusive access to entire play area (private only)',
+      'Premium party decorations & setup',
+      'Dedicated party host',
+      'Professional photo package',
+      'Special birthday throne for birthday child',
+      'Custom party favors for all guests',
+      'You bring food & drinks, we handle everything else'
     ]
   }
 ]
@@ -86,7 +109,7 @@ export function PartyPackages() {
         
         {/* Package Cards */}
         <motion.div
-          className="grid lg:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto"
+          className="grid lg:grid-cols-3 gap-8 mb-16 max-w-6xl mx-auto"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -117,9 +140,15 @@ export function PartyPackages() {
                         {pkg.name}
                       </h3>
                       
-                      <div className="flex items-baseline justify-center space-x-2 mb-4">
-                        <span className="text-4xl font-bold text-honey-gradient">${pkg.price}</span>
-                        <span className="text-charcoal-600">total</span>
+                      <div className="text-center mb-4">
+                        <div className="flex items-baseline justify-center space-x-2 mb-2">
+                          <span className="text-3xl font-bold text-honey-gradient">${pkg.semiPrivatePrice}</span>
+                          <span className="text-sm text-charcoal-600">semi-private</span>
+                        </div>
+                        <div className="flex items-baseline justify-center space-x-2">
+                          <span className="text-3xl font-bold text-honey-gradient">${pkg.privatePrice}</span>
+                          <span className="text-sm text-charcoal-600">private</span>
+                        </div>
                       </div>
                       
                       <div className="flex justify-center space-x-4 text-sm text-charcoal-600">
@@ -152,6 +181,12 @@ export function PartyPackages() {
                         ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white' 
                         : ''} font-semibold`}
                       size="lg"
+                      onClick={() => {
+                        document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                          behavior: 'smooth',
+                          block: 'start'
+                        });
+                      }}
                     >
                       <Gift className="w-4 h-4 mr-2" />
                       Book {pkg.name}
@@ -179,15 +214,25 @@ export function PartyPackages() {
               </div>
               
               <h3 className="text-2xl font-bold mb-4">
-                🎉 Special Opening Offers Coming Soon! 🎉
+                🎉 Ready to Book Your Perfect Party? 🎉
               </h3>
               <p className="text-lg mb-6 opacity-90">
-                Limited time offer on all party packages. Use code <span className="font-bold bg-white/20 px-3 py-1 rounded">PARTY50</span>
+                Choose from our three amazing packages and create unforgettable memories for your little bee!
               </p>
               
-              <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 font-bold">
+              <Button 
+                size="lg" 
+                className="bg-white text-purple-600 hover:bg-gray-100 font-bold"
+                onClick={() => {
+                  // Scroll to the first package or booking section
+                  document.querySelector('.grid')?.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                  });
+                }}
+              >
                 <Calendar className="w-5 h-5 mr-2" />
-                Book Now & Save
+                Choose Your Package
               </Button>
             </CardContent>
             

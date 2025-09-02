@@ -1,17 +1,13 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { CreditCard, Shirt, Clock, Coffee, Users, Bell } from 'lucide-react'
+import { Shirt, Clock, Coffee, Users, Bell } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const importantInfo = [
-  {
-    icon: CreditCard,
-    title: 'Cashless Business',
-    description: 'We accept all major credit and debit cards - no cash needed!'
-  },
+
   {
     icon: Shirt,
     title: 'Socks Required',

@@ -79,8 +79,8 @@ export function AboutHero() {
               {/* Main Hero Image */}
               <div className="aspect-[4/3] relative">
                 <Image
-                  src="/images/children-playing-happily.jpg"
-                  alt="Children playing happily at Busy Bees"
+                  src="/images/superhero-squad.jpg"
+                  alt="Superhero squad children at Busy Bees"
                   fill
                   className="object-cover"
                   priority

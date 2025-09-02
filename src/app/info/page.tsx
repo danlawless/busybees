@@ -3,7 +3,7 @@ import { InfoHero } from '@/components/info/InfoHero'
 import { ImportantInfo } from '@/components/info/ImportantInfo'
 import { DetailedHours } from '@/components/info/DetailedHours'
 import { PricingDetails } from '@/components/info/PricingDetails'
-import { Amenities } from '@/components/info/Amenities'
+
 import { Policies } from '@/components/info/Policies'
 import { FAQ } from '@/components/info/FAQ'
 
@@ -19,7 +19,7 @@ export default function InfoPage() {
       <ImportantInfo />
       <DetailedHours />
       <PricingDetails />
-      <Amenities />
+
       <Policies />
       <FAQ />
     </Layout>

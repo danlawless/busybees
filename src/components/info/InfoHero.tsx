@@ -25,7 +25,7 @@ const quickInfo = [
   {
     icon: Phone,
     title: 'Contact',
-    content: '(123) 456-7890',
+    content: 'Coming Soon',
     subtext: 'Call for parties & info'
   }
 ]

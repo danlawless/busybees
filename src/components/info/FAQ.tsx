@@ -54,7 +54,7 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Call us at (123) 456-7890 to book your party! We recommend booking 2-3 weeks in advance, especially for weekend slots. We\'ll help you choose between private ($425) and semi-private ($350) packages.'
+        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We\'ll help you choose between private ($425) and semi-private ($350) packages.'
       },
       {
         question: 'What\'s included in party packages?',
@@ -88,6 +88,31 @@ const faqs = [
       {
         question: 'Can grandparents bring their grandchildren?',
         answer: 'Of course! Any responsible adult can supervise children at Busy Bees. We just require that children are actively supervised at all times during their visit.'
+      }
+    ]
+  },
+  {
+    category: 'Classes & Programs',
+    questions: [
+      {
+        question: 'What classes do you offer?',
+        answer: 'We offer a variety of structured programs including Mommy and Me, Story Time, Kids Yoga, Lego Build, Toddler Tunes, Zumbini, and New Parent Support Group. Each class is designed for specific age ranges and developmental goals.'
+      },
+      {
+        question: 'Do I need to register for classes in advance?',
+        answer: 'Yes, class registration is required as space is limited. Members receive a 10% discount on all classes. Contact us to register or check availability for upcoming sessions.'
+      },
+      {
+        question: 'What ages are the classes for?',
+        answer: 'Our classes range from infants (0-12 months) to preschoolers (up to 6 years). Each class listing includes the recommended age range. We also have programs for parents, like our New Parent Support Group.'
+      },
+      {
+        question: 'Can I try a class before committing?',
+        answer: 'Absolutely! We offer drop-in rates for most classes so you can try before signing up for a full session. Contact us to learn about trial options for specific programs.'
+      },
+      {
+        question: 'What should my child wear to classes?',
+        answer: 'Comfortable, play-friendly clothing is recommended. For Kids Yoga, loose-fitting clothes work best. For all classes, remember that socks are required in our play areas for safety and hygiene.'
       }
     ]
   }
@@ -197,23 +222,6 @@ export function FAQ() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <Card className="bg-primary-50 border-primary-200">
-            <CardContent className="p-8">
-              <h4 className="font-semibold text-neutral-900 mb-3">Still have questions?</h4>
-              <p className="text-neutral-600 mb-4">
-                We're here to help! Give us a call or stop by during our open hours.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
-                <div className="flex items-center">
-                  <span className="font-medium text-primary-700">📞 (123) 456-7890</span>
-                </div>
-                <div className="hidden sm:block text-neutral-400">•</div>
-                <div className="flex items-center">
-                  <span className="font-medium text-primary-700">📧 info@busybeesipc.com</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </motion.div>
       </div>
     </section>
