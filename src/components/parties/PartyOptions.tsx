@@ -69,7 +69,7 @@ export function PartyOptions() {
             Party Options
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
-            Choose Your <span className="text-gradient bg-gradient-to-r from-purple-500 to-pink-600 bg-clip-text text-transparent">Perfect Party Experience</span>
+            Choose Your <span className="text-honey-600">Perfect Party Experience</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
             We offer two types of party experiences for you to choose from. Each option provides amazing value with everything you need for an unforgettable celebration!
@@ -87,9 +87,9 @@ export function PartyOptions() {
           {partyTypes.map((party, index) => {
             const Icon = party.icon
             return (
-              <motion.div key={index} variants={fadeInUp} className="relative">
-                <Card className={`h-full card-pastel border-2 ${party.borderColor} hover:scale-105 transition-all duration-300 group`}>
-                  <CardContent className="p-8">
+              <motion.div key={index} variants={fadeInUp} className="relative h-full">
+                <Card className={`h-full card-pastel border-2 ${party.borderColor} hover:scale-105 transition-all duration-300 group flex flex-col`}>
+                  <CardContent className="p-8 flex-1 flex flex-col">
                     {/* Header */}
                     <div className="text-center mb-6">
                       <div className={`w-16 h-16 bg-gradient-to-br ${party.color} hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
@@ -100,9 +100,11 @@ export function PartyOptions() {
                         {party.name}
                       </h3>
                       
-                      <p className="text-charcoal-600 leading-relaxed mb-4">
-                        {party.description}
-                      </p>
+                      <div className="min-h-[60px] flex items-center justify-center">
+                        <p className="text-charcoal-600 leading-relaxed">
+                          {party.description}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Schedule */}
@@ -125,7 +127,7 @@ export function PartyOptions() {
                     </div>
 
                     {/* Benefits */}
-                    <div className="mb-6">
+                    <div className="mb-6 flex-1">
                       <h4 className="font-semibold text-charcoal-800 mb-3 flex items-center">
                         <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
                         What's Included
@@ -142,11 +144,13 @@ export function PartyOptions() {
                       </div>
                     </div>
 
-                    {/* Pricing Note */}
-                    <div className={`p-4 bg-gradient-to-r ${party.accentColor} rounded-lg text-white text-center`}>
-                      <p className="font-medium">
-                        💰 {party.priceNote}
-                      </p>
+                    {/* Pricing Note - Always at bottom */}
+                    <div className="mt-auto">
+                      <div className={`p-4 bg-gradient-to-r ${party.accentColor} rounded-lg text-white text-center`}>
+                        <p className="font-medium">
+                          💰 {party.priceNote}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

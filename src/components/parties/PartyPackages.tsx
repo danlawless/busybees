@@ -99,7 +99,7 @@ export function PartyPackages() {
             Party Packages
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-            Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Package</span>
+            Choose Your <span className="text-honey-600">Perfect Package</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
             Now that you know about our party options, choose your package! Every package is available as both 
@@ -118,11 +118,9 @@ export function PartyPackages() {
           {packages.map((pkg, index) => {
             const Icon = pkg.icon
             return (
-              <motion.div key={index} variants={fadeInUp} className="relative">
-
-                
-                <Card className={`h-full card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group`}>
-                  <CardContent className="p-8">
+              <motion.div key={index} variants={fadeInUp} className="relative h-full">
+                <Card className={`h-full card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group flex flex-col`}>
+                  <CardContent className="p-8 flex-1 flex flex-col">
                     {/* Package Header */}
                     <div className="text-center mb-6">
                       <div className={`w-16 h-16 bg-gradient-to-br ${pkg.color} hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
@@ -160,7 +158,7 @@ export function PartyPackages() {
                     </div>
                     
                     {/* Features List */}
-                    <div className="space-y-3 mb-8">
+                    <div className="space-y-3 mb-8 flex-1">
                       {pkg.features.map((feature, idx) => (
                         <div key={idx} className="flex items-start space-x-3">
                           <div className="w-5 h-5 bg-gradient-to-br from-green-200 to-green-300 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
@@ -171,22 +169,22 @@ export function PartyPackages() {
                       ))}
                     </div>
                     
-                    {/* CTA Button */}
-                    <Button 
-                      className={`w-full ${pkg.popular 
-                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white' 
-                        : ''} font-semibold`}
-                      size="lg"
-                      onClick={() => {
-                        document.getElementById('party-calendar-section')?.scrollIntoView({ 
-                          behavior: 'smooth',
-                          block: 'start'
-                        });
-                      }}
-                    >
-                      <Gift className="w-4 h-4 mr-2" />
-                      Book {pkg.name}
-                    </Button>
+                    {/* CTA Button - Always at bottom */}
+                    <div className="mt-auto">
+                      <Button 
+                        className="w-full bg-gradient-to-r from-honey-500 to-primary-600 hover:from-honey-600 hover:to-primary-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                        size="lg"
+                        onClick={() => {
+                          document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                          });
+                        }}
+                      >
+                        <Gift className="w-4 h-4 mr-2" />
+                        Book {pkg.name}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>

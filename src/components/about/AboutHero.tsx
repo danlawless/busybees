@@ -46,7 +46,8 @@ export function AboutHero() {
               and lifelong memories are made.
             </motion.p>
             
-            <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            {/* Stats hidden until opening */}
+            {/* <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               {stats.map((stat, index) => {
                 const Icon = stat.icon
                 return (
@@ -65,7 +66,7 @@ export function AboutHero() {
                   </Card>
                 )
               })}
-            </motion.div>
+            </motion.div> */}
           </motion.div>
           
           {/* Image Side */}

@@ -122,8 +122,8 @@ export function PartyGalleryUpdated() {
           </div>
         </motion.div>
         
-        {/* Party Stats - Same as before */}
-        <motion.div
+        {/* Party Stats hidden until opening */}
+        {/* <motion.div
           className="mb-20"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -156,7 +156,7 @@ export function PartyGalleryUpdated() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </motion.div> */}
       </div>
     </section>
   )

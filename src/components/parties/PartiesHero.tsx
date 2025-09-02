@@ -96,8 +96,8 @@ export function PartiesHero() {
               </Button>
             </motion.div>
             
-            {/* Quick Stats */}
-            <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Quick Stats hidden until opening */}
+            {/* <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {quickStats.map((stat, index) => {
                 const Icon = stat.icon
                 return (
@@ -114,7 +114,7 @@ export function PartiesHero() {
                   </div>
                 )
               })}
-            </motion.div>
+            </motion.div> */}
           </motion.div>
           
           {/* Image Side */}
