@@ -21,7 +21,7 @@ export function OurStory() {
               Our Story
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-              Built by a Family, for <span className="text-honey-gradient">Families</span>
+              Built By a Family For <span className="text-honey-gradient">Families</span>
             </h2>
           </motion.div>
         </div>
