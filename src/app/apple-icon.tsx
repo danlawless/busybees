@@ -17,18 +17,45 @@ export default function AppleIcon() {
       // ImageResponse JSX element
       <div
         style={{
-          fontSize: 120,
-          background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE047 100%)', // Yellow gradient
+          background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)', // Primary blue gradient
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '20%',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          borderRadius: '22%',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
+          border: '3px solid rgba(255, 255, 255, 0.2)',
         }}
       >
-        🐝
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FEF3C7',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '80px',
+              marginBottom: '8px',
+            }}
+          >
+            🐝
+          </div>
+          <div
+            style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              letterSpacing: '1px',
+              textAlign: 'center',
+            }}
+          >
+            BUSY<br/>BEES
+          </div>
+        </div>
       </div>
     ),
     // ImageResponse options

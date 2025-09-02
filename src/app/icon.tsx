@@ -17,18 +17,28 @@ export default function Icon() {
       // ImageResponse JSX element
       <div
         style={{
-          fontSize: 24,
-          background: '#FEF3C7', // Light yellow background
+          background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)', // Primary blue gradient
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '50%',
-          border: '2px solid #F59E0B', // Yellow border
+          borderRadius: '20%',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         }}
       >
-        🐝
+        <div
+          style={{
+            fontSize: '20px',
+            color: '#FEF3C7',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          🐝
+        </div>
       </div>
     ),
     // ImageResponse options

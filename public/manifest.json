@@ -1,0 +1,21 @@
+{
+  "name": "Busy Bees Indoor Play Center",
+  "short_name": "Busy Bees",
+  "description": "A modern, safe and engaging indoor play space for children ages 0-6",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3B82F6",
+  "background_color": "#FFFFFF",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
