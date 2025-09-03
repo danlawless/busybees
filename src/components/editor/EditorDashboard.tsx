@@ -13,7 +13,9 @@ export function EditorDashboard() {
     logout, 
     toggleEditing, 
     isEditing,
-    saveContent 
+    saveContent,
+    detectFields,
+    updateField
   } = useEditor()
   
   const [password, setPassword] = useState('')
@@ -22,9 +24,10 @@ export function EditorDashboard() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    console.log('🔐 Dashboard login attempt with password:', password)
     const success = await login(password)
     if (!success) {
-      alert('Invalid password')
+      alert('Invalid password - check console for details')
     }
     setIsLoading(false)
   }
@@ -38,6 +41,11 @@ export function EditorDashboard() {
       alert('Failed to save content')
     }
     setIsLoading(false)
+  }
+
+  const handleDetectFields = () => {
+    console.log('🔍 Manual field detection triggered')
+    detectFields()
   }
 
   if (!isAuthenticated) {
@@ -82,7 +90,8 @@ export function EditorDashboard() {
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
                 fontSize: '16px',
-                marginBottom: '20px'
+                marginBottom: '20px',
+                boxSizing: 'border-box'
               }}
               required
             />
@@ -105,6 +114,14 @@ export function EditorDashboard() {
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
+          
+          <p style={{ 
+            fontSize: '0.9rem', 
+            color: '#6b7280', 
+            marginTop: '20px' 
+          }}>
+            Try password: <code>universal2025!</code>
+          </p>
         </div>
       </div>
     )
@@ -130,7 +147,21 @@ export function EditorDashboard() {
             {fields.length} editable fields detected
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleDetectFields}
+            style={{
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            🔍 Detect Fields
+          </button>
           <button
             onClick={toggleEditing}
             style={{
@@ -229,7 +260,8 @@ export function EditorDashboard() {
                 borderRadius: '4px',
                 fontFamily: 'monospace',
                 fontSize: '0.9rem',
-                resize: 'vertical'
+                resize: 'vertical',
+                boxSizing: 'border-box'
               }}
             />
             
@@ -254,8 +286,33 @@ export function EditorDashboard() {
           borderRadius: '12px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
         }}>
-          <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>
-            No editable fields detected. Make sure your components have text content.
+          <h3 style={{ color: '#111827', marginBottom: '15px' }}>
+            No Editable Fields Detected
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: '1rem', marginBottom: '20px' }}>
+            The field detector is scanning for text content in your React components.
+          </p>
+          <button
+            onClick={handleDetectFields}
+            style={{
+              background: config.colors?.primary || '#2563eb',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            🔍 Try Detecting Fields Again
+          </button>
+          <p style={{ 
+            fontSize: '0.9rem', 
+            color: '#6b7280', 
+            marginTop: '15px',
+            fontStyle: 'italic'
+          }}>
+            Open browser console to see detection details
           </p>
         </div>
       )}
