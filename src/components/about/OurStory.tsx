@@ -65,7 +65,7 @@ export function OurStory() {
                   src="/images/family/busy-bees-family.png"
                   alt="The Busy Bees Family"
                   fill
-                  className="object-cover"
+                  className="object-cover rounded-3xl"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
