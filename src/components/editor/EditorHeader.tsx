@@ -3,10 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useEditor } from './EditorProvider'
 
-/**
- * Editor Header - Fixed toolbar when authenticated
- * Replicates HTML version's editor-toolbar exactly
- */
 export function EditorHeader() {
   const { 
     config, 
@@ -21,16 +17,23 @@ export function EditorHeader() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [currentPath, setCurrentPath] = useState('/')
 
   useEffect(() => {
     setIsMounted(true)
+    if (typeof window !== 'undefined') {
+      setCurrentPath(window.location.pathname)
+    }
   }, [])
 
-  // Only show header when authenticated and not on editor page
+  // Show header when authenticated AND either:
+  // 1. On editor page, OR 
+  // 2. On any page with ?editor=true parameter
   const shouldShow = isMounted && 
                     isAuthenticated && 
                     typeof window !== 'undefined' && 
-                    window.location.pathname !== '/editor'
+                    (window.location.pathname === '/editor' || 
+                     window.location.search.includes('editor=true'))
 
   if (!shouldShow) return null
 
@@ -63,13 +66,15 @@ export function EditorHeader() {
 
   const navigateToPage = (path: string) => {
     if (typeof window !== 'undefined') {
-      window.location.href = path
+      // Add ?editor=true to maintain editor mode
+      const editorParam = window.location.search.includes('editor=true') ? '?editor=true' : ''
+      window.location.href = path + editorParam
     }
   }
 
   return (
     <>
-      {/* Editor Toolbar - exact replica of HTML version */}
+      {/* Editor Toolbar - matches HTML version */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -87,7 +92,7 @@ export function EditorHeader() {
         fontSize: '14px',
         fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
-        {/* Left - Brand and Instructions */}
+        {/* Left - Brand and Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h1 style={{
             margin: 0,
@@ -97,22 +102,31 @@ export function EditorHeader() {
             {config.brandName || 'Universal Editor'}
           </h1>
           
-          {isEditing && (
-            <div style={{
-              fontSize: '13px',
-              opacity: 0.9,
-              fontStyle: 'italic'
+          <div style={{
+            fontSize: '13px',
+            opacity: 0.9,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '15px'
+          }}>
+            <span>📍 {currentPath}</span>
+            <span>📝 {fields.length} fields</span>
+            <span style={{
+              background: isEditing ? '#059669' : 'rgba(255,255,255,0.2)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '12px'
             }}>
-              Click any text to edit directly
-            </div>
-          )}
+              {isEditing ? '✏️ Editing' : '👁️ Viewing'}
+            </span>
+          </div>
         </div>
 
         {/* Center - Page Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '13px', opacity: 0.8 }}>Page:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '13px', opacity: 0.8 }}>Navigate:</span>
           <select 
-            value={isMounted ? window.location.pathname : '/'}
+            value={currentPath}
             onChange={(e) => navigateToPage(e.target.value)}
             style={{
               background: 'rgba(255,255,255,0.1)',
@@ -129,17 +143,8 @@ export function EditorHeader() {
             <option value="/parties">🎉 Parties</option>
             <option value="/info">ℹ️ Info</option>
             <option value="/classes">📚 Classes</option>
+            <option value="/editor">⚙️ Dashboard</option>
           </select>
-          
-          <div style={{
-            fontSize: '12px',
-            opacity: 0.8,
-            background: 'rgba(255,255,255,0.1)',
-            padding: '4px 8px',
-            borderRadius: '4px'
-          }}>
-            {fields.length} fields
-          </div>
         </div>
 
         {/* Right - Action Buttons */}
@@ -217,26 +222,6 @@ export function EditorHeader() {
           </button>
 
           <button
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.open('/editor', '_blank')
-              }
-            }}
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: 'white',
-              border: '1px solid rgba(255,255,255,0.3)',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
-            }}
-          >
-            📊
-          </button>
-
-          <button
             onClick={logout}
             style={{
               background: 'rgba(255,255,255,0.1)',
@@ -254,7 +239,7 @@ export function EditorHeader() {
         </div>
       </div>
 
-      {/* Content spacer to push page content below header */}
+      {/* Content spacer */}
       <div style={{ height: '60px' }} />
     </>
   )
