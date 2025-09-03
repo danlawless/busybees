@@ -2,13 +2,9 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install && git submodule update --init --recursive",
+  "installCommand": "npm install",
   "outputDirectory": ".next",
-  "functions": {
-    "editor/api/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
+
   "env": {
     "GITHUB_REPO": "danlawless/busybees",
     "GITHUB_BRANCH": "main"
