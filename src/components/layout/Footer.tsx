@@ -13,7 +13,7 @@ const footerNavigation = {
     { name: 'Info', href: '/info' },
     { name: 'Parties', href: '/parties' },
     { name: 'Contact', href: '/contact' },
-    // { name: 'Jobs', href: '/jobs' }, // Hidden until opening
+    { name: 'Jobs', href: '/jobs' },
   ],
   legal: [
     { name: 'Privacy Policy', href: '/privacy' },

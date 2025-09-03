@@ -13,9 +13,14 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Serve editor files as static content
       {
-        source: '/editor/:path*',
-        destination: '/editor/:path*',
+        source: '/editor',
+        destination: '/editor/index.html',
+      },
+      {
+        source: '/editor/',
+        destination: '/editor/index.html',
       },
     ];
   },

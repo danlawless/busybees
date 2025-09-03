@@ -4,11 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "prebuild": "npm run copy-editor",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "copy-editor": "mkdir -p public/editor && cp -r editor/* public/editor/ 2>/dev/null || true"
+    "lint": "next lint"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

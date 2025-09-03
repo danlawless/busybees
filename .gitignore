@@ -40,5 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# editor submodule copies (generated during build)
-/public/editor/
+

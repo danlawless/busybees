@@ -40,7 +40,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} font-body antialiased`}>
         {children}
-        <script src="/editor/embed/editor-embed.js" data-password="universal2025!" data-admin-link="false" data-auto-scan="false" data-debug="true" async></script>
+
       </body>
     </html>
   );
