@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { EditorProvider } from './EditorProvider'
 import { EditorHeader } from './EditorHeader'
 import { VisualEditingOverlay } from './VisualEditingOverlay'
@@ -12,17 +12,22 @@ interface UniversalEditorProps extends Partial<EditorConfig> {
 }
 
 /**
- * Universal Editor - Clean Header Integration
- * 
- * Usage: <UniversalEditor password="your-password" />
- * 
- * Provides:
- * - Fixed header toolbar when authenticated
- * - Click-to-edit functionality  
- * - Invisible when not authenticated
- * - Exact replica of HTML version UX
+ * Universal Editor - Client-Side Only Integration
+ * Prevents all SSR/hydration issues by only rendering after mount
  */
 export default function UniversalEditor(props: UniversalEditorProps) {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Only render after client-side mount to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Don't render anything during SSR
+  if (!isMounted) {
+    return <>{props.children}</>
+  }
+
   const config: EditorConfig = {
     password: props.password,
     apiBasePath: props.apiBasePath || '/api/editor',

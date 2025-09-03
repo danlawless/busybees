@@ -40,35 +40,15 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
   const [authToken, setAuthToken] = useState<string>('')
   const [isMounted, setIsMounted] = useState(false)
 
-  // Ensure component is mounted before doing anything with window/DOM
+  // Ensure component is mounted before any DOM operations
   useEffect(() => {
     setIsMounted(true)
-  }, [])
-
-  // Only initialize when mounted and on editor page
-  useEffect(() => {
-    if (!isMounted) return
     
+    // Only load content when on editor page
     if (typeof window !== 'undefined' && window.location.pathname === '/editor') {
       loadContent()
     }
-  }, [isMounted])
-
-  // Listen for toggle editing events (only when mounted)
-  useEffect(() => {
-    if (!isMounted) return
-    
-    const handleToggleEditing = () => {
-      toggleEditing()
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('editor-toggle-editing', handleToggleEditing)
-      return () => {
-        window.removeEventListener('editor-toggle-editing', handleToggleEditing)
-      }
-    }
-  }, [isMounted])
+  }, [])
 
   const login = async (password: string): Promise<boolean> => {
     try {
@@ -79,19 +59,13 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
         body: JSON.stringify({ action: 'login', password })
       })
       
-      console.log('📡 Auth response status:', response.status)
       const data = await response.json()
       console.log('📋 Auth response:', data)
       
       if (data.success) {
         setAuthToken(data.token)
         setIsAuthenticated(true)
-        // Store in localStorage for persistence
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('editor-token', data.token)
-          localStorage.setItem('editor-authenticated', 'true')
-        }
-        // Trigger field detection after login
+        // Detect fields after successful login
         setTimeout(() => detectFields(), 500)
         return true
       }
@@ -106,10 +80,6 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
     setAuthToken('')
     setIsAuthenticated(false)
     setIsEditing(false)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('editor-token')
-      localStorage.removeItem('editor-authenticated')
-    }
   }
 
   const toggleEditing = () => {
@@ -123,49 +93,33 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
   const detectFields = () => {
     if (!isMounted || typeof window === 'undefined') return
     
-    console.log('🔍 Detecting fields on current page...')
+    console.log('🔍 Detecting fields...')
     const detectedFields: EditableField[] = []
     let fieldCounter = 0
 
-    // Get the current page URL to scan
     const currentPage = window.location.pathname
     console.log('📍 Scanning page:', currentPage)
 
-    // Skip if on editor page
+    // Skip detection on editor page itself
     if (currentPage === '/editor') {
-      console.log('⏭️ Skipping field detection on editor page')
+      console.log('⏭️ Skipping detection on editor page')
       return
     }
 
-    // Scan for text content in React components
-    const selectors = [
-      'h1, h2, h3, h4, h5, h6',  // Headings
-      'p',                       // Paragraphs  
-      'span:not(:empty)',        // Non-empty spans
-      'button',                  // Buttons
-      'a'                        // Links
-    ]
+    // Scan for editable content
+    const selectors = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'button', 'a']
     
     selectors.forEach(selector => {
       const elements = document.querySelectorAll(selector)
-      console.log(`Found ${elements.length} elements for selector: ${selector}`)
       
       elements.forEach(element => {
         const text = element.textContent?.trim() || ''
         
         // Filter for meaningful content
         if (!text || text.length < 3 || text.length > 500) return
+        if (element.children.length > 3) return // Skip containers
+        if (element.hasAttribute('data-editor-id')) return // Skip already detected
         
-        // Skip elements that are clearly not content
-        if (text.match(/^[\d\s\-\.]+$/) && text.length < 10) return // Skip pure numbers/dates
-        if (element.closest('script, style, noscript')) return // Skip script content
-        
-        // Skip if element has many children (likely a container)
-        if (element.children.length > 3) return
-        
-        // Skip if already detected
-        if (element.hasAttribute('data-editor-id')) return
-
         fieldCounter++
         const fieldId = `${currentPage.replace('/', '') || 'home'}-field-${fieldCounter}`
         
@@ -184,12 +138,12 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
         detectedFields.push(field)
         element.setAttribute('data-editor-id', fieldId)
         
-        console.log(`✅ Detected: ${fieldId} - "${text.substring(0, 50)}..."`)
+        console.log(`✅ Detected: ${fieldId}`)
       })
     })
 
     setFields(detectedFields)
-    console.log(`🎯 Total fields detected: ${detectedFields.length}`)
+    console.log(`🎯 Total: ${detectedFields.length} fields`)
   }
 
   const loadContent = async () => {
@@ -201,7 +155,7 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
         console.log('📄 Content loaded')
       }
     } catch (error) {
-      console.error('Failed to load content:', error)
+      console.error('Content load error:', error)
     }
   }
 
@@ -269,7 +223,7 @@ function generateSelector(element: Element): string {
 }
 
 function findSection(element: Element): string | undefined {
-  if (!element || typeof window === 'undefined') return 'unknown'
+  if (typeof window === 'undefined') return 'unknown'
   
   let current = element
   while (current && current !== document.body) {
