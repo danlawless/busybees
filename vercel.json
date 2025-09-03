@@ -4,14 +4,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "functions": {
-    "editor/api/auth.js": {
-      "runtime": "@vercel/node"
-    },
-    "editor/api/content.js": {
-      "runtime": "@vercel/node"
-    }
-  },
+
   "env": {
     "GITHUB_REPO": "danlawless/busybees",
     "GITHUB_BRANCH": "main"

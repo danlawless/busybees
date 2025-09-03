@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import UniversalEditor from "../editor/nextjs/components/UniversalEditor";
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -39,8 +40,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} font-body antialiased`}>
-        {children}
-
+        <UniversalEditor 
+          password="universal2025!" 
+          brandName="Busy Bees Editor"
+          githubRepo="danlawless/busybees"
+        >
+          {children}
+        </UniversalEditor>
       </body>
     </html>
   );
