@@ -26,20 +26,24 @@ export function EditorHeader() {
     }
   }, [])
 
-  // Show header when authenticated AND either:
-  // 1. On editor page, OR 
-  // 2. On any page with ?editor=true parameter
+  // Show header when authenticated AND either on editor page OR has editor param
   const shouldShow = isMounted && 
                     isAuthenticated && 
                     typeof window !== 'undefined' && 
                     (window.location.pathname === '/editor' || 
                      window.location.search.includes('editor=true'))
 
-  if (!shouldShow) return null
+  // Don't render anything during SSR or when conditions not met
+  if (!isMounted || !shouldShow) return null
 
   const handleSave = async () => {
     setIsLoading(true)
-    const success = await saveContent()
+    try {
+      const success = await saveContent()
+      console.log(success ? '✅ Saved' : '❌ Save failed')
+    } catch (error) {
+      console.error('Save error:', error)
+    }
     setIsLoading(false)
   }
 
@@ -66,15 +70,14 @@ export function EditorHeader() {
 
   const navigateToPage = (path: string) => {
     if (typeof window !== 'undefined') {
-      // Add ?editor=true to maintain editor mode
-      const editorParam = window.location.search.includes('editor=true') ? '?editor=true' : ''
-      window.location.href = path + editorParam
+      // Preserve editor mode when navigating
+      window.location.href = path + '?editor=true'
     }
   }
 
   return (
     <>
-      {/* Editor Toolbar - matches HTML version */}
+      {/* Fixed Header Toolbar (matches HTML version) */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -90,7 +93,7 @@ export function EditorHeader() {
         boxShadow: '0 4px 20px rgba(37, 99, 235, 0.3)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         fontSize: '14px',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
+        fontFamily: 'system-ui, sans-serif'
       }}>
         {/* Left - Brand and Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -124,7 +127,7 @@ export function EditorHeader() {
 
         {/* Center - Page Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', opacity: 0.8 }}>Navigate:</span>
+          <span style={{ fontSize: '13px', opacity: 0.8 }}>Page:</span>
           <select 
             value={currentPath}
             onChange={(e) => navigateToPage(e.target.value)}
@@ -156,9 +159,9 @@ export function EditorHeader() {
           <button
             onClick={detectFields}
             style={{
-              background: 'rgba(255,255,255,0.1)',
+              background: '#6b7280',
               color: 'white',
-              border: '1px solid rgba(255,255,255,0.3)',
+              border: 'none',
               padding: '8px 12px',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -239,7 +242,7 @@ export function EditorHeader() {
         </div>
       </div>
 
-      {/* Content spacer */}
+      {/* Content spacer to push page content below header */}
       <div style={{ height: '60px' }} />
     </>
   )

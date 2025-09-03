@@ -20,16 +20,14 @@ export function VisualEditingOverlay() {
     setIsMounted(true)
   }, [])
 
-  // Setup visual editing when authenticated and fields are detected
+  // Only setup visual editing when properly mounted and authenticated
   useEffect(() => {
-    if (!isMounted) return
+    if (!isMounted || typeof window === 'undefined') return
     
     if (isAuthenticated && 
         fields.length > 0 &&
-        typeof window !== 'undefined' && 
         window.location.pathname !== '/editor') {
       
-      // Always show visual indicators when authenticated and fields exist
       showVisualIndicators()
       
       if (isEditing) {
@@ -45,20 +43,22 @@ export function VisualEditingOverlay() {
   }, [isMounted, isAuthenticated, isEditing, fields])
 
   const showVisualIndicators = () => {
+    if (typeof window === 'undefined') return
+    
     console.log('🎨 Showing visual indicators for', fields.length, 'fields')
     
     fields.forEach(field => {
       const element = document.querySelector(`[data-editor-id="${field.id}"]`) as HTMLElement
       if (!element) return
 
-      // Add visual indicators (blue boxes like HTML version)
+      // Blue boxes like HTML version
       element.style.position = 'relative'
       element.style.outline = '2px dashed #3498db'
       element.style.outlineOffset = '2px'
       element.style.backgroundColor = 'rgba(52, 152, 219, 0.05)'
       element.style.transition = 'all 0.2s ease'
       
-      // Add a small label (like HTML version)
+      // Add field type label
       const existingLabel = element.querySelector('.editor-field-label')
       if (!existingLabel) {
         const label = document.createElement('div')
@@ -80,6 +80,8 @@ export function VisualEditingOverlay() {
         `
         element.appendChild(label)
       }
+
+      element.setAttribute('data-visual-indicator', 'true')
     })
   }
 
@@ -90,7 +92,6 @@ export function VisualEditingOverlay() {
       const element = document.querySelector(`[data-editor-id="${field.id}"]`) as HTMLElement
       if (!element) return
 
-      // Enhanced visual for editing mode
       element.style.cursor = 'pointer'
       
       // Hover effects
@@ -112,13 +113,6 @@ export function VisualEditingOverlay() {
       const handleClick = (e: Event) => {
         e.preventDefault()
         e.stopPropagation()
-        
-        if (editingElement && editingElement !== field.id) {
-          finishEditing(editingElement)
-          setTimeout(() => startEditing(field.id, element), 200)
-          return
-        }
-        
         startEditing(field.id, element)
       }
 
@@ -144,7 +138,7 @@ export function VisualEditingOverlay() {
   const removeAllVisualElements = () => {
     if (typeof window === 'undefined') return
     
-    const allElements = document.querySelectorAll('[data-editor-id]')
+    const allElements = document.querySelectorAll('[data-visual-indicator="true"]')
     allElements.forEach(element => {
       const htmlElement = element as HTMLElement
       
@@ -160,6 +154,7 @@ export function VisualEditingOverlay() {
       if (label) label.remove()
       
       htmlElement.removeAttribute('contenteditable')
+      htmlElement.removeAttribute('data-visual-indicator')
       htmlElement.removeAttribute('data-click-editor')
     })
     
@@ -170,7 +165,7 @@ export function VisualEditingOverlay() {
     console.log('🖱️ Starting to edit:', fieldId)
     setEditingElement(fieldId)
     
-    // Active editing visual (green like HTML version)
+    // Green outline for active editing
     element.style.outline = '2px solid #27ae60'
     element.style.backgroundColor = 'rgba(39, 174, 96, 0.15)'
     
@@ -182,11 +177,15 @@ export function VisualEditingOverlay() {
     
     // Select all text
     if (typeof window !== 'undefined') {
-      const range = document.createRange()
-      range.selectNodeContents(element)
-      const selection = window.getSelection()
-      selection?.removeAllRanges()
-      selection?.addRange(range)
+      try {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        const selection = window.getSelection()
+        selection?.removeAllRanges()
+        selection?.addRange(range)
+      } catch (error) {
+        console.log('Selection error:', error)
+      }
     }
 
     const handleBlur = () => {
@@ -224,148 +223,6 @@ export function VisualEditingOverlay() {
     setEditingElement(null)
   }
 
-  const navigateToPage = (path: string) => {
-    if (typeof window !== 'undefined') {
-      window.location.href = path + '?editor=true'
-    }
-  }
-
-  return (
-    <>
-      {/* Fixed Header Toolbar */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-        color: 'white',
-        padding: '15px 25px',
-        zIndex: 10000,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 4px 20px rgba(37, 99, 235, 0.3)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        fontSize: '14px',
-        fontFamily: 'system-ui, sans-serif'
-      }}>
-        {/* Left - Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>
-            {config.brandName || 'Universal Editor'}
-          </h1>
-          
-          {isEditing && (
-            <div style={{ fontSize: '13px', opacity: 0.9, fontStyle: 'italic' }}>
-              Click any highlighted text to edit
-            </div>
-          )}
-        </div>
-
-        {/* Center - Page Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <select 
-            value={currentPath}
-            onChange={(e) => navigateToPage(e.target.value)}
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              fontSize: '13px'
-            }}
-          >
-            <option value="/">🏠 Home</option>
-            <option value="/about">📖 About</option>
-            <option value="/contact">📞 Contact</option>
-            <option value="/parties">🎉 Parties</option>
-            <option value="/info">ℹ️ Info</option>
-            <option value="/classes">📚 Classes</option>
-            <option value="/editor">⚙️ Dashboard</option>
-          </select>
-          
-          <span style={{
-            fontSize: '12px',
-            background: 'rgba(255,255,255,0.1)',
-            padding: '4px 8px',
-            borderRadius: '4px'
-          }}>
-            {fields.length} fields
-          </span>
-        </div>
-
-        {/* Right - Controls */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={detectFields}
-            style={{
-              background: '#6b7280',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
-            }}
-          >
-            🔍 Scan
-          </button>
-
-          <button
-            onClick={toggleEditing}
-            style={{
-              background: isEditing ? '#27ae60' : '#3498db',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
-            }}
-          >
-            {isEditing ? 'Stop' : 'Edit'}
-          </button>
-
-          <button
-            onClick={handleSave}
-            style={{
-              background: '#27ae60',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
-            }}
-          >
-            💾
-          </button>
-
-          <button
-            onClick={logout}
-            style={{
-              background: '#dc2626',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Content spacer */}
-      <div style={{ height: '60px' }} />
-    </>
-  )
+  // This component only adds behavior, no visual elements
+  return null
 }
