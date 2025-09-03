@@ -9,6 +9,10 @@
       "runtime": "nodejs18.x"
     }
   },
+  "env": {
+    "GITHUB_REPO": "danlawless/busybees",
+    "GITHUB_BRANCH": "main"
+  },
   "rewrites": [
     {
       "source": "/editor/(.*)",
