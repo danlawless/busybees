@@ -14,30 +14,29 @@ export const contentType = 'image/png'
 export default function Icon() {
   return new ImageResponse(
     (
-      // ImageResponse JSX element
+      // ImageResponse JSX element with white background and yellow branding
       <div
         style={{
-          background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)', // Primary blue gradient
+          background: '#ffffff', // White background as requested
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '20%',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(245, 213, 101, 0.3)',
         }}
       >
         <div
           style={{
-            fontSize: '20px',
-            color: '#FEF3C7',
-            fontWeight: 'bold',
+            fontSize: '18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          🐝
+          🍯
         </div>
       </div>
     ),

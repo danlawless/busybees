@@ -14,18 +14,18 @@ export const contentType = 'image/png'
 export default function AppleIcon() {
   return new ImageResponse(
     (
-      // ImageResponse JSX element
+      // ImageResponse JSX element with white background and yellow accents
       <div
         style={{
-          background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)', // Primary blue gradient
+          background: '#ffffff', // White background as requested
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '22%',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
-          border: '3px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+          border: '3px solid #f5d565', // Yellow border using brand color
         }}
       >
         <div
@@ -34,16 +34,16 @@ export default function AppleIcon() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#FEF3C7',
+            color: '#f5d565', // Yellow brand color
           }}
         >
           <div
             style={{
-              fontSize: '80px',
+              fontSize: '70px',
               marginBottom: '8px',
             }}
           >
-            🐝
+            🍯
           </div>
           <div
             style={{
@@ -51,6 +51,7 @@ export default function AppleIcon() {
               fontWeight: 'bold',
               letterSpacing: '1px',
               textAlign: 'center',
+              color: '#2d2d2d', // Charcoal color for text
             }}
           >
             BUSY<br/>BEES
