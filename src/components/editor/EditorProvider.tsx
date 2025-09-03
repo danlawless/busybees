@@ -41,7 +41,7 @@ export function EditorProvider({ config, children }: EditorProviderProps) {
 
   useEffect(() => {
     // Only detect fields when not on the editor page itself
-    if (!window.location.pathname.startsWith('/editor')) {
+    if (false // window.location.pathname.startsWith('/editor')) {
       setTimeout(() => {
         console.log('🔍 Starting field detection...')
         detectFields()

@@ -10,44 +10,48 @@ interface UniversalEditorProps extends Partial<EditorConfig> {
 }
 
 /**
- * Universal Editor - One-Line React Integration
+ * Universal Editor - Invisible Integration
  * 
- * Drop this component anywhere in your Next.js app to enable editing:
- * <UniversalEditor password="your-password" />
+ * Usage: <UniversalEditor password="your-password" />
  * 
- * Features:
- * - Automatic field detection
- * - Visual editing overlay
- * - GitHub integration
- * - Content management dashboard
- * - Zero configuration required
+ * This component:
+ * - Provides editor context but stays completely invisible
+ * - Only activates when you visit /editor and log in
+ * - No visual elements on your main site
+ * - Clean, unobtrusive integration
  */
-export default function UniversalEditor(props: UniversalEditorProps) {
+export default function UniversalEditor({
+  password,
+  apiBasePath = '/api/editor',
+  githubRepo = process.env.NEXT_PUBLIC_GITHUB_REPO,
+  brandName = 'Universal Editor',
+  colors = {
+    primary: '#2563eb',
+    primaryDark: '#1d4ed8',
+    success: '#059669',
+    error: '#dc2626'
+  },
+  features = {
+    visualEditor: true,
+    bulkEditor: true,
+    githubIntegration: true,
+    aiFeatures: true
+  },
+  children
+}: UniversalEditorProps) {
   const config: EditorConfig = {
-    password: props.password,
-    apiBasePath: props.apiBasePath || '/api/editor',
-    githubRepo: props.githubRepo || process.env.NEXT_PUBLIC_GITHUB_REPO,
-    githubToken: props.githubToken || process.env.GITHUB_TOKEN,
-    brandName: props.brandName || 'Universal Editor',
-    colors: {
-      primary: '#2563eb',
-      primaryDark: '#1d4ed8',
-      success: '#059669',
-      error: '#dc2626',
-      ...props.colors
-    },
-    features: {
-      visualEditor: true,
-      bulkEditor: true,
-      githubIntegration: true,
-      aiFeatures: true,
-      ...props.features
-    }
+    password,
+    apiBasePath,
+    githubRepo,
+    brandName,
+    colors,
+    features
   }
 
   return (
     <EditorProvider config={config}>
-      {props.children}
+      {children}
+      {/* No visual components - completely invisible */}
     </EditorProvider>
   )
 }
