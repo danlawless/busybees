@@ -23,14 +23,14 @@ export const metadata: Metadata = {
     description: 'Safe, fun indoor play space for children ages 0-6',
     url: 'https://busybeesipc.com',
     siteName: 'Busy Bees Indoor Play Center',
-    images: ['/busy-bees-logo2.png'],
+    images: ['/busy-bees-logo-winter.png'],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Busy Bees Indoor Play Center',
     description: 'Safe, fun indoor play space for children ages 0-6',
-    images: ['/busy-bees-logo2.png'],
+    images: ['/busy-bees-logo-winter.png'],
   },
   other: {
     'theme-color': '#f5d565',
