@@ -2,6 +2,28 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "outputDirectory": ".next"
+  "installCommand": "npm install && git submodule update --init --recursive",
+  "outputDirectory": ".next",
+  "functions": {
+    "editor/api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/editor/(.*)",
+      "destination": "/editor/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/editor/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
