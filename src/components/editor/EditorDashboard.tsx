@@ -319,3 +319,32 @@ export function EditorDashboard() {
     </div>
   )
 }
+
+  const handleCommitToGitHub = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/editor/github', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ 
+          action: 'commit', 
+          content,
+          message: `Update content via Universal Editor - ${new Date().toLocaleString()}`
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        alert('✅ Content committed to GitHub successfully!')
+      } else {
+        alert('❌ Failed to commit: ' + data.message)
+      }
+    } catch (error) {
+      console.error('Commit error:', error)
+      alert('❌ Commit failed')
+    }
+    setIsLoading(false)
+  }
