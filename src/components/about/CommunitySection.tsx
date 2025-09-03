@@ -34,14 +34,32 @@ export function NewsletterSection() {
   const [name, setName] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the data to your newsletter service
-    console.log('Newsletter signup:', { email, name })
-    setIsSubmitted(true)
-    setTimeout(() => setIsSubmitted(false), 3000)
-    setEmail('')
-    setName('')
+
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to subscribe to newsletter')
+      }
+
+      setIsSubmitted(true)
+      setTimeout(() => setIsSubmitted(false), 3000)
+      setEmail('')
+      setName('')
+    } catch (error) {
+      console.error('Newsletter signup error:', error)
+      alert('There was an error subscribing to our newsletter. Please try again or contact us directly at info@busybeesipc.com')
+    }
   }
 
   return (

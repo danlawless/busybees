@@ -111,9 +111,6 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       const booking: Omit<PartyBooking, 'id' | 'createdAt'> = {
         date: selectedDate,
         startTime: selectedTimeSlot.startTime,
@@ -128,6 +125,32 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
         status: 'pending',
         notes: formData.notes.trim() || undefined
       };
+
+      // Send party booking data to API
+      const response = await fetch('/api/party-booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactName: formData.customerName.trim(),
+          email: formData.customerEmail.trim(),
+          phone: formData.customerPhone,
+          childName: formData.customerName.trim(), // Assuming this is the child's party
+          childAge: '', // You might want to add this field to the form
+          selectedDate: selectedDate,
+          selectedTimeSlot: `${selectedTimeSlot.startTime} - ${selectedTimeSlot.endTime}`,
+          partyPackage: formData.partyType,
+          guestCount: formData.guestCount,
+          additionalInfo: formData.notes.trim() || undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit party booking');
+      }
 
       onSubmit(booking);
     } catch (error) {

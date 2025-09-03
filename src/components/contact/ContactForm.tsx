@@ -86,11 +86,37 @@ export function ContactForm() {
 
     setIsSubmitting(true)
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-    setIsSubmitting(false)
-    setIsSubmitted(true)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit form')
+      }
+
+      setIsSubmitted(true)
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        userType: '',
+        message: ''
+      })
+    } catch (error) {
+      console.error('Form submission error:', error)
+      // You could add error state handling here
+      alert('There was an error submitting your form. Please try again or contact us directly at info@busybeesipc.com')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleGoHome = () => {
