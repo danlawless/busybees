@@ -60,7 +60,7 @@ export function OurStory() {
             viewport={{ once: true }}
           >
             <div className="relative">
-              <div className="aspect-[4/3] rounded-full shadow-lg overflow-hidden">
+              <div className="aspect-[4/3] rounded-3xl shadow-lg overflow-hidden">
                 <Image
                   src="/images/family/busy-bees-family.png"
                   alt="The Busy Bees Family"
