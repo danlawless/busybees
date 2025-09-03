@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { EditorProvider } from './EditorProvider'
-import { VisualEditor } from './VisualEditor'
+import { EditorHeader } from './EditorHeader'
+import { VisualEditingOverlay } from './VisualEditingOverlay'
 import { EditorConfig } from '../../lib/editor/types'
 
 interface UniversalEditorProps extends Partial<EditorConfig> {
@@ -11,15 +12,15 @@ interface UniversalEditorProps extends Partial<EditorConfig> {
 }
 
 /**
- * Universal Editor - Complete Integration
+ * Universal Editor - Complete Integration with Header Toolbar
  * 
  * Usage: <UniversalEditor password="your-password" />
  * 
  * Provides:
- * - Invisible background operation
- * - Visual click-to-edit overlay (when authenticated)
- * - Dashboard access at /editor
- * - GitHub integration
+ * - Fixed header toolbar (when authenticated)
+ * - Visual click-to-edit functionality
+ * - Page navigation and controls
+ * - Invisible when not authenticated
  */
 export default function UniversalEditor({
   password,
@@ -51,8 +52,9 @@ export default function UniversalEditor({
 
   return (
     <EditorProvider config={config}>
+      <EditorHeader />
       {children}
-      <VisualEditor />
+      <VisualEditingOverlay />
     </EditorProvider>
   )
 }
