@@ -7,7 +7,15 @@ To enable full editor functionality with GitHub integration, you need to set the
 ### **Required for GitHub Integration:**
 ```bash
 GITHUB_TOKEN=your_personal_access_token_here
+GITHUB_REPO=danlawless/busybees
 ```
+
+**⚠️ Important**: The `GITHUB_REPO` should be in format `username/repository` (not the full URL). 
+- ✅ Correct: `danlawless/busybees`
+- ❌ Incorrect: `https://github.com/danlawless/busybees.git`
+- ❌ Incorrect: `danlawless/busybess` (typo in repository name)
+
+**If you already added the environment variable with a typo or full URL, please update it in Vercel to use the correct format above.**
 
 ### **Optional for AI Features:**
 ```bash
