@@ -1,106 +1,182 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useEditor } from './EditorProvider'
 
 /**
- * Visual Editor Overlay - sits on top of your actual website
- * Allows in-place editing of text content
+ * Visual Editor - Click-to-Edit Overlay System
+ * Replicates the HTML version's visual editing capabilities
  */
 export function VisualEditor() {
   const { 
-    config, 
     isAuthenticated, 
     isEditing, 
     fields, 
     content, 
     updateField, 
     saveContent,
-    detectFields,
-    toggleEditing,
-    logout
+    config
   } = useEditor()
 
+  const [editingElement, setEditingElement] = useState<string | null>(null)
   const [isVisible, setIsVisible] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
 
-  // Show/hide based on authentication and editing state
+  // Show visual editor when authenticated and on non-editor pages
   useEffect(() => {
-    setIsVisible(isAuthenticated)
+    const shouldShow = isAuthenticated && 
+                     typeof window !== 'undefined' && 
+                     window.location.pathname !== '/editor'
+    setIsVisible(shouldShow)
   }, [isAuthenticated])
 
-  // Make elements editable when editing is enabled
+  // Setup visual editing when editing mode is enabled
   useEffect(() => {
-    if (isEditing) {
-      makeElementsEditable()
+    if (isVisible && isEditing) {
+      makeElementsVisuallyEditable()
     } else {
-      removeEditableState()
+      removeVisualEditing()
     }
-  }, [isEditing, fields])
+  }, [isVisible, isEditing, fields])
 
-  const makeElementsEditable = () => {
+  const makeElementsVisuallyEditable = () => {
     fields.forEach(field => {
-      const element = document.querySelector(`[data-editor-id="${field.id}"]`)
-      if (element) {
-        element.setAttribute('contenteditable', 'true')
-        element.style.outline = '2px dashed #2563eb'
-        element.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'
-        element.style.cursor = 'text'
-        
-        // Add blur event to save changes
-        const handleBlur = (e: Event) => {
-          const newContent = (e.target as Element).textContent || ''
-          if (newContent !== field.content) {
-            updateField(field.id, newContent)
-            console.log(`✏️ Updated field ${field.id}:`, newContent)
-          }
+      const element = document.querySelector(`[data-editor-id="${field.id}"]`) as HTMLElement
+      if (!element) return
+
+      // Visual indicators like HTML version
+      element.style.position = 'relative'
+      element.style.outline = '2px dashed #2563eb'
+      element.style.outlineOffset = '2px'
+      element.style.backgroundColor = 'rgba(37, 99, 235, 0.05)'
+      element.style.cursor = 'pointer'
+      element.style.transition = 'all 0.2s ease'
+
+      // Hover effects
+      const handleMouseEnter = () => {
+        if (editingElement !== field.id) {
+          element.style.outline = '2px solid #2563eb'
+          element.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'
         }
-        
-        element.addEventListener('blur', handleBlur)
-        element.setAttribute('data-editor-listener', 'true')
       }
+
+      const handleMouseLeave = () => {
+        if (editingElement !== field.id) {
+          element.style.outline = '2px dashed #2563eb'
+          element.style.backgroundColor = 'rgba(37, 99, 235, 0.05)'
+        }
+      }
+
+      // Click to edit
+      const handleClick = (e: Event) => {
+        e.preventDefault()
+        e.stopPropagation()
+        startEditing(field.id, element)
+      }
+
+      element.addEventListener('mouseenter', handleMouseEnter)
+      element.addEventListener('mouseleave', handleMouseLeave)
+      element.addEventListener('click', handleClick)
+      
+      // Store event listeners for cleanup
+      element.setAttribute('data-editor-listeners', 'true')
     })
   }
 
-  const removeEditableState = () => {
+  const removeVisualEditing = () => {
     fields.forEach(field => {
-      const element = document.querySelector(`[data-editor-id="${field.id}"]`)
-      if (element) {
-        element.removeAttribute('contenteditable')
-        element.style.outline = ''
-        element.style.backgroundColor = ''
-        element.style.cursor = ''
-        
-        // Remove event listeners
-        if (element.hasAttribute('data-editor-listener')) {
-          element.removeAttribute('data-editor-listener')
-          // Note: In a real implementation, you'd want to properly remove the specific listener
-        }
+      const element = document.querySelector(`[data-editor-id="${field.id}"]`) as HTMLElement
+      if (!element) return
+
+      // Remove visual indicators
+      element.style.outline = ''
+      element.style.outlineOffset = ''
+      element.style.backgroundColor = ''
+      element.style.cursor = ''
+      element.style.transition = ''
+      
+      // Remove contenteditable
+      element.removeAttribute('contenteditable')
+      
+      // Clean up event listeners (simplified)
+      if (element.hasAttribute('data-editor-listeners')) {
+        element.removeAttribute('data-editor-listeners')
+        // In a real implementation, you'd store and remove specific listeners
       }
     })
+    
+    setEditingElement(null)
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
-    const success = await saveContent()
-    if (success) {
-      alert('✅ Content saved successfully!')
-    } else {
-      alert('❌ Failed to save content')
+  const startEditing = (fieldId: string, element: HTMLElement) => {
+    // Stop editing any other element first
+    if (editingElement && editingElement !== fieldId) {
+      finishEditing()
     }
-    setIsSaving(false)
+
+    console.log('🖱️ Starting to edit:', fieldId)
+    setEditingElement(fieldId)
+    
+    // Visual feedback for active editing
+    element.style.outline = '2px solid #059669'
+    element.style.backgroundColor = 'rgba(5, 150, 105, 0.1)'
+    
+    // Make element editable
+    element.contentEditable = 'true'
+    element.focus()
+    
+    // Select all text
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    // Handle saving on blur
+    const handleBlur = () => {
+      const newContent = element.textContent || ''
+      if (newContent !== content[fieldId]) {
+        updateField(fieldId, newContent)
+        console.log(`✏️ Updated ${fieldId}:`, newContent)
+      }
+      finishEditing()
+    }
+
+    // Handle Enter key to save
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        element.blur()
+      }
+      if (e.key === 'Escape') {
+        // Restore original content
+        element.textContent = content[fieldId] || field.content
+        element.blur()
+      }
+    }
+
+    element.addEventListener('blur', handleBlur, { once: true })
+    element.addEventListener('keydown', handleKeyDown)
   }
 
-  const handleDetectFields = () => {
-    console.log('🔍 Manually detecting fields on current page...')
-    detectFields()
+  const finishEditing = () => {
+    if (!editingElement) return
+    
+    const element = document.querySelector(`[data-editor-id="${editingElement}"]`) as HTMLElement
+    if (element) {
+      element.contentEditable = 'false'
+      element.style.outline = '2px dashed #2563eb'
+      element.style.backgroundColor = 'rgba(37, 99, 235, 0.05)'
+    }
+    
+    setEditingElement(null)
   }
 
+  // Don't render anything if not visible
   if (!isVisible) return null
 
   return (
     <>
-      {/* Floating Editor Toolbar */}
+      {/* Floating Editor Controls */}
       <div style={{
         position: 'fixed',
         top: '20px',
@@ -111,107 +187,107 @@ export function VisualEditor() {
         borderRadius: '12px',
         padding: '15px',
         boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
+        fontSize: '14px',
         minWidth: '200px'
       }}>
         <div style={{
-          fontSize: '14px',
           fontWeight: '600',
           color: '#111827',
+          marginBottom: '10px',
           borderBottom: '1px solid #e5e7eb',
-          paddingBottom: '10px',
-          marginBottom: '5px'
+          paddingBottom: '8px'
         }}>
-          {config.brandName} 
+          {config.brandName}
           <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '400' }}>
-            {fields.length} fields detected
+            {fields.length} fields • {isEditing ? 'Editing ON' : 'Click to enable'}
           </div>
         </div>
 
-        <button
-          onClick={handleDetectFields}
-          style={{
-            background: '#6b7280',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}
-        >
-          🔍 Scan Page
-        </button>
-
-        <button
-          onClick={toggleEditing}
-          style={{
-            background: isEditing ? config.colors?.success : config.colors?.primary,
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}
-        >
-          {isEditing ? '✅ Editing ON' : '✏️ Start Editing'}
-        </button>
-
-        {isEditing && (
+        {!isEditing && (
           <button
-            onClick={handleSave}
-            disabled={isSaving}
+            onClick={() => {
+              // Enable editing mode in the EditorProvider
+              const event = new CustomEvent('editor-toggle-editing')
+              window.dispatchEvent(event)
+            }}
             style={{
-              background: config.colors?.success || '#059669',
+              width: '100%',
+              background: config.colors?.primary || '#2563eb',
               color: 'white',
               border: 'none',
               padding: '8px 12px',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '12px',
               fontWeight: '600',
-              opacity: isSaving ? 0.7 : 1
+              marginBottom: '8px'
             }}
           >
-            {isSaving ? '💾 Saving...' : '💾 Save All'}
+            ✏️ Enable Editing
           </button>
+        )}
+
+        {isEditing && (
+          <>
+            <button
+              onClick={async () => {
+                const success = await saveContent()
+                if (success) {
+                  alert('✅ Content saved!')
+                } else {
+                  alert('❌ Save failed')
+                }
+              }}
+              style={{
+                width: '100%',
+                background: config.colors?.success || '#059669',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                marginBottom: '8px'
+              }}
+            >
+              💾 Save Changes
+            </button>
+            
+            <button
+              onClick={() => {
+                const event = new CustomEvent('editor-toggle-editing')
+                window.dispatchEvent(event)
+              }}
+              style={{
+                width: '100%',
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              ❌ Stop Editing
+            </button>
+          </>
         )}
 
         <button
           onClick={() => window.open('/editor', '_blank')}
           style={{
+            width: '100%',
             background: '#6b7280',
             color: 'white',
             border: 'none',
             padding: '8px 12px',
             borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '600'
+            fontWeight: '600',
+            marginTop: '8px'
           }}
         >
           📊 Dashboard
-        </button>
-
-        <button
-          onClick={logout}
-          style={{
-            background: '#dc2626',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}
-        >
-          Logout
         </button>
       </div>
 
@@ -222,16 +298,52 @@ export function VisualEditor() {
           bottom: '20px',
           left: '20px',
           zIndex: 9999,
-          background: 'rgba(37, 99, 235, 0.9)',
+          background: 'rgba(37, 99, 235, 0.95)',
           color: 'white',
-          padding: '12px 16px',
+          padding: '15px 20px',
           borderRadius: '8px',
           fontSize: '14px',
-          maxWidth: '300px'
+          maxWidth: '350px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
         }}>
-          ✏️ <strong>Editing Mode:</strong> Click any highlighted text to edit it directly on the page.
+          <div style={{ fontWeight: '600', marginBottom: '5px' }}>
+            ✏️ Visual Editing Active
+          </div>
+          <div style={{ fontSize: '13px', opacity: 0.9 }}>
+            • Click any highlighted text to edit it<br/>
+            • Press Enter to save, Escape to cancel<br/>
+            • Changes auto-save when you click away
+          </div>
+        </div>
+      )}
+
+      {editingElement && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 10000,
+          background: 'white',
+          border: '2px solid #059669',
+          borderRadius: '8px',
+          padding: '10px',
+          fontSize: '12px',
+          color: '#059669',
+          fontWeight: '600',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+        }}>
+          ✏️ Editing: {editingElement}
         </div>
       )}
     </>
   )
+}
+
+// Add event listener for toggle editing
+if (typeof window !== 'undefined') {
+  window.addEventListener('editor-toggle-editing', () => {
+    // This will be handled by the EditorProvider
+    console.log('Toggle editing event received')
+  })
 }

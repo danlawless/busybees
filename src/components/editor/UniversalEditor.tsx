@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { EditorProvider } from './EditorProvider'
+import { VisualEditor } from './VisualEditor'
 import { EditorConfig } from '../../lib/editor/types'
 
 interface UniversalEditorProps extends Partial<EditorConfig> {
@@ -10,15 +11,15 @@ interface UniversalEditorProps extends Partial<EditorConfig> {
 }
 
 /**
- * Universal Editor - Invisible Integration
+ * Universal Editor - Complete Integration
  * 
  * Usage: <UniversalEditor password="your-password" />
  * 
- * This component:
- * - Provides editor context but stays completely invisible
- * - Only activates when you visit /editor and log in
- * - No visual elements on your main site
- * - Clean, unobtrusive integration
+ * Provides:
+ * - Invisible background operation
+ * - Visual click-to-edit overlay (when authenticated)
+ * - Dashboard access at /editor
+ * - GitHub integration
  */
 export default function UniversalEditor({
   password,
@@ -51,7 +52,7 @@ export default function UniversalEditor({
   return (
     <EditorProvider config={config}>
       {children}
-      {/* No visual components - completely invisible */}
+      <VisualEditor />
     </EditorProvider>
   )
 }

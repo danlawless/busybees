@@ -291,3 +291,17 @@ function findSection(element: Element): string | undefined {
   }
   return 'unknown'
 }
+
+  // Listen for toggle editing events from visual editor
+  useEffect(() => {
+    const handleToggleEditing = () => {
+      toggleEditing()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('editor-toggle-editing', handleToggleEditing)
+      return () => {
+        window.removeEventListener('editor-toggle-editing', handleToggleEditing)
+      }
+    }
+  }, [])
