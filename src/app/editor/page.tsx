@@ -1,4 +1,4 @@
-import { EditorDashboard } from '../../editor/nextjs/components/EditorDashboard'
+import { EditorDashboard } from '../../components/editor/EditorDashboard'
 
 export default function EditorPage() {
   return <EditorDashboard />
