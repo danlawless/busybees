@@ -14,21 +14,23 @@ export const metadata: Metadata = {
   keywords: 'indoor playground, kids play center, birthday parties, toddler activities, family fun, safe play space',
   authors: [{ name: 'Busy Bees Indoor Play Center' }],
   icons: {
-    icon: '/icon',
-    apple: '/apple-icon',
+    icon: '/busy-bees-favicon.png',
+    apple: '/busy-bees-favicon.png',
+    shortcut: '/busy-bees-favicon.png',
   },
   openGraph: {
     title: 'Busy Bees Indoor Play Center',
     description: 'Safe, fun indoor play space for children ages 0-6',
     url: 'https://busybeesipc.com',
     siteName: 'Busy Bees Indoor Play Center',
-    images: ['/opengraph-image'],
+    images: ['/busy-bees-logo.png'],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Busy Bees Indoor Play Center',
     description: 'Safe, fun indoor play space for children ages 0-6',
+    images: ['/busy-bees-logo.png'],
   },
   other: {
     'theme-color': '#f5d565',
