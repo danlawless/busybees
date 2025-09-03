@@ -13,29 +13,11 @@ export const metadata: Metadata = {
   description: 'Modern, safe and engaging indoor play space for children ages 0-6. Creating a go-to destination for families to play, socialize and celebrate.',
   keywords: 'indoor playground, kids play center, birthday parties, toddler activities, family fun, safe play space',
   authors: [{ name: 'Busy Bees Indoor Play Center' }],
-  icons: [
-    {
-      rel: 'icon',
-      type: 'image/png',
-      sizes: '32x32',
-      url: '/busy-bees-favicon.png',
-    },
-    {
-      rel: 'icon',
-      type: 'image/png', 
-      sizes: '16x16',
-      url: '/busy-bees-favicon.png',
-    },
-    {
-      rel: 'apple-touch-icon',
-      sizes: '180x180',
-      url: '/busy-bees-favicon.png',
-    },
-    {
-      rel: 'shortcut icon',
-      url: '/busy-bees-favicon.png',
-    }
-  ],
+  icons: {
+    icon: '/busy-bees-favicon.png',
+    apple: '/busy-bees-favicon.png',
+    shortcut: '/favicon.ico',
+  },
   openGraph: {
     title: 'Busy Bees Indoor Play Center',
     description: 'Safe, fun indoor play space for children ages 0-6',
@@ -62,6 +44,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link rel="icon" type="image/png" sizes="32x32" href="/busy-bees-favicon.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/busy-bees-favicon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/busy-bees-favicon.png" />
+        <link rel="shortcut icon" href="/busy-bees-favicon.png" />
+        <meta name="theme-color" content="#f5d565" />
+      </head>
       <body className={`${inter.className} font-body antialiased`}>
         {children}
       </body>
