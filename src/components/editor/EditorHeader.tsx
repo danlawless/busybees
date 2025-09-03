@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useEditor } from './EditorProvider'
 
 /**
- * Editor Header - Replicates HTML version's editor-toolbar
- * Fixed header that appears when logged in, disappears when logged out
+ * Editor Header - Fixed toolbar when authenticated
+ * Replicates HTML version's editor-toolbar exactly
  */
 export function EditorHeader() {
   const { 
@@ -20,10 +20,15 @@ export function EditorHeader() {
   } = useEditor()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [currentPage, setCurrentPage] = useState('/')
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Only show header when authenticated and not on editor page
-  const shouldShow = isAuthenticated && 
+  const shouldShow = isMounted && 
+                    isAuthenticated && 
                     typeof window !== 'undefined' && 
                     window.location.pathname !== '/editor'
 
@@ -32,9 +37,6 @@ export function EditorHeader() {
   const handleSave = async () => {
     setIsLoading(true)
     const success = await saveContent()
-    if (success) {
-      console.log('✅ Content saved')
-    }
     setIsLoading(false)
   }
 
@@ -43,9 +45,7 @@ export function EditorHeader() {
     try {
       const response = await fetch('/api/editor/github', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           action: 'commit', 
           content: {},
@@ -54,9 +54,7 @@ export function EditorHeader() {
       })
       
       const data = await response.json()
-      if (data.success) {
-        console.log('✅ Committed to GitHub')
-      }
+      console.log(data.success ? '✅ Committed to GitHub' : '❌ Commit failed')
     } catch (error) {
       console.error('Commit error:', error)
     }
@@ -71,7 +69,7 @@ export function EditorHeader() {
 
   return (
     <>
-      {/* Editor Toolbar - matches HTML version styling */}
+      {/* Editor Toolbar - exact replica of HTML version */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -87,9 +85,9 @@ export function EditorHeader() {
         boxShadow: '0 4px 20px rgba(37, 99, 235, 0.3)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         fontSize: '14px',
-        fontFamily: 'system-ui, sans-serif'
+        fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
-        {/* Left side - Brand and status */}
+        {/* Left - Brand and Instructions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h1 style={{
             margin: 0,
@@ -99,31 +97,22 @@ export function EditorHeader() {
             {config.brandName || 'Universal Editor'}
           </h1>
           
-          <div style={{
-            fontSize: '13px',
-            opacity: 0.9,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px'
-          }}>
-            <span>📍 {window.location.pathname}</span>
-            <span>📝 {fields.length} fields</span>
-            <span style={{
-              background: isEditing ? '#059669' : 'rgba(255,255,255,0.2)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '12px'
+          {isEditing && (
+            <div style={{
+              fontSize: '13px',
+              opacity: 0.9,
+              fontStyle: 'italic'
             }}>
-              {isEditing ? '✏️ Editing' : '👁️ Viewing'}
-            </span>
-          </div>
+              Click any text to edit directly
+            </div>
+          )}
         </div>
 
-        {/* Center - Page Navigation (like HTML version) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', opacity: 0.8 }}>Navigate:</span>
+        {/* Center - Page Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <span style={{ fontSize: '13px', opacity: 0.8 }}>Page:</span>
           <select 
-            value={window.location.pathname}
+            value={isMounted ? window.location.pathname : '/'}
             onChange={(e) => navigateToPage(e.target.value)}
             style={{
               background: 'rgba(255,255,255,0.1)',
@@ -141,24 +130,34 @@ export function EditorHeader() {
             <option value="/info">ℹ️ Info</option>
             <option value="/classes">📚 Classes</option>
           </select>
+          
+          <div style={{
+            fontSize: '12px',
+            opacity: 0.8,
+            background: 'rgba(255,255,255,0.1)',
+            padding: '4px 8px',
+            borderRadius: '4px'
+          }}>
+            {fields.length} fields
+          </div>
         </div>
 
-        {/* Right side - Action buttons (like HTML version) */}
+        {/* Right - Action Buttons */}
         <div style={{
           display: 'flex',
-          gap: '10px',
+          gap: '8px',
           alignItems: 'center'
         }}>
           <button
             onClick={detectFields}
             style={{
-              background: '#6b7280',
+              background: 'rgba(255,255,255,0.1)',
               color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              border: '1px solid rgba(255,255,255,0.3)',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600'
             }}
           >
@@ -168,13 +167,13 @@ export function EditorHeader() {
           <button
             onClick={toggleEditing}
             style={{
-              background: isEditing ? '#059669' : '#3498db',
+              background: isEditing ? '#27ae60' : '#3498db',
               color: 'white',
               border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600'
             }}
           >
@@ -188,10 +187,10 @@ export function EditorHeader() {
               background: '#27ae60',
               color: 'white',
               border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600',
               opacity: isLoading ? 0.7 : 1
             }}
@@ -206,10 +205,10 @@ export function EditorHeader() {
               background: '#e74c3c',
               color: 'white',
               border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600',
               opacity: isLoading ? 0.7 : 1
             }}
@@ -218,19 +217,23 @@ export function EditorHeader() {
           </button>
 
           <button
-            onClick={() => window.open('/editor', '_blank')}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.open('/editor', '_blank')
+              }
+            }}
             style={{
               background: 'rgba(255,255,255,0.1)',
               color: 'white',
               border: '1px solid rgba(255,255,255,0.3)',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600'
             }}
           >
-            📊 Dashboard
+            📊
           </button>
 
           <button
@@ -239,10 +242,10 @@ export function EditorHeader() {
               background: 'rgba(255,255,255,0.1)',
               color: 'white',
               border: '1px solid rgba(255,255,255,0.3)',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: '8px 12px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '600'
             }}
           >
@@ -251,31 +254,8 @@ export function EditorHeader() {
         </div>
       </div>
 
-      {/* Push content down when header is visible */}
-      <div style={{
-        height: '60px',
-        width: '100%'
-      }} />
-
-      {/* Editing instructions (like HTML version) */}
-      {isEditing && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9999,
-          background: 'rgba(37, 99, 235, 0.95)',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          fontSize: '14px',
-          fontWeight: '500',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
-        }}>
-          ✏️ Click any highlighted text to edit directly • Enter to save • Escape to cancel
-        </div>
-      )}
+      {/* Content spacer to push page content below header */}
+      <div style={{ height: '60px' }} />
     </>
   )
 }
