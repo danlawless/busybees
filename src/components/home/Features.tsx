@@ -6,6 +6,7 @@ import { Shield, Users, Calendar, Coffee, Car, Shirt } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
+import { PlayfulDecorations } from '@/components/ui/PlayfulDecorations'
 
 const features = [
   {
@@ -44,7 +45,11 @@ export function Features() {
   return (
     <section className="relative py-20 section-hexagon-light hexagon-overlay overflow-hidden">
       <HoneycombPattern variant="scattered" size="lg" />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      
+      {/* Fun Bee Decorations */}
+      <PlayfulDecorations variant="features" density="medium" />
+      
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}

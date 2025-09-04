@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Check, Star, Gift, Users, Ticket, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PlayfulDecorations } from '@/components/ui/PlayfulDecorations'
 import { formatPrice, fadeInUp, staggerContainer } from '@/lib/utils'
 
 const pricingPlans = [
@@ -117,8 +118,11 @@ const partyPackages = [
 
 export function Pricing() {
   return (
-    <section className="py-20 bg-neutral-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="relative py-20 bg-neutral-50 overflow-hidden">
+      {/* Playful Bee Pricing Decorations */}
+      <PlayfulDecorations variant="pricing" density="light" />
+      
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         {/* General Admission */}
         <motion.div
           className="text-center mb-16"

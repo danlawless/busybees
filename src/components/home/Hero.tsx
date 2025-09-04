@@ -6,6 +6,7 @@ import { ArrowRight, Star, Shield, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
+import { PlayfulDecorations } from '@/components/ui/PlayfulDecorations'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const features = [
@@ -28,7 +29,10 @@ export function Hero() {
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
       
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Playful Bee Party Decorations! */}
+      <PlayfulDecorations variant="hero" density="dense" />
+      
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
           className="text-center"
           variants={staggerContainer}
@@ -77,12 +81,12 @@ export function Hero() {
             variants={fadeInUp}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Button size="lg" className="min-w-48">
+            <Button size="lg" className="min-w-48 btn-party">
               Plan Your Visit
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <Button variant="outline" size="lg" className="min-w-48">
-              Book a Party
+            <Button variant="outline" size="lg" className="min-w-48 btn-party">
+              Book a Party 🎉
             </Button>
           </motion.div>
 
@@ -155,14 +159,14 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* Decorative Elements */}
-      <div className="absolute top-20 left-10 opacity-15">
+      {/* Additional subtle branding elements */}
+      <div className="absolute top-20 left-10 opacity-10 z-5">
         <Logo size="md" showText={false} animate={false} />
       </div>
-      <div className="absolute bottom-20 right-10 opacity-20">
+      <div className="absolute bottom-20 right-10 opacity-15 z-5">
         <BeeIcon size="md" animate={false} />
       </div>
-      <div className="absolute top-1/2 right-20 opacity-10">
+      <div className="absolute top-1/2 right-20 opacity-8 z-5">
         <Logo size="lg" showText={false} animate={false} />
       </div>
     </section>
