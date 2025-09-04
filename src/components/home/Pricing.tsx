@@ -150,7 +150,7 @@ export function Pricing() {
             const Icon = plan.icon
             return (
               <motion.div key={index} variants={fadeInUp}>
-                <Card className={`h-full relative ${plan.popular ? 'ring-2 ring-primary-500 shadow-large' : ''}`}>
+                <Card className={`h-full relative flex flex-col ${plan.popular ? 'ring-2 ring-primary-500 shadow-large' : ''}`}>
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <div className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
@@ -176,8 +176,8 @@ export function Pricing() {
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <ul className="space-y-2 mb-6">
+                  <CardContent className="pt-0 flex-1 flex flex-col">
+                    <ul className="space-y-2 mb-6 flex-1">
                       {plan.features.map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-start">
                           <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -186,7 +186,7 @@ export function Pricing() {
                       ))}
                     </ul>
                     <Button 
-                      className="w-full" 
+                      className="w-full mt-auto" 
                       variant={plan.popular ? 'primary' : 'outline'}
                       size="sm"
                     >
@@ -210,12 +210,12 @@ export function Pricing() {
           <h3 className="text-2xl font-bold text-neutral-900 text-center mb-8">
             Special Rates
           </h3>
-          <div className="max-w-md mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {specialRates.map((rate, index) => {
               const Icon = rate.icon
               return (
-                <motion.div key={index} variants={fadeInUp}>
-                  <Card className="text-center">
+                <motion.div key={index} variants={fadeInUp} className="h-full">
+                  <Card className="text-center h-full flex flex-col">
                     <CardHeader className="pb-4">
                       <div className="w-12 h-12 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Icon className="w-6 h-6 text-secondary-600" />
@@ -228,8 +228,8 @@ export function Pricing() {
                       </div>
                       <p className="text-neutral-600 mt-2">{rate.description}</p>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <ul className="space-y-2 mb-6">
+                    <CardContent className="pt-0 flex-1 flex flex-col">
+                      <ul className="space-y-2 mb-6 flex-1">
                         {rate.features.map((feature, featureIndex) => (
                           <li key={featureIndex} className="flex items-start">
                             <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -274,7 +274,7 @@ export function Pricing() {
         >
           {partyPackages.map((pkg, index) => (
             <motion.div key={index} variants={fadeInUp}>
-              <Card className="h-full">
+              <Card className="h-full flex flex-col">
                 <CardHeader className="text-center">
                   <CardTitle className="text-xl text-primary-600">{pkg.name}</CardTitle>
                   <div className="mt-4">
@@ -287,8 +287,8 @@ export function Pricing() {
                     <p className="text-sm text-neutral-500 mt-1">Pricing details available soon</p>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <ul className="space-y-2 mb-6">
+                <CardContent className="pt-0 flex-1 flex flex-col">
+                  <ul className="space-y-2 mb-6 flex-1">
                     {pkg.features.map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start">
                         <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -296,7 +296,7 @@ export function Pricing() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="secondary">
+                  <Button className="w-full mt-auto" variant="secondary">
                     Book This Package
                   </Button>
                 </CardContent>
