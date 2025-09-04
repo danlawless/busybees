@@ -91,23 +91,10 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
               />
             </motion.div>
 
-            {/* Top Right - Hive */}
-            <motion.div 
-              className="absolute top-16 right-8 md:right-20 z-10"
-              {...gentleFloat}
-            >
-              <Image 
-                src="/bee-n-hive-rev.png" 
-                alt="" 
-                width={80} 
-                height={80} 
-                className="w-16 h-16 md:w-20 md:h-20"
-              />
-            </motion.div>
 
-            {/* Middle Left - Small Bee */}
+            {/* Upper Right - Small Bee (moved from left side) */}
             <motion.div 
-              className="absolute top-1/3 left-4 md:left-12 z-10"
+              className="absolute top-12 right-8 md:top-16 md:right-16 z-10"
               {...floatingAnimation}
             >
               <Image 
@@ -134,24 +121,10 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
               />
             </motion.div>
 
-            {/* Bottom Left - Hive */}
-            <motion.div 
-              className="absolute bottom-20 left-8 md:left-24 z-10"
-              {...gentleFloat}
-              style={{ animationDelay: '2s' }}
-            >
-              <Image 
-                src="/hive2.png" 
-                alt="" 
-                width={65} 
-                height={65} 
-                className="w-13 h-13 md:w-16 md:h-16"
-              />
-            </motion.div>
 
-            {/* Bottom Right - Flying Bee */}
+            {/* Bottom Left - Flying Bee (moved from bottom right) */}
             <motion.div 
-              className="absolute bottom-16 right-6 md:right-12 z-10"
+              className="absolute bottom-16 left-8 md:left-24 z-10"
               {...floatingAnimation}
               style={{ animationDelay: '0.5s' }}
             >
@@ -199,18 +172,6 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
         return (
           <>
             {/* Scattered throughout features section */}
-            <motion.div 
-              className="absolute top-8 left-6 md:left-12 z-10"
-              {...buzzing}
-            >
-              <Image 
-                src="/bee1-rev.png" 
-                alt="" 
-                width={50} 
-                height={50} 
-                className="w-10 h-10 md:w-12 md:h-12"
-              />
-            </motion.div>
 
             <motion.div 
               className="absolute top-16 right-8 md:right-16 z-10"
@@ -220,89 +181,44 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
               <Image 
                 src="/hive2-rev.png" 
                 alt="" 
-                width={60} 
-                height={60} 
-                className="w-12 h-12 md:w-15 md:h-15"
+                width={150} 
+                height={150} 
+                className="w-[120px] h-[120px] md:w-[150px] md:h-[150px]"
+                style={{
+                  width: '150px',
+                  height: '150px'
+                }}
               />
             </motion.div>
 
-            <motion.div 
-              className="absolute bottom-12 left-8 md:left-20 z-10"
-              {...gentleFloat}
-              style={{ animationDelay: '2s' }}
-            >
-              <Image 
-                src="/bee-n-hive.png" 
-                alt="" 
-                width={65} 
-                height={65} 
-                className="w-13 h-13 md:w-16 md:h-16"
-              />
-            </motion.div>
-
-            <motion.div 
-              className="absolute bottom-8 right-6 md:right-14 z-10"
-              {...buzzing}
-              style={{ animationDelay: '0.5s' }}
-            >
-              <Image 
-                src="/bee3.png" 
-                alt="" 
-                width={45} 
-                height={45} 
-                className="w-9 h-9 md:w-11 md:h-11"
-              />
-            </motion.div>
-
-            {/* Hidden on mobile for cleaner look */}
-            <motion.div 
-              className="absolute top-1/2 left-4 z-10 hidden md:block"
-              {...floatingAnimation}
-              style={{ animationDelay: '2.5s' }}
-            >
-              <Image 
-                src="/bee2.png" 
-                alt="" 
-                width={35} 
-                height={35} 
-                className="w-7 h-7 opacity-75"
-              />
-            </motion.div>
           </>
         )
 
       case 'pricing':
         return (
           <>
+            {/* Honey pot and bee moved from right to left - 150px x 150px */}
             <motion.div 
-              className="absolute top-12 left-8 md:left-16 z-10"
-              {...buzzing}
-            >
-              <Image 
-                src="/bee1.png" 
-                alt="" 
-                width={55} 
-                height={55} 
-                className="w-11 h-11 md:w-14 md:h-14"
-              />
-            </motion.div>
-
-            <motion.div 
-              className="absolute top-8 right-6 md:right-12 z-10"
+              className="absolute top-8 left-8 md:left-16 z-10"
               {...gentleFloat}
               style={{ animationDelay: '1s' }}
             >
               <Image 
                 src="/bee-n-hive-rev.png" 
                 alt="" 
-                width={70} 
-                height={70} 
-                className="w-14 h-14 md:w-17 md:h-17"
+                width={150} 
+                height={150} 
+                className="w-[120px] h-[120px] md:w-[150px] md:h-[150px]"
+                style={{
+                  width: '150px',
+                  height: '150px'
+                }}
               />
             </motion.div>
 
+            {/* Bee moved from left to right */}
             <motion.div 
-              className="absolute bottom-16 left-4 md:left-10 z-10"
+              className="absolute bottom-16 right-8 md:right-16 z-10"
               {...floatingAnimation}
               style={{ animationDelay: '1.5s' }}
             >
@@ -312,20 +228,6 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
                 width={45} 
                 height={45} 
                 className="w-9 h-9 md:w-11 md:h-11"
-              />
-            </motion.div>
-
-            <motion.div 
-              className="absolute bottom-12 right-8 md:right-16 z-10"
-              {...buzzing}
-              style={{ animationDelay: '2s' }}
-            >
-              <Image 
-                src="/hive2.png" 
-                alt="" 
-                width={50} 
-                height={50} 
-                className="w-10 h-10 md:w-12 md:h-12"
               />
             </motion.div>
           </>
