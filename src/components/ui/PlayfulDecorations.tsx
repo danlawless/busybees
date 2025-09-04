@@ -67,17 +67,27 @@ export function PlayfulDecorations({ variant = 'minimal', density = 'medium' }: 
       case 'hero':
         return (
           <>
-            {/* Top Left - Floating Bee */}
+            {/* Top Left - Beautiful Hive 250x250px */}
             <motion.div 
-              className="absolute top-10 left-8 md:left-16 z-10"
-              {...buzzing}
+              className="absolute top-4 left-4 md:top-6 md:left-6 z-10"
+              {...gentleFloat}
+              style={{ 
+                opacity: 0.85,
+                filter: 'drop-shadow(2px 4px 8px rgba(0,0,0,0.1))'
+              }}
             >
               <Image 
-                src="/bee2.png" 
-                alt="" 
-                width={60} 
-                height={60} 
-                className="w-12 h-12 md:w-16 md:h-16"
+                src="/hive2.png" 
+                alt="Busy Bees Hive" 
+                width={250} 
+                height={250} 
+                className="w-[180px] h-[180px] md:w-[250px] md:h-[250px]"
+                style={{ 
+                  maxWidth: '250px', 
+                  maxHeight: '250px',
+                  width: '250px',
+                  height: '250px'
+                }}
               />
             </motion.div>
 
