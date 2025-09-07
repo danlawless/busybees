@@ -17,9 +17,6 @@ export function OurStory() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <span className="inline-block px-4 py-2 bg-honey-100 text-honey-800 rounded-full text-sm font-medium mb-4">
-              Our Story
-            </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
               Built By a Family For <span className="text-honey-gradient">Families</span>
             </h1>
@@ -35,6 +32,7 @@ export function OurStory() {
             viewport={{ once: true }}
           >
             <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-charcoal-800 mb-4">Our Story</h3>
               <p className="text-lg text-charcoal-600 leading-relaxed">
                 Once upon a time, a husband and wife had a dream: to create an indoor play center 
                 for young children in or around their hometown. Inspired by the many play spaces 

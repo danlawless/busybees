@@ -38,15 +38,10 @@ export function PartiesHero() {
             animate="visible"
           >
             <motion.div variants={fadeInUp}>
-              <div className="flex items-center justify-center lg:justify-start mb-6">
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-pink-100 to-purple-100 px-4 py-2 rounded-full">
-                  <Gift className="w-5 h-5 text-pink-600" />
-                  <span className="text-pink-800 font-medium text-sm">Birthday Parties</span>
-                </div>
-              </div>
+
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
-                <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Let's Party!</span>
+                Let's Party!
               </h1>
             </motion.div>
             
@@ -77,7 +72,7 @@ export function PartiesHero() {
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="bg-gradient-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 onClick={() => {
                   document.getElementById('party-calendar-section')?.scrollIntoView({ 
                     behavior: 'smooth',
