@@ -117,71 +117,32 @@ export function Hero() {
             </Link>
           </motion.div>
 
-          {/* Pricing Highlight */}
+          {/* Important Info */}
           <motion.div 
             variants={fadeInUp}
-            className="mt-12 space-y-6 max-w-4xl mx-auto"
+            className="mt-12 p-6 card-pastel rounded-2xl shadow-soft max-w-3xl mx-auto"
           >
-            {/* Main Pricing Cards */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="p-6 card-pastel rounded-2xl shadow-soft text-center">
-                <p className="text-sm font-medium text-charcoal-600 mb-2">Daily Admission</p>
-                <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
-                </div>
-                <p className="text-xs text-charcoal-500 mt-1">
-                  Ages 0-6 welcome
-                </p>
+            <h3 className="text-lg font-semibold text-charcoal-800 mb-4 text-center">
+              Good to Know
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm text-charcoal-600">
+              <div className="flex items-start space-x-2">
+                <span className="text-primary-600">💳</span>
+                <span>Cash-free business - all major cards accepted</span>
               </div>
-              
-              <div className="p-6 card-pastel rounded-2xl shadow-soft text-center border-2 border-charcoal-200">
-                <p className="text-sm font-medium text-charcoal-600 mb-2">Monthly Membership</p>
-                <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
-                </div>
-                <p className="text-xs text-charcoal-500 mt-1">
-                  Unlimited visits
-                </p>
+              <div className="flex items-start space-x-2">
+                <span className="text-primary-600">🧦</span>
+                <span>Socks required (we sell them if you forget!)</span>
               </div>
-              
-              <div className="p-6 card-pastel rounded-2xl shadow-soft text-center">
-                <p className="text-sm font-medium text-charcoal-600 mb-2">10-Visit Punch Card</p>
-                <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-2xl font-bold text-charcoal-800">Coming Soon</span>
-                </div>
-                <p className="text-xs text-charcoal-500 mt-1">
-                  Bulk visit savings
-                </p>
+              <div className="flex items-start space-x-2">
+                <span className="text-primary-600">📅</span>
+                <span>No reservations required - just drop in!</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-primary-600">🥪</span>
+                <span>Outside food welcome in our café area</span>
               </div>
             </div>
-            
-            {/* Important Info */}
-            <motion.div 
-              variants={fadeInUp}
-              className="mt-8 p-6 card-pastel rounded-2xl shadow-soft max-w-3xl mx-auto"
-            >
-              <h3 className="text-lg font-semibold text-charcoal-800 mb-4 text-center">
-                Good to Know
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4 text-sm text-charcoal-600">
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary-600">💳</span>
-                  <span>Cash-free business - all major cards accepted</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary-600">🧦</span>
-                  <span>Socks required (we sell them if you forget!)</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary-600">📅</span>
-                  <span>No reservations required - just drop in!</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-primary-600">🥪</span>
-                  <span>Outside food welcome in our café area</span>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </motion.div>
       </div>
