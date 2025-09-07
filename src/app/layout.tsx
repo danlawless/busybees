@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Gloria_Hallelujah } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ 
+const gloriaHallelujah = Gloria_Hallelujah({ 
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter'
+  variable: '--font-gloria',
+  weight: '400' // Gloria Hallelujah only has 400 weight
 });
 
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={gloriaHallelujah.variable}>
       <head>
         <link rel="icon" type="image/png" sizes="32x32" href="/busy-bees-favicon.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/busy-bees-favicon.png" />
@@ -47,7 +48,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/busy-bees-favicon.png" />
         <meta name="theme-color" content="#f5d565" />
       </head>
-      <body className={`${inter.className} font-body antialiased`}>
+      <body className={`${gloriaHallelujah.className} font-body antialiased`}>
         {children}
       </body>
     </html>

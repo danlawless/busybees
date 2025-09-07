@@ -84,8 +84,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ['Inter', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Gloria Hallelujah', 'cursive', 'system-ui', 'sans-serif'],
+        body: ['Gloria Hallelujah', 'cursive', 'system-ui', 'sans-serif'],
+        sans: ['Gloria Hallelujah', 'cursive', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],

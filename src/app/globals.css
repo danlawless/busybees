@@ -21,7 +21,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-gloria);
 }
 
 /* Removed dark mode override to prevent white text on light backgrounds */
@@ -40,7 +40,7 @@ body {
     #f5f5f5 100%);
   background-attachment: fixed;
   color: var(--charcoal-soft);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Gloria Hallelujah', cursive, system-ui, sans-serif;
   min-height: 100vh;
   position: relative;
 }
