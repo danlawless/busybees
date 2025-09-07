@@ -5,6 +5,7 @@ import { Layout } from '@/components/layout/Layout'
 import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyOptions } from '@/components/parties/PartyOptions'
 import { PartyPackages } from '@/components/parties/PartyPackages'
+import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 // Temporarily removed imports for hidden components
 // import { BookingFlow } from '@/components/parties/BookingFlow'
 // import { PartyGallery } from '@/components/parties/PartyGallery'
@@ -75,8 +76,14 @@ export default function PartiesPage() {
   return (
     <Layout>
       <PartiesHero />
+      
+      {/* Hexagon Package Showcase - Now the primary party options */}
+      <PartyPackageBackdrop />
+      
+      {/* Temporarily hidden party option components
       <PartyOptions />
       <PartyPackages />
+      */}
       
       {/* Temporarily hidden sections
       <BookingFlow />

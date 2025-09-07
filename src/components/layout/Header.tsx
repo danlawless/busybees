@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,37 +19,23 @@ const navigation = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrolled = window.scrollY > 100
-      setIsScrolled(scrolled)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   return (
     <>
-      {/* Logo Section - Not Sticky, Will Scroll Away */}
-      <div className={cn(
-        "bg-white/95 backdrop-blur-sm border-b border-neutral-200 transition-transform duration-300",
-        isScrolled ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
-      )}>
+      {/* Logo Section */}
+      <div className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center py-2">
             <Link href="/" className="flex items-center">
-              <Logo size="3xl" animate={true} showText={false} />
+              <Logo size="2xl" animate={true} showText={false} />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Navigation Section - Sticky Header */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-neutral-200">
+      {/* Navigation Section */}
+      <nav className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:justify-between md:px-8 lg:px-16 xl:px-24">
@@ -84,8 +70,6 @@ export function Header() {
               <span className="ml-2 text-sm font-medium">MENU</span>
             </button>
           </div>
-
-
         </div>
       </nav>
 
@@ -109,7 +93,7 @@ export function Header() {
             >
               <div className="flex items-center justify-between mb-6">
                 <Link href="/" className="flex items-center">
-                  <Logo size="lg" animate={false} textSize="md" />
+                  <Logo size="md" animate={false} showText={false} />
                 </Link>
                 <button
                   type="button"

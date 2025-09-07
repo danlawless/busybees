@@ -2,10 +2,9 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Check, Star, Gift, Users, Ticket, CreditCard } from 'lucide-react'
+import { Check, Star, Users, Ticket } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { PlayfulDecorations } from '@/components/ui/PlayfulDecorations'
 import { formatPrice, fadeInUp, staggerContainer } from '@/lib/utils'
 
 const pricingPlans = [
@@ -20,7 +19,7 @@ const pricingPlans = [
       'No time limits'
     ],
     popular: false,
-    cta: 'Visit Today',
+    cta: 'Coming Soon',
     icon: Ticket
   },
   {
@@ -34,7 +33,7 @@ const pricingPlans = [
       'Parent supervision required'
     ],
     popular: false,
-    cta: 'Bring Baby',
+    cta: 'Coming Soon',
     icon: Users
   },
   {
@@ -50,7 +49,7 @@ const pricingPlans = [
       '30% off third child ($70)'
     ],
     popular: true,
-    cta: 'Join Now',
+    cta: 'Coming Soon',
     icon: Star
   },
   {
@@ -65,62 +64,16 @@ const pricingPlans = [
       'All daily pass benefits'
     ],
     popular: false,
-    cta: 'Buy Card',
-    icon: CreditCard
+    cta: 'Coming Soon',
+    icon: Ticket
   }
 ]
 
-const specialRates = [
-  {
-    name: 'Group Rates',
-    price: 15,
-    description: 'Special pricing for large groups',
-    features: [
-      '10+ children eligibility',
-      '$15 per child',
-      'Perfect for daycares & schools',
-      'Advanced booking required'
-    ],
-    icon: Users
-  }
-]
 
-const partyPackages = [
-  {
-    name: 'Private Party',
-    price: 'TBD',
-    duration: '2 hours',
-    includes: 'Full venue exclusivity',
-    features: [
-      'Exclusive use of entire venue',
-      'Dedicated party host',
-      'Tables, chairs, and decorations',
-      'Paper goods provided',
-      'Access to full play area',
-      'Party setup and cleanup'
-    ]
-  },
-  {
-    name: 'Semi-Private Party',
-    price: 'TBD', 
-    duration: '2 hours',
-    includes: 'Reserved party area',
-    features: [
-      'Reserved party room',
-      'Dedicated party host',
-      'Tables, chairs, and decorations',
-      'Paper goods provided',
-      'Shared play area access',
-      'Party setup and cleanup'
-    ]
-  }
-]
 
 export function Pricing() {
   return (
     <section className="relative py-20 bg-neutral-50 overflow-hidden">
-      {/* Playful Bee Pricing Decorations */}
-      <PlayfulDecorations variant="pricing" density="light" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         {/* General Admission */}
@@ -199,165 +152,6 @@ export function Pricing() {
           })}
         </motion.div>
 
-        {/* Special Rates */}
-        <motion.div
-          className="mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h3 className="text-2xl font-bold text-neutral-900 text-center mb-8">
-            Special Rates
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {specialRates.map((rate, index) => {
-              const Icon = rate.icon
-              return (
-                <motion.div key={index} variants={fadeInUp} className="h-full">
-                  <Card className="text-center h-full flex flex-col">
-                    <CardHeader className="pb-4">
-                      <div className="w-12 h-12 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Icon className="w-6 h-6 text-secondary-600" />
-                      </div>
-                      <CardTitle className="text-xl">{rate.name}</CardTitle>
-                      <div className="mt-4">
-                        <div className="text-3xl font-bold text-secondary-600">
-                          Coming Soon
-                        </div>
-                      </div>
-                      <p className="text-neutral-600 mt-2">{rate.description}</p>
-                    </CardHeader>
-                    <CardContent className="pt-0 flex-1 flex flex-col">
-                      <ul className="space-y-2 mb-6 flex-1">
-                        {rate.features.map((feature, featureIndex) => (
-                          <li key={featureIndex} className="flex items-start">
-                            <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
-                            <span className="text-neutral-600 text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Button className="w-full" variant="secondary">
-                        Contact Us
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.div>
-
-        {/* Party Packages */}
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h3 className="text-2xl font-bold text-neutral-900 mb-4">
-            <Gift className="w-6 h-6 inline mr-2 text-primary-500" />
-            Birthday Party Packages
-          </h3>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            Make your child's special day unforgettable with our party packages
-          </p>
-        </motion.div>
-
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {partyPackages.map((pkg, index) => (
-            <motion.div key={index} variants={fadeInUp}>
-              <Card className="h-full flex flex-col">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-xl text-primary-600">{pkg.name}</CardTitle>
-                  <div className="mt-4">
-                    <div className="text-3xl font-bold text-primary-600">
-                      Coming Soon
-                    </div>
-                  </div>
-                  <div className="text-neutral-600 mt-2">
-                    <p className="font-medium">{pkg.duration} • {pkg.includes}</p>
-                    <p className="text-sm text-neutral-500 mt-1">Pricing details available soon</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 flex-1 flex flex-col">
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {pkg.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
-                        <span className="text-neutral-600 text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="w-full mt-auto" variant="secondary">
-                    Book This Package
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Important Info */}
-        <motion.div
-          className="bg-white rounded-2xl p-8 shadow-lg max-w-4xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h3 className="text-2xl font-bold text-neutral-900 text-center mb-6">
-            Important Information
-          </h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <CreditCard className="w-5 h-5 text-primary-500 mt-1" />
-                <div>
-                  <h4 className="font-semibold text-neutral-900">Cash-Free Business</h4>
-                  <p className="text-neutral-600 text-sm">We accept all major credit and debit cards</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-primary-500 text-lg mt-0.5">🧦</span>
-                <div>
-                  <h4 className="font-semibold text-neutral-900">Socks Required</h4>
-                  <p className="text-neutral-600 text-sm">Don't worry if you forget - we sell branded socks!</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-primary-500 text-lg mt-0.5">📅</span>
-                <div>
-                  <h4 className="font-semibold text-neutral-900">No Reservations Required</h4>
-                  <p className="text-neutral-600 text-sm">Just drop in and start playing!</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <span className="text-primary-500 text-lg mt-0.5">🥪</span>
-                <div>
-                  <h4 className="font-semibold text-neutral-900">Outside Food Welcome</h4>
-                  <p className="text-neutral-600 text-sm">Enjoy your own food in our café area. We also sell healthy snacks!</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-primary-500 text-lg mt-0.5">📱</span>
-                <div>
-                  <h4 className="font-semibold text-neutral-900">Stay Connected</h4>
-                  <p className="text-neutral-600 text-sm">Follow us on social media or sign up for our newsletter</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   )

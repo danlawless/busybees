@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Shield, FileText, AlertTriangle, Clock, Users, Zap, Heart, Coffee, PartyPopper, Camera, HandHeart, Baby } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -110,8 +111,14 @@ export function RulesAndWaiver() {
               <div className="grid md:grid-cols-2 gap-4">
                 {generalSafetyRules.map((rule, index) => (
                   <div key={index} className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-charcoal-700 text-sm font-bold">{index + 1}</span>
+                    <div className="flex-shrink-0 mt-1">
+                      <Image
+                        src="/busy-bee.png"
+                        alt="Bee bullet point"
+                        width={20}
+                        height={20}
+                        className="w-5 h-5"
+                      />
                     </div>
                     <p className="text-charcoal-600 leading-relaxed text-sm">{rule}</p>
                   </div>

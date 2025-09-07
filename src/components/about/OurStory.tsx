@@ -6,8 +6,8 @@ import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
 export function OurStory() {
   return (
-    <section className="relative py-20 section-hexagon-light overflow-hidden">
-      <HoneycombPattern variant="subtle" size="lg" />
+    <section className="relative py-20 sm:py-24 section-hexagon-dense hexagon-overlay overflow-hidden">
+      <HoneycombPattern variant="dense" size="xl" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
@@ -20,9 +20,9 @@ export function OurStory() {
             <span className="inline-block px-4 py-2 bg-honey-100 text-honey-800 rounded-full text-sm font-medium mb-4">
               Our Story
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
               Built By a Family For <span className="text-honey-gradient">Families</span>
-            </h2>
+            </h1>
           </motion.div>
         </div>
         

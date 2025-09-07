@@ -33,9 +33,8 @@ export function AboutHero() {
                 Our Story
               </span>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
-                Where Little
-                <span className="text-honey-gradient block">Dreamers</span>
-                Come to Play
+                Built By a Family
+                <span className="text-honey-gradient block">For Families</span>
               </h1>
             </motion.div>
             

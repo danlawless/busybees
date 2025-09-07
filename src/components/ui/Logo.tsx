@@ -21,12 +21,12 @@ export function Logo({
   textSize = 'md'
 }: LogoProps) {
   const sizes = {
-    sm: { width: 32, height: 32 },
-    md: { width: 48, height: 48 },
-    lg: { width: 64, height: 64 },
-    xl: { width: 80, height: 80 },
-    '2xl': { width: 120, height: 120 },
-    '3xl': { width: 160, height: 160 }
+    sm: { width: 120, height: 40 },
+    md: { width: 180, height: 60 },
+    lg: { width: 240, height: 80 },
+    xl: { width: 300, height: 100 },
+    '2xl': { width: 360, height: 120 },
+    '3xl': { width: 480, height: 160 }
   }
 
   const textSizes = {
@@ -60,7 +60,7 @@ export function Logo({
         whileHover={animate ? "hover" : undefined}
       >
         <Image
-          src="/busy-bees-logo.png"
+          src="/busy-bees-logo-long.png"
           alt="Busy Bees Indoor Play Center Logo"
           width={width}
           height={height}

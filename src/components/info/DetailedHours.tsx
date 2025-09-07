@@ -12,7 +12,9 @@ const weeklySchedule = [
   { day: 'Wednesday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
   { day: 'Thursday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
   { day: 'Friday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Saturday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: 'Open Play' },
   { day: 'Saturday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' },
+  { day: 'Sunday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: 'Open Play' },
   { day: 'Sunday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' }
 ]
 
@@ -21,7 +23,7 @@ const specialPrograms = [
     icon: Calendar,
     title: 'Open Play Times',
     description: 'Drop-in play sessions where families can enjoy all play areas',
-    schedule: 'Mon-Fri: 10AM-4PM'
+    schedule: 'Mon-Fri: 10AM-4PM | Sat-Sun: 9AM-12PM'
   },
   {
     icon: PartyPopper,
@@ -101,8 +103,12 @@ export function DetailedHours() {
                             <p className="text-sm text-neutral-500 mt-1">{schedule.additional}</p>
                           )}
                         </div>
-                        <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded-full">
-                          Open Play
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          schedule.type === 'open-play' 
+                            ? 'bg-secondary-100 text-secondary-700' 
+                            : 'bg-primary-100 text-primary-700'
+                        }`}>
+                          {schedule.type === 'open-play' ? 'Open Play' : 'Private Bookings'}
                         </span>
                       </div>
                     </div>
@@ -153,8 +159,8 @@ export function DetailedHours() {
                     <div>
                       <h4 className="font-semibold text-accent-900 mb-2">Important Notice</h4>
                       <p className="text-accent-800 text-sm">
-                        Weekend afternoon slots (1PM-6PM) are reserved for private birthday parties. 
-                        Please call ahead to confirm availability during these times.
+                        Weekends offer both Open Play (9AM-12PM) and Private Bookings (1PM-6PM). 
+                        Weekend afternoon slots are reserved for birthday parties. Please call ahead to confirm availability.
                       </p>
                     </div>
                   </div>

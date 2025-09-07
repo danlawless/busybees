@@ -84,6 +84,17 @@ const classes = [
     color: 'from-yellow-200 to-yellow-300',
     borderColor: 'border-yellow-300',
     highlights: ['Peer support', 'Expert guidance', 'Parenting tips', 'Community building']
+  },
+  {
+    name: 'Book Club',
+    description: 'Interactive reading sessions where children explore stories, discuss characters, and develop a love for literature.',
+    ageRange: '4-6 years',
+    duration: '60 minutes',
+    icon: Book,
+    schedule: 'Fridays 2:00 PM',
+    color: 'from-indigo-200 to-indigo-300',
+    borderColor: 'border-indigo-300',
+    highlights: ['Reading comprehension', 'Discussion skills', 'Critical thinking', 'Literature appreciation']
   }
 ]
 

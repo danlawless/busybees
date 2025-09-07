@@ -46,9 +46,7 @@ export function PartiesHero() {
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
-                The Most
-                <span className="text-honey-gradient block">Epic Birthday</span>
-                <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Parties Ever!</span>
+                <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Let's Party!</span>
               </h1>
             </motion.div>
             

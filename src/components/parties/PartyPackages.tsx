@@ -1,93 +1,91 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Gift, Users, Clock, Cake, Star, Check, Crown, Zap, Calendar } from 'lucide-react'
+import { Gift, Users, Crown, Sparkles, Star, CheckCircle } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
-const packages = [
+const partyPackages = [
   {
-    name: 'Basic Bee',
-    semiPrivatePrice: 299,
-    privatePrice: 399,
-    duration: '2 Hours',
-    guests: '15 Kids Included',
-    icon: Users,
+    name: 'Basic Birthday Bash',
+    description: 'Perfect for intimate celebrations with all the party essentials',
+    icon: Gift,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
-    popular: false,
+    accentColor: 'from-blue-500 to-blue-600',
+    semiPrivatePrice: 250,
+    privatePrice: 350,
+    maxGuests: 15,
+    duration: '2 hours',
     features: [
       'Exclusive party room access',
-      'Access to play area during public play',
-      'Paper goods included (plates, napkins, cups)',
-      'Table cloth and plastic cutlery',
-      '15 kids included, additional guest pricing available soon',
-      'Weekdays: 10am - 4pm available',
-      'Weekends: 9am - 12pm available',
-      'You bring food, drinks & decorations'
-    ]
+      'Basic table setup with tablecloth', 
+      'Paper plates, cups, napkins & utensils',
+      'Birthday crown for birthday child',
+      'Access to play area during party',
+      'Dedicated party host assistance',
+      'Basic cleanup service included',
+      'Party setup & breakdown handled'
+    ],
+    popular: false
   },
   {
-    name: 'Worker Bee',
-    semiPrivatePrice: 399,
-    privatePrice: 499,
-    duration: '2 Hours',
-    guests: '15 Kids Included',
-    icon: Zap,
-    color: 'from-yellow-200 to-yellow-300',
-    borderColor: 'border-yellow-300',
-    popular: true,
+    name: 'Super Fun Party',
+    description: 'Our most popular package with extra special party touches',
+    icon: Sparkles,
+    color: 'from-purple-200 to-purple-300',
+    borderColor: 'border-purple-300',
+    accentColor: 'from-purple-500 to-purple-600',
+    semiPrivatePrice: 350,
+    privatePrice: 450,
+    maxGuests: 20,
+    duration: '2 hours',
     features: [
-      'Everything from Basic Bee',
-      'Enhanced party decorations',
-      'Special activity coordinator',
-      'Birthday child gets special crown',
-      'Photo session included',
-      'Weekdays: 10am - 4pm available',
-      'Weekends: 9am - 12pm or 1pm-3pm available',
-      'You bring food, drinks & extra decorations'
-    ]
+      'Everything in Basic Birthday Bash',
+      'Themed decorations & balloon setup',
+      'Special birthday throne for photos',
+      'Goodie bags for all party guests',
+      'Face painting or temporary tattoos',
+      'Music & entertainment coordination',
+      'Polaroid photos for lasting memories',
+      'Extended cleanup service included'
+    ],
+    popular: true
   },
   {
-    name: 'Queen Bee',
-    semiPrivatePrice: 499,
-    privatePrice: 599,
-    duration: '2 Hours',
-    guests: '15 Kids Included',
+    name: 'Ultimate Celebration',
+    description: 'The premium experience for truly unforgettable memories',
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
-    popular: false,
+    accentColor: 'from-pink-500 to-pink-600',
+    semiPrivatePrice: 450,
+    privatePrice: 550,
+    maxGuests: 25,
+    duration: '2 hours',
     features: [
-      'Everything from Worker Bee',
-      'Exclusive access to entire play area (private only)',
-      'Premium party decorations & setup',
-      'Dedicated party host',
-      'Professional photo package',
-      'Special birthday throne for birthday child',
-      'Custom party favors for all guests',
-      'You bring food & drinks, we handle everything else'
-    ]
+      'Everything in Super Fun Party',
+      'Premium themed decoration package',
+      'Professional photo session included',
+      'Upgraded goodie bags with premium toys',
+      'Beautiful balloon bouquets for tables',
+      'Special birthday performance or show',
+      'Customized party favors & keepsakes',
+      'Take-home photo album as memento'
+    ],
+    popular: false
   }
-]
-
-const addOns = [
-  { name: 'Pizza Party', price: 49, icon: '🍕', description: 'Fresh pizza for all party guests' },
-  { name: 'Face Painting', price: 75, icon: '🎨', description: 'Professional face painter for 1 hour' },
-  { name: 'Balloon Artist', price: 85, icon: '🎈', description: 'Balloon sculptures for every child' },
-  { name: 'Extra Hour', price: 99, icon: '⏰', description: 'Extend your party by one hour' },
-  { name: 'Photo Booth', price: 125, icon: '📸', description: 'Props and instant photo prints' },
-  { name: 'Custom Cake', price: 65, icon: '🎂', description: 'Personalized birthday cake' }
 ]
 
 export function PartyPackages() {
   return (
-    <section className="relative py-20 section-hexagon-light overflow-hidden">
+    <section className="relative py-20 section-hexagon-subtle overflow-hidden">
       <HoneycombPattern variant="scattered" size="lg" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
@@ -99,81 +97,102 @@ export function PartyPackages() {
             Party Packages
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-            Choose Your <span className="text-honey-600">Perfect Package</span>
+            Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Package</span>
           </h2>
-          <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
+          <p className="text-lg text-charcoal-600 max-w-4xl mx-auto leading-relaxed">
             Now that you know about our party options, choose your package! Every package is available as both 
-            semi-private and private - no hidden fees, no stress, just pure birthday magic!
+            semi-private and private - <strong>no hidden fees, no stress, just pure birthday magic!</strong>
           </p>
         </motion.div>
-        
+
         {/* Package Cards */}
         <motion.div
-          className="grid lg:grid-cols-3 gap-8 mb-16 max-w-6xl mx-auto"
+          className="grid lg:grid-cols-3 gap-8 mb-12"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
         >
-          {packages.map((pkg, index) => {
+          {partyPackages.map((pkg, index) => {
             const Icon = pkg.icon
             return (
-              <motion.div key={index} variants={fadeInUp} className="relative h-full">
-                <Card className={`h-full card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group flex flex-col`}>
+              <motion.div key={index} variants={fadeInUp} className="relative">
+                {pkg.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-bold flex items-center shadow-lg">
+                      <Star className="w-4 h-4 mr-1" />
+                      Most Popular
+                    </div>
+                  </div>
+                )}
+                
+                <Card className={`card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group ${pkg.popular ? 'shadow-xl ring-2 ring-purple-200' : ''} h-full flex flex-col`}>
                   <CardContent className="p-8 flex-1 flex flex-col">
-                    {/* Package Header */}
-                    <div className="text-center mb-6">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${pkg.color} hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
-                        <Icon className="w-8 h-8 text-charcoal-700" />
+                    {/* Header Section */}
+                    <div className="text-center mb-8">
+                      <div className={`w-20 h-20 bg-gradient-to-br ${pkg.color} hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
+                        <Icon className="w-10 h-10 text-charcoal-700" />
                       </div>
                       
-                      <h3 className="text-2xl font-bold text-charcoal-800 mb-2">
+                      <h3 className="text-2xl font-bold text-charcoal-800 mb-4">
                         {pkg.name}
                       </h3>
                       
-                      <div className="text-center mb-4">
-                        <div className="flex items-baseline justify-center space-x-2 mb-2">
-                          <span className="text-3xl font-bold text-honey-gradient">${pkg.semiPrivatePrice}</span>
-                          <span className="text-sm text-charcoal-600 bg-blue-50 px-2 py-1 rounded-full">semi-private</span>
+                      <p className="text-charcoal-600 leading-relaxed mb-6 min-h-[3rem] flex items-center justify-center px-2">
+                        {pkg.description}
+                      </p>
+
+                      {/* Package Info */}
+                      <div className="flex justify-center items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <Users className="w-4 h-4 text-honey-600" />
+                          <span className="text-sm text-charcoal-600">{pkg.maxGuests} guests</span>
                         </div>
-                        <div className="flex items-baseline justify-center space-x-2">
-                          <span className="text-3xl font-bold text-honey-gradient">${pkg.privatePrice}</span>
-                          <span className="text-sm text-charcoal-600 bg-purple-50 px-2 py-1 rounded-full">private</span>
-                        </div>
-                        <p className="text-xs text-charcoal-500 mt-2">
-                          Choose your party type above, then select this package!
-                        </p>
+                        <div className="w-1 h-1 bg-charcoal-400 rounded-full"></div>
+                        <span className="text-sm text-charcoal-600">{pkg.duration}</span>
                       </div>
-                      
-                      <div className="flex justify-center space-x-4 text-sm text-charcoal-600">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{pkg.duration}</span>
+                    </div>
+
+                    {/* Pricing Section */}
+                    <div className="text-center mb-8">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                          <span className="font-medium text-charcoal-700">Semi-Private:</span>
+                          <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Users className="w-4 h-4" />
-                          <span>{pkg.guests}</span>
+                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                          <span className="font-medium text-charcoal-700">Private:</span>
+                          <span className="text-2xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Features List */}
-                    <div className="space-y-3 mb-8 flex-1">
-                      {pkg.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-start space-x-3">
-                          <div className="w-5 h-5 bg-gradient-to-br from-green-200 to-green-300 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                            <Check className="w-3 h-3 text-green-700" />
+
+                    {/* Features Section */}
+                    <div className="mb-8 flex-1">
+                      <h4 className="font-semibold text-charcoal-800 mb-4 flex items-center">
+                        <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                        What's Included
+                      </h4>
+                      <div className="space-y-3">
+                        {pkg.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-start space-x-3">
+                            <div className="w-5 h-5 bg-gradient-to-br from-green-200 to-green-300 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                              <CheckCircle className="w-3 h-3 text-green-700" />
+                            </div>
+                            <span className="text-sm text-charcoal-600 leading-relaxed">{feature}</span>
                           </div>
-                          <span className="text-sm text-charcoal-600 leading-relaxed">{feature}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                    
-                    {/* CTA Button - Always at bottom */}
+
+                    {/* CTA Button Section */}
                     <div className="mt-auto">
                       <Button 
-                        className="w-full bg-gradient-to-r from-honey-500 to-primary-600 hover:from-honey-600 hover:to-primary-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                        size="lg"
+                        size="lg" 
+                        className={`w-full ${pkg.popular 
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg' 
+                          : `bg-gradient-to-r ${pkg.accentColor} text-white hover:shadow-lg`
+                        } font-semibold transition-all duration-300 transform hover:scale-105`}
                         onClick={() => {
                           document.getElementById('party-calendar-section')?.scrollIntoView({ 
                             behavior: 'smooth',
@@ -181,8 +200,8 @@ export function PartyPackages() {
                           });
                         }}
                       >
-                        <Gift className="w-4 h-4 mr-2" />
-                        Book {pkg.name}
+                        <Gift className="w-5 h-5 mr-2" />
+                        Choose This Package
                       </Button>
                     </div>
                   </CardContent>
@@ -191,49 +210,49 @@ export function PartyPackages() {
             )
           })}
         </motion.div>
-        
-        
-        {/* Special Offer Banner */}
+
+        {/* Add-ons Section */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
+          className="text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
-          className="mt-16"
         >
-          <Card className="bg-gradient-to-r from-pink-500 to-purple-600 text-white overflow-hidden relative">
-            <CardContent className="p-8 text-center relative z-10">
-              <div className="w-16 h-16 bg-white/20 hexagon-shape flex items-center justify-center mx-auto mb-6 hexagon-pulse">
-                <Zap className="w-8 h-8 text-white" />
+          <Card className="bg-gradient-to-r from-honey-50 to-yellow-50 border-2 border-honey-200 max-w-4xl mx-auto">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <Sparkles className="w-6 h-6 text-honey-600" />
+                <h3 className="text-2xl font-bold text-charcoal-800">Make It Even More Special!</h3>
               </div>
-              
-              <h3 className="text-2xl font-bold mb-4">
-                🎉 Ready to Book Your Perfect Party? 🎉
-              </h3>
-              <p className="text-lg mb-6 opacity-90">
-                You've learned about our party options and seen our amazing packages. Now pick your perfect combination and create unforgettable memories for your little bee!
+              <p className="text-charcoal-600 leading-relaxed mb-6">
+                Want to add extra magic to your celebration? Ask about our available add-ons including 
+                specialty entertainment, custom cake coordination, extended party time, and more!
               </p>
-              
-              <Button 
-                size="lg" 
-                className="bg-white text-purple-600 hover:bg-gray-100 font-bold"
-                onClick={() => {
-                  // Scroll to the first package or booking section
-                  document.querySelector('.grid')?.scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                  });
-                }}
-              >
-                <Calendar className="w-5 h-5 mr-2" />
-                Choose Your Package
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50 font-semibold"
+                >
+                  <Gift className="w-5 h-5 mr-2" />
+                  View Add-Ons
+                </Button>
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  onClick={() => {
+                    document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }}
+                >
+                  <Star className="w-5 h-5 mr-2" />
+                  Book Your Party Now
+                </Button>
+              </div>
             </CardContent>
-            
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <HoneycombPattern variant="light" size="md" />
-            </div>
           </Card>
         </motion.div>
       </div>

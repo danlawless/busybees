@@ -1,12 +1,13 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Star, Shield, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
-import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
-import { PlayfulDecorations } from '@/components/ui/PlayfulDecorations'
+import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const features = [
@@ -29,8 +30,36 @@ export function Hero() {
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
       
-      {/* Playful Bee Party Decorations! */}
-      <PlayfulDecorations variant="hero" density="dense" />
+      {/* Flying Bees on Sides */}
+      <motion.div 
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 hidden lg:block"
+        initial={{ x: -100, opacity: 0 }}
+        animate={{ x: 0, opacity: 0.7 }}
+        transition={{ duration: 1, delay: 0.5 }}
+      >
+        <Image
+          src="/bee-flying-side2.png"
+          alt="Flying bee decoration"
+          width={120}
+          height={120}
+          className="drop-shadow-sm"
+        />
+      </motion.div>
+      
+      <motion.div 
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 hidden lg:block"
+        initial={{ x: 100, opacity: 0 }}
+        animate={{ x: 0, opacity: 0.7 }}
+        transition={{ duration: 1, delay: 0.7 }}
+      >
+        <Image
+          src="/bee-flying-side1.png"
+          alt="Flying bee decoration"
+          width={120}
+          height={120}
+          className="drop-shadow-sm"
+        />
+      </motion.div>
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
@@ -81,13 +110,11 @@ export function Hero() {
             variants={fadeInUp}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Button size="lg" className="min-w-48 btn-party">
-              Plan Your Visit
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button variant="outline" size="lg" className="min-w-48 btn-party">
-              Book a Party 🎉
-            </Button>
+            <Link href="/parties">
+              <Button variant="outline" size="lg" className="min-w-48 btn-party">
+                Book a Party 🎉
+              </Button>
+            </Link>
           </motion.div>
 
           {/* Pricing Highlight */}
@@ -159,16 +186,6 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* Additional subtle branding elements */}
-      <div className="absolute top-20 left-10 opacity-10 z-5">
-        <Logo size="md" showText={false} animate={false} />
-      </div>
-      <div className="absolute bottom-20 right-10 opacity-15 z-5">
-        <BeeIcon size="md" animate={false} />
-      </div>
-      <div className="absolute top-1/2 right-20 opacity-8 z-5">
-        <Logo size="lg" showText={false} animate={false} />
-      </div>
     </section>
   )
 }
