@@ -72,16 +72,21 @@ export function Features() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl font-bold text-charcoal-800 sm:text-4xl mb-4">
-            Why Families Love Busy Bees
-          </h2>
-          <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
-            Every detail has been designed with your family's comfort, safety, and fun in mind
-          </p>
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <span className="inline-block px-4 py-2 bg-gradient-to-r from-honey-200 to-honey-300 text-charcoal-800 rounded-full text-sm font-medium">
+              ✨ What Makes Us Special
+            </span>
+            <h2 className="text-4xl font-bold text-charcoal-800 sm:text-5xl">
+              Why Families <span className="text-honey-600">Choose Us</span>
+            </h2>
+          </div>
+          <h3 className="text-3xl sm:text-4xl font-medium text-charcoal-700 mb-8">
+            Again & Again
+          </h3>
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
@@ -91,22 +96,75 @@ export function Features() {
             const Icon = feature.icon
             return (
               <motion.div key={index} variants={fadeInUp}>
-                <Card className="h-full text-center group card-pastel">
+                <Card className={`h-full text-left group relative overflow-hidden bg-gradient-to-br ${feature.bgColor} border-2 border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1`}>
                   <CardContent className="p-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-primary-200 to-primary-300 hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:from-primary-300 group-hover:to-primary-400 transition-all duration-300">
-                      <Icon className="w-8 h-8 text-charcoal-700" />
+                    {/* Title and Logo Section */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} hexagon-shape flex items-center justify-center group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
+                        <Icon className="w-8 h-8 text-charcoal-700" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-charcoal-800 leading-tight">
+                        {feature.title}
+                      </h3>
                     </div>
-                    <h3 className="text-xl font-semibold text-charcoal-800 mb-4">
-                      {feature.title}
-                    </h3>
-                    <p className="text-charcoal-600 leading-relaxed">
+
+                    {/* Highlight Badge - Left aligned inside card */}
+                    <div className="flex justify-start mb-4">
+                      <span className="text-sm font-medium text-charcoal-700 bg-white/80 px-3 py-1 rounded-full">
+                        {feature.highlight}
+                      </span>
+                    </div>
+                    
+                    <p className="text-charcoal-700 leading-relaxed text-base">
                       {feature.description}
                     </p>
+                    
+                    {/* Decorative element */}
+                    <div className={`absolute -bottom-2 -right-2 w-16 h-16 bg-gradient-to-br ${feature.color} opacity-10 rounded-full group-hover:scale-150 transition-transform duration-500`}></div>
                   </CardContent>
                 </Card>
               </motion.div>
             )
           })}
+        </motion.div>
+
+        {/* Descriptive Text */}
+        <motion.div 
+          className="text-left mt-16 mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <p className="text-xl text-charcoal-600 max-w-3xl leading-relaxed">
+            We're not just another play center. We're parents who built the space 
+            <strong className="text-honey-600"> we wished existed</strong> for our own families.
+          </p>
+        </motion.div>
+
+        {/* Call to Action */}
+        <motion.div 
+          className="text-center mt-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <div className="bg-gradient-to-r from-honey-100 to-honey-200 rounded-2xl p-8 max-w-4xl mx-auto border border-honey-300/50 shadow-lg">
+            <h3 className="text-2xl font-bold text-charcoal-800 mb-4">
+              Ready to See What Makes Us Different? 🐝
+            </h3>
+            <p className="text-lg text-charcoal-700 mb-6 leading-relaxed">
+              Come experience the Busy Bees difference! Your family deserves a place where 
+              everyone feels welcome, safe, and excited to play.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-honey-600">Coming Soon!</p>
+                <p className="text-sm text-charcoal-600">Follow us for opening updates</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </section>

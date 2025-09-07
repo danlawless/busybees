@@ -111,7 +111,7 @@ export function Hero() {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <Link href="/parties">
-              <Button variant="outline" size="lg" className="min-w-48 btn-party">
+              <Button variant="primary" size="lg" className="min-w-48 btn-party">
                 Book a Party 🎉
               </Button>
             </Link>
