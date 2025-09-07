@@ -2,41 +2,59 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Users, Calendar, Coffee, Car, Shirt } from 'lucide-react'
+import { Shield, Users, Calendar, Coffee, Car, Shirt, Heart, Sparkles, Baby, PartyPopper, MapPin, Star } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
 const features = [
   {
+    icon: Heart,
+    title: 'Built by Parents, for Parents',
+    description: 'We understand the challenges of entertaining little ones! Our space was designed by a family who knows exactly what you need for a perfect day out.',
+    highlight: '💝 Family-First Design',
+    color: 'from-pink-200 to-pink-300',
+    bgColor: 'from-pink-50 to-pink-100'
+  },
+  {
     icon: Shield,
-    title: 'Safe & Clean',
-    description: 'Dedicated infant area, soft flooring, and cleanable surfaces for maximum safety'
+    title: 'Safety That Gives You Peace of Mind',
+    description: 'Relax while your kids play! Our dedicated infant areas, soft surfaces, and secure environment let you actually enjoy watching them explore.',
+    highlight: '🛡️ Parent-Approved Safety',
+    color: 'from-green-200 to-green-300',
+    bgColor: 'from-green-50 to-green-100'
   },
   {
-    icon: Users,
-    title: 'Age-Appropriate Zones',
-    description: 'Separate areas for infants (0-2) and active play for toddlers and children (2-6)'
+    icon: Baby,
+    title: 'Perfect for Every Age & Stage',
+    description: 'From crawling babies to energetic 6-year-olds, every child finds their perfect play space. No more "too young" or "too old" worries!',
+    highlight: '👶 Ages 0-6 Welcome',
+    color: 'from-purple-200 to-purple-300',
+    bgColor: 'from-purple-50 to-purple-100'
   },
   {
-    icon: Calendar,
-    title: 'Private Party Room',
-    description: 'Bookable party space for birthdays and special celebrations'
+    icon: PartyPopper,
+    title: 'Unforgettable Birthday Magic',
+    description: 'Transform your child\'s special day into pure magic! Our private party room and expert staff handle everything so you can focus on making memories.',
+    highlight: '🎂 Stress-Free Parties',
+    color: 'from-yellow-200 to-yellow-300',
+    bgColor: 'from-yellow-50 to-yellow-100'
   },
   {
     icon: Coffee,
-    title: 'Designated Eating Area',
-    description: 'Comfortable lounge space with snacks and drinks available for purchase'
+    title: 'Parents Deserve Fun Too!',
+    description: 'Grab a coffee, chat with other parents, or simply enjoy watching your little ones play. Our comfortable seating areas are designed for you to relax and recharge.',
+    highlight: '☕ Adult-Friendly Space',
+    color: 'from-amber-200 to-amber-300',
+    bgColor: 'from-amber-50 to-amber-100'
   },
   {
-    icon: Car,
-    title: 'Ample Parking',
-    description: 'Convenient parking spaces for easy access with families'
-  },
-  {
-    icon: Shirt,
-    title: 'Shoe-Free Play',
-    description: 'Cubbies for shoes and hooks for coats, with grip socks available for purchase'
+    icon: Sparkles,
+    title: 'Clean, Fresh & Always Ready',
+    description: 'Walk into a spotless environment every single time. Our rigorous cleaning protocols and premium materials ensure a fresh, healthy play experience.',
+    highlight: '✨ Hospital-Grade Clean',
+    color: 'from-blue-200 to-blue-300',
+    bgColor: 'from-blue-50 to-blue-100'
   }
 ]
 

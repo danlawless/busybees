@@ -59,6 +59,7 @@ const pricingPlans = [
     description: 'Save $20 with bulk visits',
     features: [
       '10 visits at $15 each (save $20)',
+      'One punch per child per visit',
       'Never expires',
       'Transferable to family/friends',
       'All daily pass benefits'

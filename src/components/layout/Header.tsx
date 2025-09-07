@@ -22,9 +22,9 @@ export function Header() {
   const pathname = usePathname()
 
   return (
-    <>
+    <header className="sticky top-0 z-50">
       {/* Logo Section */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
+      <div className="bg-white/95 backdrop-blur-sm border-b border-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center py-2">
             <Link href="/" className="flex items-center">
@@ -131,6 +131,6 @@ export function Header() {
           </>
         )}
       </AnimatePresence>
-    </>
+    </header>
   )
 }

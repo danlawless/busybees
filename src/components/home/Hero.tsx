@@ -30,34 +30,34 @@ export function Hero() {
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
       
-      {/* Flying Bees on Sides */}
+      {/* Flying Bees beside Title */}
       <motion.div 
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 hidden lg:block"
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 0.7 }}
-        transition={{ duration: 1, delay: 0.5 }}
+        className="absolute left-1/2 top-32 transform -translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
+        initial={{ x: -100, opacity: 0, scale: 0.8 }}
+        animate={{ x: 0, opacity: 0.8, scale: 1 }}
+        transition={{ duration: 1.2, delay: 0.8 }}
       >
         <Image
           src="/bee-flying-side2.png"
           alt="Flying bee decoration"
-          width={120}
-          height={120}
-          className="drop-shadow-sm"
+          width={180}
+          height={180}
+          className="drop-shadow-lg"
         />
       </motion.div>
       
       <motion.div 
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 hidden lg:block"
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 0.7 }}
-        transition={{ duration: 1, delay: 0.7 }}
+        className="absolute right-1/2 top-32 transform translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
+        initial={{ x: 100, opacity: 0, scale: 0.8 }}
+        animate={{ x: 0, opacity: 0.8, scale: 1 }}
+        transition={{ duration: 1.2, delay: 1.0 }}
       >
         <Image
           src="/bee-flying-side1.png"
           alt="Flying bee decoration"
-          width={120}
-          height={120}
-          className="drop-shadow-sm"
+          width={180}
+          height={180}
+          className="drop-shadow-lg"
         />
       </motion.div>
       
