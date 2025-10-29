@@ -619,11 +619,17 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
     const sortedPromos = [...promos].sort((a, b) => {
       const statusA = getPromoStatus(a);
       const statusB = getPromoStatus(b);
-      if (statusA.status === 'active') return -1;
-      if (statusB.status === 'active') return 1;
+      
+      // Active promos first
+      if (statusA.status === 'active' && statusB.status !== 'active') return -1;
+      if (statusB.status === 'active' && statusA.status !== 'active') return 1;
+      
+      // Then scheduled promos
       if (statusA.status === 'scheduled' && statusB.status !== 'scheduled') return -1;
       if (statusB.status === 'scheduled' && statusA.status !== 'scheduled') return 1;
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      
+      // Within each status group, sort by end date (newest/furthest end date at top, oldest at bottom)
+      return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
     });
 
     return (
