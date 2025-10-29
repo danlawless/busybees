@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { PromoSpecial, getPromoStatus, getActivePromo, formatPromoDate, formatPromoDateRange, validatePromoCode, validatePromoDates } from '@/lib/utils/promoHelpers';
+import { PromoBanner } from '@/components/home/PromoBanner';
 
 interface Child {
   id: string;
@@ -66,16 +68,33 @@ interface SavedCard {
 interface AdminPanelProps {
   customers: Customer[];
   onUpdateCustomers: (customers: Customer[]) => void;
+  promos: PromoSpecial[];
+  onUpdatePromos: (promos: PromoSpecial[]) => void;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing';
 
-export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
+export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromos }: AdminPanelProps) {
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
   const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
   const [refundTimeout, setRefundTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Marketing/Promo states
+  const [showPromoForm, setShowPromoForm] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<PromoSpecial | null>(null);
+  const [promoFormData, setPromoFormData] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+    discountPercent: '',
+    description: '',
+    stripeCouponCode: '',
+    isActive: true,
+  });
+  const [promoFormErrors, setPromoFormErrors] = useState<Record<string, string>>({});
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -470,6 +489,417 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
     </div>
   );
 
+  // Promo handlers
+  const handleCreatePromo = () => {
+    setEditingPromo(null);
+    setPromoFormData({
+      name: '',
+      startDate: '',
+      endDate: '',
+      discountPercent: '',
+      description: '',
+      stripeCouponCode: '',
+      isActive: true,
+    });
+    setPromoFormErrors({});
+    setShowPromoForm(true);
+  };
+
+  const handleEditPromo = (promo: PromoSpecial) => {
+    setEditingPromo(promo);
+    setPromoFormData({
+      name: promo.name,
+      startDate: promo.startDate,
+      endDate: promo.endDate,
+      discountPercent: promo.discountPercent.toString(),
+      description: promo.description,
+      stripeCouponCode: promo.stripeCouponCode,
+      isActive: promo.isActive,
+    });
+    setPromoFormErrors({});
+    setShowPromoForm(true);
+  };
+
+  const handleSavePromo = () => {
+    const errors: Record<string, string> = {};
+
+    // Validate all fields
+    if (!promoFormData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    if (!promoFormData.startDate) {
+      errors.startDate = 'Start date is required';
+    }
+    if (!promoFormData.endDate) {
+      errors.endDate = 'End date is required';
+    }
+    if (!promoFormData.discountPercent || isNaN(Number(promoFormData.discountPercent))) {
+      errors.discountPercent = 'Valid discount percentage is required';
+    } else {
+      const percent = Number(promoFormData.discountPercent);
+      if (percent <= 0 || percent > 100) {
+        errors.discountPercent = 'Discount must be between 1 and 100';
+      }
+    }
+    if (!promoFormData.description.trim()) {
+      errors.description = 'Description is required';
+    }
+
+    const codeValidation = validatePromoCode(promoFormData.stripeCouponCode);
+    if (!codeValidation.valid) {
+      errors.stripeCouponCode = codeValidation.error!;
+    }
+
+    if (promoFormData.startDate && promoFormData.endDate) {
+      const dateValidation = validatePromoDates(promoFormData.startDate, promoFormData.endDate);
+      if (!dateValidation.valid) {
+        errors.dates = dateValidation.error!;
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setPromoFormErrors(errors);
+      return;
+    }
+
+    // Save promo
+    if (editingPromo) {
+      // Update existing promo
+      const updatedPromo: PromoSpecial = {
+        ...editingPromo,
+        name: promoFormData.name.trim(),
+        startDate: promoFormData.startDate,
+        endDate: promoFormData.endDate,
+        discountPercent: Number(promoFormData.discountPercent),
+        description: promoFormData.description.trim(),
+        stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
+        isActive: promoFormData.isActive,
+        updatedAt: new Date().toISOString(),
+      };
+      onUpdatePromos(promos.map(p => p.id === editingPromo.id ? updatedPromo : p));
+    } else {
+      // Create new promo
+      const newPromo: PromoSpecial = {
+        id: `promo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: promoFormData.name.trim(),
+        startDate: promoFormData.startDate,
+        endDate: promoFormData.endDate,
+        discountPercent: Number(promoFormData.discountPercent),
+        description: promoFormData.description.trim(),
+        stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
+        isActive: promoFormData.isActive,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      onUpdatePromos([...promos, newPromo]);
+    }
+
+    setShowPromoForm(false);
+    setEditingPromo(null);
+  };
+
+  const handleDeletePromo = (id: string) => {
+    if (confirmingDelete === id) {
+      onUpdatePromos(promos.filter(p => p.id !== id));
+      setConfirmingDelete(null);
+    } else {
+      setConfirmingDelete(id);
+      setTimeout(() => setConfirmingDelete(null), 5000);
+    }
+  };
+
+  const handleTogglePromo = (id: string) => {
+    onUpdatePromos(promos.map(p =>
+      p.id === id ? { ...p, isActive: !p.isActive, updatedAt: new Date().toISOString() } : p
+    ));
+  };
+
+  const renderMarketing = () => {
+    const activePromo = getActivePromo(promos);
+    const sortedPromos = [...promos].sort((a, b) => {
+      const statusA = getPromoStatus(a);
+      const statusB = getPromoStatus(b);
+      if (statusA.status === 'active') return -1;
+      if (statusB.status === 'active') return 1;
+      if (statusA.status === 'scheduled' && statusB.status !== 'scheduled') return -1;
+      if (statusB.status === 'scheduled' && statusA.status !== 'scheduled') return 1;
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Active Promo Preview */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Active Promo Preview</h3>
+            {activePromo && (
+              <Button
+                onClick={() => window.open('/', '_blank')}
+                size="sm"
+                variant="outline"
+              >
+                🌐 Preview on Website
+              </Button>
+            )}
+          </div>
+
+          {activePromo ? (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-3">This is how customers see the banner:</p>
+              <PromoBanner promo={activePromo} />
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-500 text-lg mb-2">📢 No active promo</p>
+              <p className="text-sm text-gray-400">Create a promo to start advertising deals to customers</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Create New Promo Button */}
+        <div className="flex justify-end">
+          <Button onClick={handleCreatePromo} size="sm">
+            ➕ Create New Promo
+          </Button>
+        </div>
+
+        {/* Promo List */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">All Promos ({promos.length})</h3>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {sortedPromos.map((promo) => {
+              const status = getPromoStatus(promo);
+              const statusColors = {
+                active: 'bg-green-100 text-green-800 border-green-300',
+                scheduled: 'bg-blue-100 text-blue-800 border-blue-300',
+                expired: 'bg-gray-100 text-gray-800 border-gray-300',
+              };
+
+              return (
+                <div key={promo.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-semibold text-lg">{promo.name}</h4>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[status.status]}`}>
+                          {status.status.toUpperCase()}
+                        </span>
+                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">
+                          {promo.discountPercent}% OFF
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{promo.description}</p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <span>📅 {formatPromoDateRange(promo.startDate, promo.endDate)}</span>
+                        <span>💳 Code: <span className="font-mono font-bold">{promo.stripeCouponCode}</span></span>
+                        {status.status === 'active' && (
+                          <span className="text-orange-600 font-medium">
+                            ⏰ {status.daysRemaining}d {status.hoursRemaining}h remaining
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col space-y-2 ml-4">
+                      <div className="flex items-center space-x-2">
+                        <label className="text-xs text-gray-600">Active:</label>
+                        <input
+                          type="checkbox"
+                          checked={promo.isActive}
+                          onChange={() => handleTogglePromo(promo.id)}
+                          className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => handleEditPromo(promo)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        ✏️ Edit
+                      </Button>
+                      <Button
+                        onClick={() => handleDeletePromo(promo.id)}
+                        size="sm"
+                        variant="outline"
+                        className={`transition-colors ${
+                          confirmingDelete === promo.id
+                            ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200 animate-pulse'
+                            : 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                        }`}
+                      >
+                        {confirmingDelete === promo.id ? '✓ Confirm' : '🗑️ Delete'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {promos.length === 0 && (
+              <p className="text-gray-500 text-center py-8">No promos created yet</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Promo Form Modal */}
+        {showPromoForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                {editingPromo ? 'Edit Promo' : 'Create New Promo'}
+              </h2>
+
+              <div className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Promo Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={promoFormData.name}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, name: e.target.value })}
+                    placeholder="e.g., Black Friday!"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  />
+                  {promoFormErrors.name && (
+                    <p className="text-red-600 text-sm mt-1">{promoFormErrors.name}</p>
+                  )}
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={promoFormData.startDate}
+                      onChange={(e) => setPromoFormData({ ...promoFormData, startDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    />
+                    {promoFormErrors.startDate && (
+                      <p className="text-red-600 text-sm mt-1">{promoFormErrors.startDate}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={promoFormData.endDate}
+                      onChange={(e) => setPromoFormData({ ...promoFormData, endDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    />
+                    {promoFormErrors.endDate && (
+                      <p className="text-red-600 text-sm mt-1">{promoFormErrors.endDate}</p>
+                    )}
+                  </div>
+                </div>
+                {promoFormErrors.dates && (
+                  <p className="text-red-600 text-sm">{promoFormErrors.dates}</p>
+                )}
+
+                {/* Discount Percent */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Discount Percentage * (1-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={promoFormData.discountPercent}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, discountPercent: e.target.value })}
+                    placeholder="e.g., 25"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  />
+                  {promoFormErrors.discountPercent && (
+                    <p className="text-red-600 text-sm mt-1">{promoFormErrors.discountPercent}</p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description * ({promoFormData.description.length} characters)
+                  </label>
+                  <textarea
+                    value={promoFormData.description}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, description: e.target.value })}
+                    placeholder="e.g., Coming soon! Bee one of the first!"
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  />
+                  {promoFormErrors.description && (
+                    <p className="text-red-600 text-sm mt-1">{promoFormErrors.description}</p>
+                  )}
+                </div>
+
+                {/* Stripe Coupon Code */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stripe Coupon Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={promoFormData.stripeCouponCode}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, stripeCouponCode: e.target.value.toUpperCase() })}
+                    placeholder="e.g., BLACKFRIDAY40"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter the exact coupon code you created in Stripe
+                  </p>
+                  {promoFormErrors.stripeCouponCode && (
+                    <p className="text-red-600 text-sm mt-1">{promoFormErrors.stripeCouponCode}</p>
+                  )}
+                </div>
+
+                {/* Active Toggle */}
+                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="promoActive"
+                    checked={promoFormData.isActive}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, isActive: e.target.checked })}
+                    className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="promoActive" className="text-sm text-gray-700 font-medium">
+                    Promo is active (customers can see it during the date range)
+                  </label>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex space-x-3 mt-8">
+                <Button
+                  onClick={() => {
+                    setShowPromoForm(false);
+                    setEditingPromo(null);
+                    setPromoFormErrors({});
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSavePromo}
+                  className="flex-1"
+                >
+                  {editingPromo ? '💾 Update Promo' : '✨ Create Promo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Admin Navigation */}
@@ -503,6 +933,13 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
           >
             🕐 Sessions
           </Button>
+          <Button
+            onClick={() => setCurrentView('marketing')}
+            variant={currentView === 'marketing' ? 'default' : 'outline'}
+            size="sm"
+          >
+            📢 Marketing
+          </Button>
         </nav>
       </Card>
 
@@ -511,6 +948,7 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
       {currentView === 'customers' && renderCustomers()}
       {currentView === 'sales' && renderSales()}
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
+      {currentView === 'marketing' && renderMarketing()}
     </div>
   );
 }
