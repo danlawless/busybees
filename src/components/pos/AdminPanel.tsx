@@ -628,8 +628,8 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
       if (statusA.status === 'scheduled' && statusB.status !== 'scheduled') return -1;
       if (statusB.status === 'scheduled' && statusA.status !== 'scheduled') return 1;
       
-      // Within each status group, sort by end date (newest/furthest end date at top, oldest at bottom)
-      return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+      // Within each status group, sort by end date (oldest/earliest end date at top, newest at bottom)
+      return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
     });
 
     return (
