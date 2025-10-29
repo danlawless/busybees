@@ -15,10 +15,6 @@ const faqs = [
         answer: 'Busy Bees is designed for children ages 0-6 years. We have a dedicated infant area (0-2 years) and a main play area (2-6 years) to ensure age-appropriate and safe play for all children.'
       },
       {
-        question: 'How much does it cost to visit?',
-        answer: 'Daily admission is $15 for children 2+ years and $5 for infants under 2 (free with paid sibling). We also offer a 10-visit punch card for $130 and monthly memberships for $75.'
-      },
-      {
         question: 'Do I need to make a reservation?',
         answer: 'No reservations needed for open play! Just walk in during our open hours. Reservations are only required for birthday parties and private events.'
       },
@@ -54,11 +50,11 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We\'ll help you choose between private ($425) and semi-private ($350) packages.'
+        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We offer three party packages (Basic Bee, Worker Bee, and Queen Bee) in both Private and Semi-Private options. Private packages ($475-$575) include exclusive use of the party room and play area, while Semi-Private packages ($400-$500) include an exclusive party room with shared play area.'
       },
       {
         question: 'What\'s included in party packages?',
-        answer: 'Both packages include 2 hours of play time, dedicated party host, tables and chairs, decorations, paper goods, and access to the play area. Private parties get exclusive use of the party room.'
+        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs, and paper goods. Worker Bee and Queen Bee packages also include pizza and soda. The Queen Bee package adds sheet cake and balloons!'
       },
       {
         question: 'Can I bring my own decorations and cake?',
@@ -66,7 +62,7 @@ const faqs = [
       },
       {
         question: 'What if I have more than 15 children?',
-        answer: 'No problem! Additional children are $12 each beyond the 15 included in both party packages. Just let us know your final headcount when you book.'
+        answer: 'No problem! Additional children are $15 each beyond the 15 included in both party packages. Just let us know your final headcount when you book.'
       }
     ]
   },
@@ -75,11 +71,11 @@ const faqs = [
     questions: [
       {
         question: 'How does the monthly membership work?',
-        answer: 'Our $75 monthly membership includes unlimited visits, priority party booking, member-only events, 10% off snacks, and 2 free guest passes per month. It\'s perfect for families who visit regularly!'
+        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $100 for the first child, with discounts for additional children (10% off second child, 20% off third child). Infant membership (under 2) is $70. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 6 visits!'
       },
       {
         question: 'Do punch cards expire?',
-        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. At $13 per visit, you save $20 compared to daily admission.'
+        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $150 (saving $20 at $15/visit) and infant punch cards are $50 (saving $20 at $5/visit).'
       },
       {
         question: 'What if the weather is bad?',
@@ -122,8 +118,8 @@ export function FAQ() {
   const [openItems, setOpenItems] = useState<string[]>([])
 
   const toggleItem = (id: string) => {
-    setOpenItems(prev => 
-      prev.includes(id) 
+    setOpenItems(prev =>
+      prev.includes(id)
         ? prev.filter(item => item !== id)
         : [...prev, id]
     )
@@ -161,12 +157,12 @@ export function FAQ() {
                 <div className="w-2 h-2 bg-primary-500 rounded-full mr-3"></div>
                 {category.category}
               </h3>
-              
+
               <div className="space-y-3">
                 {category.questions.map((faq, faqIndex) => {
                   const itemId = `${categoryIndex}-${faqIndex}`
                   const isOpen = openItems.includes(itemId)
-                  
+
                   return (
                     <Card key={faqIndex} className="overflow-hidden">
                       <button
@@ -187,7 +183,7 @@ export function FAQ() {
                           </div>
                         </CardContent>
                       </button>
-                      
+
                       <AnimatePresence>
                         {isOpen && (
                           <motion.div

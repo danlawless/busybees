@@ -16,9 +16,10 @@ const topNavigation = [
 ]
 
 const businessHours = [
-  { label: 'Mon - Fri', time: '10:00 AM - 4:00 PM', type: 'Open Play' },
+  { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play' },
   { label: 'Sat - Sun', time: '9:00 AM - 12:00 PM', type: 'Open Play' },
-  { label: 'Sat - Sun', time: '1:00 PM - 6:00 PM', type: 'Private Bookings' },
+  { label: 'Sat - Sun', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
+  { label: 'Sat - Sun', time: '4:00 PM - 6:00 PM', type: 'Private Parties' },
 ]
 
 export function Footer() {
@@ -35,9 +36,9 @@ export function Footer() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
-          email 
+          email
         }),
       })
 
@@ -56,7 +57,7 @@ export function Footer() {
   return (
     <footer className="relative bg-gradient-to-b from-charcoal-50 to-charcoal-100 border-t border-charcoal-200">
       <HoneycombPattern variant="light" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Top Navigation */}
         <div className="mb-8">
@@ -84,8 +85,10 @@ export function Footer() {
               <div className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-medium">Coming Soon</p>
-                  <p>Location TBD</p>
+                  <p className="font-medium">Lunenburg Crossing</p>
+                  <p>301 Massachusetts Avenue Rt. 2A</p>
+                  <p>Unit 4A</p>
+                  <p>Lunenburg, MA 01462</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -96,7 +99,7 @@ export function Footer() {
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <span>Coming Soon</span>
+                <span>(978) 555-BEES</span>
               </div>
             </div>
           </div>
@@ -153,9 +156,9 @@ export function Footer() {
                   required
                   className="w-full px-3 py-2 text-xs border border-charcoal-300 rounded bg-white focus:ring-2 focus:ring-primary-300 focus:border-transparent"
                 />
-                <Button 
-                  type="submit" 
-                  size="sm" 
+                <Button
+                  type="submit"
+                  size="sm"
                   className="w-full bg-primary-500 hover:bg-primary-600 text-white text-xs"
                 >
                   Sign Up
@@ -174,17 +177,17 @@ export function Footer() {
               Follow Us
             </h3>
             <div className="flex space-x-4">
-              <a 
-                href="https://instagram.com/busybeesipc" 
-                target="_blank" 
+              <a
+                href="https://instagram.com/busybeesipc"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
               >
                 <Instagram className="w-4 h-4 text-primary-600" />
               </a>
-              <a 
-                href="https://facebook.com/busybeesipc" 
-                target="_blank" 
+              <a
+                href="https://facebook.com/busybeesipc"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
               >

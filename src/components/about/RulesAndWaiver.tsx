@@ -69,7 +69,7 @@ export function RulesAndWaiver() {
   return (
     <section className="relative py-20 section-hexagon-medium overflow-hidden">
       <HoneycombPattern variant="medium" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16"
@@ -85,7 +85,7 @@ export function RulesAndWaiver() {
             We are committed to creating a safe, clean, and fun environment for all our guests. Please take a moment to review and follow our guidelines.
           </p>
         </motion.div>
-        
+
         {/* General Safety Rules */}
         <motion.div
           className="mb-16"
@@ -104,7 +104,7 @@ export function RulesAndWaiver() {
                   General <span className="text-honey-gradient">Safety Rules</span>
                 </h3>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 {generalSafetyRules.map((rule, index) => (
                   <div key={index} className="flex items-start space-x-3">
@@ -148,7 +148,7 @@ export function RulesAndWaiver() {
                           {section.title}
                         </h4>
                       </div>
-                      
+
                       <ul className="space-y-3">
                         {section.rules.map((rule, ruleIndex) => (
                           <li key={ruleIndex} className="flex items-start space-x-2">
@@ -183,7 +183,7 @@ export function RulesAndWaiver() {
                   Additional <span className="text-honey-gradient">Policies</span>
                 </h3>
               </div>
-              
+
               <div className="space-y-4">
                 {additionalPolicies.map((policy, index) => (
                   <div key={index} className="flex items-start space-x-3">
@@ -194,7 +194,7 @@ export function RulesAndWaiver() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="mt-8 p-4 bg-honey-50 rounded-xl border border-honey-200">
                 <p className="text-center text-charcoal-800 font-medium">
                   Thank you for helping us keep our play space safe, clean, and fun for everyone!
@@ -203,7 +203,7 @@ export function RulesAndWaiver() {
             </CardContent>
           </Card>
         </motion.div>
-        
+
         {/* Waiver Information */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -222,11 +222,11 @@ export function RulesAndWaiver() {
                   Waiver & <span className="text-honey-gradient">Liability</span>
                 </h3>
               </div>
-              
+
               <p className="text-charcoal-600 mb-6 leading-relaxed">
                 By entering Busy Bees Indoor Play Center, all visitors acknowledge and agree to the following terms and conditions:
               </p>
-              
+
               <ul className="space-y-4">
                 {waiverPoints.map((point, index) => (
                   <li key={index} className="flex items-start space-x-3">
@@ -237,32 +237,48 @@ export function RulesAndWaiver() {
                   </li>
                 ))}
               </ul>
+
+              {/* Electronic Waiver Button */}
+              <div className="mt-8 text-center">
+                <a
+                  href="https://docs.google.com/document/d/1P0KrCnrkhqofQwUcKW5EHZWdEuiaR15ldcTVxQSrHBw/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-8 py-4 bg-gradient-to-r from-honey-400 to-honey-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:from-honey-500 hover:to-honey-600 transition-all duration-300"
+                >
+                  <FileText className="w-5 h-5 inline mr-2" />
+                  View & Sign Our Waiver
+                </a>
+                <p className="text-sm text-charcoal-600 mt-3">
+                  Opens in a new tab for your convenience
+                </p>
+              </div>
             </div>
-            
+
             {/* Important Notice Card */}
             <Card className="card-pastel border-2 border-honey-200">
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
                   <AlertTriangle className="w-8 h-8 text-red-600" />
                 </div>
-                
+
                 <h4 className="text-xl font-bold text-charcoal-800 text-center mb-4">
                   Important Notice
                 </h4>
-                
+
                 <div className="space-y-4 text-sm text-charcoal-600">
                   <p className="leading-relaxed">
                     <strong>Emergency Procedures:</strong> In case of emergency, please notify staff immediately. Emergency exits are clearly marked throughout the facility.
                   </p>
-                  
+
                   <p className="leading-relaxed">
                     <strong>Health & Safety:</strong> Children showing signs of illness should not use the facility. Hand sanitizing stations are available throughout the play area.
                   </p>
-                  
+
                   <p className="leading-relaxed">
                     <strong>Contact Information:</strong> All visitors must provide current contact information at check-in for safety and communication purposes.
                   </p>
-                  
+
                   <div className="mt-6 p-4 bg-honey-50 rounded-xl border border-honey-200">
                     <p className="text-center text-charcoal-800 font-medium">
                       Questions about our policies? Please speak with our staff or contact us directly.
