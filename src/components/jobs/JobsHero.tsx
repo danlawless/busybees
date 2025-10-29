@@ -87,7 +87,7 @@ export function JobsHero() {
   return (
     <section className="relative py-20 section-hexagon-light overflow-hidden">
       <HoneycombPattern variant="scattered" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -104,7 +104,7 @@ export function JobsHero() {
             Work at <span className="text-honey-600">Busy Bees</span>
           </h1>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            Join our amazing team and help create magical experiences for children and families! 
+            Join our amazing team and help create magical experiences for children and families!
             We're looking for energetic, caring individuals who love working with kids.
           </p>
         </motion.div>
@@ -120,7 +120,7 @@ export function JobsHero() {
           <h2 className="text-3xl font-bold text-charcoal-800 text-center mb-12">
             Available <span className="text-honey-600">Positions</span>
           </h2>
-          
+
           <div className="grid lg:grid-cols-3 gap-8">
             {jobPositions.map((job, index) => {
               const Icon = job.icon
@@ -132,11 +132,11 @@ export function JobsHero() {
                         <div className={`w-16 h-16 bg-gradient-to-br ${job.color} hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
                           <Icon className="w-8 h-8 text-charcoal-700" />
                         </div>
-                        
+
                         <h3 className="text-2xl font-bold text-charcoal-800 mb-2">
                           {job.title}
                         </h3>
-                        
+
                         <div className="flex items-center justify-center space-x-2 mb-4">
                           <DollarSign className="w-5 h-5 text-green-600" />
                           <span className="text-2xl font-bold text-green-600">${job.hourlyRate}</span>
@@ -205,7 +205,7 @@ export function JobsHero() {
               <h3 className="text-2xl font-bold text-charcoal-800 text-center mb-8">
                 Why Work at <span className="text-honey-600">Busy Bees?</span>
               </h3>
-              
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start space-x-3">
@@ -233,32 +233,32 @@ export function JobsHero() {
               <div className="w-16 h-16 bg-white/20 hexagon-shape flex items-center justify-center mx-auto mb-6">
                 <Mail className="w-8 h-8 text-white" />
               </div>
-              
+
               <h3 className="text-2xl font-bold mb-4">Ready to Join Our Team?</h3>
               <p className="text-lg mb-6 opacity-90 max-w-2xl mx-auto">
                 We'd love to hear from you! Please include the following information in your application:
               </p>
-              
+
               <div className="bg-white/10 rounded-lg p-6 mb-8 text-left max-w-2xl mx-auto">
                 <ul className="space-y-2">
                   {applicationRequirements.map((requirement, index) => (
                     <li key={index} className="flex items-start space-x-3">
-                      <span className="text-white/70 font-bold text-sm flex-shrink-0 mt-0.5">{index + 1}.</span>
-                      <span className="text-white/90 leading-relaxed">{requirement}</span>
+                      <span className="text-black font-bold text-sm flex-shrink-0 mt-0.5">{index + 1}.</span>
+                      <span className="text-black leading-relaxed">{requirement}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              
-              <Button 
-                size="lg" 
+
+              <Button
+                size="lg"
                 className="bg-white text-honey-600 hover:bg-gray-100 font-bold shadow-lg hover:shadow-xl"
                 onClick={() => window.location.href = 'mailto:krista@busybeesipc.com?subject=Job Application - Busy Bees Indoor Play Center'}
               >
                 <Mail className="w-5 h-5 mr-2" />
                 Email Your Resume
               </Button>
-              
+
               <p className="text-sm opacity-75 mt-4">
                 Send to: <span className="font-medium">krista@busybeesipc.com</span>
               </p>
