@@ -7,15 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const weeklySchedule = [
-  { day: 'Monday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
-  { day: 'Tuesday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
-  { day: 'Wednesday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
-  { day: 'Thursday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
-  { day: 'Friday', hours: '10:00 AM - 4:00 PM', type: 'open-play' },
+  { day: 'Monday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
+  { day: 'Tuesday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
+  { day: 'Wednesday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
+  { day: 'Thursday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
+  { day: 'Friday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
   { day: 'Saturday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: 'Open Play' },
-  { day: 'Saturday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' },
+  { day: 'Saturday', hours: '1:00 PM - 3:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
+  { day: 'Saturday', hours: '4:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
   { day: 'Sunday', hours: '9:00 AM - 12:00 PM', type: 'open-play', additional: 'Open Play' },
-  { day: 'Sunday', hours: '1:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Bookings Only' }
+  { day: 'Sunday', hours: '1:00 PM - 3:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
+  { day: 'Sunday', hours: '4:00 PM - 6:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' }
 ]
 
 const specialPrograms = [
@@ -23,13 +25,13 @@ const specialPrograms = [
     icon: Calendar,
     title: 'Open Play Times',
     description: 'Drop-in play sessions where families can enjoy all play areas',
-    schedule: 'Mon-Fri: 10AM-4PM | Sat-Sun: 9AM-12PM'
+    schedule: 'Mon-Fri: 9AM-5PM | Sat-Sun: 9AM-12PM'
   },
   {
     icon: PartyPopper,
-    title: 'Private Bookings',
-    description: 'Exclusive birthday parties and celebrations',
-    schedule: 'Sat-Sun: 1PM-6PM (Private Bookings Only)'
+    title: 'Private Party Bookings',
+    description: 'Exclusive birthday parties and celebrations in 2-hour time slots',
+    schedule: 'Sat-Sun: 1PM-3PM or 4PM-6PM (2-hour slots)'
   }
 ]
 
@@ -81,8 +83,8 @@ export function DetailedHours() {
                     <div
                       key={index}
                       className={`p-4 transition-colors ${
-                        schedule.day === currentDay 
-                          ? 'bg-primary-50 border-l-4 border-primary-500' 
+                        schedule.day === currentDay
+                          ? 'bg-primary-50 border-l-4 border-primary-500'
                           : 'hover:bg-neutral-50'
                       }`}
                     >
@@ -104,8 +106,8 @@ export function DetailedHours() {
                           )}
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          schedule.type === 'open-play' 
-                            ? 'bg-secondary-100 text-secondary-700' 
+                          schedule.type === 'open-play'
+                            ? 'bg-secondary-100 text-secondary-700'
                             : 'bg-primary-100 text-primary-700'
                         }`}>
                           {schedule.type === 'open-play' ? 'Open Play' : 'Private Bookings'}
@@ -159,8 +161,8 @@ export function DetailedHours() {
                     <div>
                       <h4 className="font-semibold text-accent-900 mb-2">Important Notice</h4>
                       <p className="text-accent-800 text-sm">
-                        Weekends offer both Open Play (9AM-12PM) and Private Bookings (1PM-6PM). 
-                        Weekend afternoon slots are reserved for birthday parties. Please call ahead to confirm availability.
+                        Weekends offer both Open Play (9AM-12PM) and Private Party Bookings (1PM-3PM and 4PM-6PM).
+                        We have TWO 2-hour time slots available each weekend afternoon for birthday parties, allowing us to accommodate multiple celebrations each day. Please book in advance to secure your preferred time slot.
                       </p>
                     </div>
                   </div>

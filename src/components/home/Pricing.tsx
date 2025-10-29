@@ -19,7 +19,7 @@ const pricingPlans = [
       'No time limits'
     ],
     popular: false,
-    cta: 'Coming Soon',
+    cta: 'Visit Us',
     icon: Ticket
   },
   {
@@ -28,12 +28,12 @@ const pricingPlans = [
     description: 'Special pricing for our littlest visitors',
     features: [
       'Access to infant-safe areas',
-      'Free with paid sibling admission',
+      'FREE with paid sibling admission',
       'Dedicated infant play space',
       'Parent supervision required'
     ],
     popular: false,
-    cta: 'Coming Soon',
+    cta: 'Visit Us',
     icon: Users
   },
   {
@@ -42,21 +42,20 @@ const pricingPlans = [
     description: 'Best value for regular families',
     features: [
       'Unlimited visits for 1 child',
-      '10% off birthday bookings',
-      '10% off classes',
-      'Member exclusive events',
-      '20% off second child ($80)',
-      '30% off third child ($70)'
+      'Pays for itself after 6 visits!',
+      '10% off second child ($90)',
+      '20% off third child ($80)',
+      'Member exclusive events'
     ],
     popular: true,
-    cta: 'Coming Soon',
+    cta: 'Join Now',
     icon: Star
   },
   {
-    name: '10-Visit Punch Card',
+    name: '10-Visit Punch Card (Toddler)',
     price: 150,
     originalPrice: 170,
-    description: 'Save $20 with bulk visits',
+    description: 'Save with bulk visits',
     features: [
       '10 visits at $15 each (save $20)',
       'One punch per child per visit',
@@ -65,8 +64,39 @@ const pricingPlans = [
       'All daily pass benefits'
     ],
     popular: false,
-    cta: 'Coming Soon',
+    cta: 'Purchase',
     icon: Ticket
+  },
+  {
+    name: '10-Visit Punch Card (Infant)',
+    price: 50,
+    originalPrice: 70,
+    description: 'Save with bulk visits for infants',
+    features: [
+      '10 visits at $5 each (save $20)',
+      'One punch per infant per visit',
+      'Never expires',
+      'Transferable to family/friends',
+      'All infant play area benefits'
+    ],
+    popular: false,
+    cta: 'Purchase',
+    icon: Users
+  },
+  {
+    name: 'Monthly Membership (Infant)',
+    price: 70,
+    description: 'Unlimited visits for your littlest one',
+    features: [
+      'Unlimited visits for 1 infant',
+      'Access to infant-safe areas',
+      'Perfect for regular visitors',
+      'Member exclusive events',
+      'Dedicated infant play space'
+    ],
+    popular: false,
+    cta: 'Join Now',
+    icon: Users
   }
 ]
 
@@ -75,7 +105,7 @@ const pricingPlans = [
 export function Pricing() {
   return (
     <section className="relative py-20 bg-neutral-50 overflow-hidden">
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         {/* General Admission */}
         <motion.div
@@ -94,7 +124,7 @@ export function Pricing() {
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
@@ -119,8 +149,8 @@ export function Pricing() {
                     </div>
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
-                      <div className="text-2xl font-bold text-primary-600">
-                        Coming Soon
+                      <div className="text-4xl font-bold text-primary-600">
+                        ${plan.price}
                       </div>
                       {plan.originalPrice && (
                         <div className="text-sm text-neutral-500 line-through">
@@ -139,8 +169,8 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button 
-                      className="w-full mt-auto" 
+                    <Button
+                      className="w-full mt-auto"
                       variant={plan.popular ? 'primary' : 'outline'}
                       size="sm"
                     >

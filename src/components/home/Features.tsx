@@ -62,8 +62,8 @@ export function Features() {
   return (
     <section className="relative py-20 section-hexagon-light hexagon-overlay overflow-hidden">
       <HoneycombPattern variant="scattered" size="lg" />
-      
-      
+
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
           className="text-center mb-16"
@@ -72,15 +72,12 @@ export function Features() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <span className="inline-block px-4 py-2 bg-gradient-to-r from-honey-200 to-honey-300 text-charcoal-800 rounded-full text-sm font-medium mb-6">
-            ✨ What Makes Us Special
-          </span>
           <h2 className="text-4xl font-bold text-charcoal-800 sm:text-5xl mb-4">
-            Why Families <span className="text-honey-600">Choose Us</span>
+            Why Families <span className="text-honey-600">Love Us</span>
           </h2>
-          <h3 className="text-3xl sm:text-4xl font-medium text-charcoal-700 mb-8">
-            Again & Again
-          </h3>
+          <p className="text-xl text-charcoal-600 max-w-2xl mx-auto">
+            Discover what makes Busy Bees the perfect place for your family
+          </p>
         </motion.div>
 
         <motion.div
@@ -112,11 +109,11 @@ export function Features() {
                         {feature.highlight}
                       </span>
                     </div>
-                    
+
                     <p className="text-charcoal-700 leading-relaxed text-base">
                       {feature.description}
                     </p>
-                    
+
                     {/* Decorative element */}
                     <div className={`absolute -bottom-2 -right-2 w-16 h-16 bg-gradient-to-br ${feature.color} opacity-10 rounded-full group-hover:scale-150 transition-transform duration-500`}></div>
                   </CardContent>
@@ -127,7 +124,7 @@ export function Features() {
         </motion.div>
 
         {/* Descriptive Text */}
-        <motion.div 
+        <motion.div
           className="text-left mt-16 mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -135,13 +132,13 @@ export function Features() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <p className="text-xl text-charcoal-600 max-w-3xl leading-relaxed">
-            We're not just another play center. We're parents who built the space 
+            We're not just another play center. We're parents who built the space
             <strong className="text-honey-600"> we wished existed</strong> for our own families.
           </p>
         </motion.div>
 
         {/* Call to Action */}
-        <motion.div 
+        <motion.div
           className="text-center mt-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -153,7 +150,7 @@ export function Features() {
               Ready to See What Makes Us Different? 🐝
             </h3>
             <p className="text-lg text-charcoal-700 mb-6 leading-relaxed">
-              Come experience the Busy Bees difference! Your family deserves a place where 
+              Come experience the Busy Bees difference! Your family deserves a place where
               everyone feels welcome, safe, and excited to play.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
