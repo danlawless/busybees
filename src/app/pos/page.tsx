@@ -5,6 +5,7 @@ import { PhoneLogin } from '@/components/pos/PhoneLogin';
 import { CustomerDashboard } from '@/components/pos/CustomerDashboard';
 import { CheckIn } from '@/components/pos/CheckIn';
 import { AdminPanel } from '../../components/pos/AdminPanel';
+import { PromoSpecial, getPromosFromStorage, savePromosToStorage } from '@/lib/utils/promoHelpers';
 
 interface Customer {
   id: string;
@@ -71,7 +72,7 @@ export default function POSPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
   const [paymentSuccessDetails, setPaymentSuccessDetails] = useState({ cardBrand: '', last4: '', saved: false });
-  
+
   // Inactivity timeout states
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(30);
@@ -79,6 +80,102 @@ export default function POSPage() {
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
   const [countdownTimer, setCountdownTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Promo specials state
+  const [promos, setPromos] = useState<PromoSpecial[]>([]);
+
+  // Initialize promos from localStorage or seed initial data
+  useEffect(() => {
+    const storedPromos = getPromosFromStorage();
+    if (storedPromos.length > 0) {
+      setPromos(storedPromos);
+    } else {
+      // Seed initial promos
+      const initialPromos: PromoSpecial[] = [
+        {
+          id: 'promo-1',
+          name: 'Early Early Bird!',
+          startDate: '2025-10-01',
+          endDate: '2025-11-30',
+          discountPercent: 25,
+          description: 'Coming soon! Bee one of the first!',
+          stripeCouponCode: 'EARLYEARLY25',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'promo-2',
+          name: 'Black Friday!',
+          startDate: '2025-10-21',
+          endDate: '2025-11-30',
+          discountPercent: 40,
+          description: 'Black Friday Deal! (Thanksgiving)',
+          stripeCouponCode: 'BLACKFRIDAY40',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'promo-3',
+          name: 'Early Bird!',
+          startDate: '2025-11-30',
+          endDate: '2025-12-31',
+          discountPercent: 20,
+          description: 'Be an early bird member!',
+          stripeCouponCode: 'EARLYBIRD20',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'promo-4',
+          name: 'Christmas Special!',
+          startDate: '2025-12-20',
+          endDate: '2025-12-25',
+          discountPercent: 30,
+          description: 'Merry Christmas this week only!',
+          stripeCouponCode: 'XMAS30',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'promo-5',
+          name: 'New Years Special!',
+          startDate: '2025-12-29',
+          endDate: '2026-01-01',
+          discountPercent: 35,
+          description: '2 Day New Years Special',
+          stripeCouponCode: 'NEWYEAR35',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'promo-6',
+          name: 'Opening Special',
+          startDate: '2026-01-01',
+          endDate: '2026-01-03',
+          discountPercent: 15,
+          description: 'Special to leave running for 1st 3 months Opening',
+          stripeCouponCode: 'OPENING15',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      setPromos(initialPromos);
+      savePromosToStorage(initialPromos);
+    }
+  }, []);
+
+  // Save promos to localStorage whenever they change
+  useEffect(() => {
+    if (promos.length > 0) {
+      savePromosToStorage(promos);
+    }
+  }, [promos]);
 
   // Mock data - in production, this would come from your backend
   const [customers, setCustomers] = useState<Customer[]>([
@@ -180,7 +277,7 @@ export default function POSPage() {
     setShowInactivityWarning(false);
     setCountdownSeconds(30);
     setInactivityCountdown(30);
-    
+
     // Trigger a synthetic activity event after the warning is cleared
     // This will cause handleActivity to restart the timer since warning is now false
     // The startInactivityTimer function will clear all existing timers including warningCountdown
@@ -270,7 +367,7 @@ export default function POSPage() {
 
   const handleClosePaymentModal = () => {
     if (processingPayment) return; // Prevent closing during processing
-    
+
     setShowPaymentModal(false);
     setCardNumber('');
     setExpiryDate('');
@@ -314,11 +411,11 @@ export default function POSPage() {
       // Start inactivity countdown from 30 seconds
       let inactivitySeconds = 30;
       setInactivityCountdown(inactivitySeconds);
-      
+
       inactivityCountdownTimer = setInterval(() => {
         inactivitySeconds--;
         setInactivityCountdown(inactivitySeconds);
-        
+
         if (inactivitySeconds <= 0) {
           clearInterval(inactivityCountdownTimer);
         }
@@ -366,24 +463,24 @@ export default function POSPage() {
     // Start logout countdown immediately when warning shows
     let seconds = 30;
     setCountdownSeconds(seconds);
-    
+
     // Create countdown function that can be called immediately and in interval
     const countdownTick = () => {
       seconds--;
       setCountdownSeconds(seconds);
-      
+
       if (seconds <= 0) {
         handleAutoLogout();
         return;
       }
     };
-    
+
     // Execute first tick immediately (30 -> 29)
     countdownTick();
-    
+
     // Then start interval for remaining ticks (29 -> 28 -> 27 -> ... -> 0)
     const warningInterval = setInterval(countdownTick, 1000);
-    
+
     // Cleanup function
     return () => {
       clearInterval(warningInterval);
@@ -418,13 +515,13 @@ export default function POSPage() {
         <div className="bg-white shadow-lg border-b-4 border-yellow-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <button 
+            <button
               onClick={handleStaffToggle}
               className="flex items-center space-x-4 hover:bg-gray-50 rounded-lg p-2 transition-colors group"
             >
               <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                isStaffMode 
-                  ? 'bg-red-400 group-hover:bg-red-500' 
+                isStaffMode
+                  ? 'bg-red-400 group-hover:bg-red-500'
                   : 'bg-yellow-400 group-hover:bg-yellow-500'
               }`}>
                 <span className="text-2xl">{isStaffMode ? '👨‍💼' : '🐝'}</span>
@@ -442,9 +539,9 @@ export default function POSPage() {
                 </p>
               </div>
             </button>
-            
+
             <div className="flex items-center space-x-4">
-              
+
               {currentCustomer && !isStaffMode && (
                 <>
                   {/* Inactivity Timer */}
@@ -462,14 +559,14 @@ export default function POSPage() {
                       <span>
                         {(() => {
                           const defaultCard = getDefaultCard();
-                          return defaultCard 
+                          return defaultCard
                             ? `${defaultCard.brand} •••• ${defaultCard.last4}`
                             : 'Add Payment';
                         })()}
                       </span>
                       <span className={`transform transition-transform ${showPaymentDropdown ? 'rotate-180' : ''}`}>▼</span>
                     </button>
-                    
+
                     {/* Payment Dropdown */}
                     {showPaymentDropdown && (
                       <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
@@ -507,7 +604,7 @@ export default function POSPage() {
                               <hr className="my-2 border-gray-200" />
                             </>
                           )}
-                          
+
                           {/* Add New Card */}
                           <button
                             onClick={() => {
@@ -534,7 +631,7 @@ export default function POSPage() {
                       <span>Settings</span>
                       <span className={`transform transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`}>▼</span>
                     </button>
-                  
+
                   {/* Settings Dropdown */}
                   {showSettingsDropdown && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
@@ -545,8 +642,8 @@ export default function POSPage() {
                             setShowSettingsDropdown(false);
                           }}
                           className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-2 ${
-                            currentView === 'checkin' 
-                              ? 'text-yellow-700 bg-yellow-50 font-medium' 
+                            currentView === 'checkin'
+                              ? 'text-yellow-700 bg-yellow-50 font-medium'
                               : 'text-gray-700'
                           }`}
                         >
@@ -559,8 +656,8 @@ export default function POSPage() {
                             setShowSettingsDropdown(false);
                           }}
                           className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center space-x-2 ${
-                            currentView === 'customer' 
-                              ? 'text-yellow-700 bg-yellow-50 font-medium' 
+                            currentView === 'customer'
+                              ? 'text-yellow-700 bg-yellow-50 font-medium'
                               : 'text-gray-700'
                           }`}
                         >
@@ -592,7 +689,7 @@ export default function POSPage() {
 
       {/* Main Content */}
       {currentView === 'login' && !isStaffMode ? (
-        <PhoneLogin 
+        <PhoneLogin
           customers={customers}
           onLogin={handleLogin}
           onNewCustomer={(customer) => {
@@ -604,11 +701,11 @@ export default function POSPage() {
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {currentView === 'customer' && currentCustomer && (
-            <CustomerDashboard 
+            <CustomerDashboard
               customer={currentCustomer}
               onUpdateCustomer={(updatedCustomer) => {
                 setCurrentCustomer(updatedCustomer);
-                setCustomers(customers.map(c => 
+                setCustomers(customers.map(c =>
                   c.id === updatedCustomer.id ? updatedCustomer : c
                 ));
               }}
@@ -616,7 +713,7 @@ export default function POSPage() {
           )}
 
           {currentView === 'checkin' && (
-            <CheckIn 
+            <CheckIn
               customers={customers}
               currentCustomer={currentCustomer}
               isStaffMode={isStaffMode}
@@ -624,7 +721,7 @@ export default function POSPage() {
                 if (currentCustomer?.id === updatedCustomer.id) {
                   setCurrentCustomer(updatedCustomer);
                 }
-                setCustomers(customers.map(c => 
+                setCustomers(customers.map(c =>
                   c.id === updatedCustomer.id ? updatedCustomer : c
                 ));
               }}
@@ -632,9 +729,11 @@ export default function POSPage() {
           )}
 
           {currentView === 'admin' && isStaffMode && (
-            <AdminPanel 
+            <AdminPanel
               customers={customers}
               onUpdateCustomers={setCustomers}
+              promos={promos}
+              onUpdatePromos={setPromos}
             />
           )}
         </div>
@@ -664,7 +763,7 @@ export default function POSPage() {
                   autoFocus
                 />
               </div>
-              
+
               {pinError && (
                 <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
                   {pinError}
@@ -889,11 +988,11 @@ export default function POSPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-4xl">✅</span>
               </div>
-              
+
               <h2 className="text-2xl font-bold text-gray-900 mb-3">
                 {paymentSuccessDetails.saved ? 'Payment Method Added!' : 'Payment Processed!'}
               </h2>
-              
+
               <div className="mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-center space-x-2 text-blue-800">
@@ -908,14 +1007,14 @@ export default function POSPage() {
                     </p>
                   )}
                 </div>
-                
+
                 <p className="text-gray-600 mb-2">
-                  {paymentSuccessDetails.saved 
+                  {paymentSuccessDetails.saved
                     ? 'Thank you for adding your payment method! You can now make purchases quickly and easily.'
                     : 'Thank you for your payment! Your transaction has been processed successfully.'
                   }
                 </p>
-                
+
                 <p className="text-sm text-gray-500">
                   🐝 We appreciate your business at Busy Bees!
                 </p>
@@ -927,7 +1026,7 @@ export default function POSPage() {
               >
                 Welcome to the Busy Bees Family!
               </button>
-              
+
               <div className="mt-4 text-xs text-gray-400 text-center">
                 🔒 Your payment information is secure and encrypted
               </div>

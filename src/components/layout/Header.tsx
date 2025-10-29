@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
+import { PromoSpecial } from '@/lib/utils/promoHelpers'
+import { PromoBanner } from '@/components/home/PromoBanner'
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -18,12 +20,22 @@ const navigation = [
   { name: 'Contact', href: '/contact' },
 ]
 
-export function Header() {
+interface HeaderProps {
+  activePromo?: PromoSpecial | null;
+  onDismissBanner?: () => void;
+}
+
+export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
   return (
     <header className="sticky top-0 z-50">
+      {/* Promo Banner */}
+      {activePromo && (
+        <PromoBanner promo={activePromo} onDismiss={onDismissBanner} />
+      )}
+
       {/* Logo Section */}
       <div className="bg-white/95 backdrop-blur-sm border-b border-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
