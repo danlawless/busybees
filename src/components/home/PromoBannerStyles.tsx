@@ -13,7 +13,7 @@ interface BannerStyleProps {
  */
 export function HoneycombStyle({ children }: BannerStyleProps) {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-b-4 border-yellow-600">
+    <div className="relative overflow-hidden bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-b-2 border-yellow-600">
       {/* Animated honeycomb background pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
@@ -50,7 +50,7 @@ export function HoneycombStyle({ children }: BannerStyleProps) {
  */
 export function GradientWaveStyle({ children }: BannerStyleProps) {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 border-b-4 border-purple-700">
+    <div className="relative overflow-hidden bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 border-b-2 border-purple-700">
       {/* Animated wave pattern */}
       <motion.div
         className="absolute inset-0 opacity-20"
@@ -93,7 +93,7 @@ export function ConfettiStyle({ children }: BannerStyleProps) {
   const shapes = ['●', '■', '▲', '★'];
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 border-b-4 border-blue-800">
+    <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 border-b-2 border-blue-800">
       {/* Falling confetti */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {confettiPieces.map((i) => (
@@ -128,19 +128,11 @@ export function ConfettiStyle({ children }: BannerStyleProps) {
  */
 export function MinimalStyle({ children }: BannerStyleProps) {
   return (
-    <div className="relative overflow-hidden bg-white border-b-4 border-gray-900">
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.4' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
-          backgroundSize: '20px 20px',
-        }} />
-      </div>
+    <div className="relative overflow-hidden bg-white border-b border-gray-200">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white opacity-60" />
 
-      {/* Subtle accent line */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900" />
-
-      <div className="text-gray-900">
+      <div className="relative text-gray-900">
         {children}
       </div>
     </div>
@@ -152,7 +144,7 @@ export function MinimalStyle({ children }: BannerStyleProps) {
  */
 export function BoldStripesStyle({ children }: BannerStyleProps) {
   return (
-    <div className="relative overflow-hidden bg-black border-b-4 border-yellow-400">
+    <div className="relative overflow-hidden bg-black border-b-2 border-yellow-400">
       {/* Animated diagonal stripes */}
       <motion.div
         className="absolute inset-0"
