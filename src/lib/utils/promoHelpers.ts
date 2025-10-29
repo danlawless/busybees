@@ -3,6 +3,8 @@
  * Utilities for managing marketing promotions and promo codes
  */
 
+export type BannerStyle = 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
+
 export interface PromoSpecial {
   id: string;
   name: string;                    // "Early Early Bird!", "Black Friday!"
@@ -12,6 +14,7 @@ export interface PromoSpecial {
   description: string;             // "Coming soon! Bee one of the first!"
   stripeCouponCode: string;        // Stripe coupon code to advertise
   isActive: boolean;               // Quick enable/disable toggle
+  bannerStyle?: BannerStyle;       // Visual style for the banner (defaults to 'honeycomb')
   createdAt: string;
   updatedAt: string;
 }
@@ -204,30 +207,36 @@ export function validatePromoDates(startDate: string, endDate: string): { valid:
 }
 
 /**
- * Check if banner should be shown (not dismissed within 24 hours)
+ * Check if banner should be shown (not dismissed today)
+ * Banner will come back every day (resets at midnight)
  */
 export function shouldShowBanner(promoId: string): boolean {
   if (typeof window === 'undefined') return true;
 
   const dismissedKey = `promo_dismissed_${promoId}`;
-  const dismissedTime = localStorage.getItem(dismissedKey);
+  const dismissedDateStr = localStorage.getItem(dismissedKey);
 
-  if (!dismissedTime) return true;
+  if (!dismissedDateStr) return true;
 
-  const dismissedDate = new Date(dismissedTime);
+  const dismissedDate = new Date(dismissedDateStr);
   const now = new Date();
-  const hoursSinceDismissed = (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60);
+  
+  // Check if dismissed date is today
+  // If it's a different day, show the banner again
+  const dismissedDay = dismissedDate.toDateString();
+  const todayDay = now.toDateString();
 
-  return hoursSinceDismissed >= 24;
+  return dismissedDay !== todayDay;
 }
 
 /**
- * Mark banner as dismissed
+ * Mark banner as dismissed for today
  */
 export function dismissBanner(promoId: string): void {
   if (typeof window === 'undefined') return;
 
   const dismissedKey = `promo_dismissed_${promoId}`;
+  // Store the current date/time
   localStorage.setItem(dismissedKey, new Date().toISOString());
 }
 

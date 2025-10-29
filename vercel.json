@@ -3,31 +3,5 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "outputDirectory": ".next",
-
-  "env": {
-    "GITHUB_REPO": "danlawless/busybees",
-    "GITHUB_BRANCH": "main"
-  },
-  "rewrites": [
-    {
-      "source": "/editor",
-      "destination": "/editor/index.html"
-    },
-    {
-      "source": "/editor/",
-      "destination": "/editor/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/editor/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    }
-  ]
+  "outputDirectory": ".next"
 }

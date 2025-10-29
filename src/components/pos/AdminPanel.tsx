@@ -91,6 +91,7 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
     discountPercent: '',
     description: '',
     stripeCouponCode: '',
+    bannerStyle: 'honeycomb' as const,
     isActive: true,
   });
   const [promoFormErrors, setPromoFormErrors] = useState<Record<string, string>>({});
@@ -499,6 +500,7 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
       discountPercent: '',
       description: '',
       stripeCouponCode: '',
+      bannerStyle: 'honeycomb',
       isActive: true,
     });
     setPromoFormErrors({});
@@ -514,6 +516,7 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
       discountPercent: promo.discountPercent.toString(),
       description: promo.description,
       stripeCouponCode: promo.stripeCouponCode,
+      bannerStyle: promo.bannerStyle || 'honeycomb',
       isActive: promo.isActive,
     });
     setPromoFormErrors({});
@@ -573,6 +576,7 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
         discountPercent: Number(promoFormData.discountPercent),
         description: promoFormData.description.trim(),
         stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
+        bannerStyle: promoFormData.bannerStyle as any,
         isActive: promoFormData.isActive,
         updatedAt: new Date().toISOString(),
       };
@@ -587,6 +591,7 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
         discountPercent: Number(promoFormData.discountPercent),
         description: promoFormData.description.trim(),
         stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
+        bannerStyle: promoFormData.bannerStyle as any,
         isActive: promoFormData.isActive,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -619,15 +624,15 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
     const sortedPromos = [...promos].sort((a, b) => {
       const statusA = getPromoStatus(a);
       const statusB = getPromoStatus(b);
-      
+
       // Active promos first
       if (statusA.status === 'active' && statusB.status !== 'active') return -1;
       if (statusB.status === 'active' && statusA.status !== 'active') return 1;
-      
+
       // Then scheduled promos
       if (statusA.status === 'scheduled' && statusB.status !== 'scheduled') return -1;
       if (statusB.status === 'scheduled' && statusA.status !== 'scheduled') return 1;
-      
+
       // Within each status group, sort by end date (oldest/earliest end date at top, newest at bottom)
       return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
     });
@@ -862,6 +867,27 @@ export function AdminPanel({ customers, onUpdateCustomers, promos, onUpdatePromo
                   {promoFormErrors.stripeCouponCode && (
                     <p className="text-red-600 text-sm mt-1">{promoFormErrors.stripeCouponCode}</p>
                   )}
+                </div>
+
+                {/* Banner Style Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Banner Style *
+                  </label>
+                  <select
+                    value={promoFormData.bannerStyle}
+                    onChange={(e) => setPromoFormData({ ...promoFormData, bannerStyle: e.target.value as any })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  >
+                    <option value="honeycomb">🐝 Honeycomb (Original - Yellow & Orange with Bees)</option>
+                    <option value="gradient-wave">✨ Gradient Wave (Purple & Pink with Sparkles)</option>
+                    <option value="confetti">🎉 Confetti (Blue & Purple with Falling Confetti)</option>
+                    <option value="minimal">⚡ Minimal (Clean White with Grid Pattern)</option>
+                    <option value="bold-stripes">⚠️ Bold Stripes (Black & Yellow Diagonal)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Choose the visual style for the banner - each has unique colors and animations
+                  </p>
                 </div>
 
                 {/* Active Toggle */}
