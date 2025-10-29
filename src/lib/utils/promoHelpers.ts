@@ -3,6 +3,8 @@
  * Utilities for managing marketing promotions and promo codes
  */
 
+export type BannerStyle = 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
+
 export interface PromoSpecial {
   id: string;
   name: string;                    // "Early Early Bird!", "Black Friday!"
@@ -12,6 +14,7 @@ export interface PromoSpecial {
   description: string;             // "Coming soon! Bee one of the first!"
   stripeCouponCode: string;        // Stripe coupon code to advertise
   isActive: boolean;               // Quick enable/disable toggle
+  bannerStyle?: BannerStyle;       // Visual style for the banner (defaults to 'honeycomb')
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check } from 'lucide-react';
 import { PromoSpecial, getPromoStatus, generatePromoMessages, dismissBanner } from '@/lib/utils/promoHelpers';
+import { getBannerStyleComponent } from './PromoBannerStyles';
 
 interface PromoBannerProps {
   promo: PromoSpecial;
@@ -47,6 +48,8 @@ export function PromoBanner({ promo, onDismiss }: PromoBannerProps) {
 
   if (!isVisible) return null;
 
+  const BannerStyleWrapper = getBannerStyleComponent(promo.bannerStyle);
+
   return (
     <AnimatePresence>
       <motion.div
@@ -54,49 +57,10 @@ export function PromoBanner({ promo, onDismiss }: PromoBannerProps) {
         animate={{ height: 'auto', opacity: 1 }}
         exit={{ height: 0, opacity: 0 }}
         transition={{ duration: 0.3 }}
-        className="relative overflow-hidden bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 border-b-4 border-yellow-600"
       >
-        {/* Animated honeycomb background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='%23000' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-            backgroundSize: '60px 60px',
-          }} />
-        </div>
-
-        {/* Animated bees */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            className="absolute top-1/2 -translate-y-1/2 text-2xl"
-            animate={{
-              x: ['-100%', '100vw'],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-          >
-            🐝
-          </motion.div>
-          <motion.div
-            className="absolute top-1/2 -translate-y-1/2 text-xl"
-            animate={{
-              x: ['100vw', '-100%'],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: 'linear',
-              delay: 5,
-            }}
-          >
-            🐝
-          </motion.div>
-        </div>
-
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+        <BannerStyleWrapper promo={promo}>
+          {/* Content */}
+          <div className="relative max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4">
             {/* Left side - Message and Countdown */}
             <div className="flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
@@ -221,21 +185,22 @@ export function PromoBanner({ promo, onDismiss }: PromoBannerProps) {
               </div>
             </motion.div>
           </div>
-        </div>
 
-        {/* Copied Feedback */}
-        <AnimatePresence>
-          {copied && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl font-bold text-lg z-10"
-            >
-              ✓ Code Copied!
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {/* Copied Feedback */}
+          <AnimatePresence>
+            {copied && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl font-bold text-lg z-10"
+              >
+                ✓ Code Copied!
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        </BannerStyleWrapper>
       </motion.div>
     </AnimatePresence>
   );
