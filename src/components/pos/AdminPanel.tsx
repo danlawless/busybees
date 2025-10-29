@@ -114,16 +114,16 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
   // Analytics calculations
   const activeSessions = customers.filter(c => (c.activeSessions || []).length > 0);
   const totalCustomers = customers.length;
-  const totalRevenue = customers.reduce((sum, customer) => 
+  const totalRevenue = customers.reduce((sum, customer) =>
     sum + customer.purchases.reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
   );
-  
+
   const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
     const purchaseDate = new Date(p.purchaseDate);
     const today = new Date();
     return purchaseDate.toDateString() === today.toDateString();
   });
-  
+
   const todaysRevenue = todaysPurchases.reduce((sum, purchase) => sum + purchase.price, 0);
 
   // Filter customers based on search
@@ -154,12 +154,12 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
 
     // Set confirmation state
     setConfirmingRefund(purchaseId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingRefund(null);
     }, 5000);
-    
+
     setRefundTimeout(timeout);
   };
 
@@ -362,11 +362,11 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
                     {customer.email && ` • ${customer.email}`}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Member since {formatDate(customer.createdAt)} • 
-                    {customer.purchases.length} purchases • 
+                    Member since {formatDate(customer.createdAt)} •
+                    {customer.purchases.length} purchases •
                     Total spent: {formatCurrency(customer.purchases.reduce((sum, p) => sum + p.price, 0))}
                   </p>
-                  
+
                   {/* Active Passes */}
                   {customer.purchases.filter(p => p.status === 'active').length > 0 && (
                     <div className="mt-2">
@@ -384,7 +384,7 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex space-x-2">
                   {(customer.activeSessions || []).length > 0 && (
                     <Button
@@ -452,13 +452,13 @@ export function AdminPanel({ customers, onUpdateCustomers }: AdminPanelProps) {
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Sales by Product Type</h3>
         <div className="space-y-3">
-          {['day_pass', 'monthly_pass', 'party_package'].map(type => {
+          {['day_pass', 'monthly_pass', 'party_package', 'food_beverage'].map(type => {
             const purchases = todaysPurchases.filter(p => p.type === type);
             const revenue = purchases.reduce((sum, p) => sum + p.price, 0);
             return (
               <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium capitalize">{type.replace('_', ' ')}</p>
+                  <p className="font-medium capitalize">{type.replace(/_/g, ' ')}</p>
                   <p className="text-sm text-gray-600">{purchases.length} sold</p>
                 </div>
                 <p className="font-semibold">{formatCurrency(revenue)}</p>

@@ -101,7 +101,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     message: '',
     details: {} as any
   });
-  const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties'>('children');
+  const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties' | 'snacks'>('children');
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
@@ -114,13 +114,18 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [paymentSuccessDetails, setPaymentSuccessDetails] = useState({ cardBrand: '', last4: '', saved: false });
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
   const [confirmingAutoRenewFor, setConfirmingAutoRenewFor] = useState<string | null>(null);
-  
+
   // Quantity state for purchases
   const [quantities, setQuantities] = useState<Record<string, number>>({
     day_pass: 1,
     weekly_pass: 1,
     monthly_pass: 1,
-    party_package: 1
+    party_package: 1,
+    apple_sauce_pouches: 1,
+    veggie_sticks: 1,
+    pirates_booty: 1,
+    goldfish: 1,
+    granola_bars: 1
   });
 
   // Children-related state
@@ -145,11 +150,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const birth = new Date(birthdate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -173,7 +178,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     };
 
     onUpdateCustomer(updatedCustomer);
-    
+
     // Reset form
     setChildName('');
     setChildBirthdate('');
@@ -198,8 +203,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const customer = selectedCustomer || currentCustomer;
     if (!customer) return;
 
-    const updatedChildren = customer.children.map(c => 
-      c.id === child.id 
+    const updatedChildren = customer.children.map(c =>
+      c.id === child.id
         ? { ...c, waiverSigned: true, waiverSignedDate: new Date().toISOString() }
         : c
     );
@@ -226,7 +231,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     if (!customer) return;
 
     // Check if child has any active passes
-    const hasActivePasses = customer.purchases.some(p => 
+    const hasActivePasses = customer.purchases.some(p =>
       p.childId === childId && p.status === 'active'
     );
 
@@ -252,7 +257,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const handleChildSelectionForPurchase = (childId: string) => {
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
-    
+
     // Now proceed with the purchase using the selected child
     if (selectedProductForPurchase) {
       handleQuickPurchase(selectedProductForPurchase);
@@ -301,11 +306,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     if (quantity === 1) {
       return basePrice;
     }
-    
+
     const fullPriceItems = 1;
     const discountedItems = quantity - 1;
     const discountedPrice = basePrice * 0.5;
-    
+
     return (fullPriceItems * basePrice) + (discountedItems * discountedPrice);
   };
 
@@ -318,12 +323,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
         savings: 0
       };
     }
-    
+
     const regularTotal = basePrice * quantity;
     const discountedTotal = calculateDiscountedTotal(basePrice, quantity);
     const savings = regularTotal - discountedTotal;
     const discountedPrice = basePrice * 0.5;
-    
+
     return {
       total: discountedTotal,
       breakdown: `$${basePrice.toFixed(2)} + ${quantity - 1} × $${discountedPrice.toFixed(2)}`,
@@ -337,7 +342,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       day_pass: 1,
       weekly_pass: 1,
       monthly_pass: 1,
-      party_package: 1
+      party_package: 1,
+      apple_sauce_pouches: 1,
+      veggie_sticks: 1,
+      pirates_booty: 1,
+      goldfish: 1,
+      granola_bars: 1
     });
   };
 
@@ -403,9 +413,48 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     }
   ];
 
+  // Available snacks and drinks
+  const AVAILABLE_SNACKS = [
+    {
+      id: 'apple_sauce_pouches',
+      name: 'Apple Sauce Pouches',
+      price: 5.00,
+      description: 'Delicious apple sauce in convenient pouches',
+      emoji: '🍎'
+    },
+    {
+      id: 'veggie_sticks',
+      name: 'Veggie Sticks',
+      price: 5.00,
+      description: 'Fresh and crunchy veggie sticks',
+      emoji: '🥕'
+    },
+    {
+      id: 'pirates_booty',
+      name: 'Pirates Booty',
+      price: 5.00,
+      description: 'Puffed rice and corn snacks',
+      emoji: '🏴‍☠️'
+    },
+    {
+      id: 'goldfish',
+      name: 'Goldfish',
+      price: 5.00,
+      description: 'Classic cheesy goldfish crackers',
+      emoji: '🐠'
+    },
+    {
+      id: 'granola_bars',
+      name: 'Granola Bars',
+      price: 5.00,
+      description: 'Wholesome granola bars',
+      emoji: '🌾'
+    }
+  ];
+
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');
-    
+
     if (phoneNumber.length <= 3) {
       return phoneNumber;
     } else if (phoneNumber.length <= 6) {
@@ -422,10 +471,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const handlePhoneSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setSearchPhone(formatted);
-    
+
     if (formatted.replace(/[^\d]/g, '').length === 10) {
       const cleanPhone = getCleanPhoneNumber(formatted);
-      const foundCustomer = customers.find(c => 
+      const foundCustomer = customers.find(c =>
         getCleanPhoneNumber(c.phone) === cleanPhone
       );
       setSelectedCustomer(foundCustomer || null);
@@ -436,7 +485,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
   const calculateActualExpiry = (type: Purchase['type'], firstUseDate: string): string => {
     const firstUse = new Date(firstUseDate);
-    
+
     switch (type) {
       case 'day_pass':
         // Expires 12 hours after first use
@@ -459,10 +508,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     console.log('Checking in with pass ID:', purchaseId);
     const now = new Date();
     const nowIso = now.toISOString();
-    
+
     // Create new session with 12-hour auto-checkout
     const autoCheckoutTime = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString();
-    
+
     const newSession: Session = {
       id: `s${Date.now()}`,
       customerId: customer.id,
@@ -475,19 +524,19 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       if (p.id === purchaseId) {
         const newUsedSessions = p.usedSessions + 1;
         const isFirstUse = !p.firstUseDate;
-        
+
         console.log(`Check-in with ${p.name}: ${p.usedSessions} -> ${newUsedSessions}`);
-        
+
         // Calculate actual expiry on first use
         let actualExpiryDate = p.actualExpiryDate;
         let firstUseDate = p.firstUseDate;
         let nextRenewalDate = p.nextRenewalDate;
-        
+
         if (isFirstUse) {
           firstUseDate = nowIso;
           actualExpiryDate = calculateActualExpiry(p.type, nowIso);
           console.log(`First use! Expiry set to: ${actualExpiryDate}`);
-          
+
           // If auto-renew is enabled and no renewal date is set, calculate it now
           if (p.autoRenew && (!p.nextRenewalDate || p.nextRenewalDate.trim() === '')) {
             const expiryDate = new Date(actualExpiryDate);
@@ -496,10 +545,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
           }
         }
 
-        const newStatus = p.totalSessions === 999 ? 
-          p.status : 
-          p.totalSessions === 1 ? 
-          p.status : 
+        const newStatus = p.totalSessions === 999 ?
+          p.status :
+          p.totalSessions === 1 ?
+          p.status :
           (newUsedSessions >= p.totalSessions ? 'used' as const : p.status);
 
         return {
@@ -527,7 +576,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const handleCheckOut = (customer: Customer, sessionId: string) => {
     console.log('Checking out session:', sessionId);
     const now = new Date().toISOString();
-    
+
     const activeSessions = customer.activeSessions || [];
     const updatedSessions = activeSessions.map(session => {
       if (session.id === sessionId) {
@@ -561,20 +610,20 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
         setShowPartyScheduling(true);
         return;
       }
-      
+
       // Check if party is within ±30 minute check-in window
       const now = new Date();
       const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
       const timeDifference = partyDateTime.getTime() - now.getTime();
       const thirtyMinutes = 30 * 60 * 1000;
-      
+
       if (Math.abs(timeDifference) > thirtyMinutes) {
         // Show party details modal with timing information
         setSelectedParty(purchase);
         setShowPartyModal(true);
         return;
       }
-      
+
       // Within check-in window, show confirmation
       setConfirmingPurchase(purchase);
       setShowConfirmDialog(true);
@@ -613,7 +662,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     partyNotes: string;
   }) => {
     if (!selectedParty) return;
-    
+
     const customer = selectedCustomer || currentCustomer;
     if (!customer) return;
 
@@ -645,11 +694,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     };
 
     onUpdateCustomer(updatedCustomer);
-    
+
     // Close scheduling modal and show success
     setShowPartyScheduling(false);
     setSelectedParty(null);
-    
+
     const formatTime = (time: string) => {
       const [hours, minutes] = time.split(':');
       const hour = parseInt(hours);
@@ -680,12 +729,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
     // Set confirmation state
     setConfirmingProduct(productId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingProduct(null);
     }, 5000);
-    
+
     setConfirmTimeout(timeout);
   };
 
@@ -697,12 +746,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
     // Set confirmation state
     setConfirmingCheckIn(purchaseId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingCheckIn(null);
     }, 5000);
-    
+
     setCheckInTimeout(timeout);
   };
 
@@ -784,7 +833,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
   const handleClosePaymentModal = () => {
     if (processingPayment) return; // Prevent closing during processing
-    
+
     setShowPaymentModal(false);
     setCardNumber('');
     setExpiryDate('');
@@ -819,7 +868,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const updatedPurchases = customer.purchases.map(p => {
       if (p.id === purchaseId) {
         let nextRenewalDate = p.nextRenewalDate;
-        
+
         if (autoRenew && p.firstUseDate) {
           // Calculate next renewal date based on pass type
           const firstUse = new Date(p.firstUseDate);
@@ -853,12 +902,15 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const customer = selectedCustomer || currentCustomer;
     if (!customer) return;
 
-    const product = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(p => p.id === productId);
+    const product = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS, ...AVAILABLE_SNACKS].find(p => p.id === productId);
     if (!product) return;
 
+    // Check if this is a snack purchase (doesn't require child selection)
+    const isSnackPurchase = AVAILABLE_SNACKS.some(s => s.id === productId);
+
     // Check if this is a pass purchase and requires child selection
-    const isPassPurchase = !productId.includes('party');
-    
+    const isPassPurchase = !productId.includes('party') && !isSnackPurchase;
+
     if (isPassPurchase) {
       // For pass purchases, require child selection
       if (!selectedChildForPurchase) {
@@ -896,13 +948,15 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     try {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Create unique purchase ID
       const purchaseId = `p${Date.now()}_${productId}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Map product type correctly
       let purchaseType: Purchase['type'];
-      if (productId.includes('party')) {
+      if (isSnackPurchase) {
+        purchaseType = 'food_beverage';
+      } else if (productId.includes('party')) {
         purchaseType = 'party_package';
       } else if (productId.includes('day')) {
         purchaseType = 'day_pass';
@@ -932,12 +986,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
         purchaseDate: new Date().toISOString(),
         expiryDate,
         usedSessions: 0,
-        totalSessions: product.sessions,
-        status: 'active',
+        totalSessions: isSnackPurchase ? 1 : (product.sessions || 1),
+        status: isSnackPurchase ? 'used' : 'active', // Snacks are immediately used
         // Explicitly ensure new purchases have no firstUseDate
         firstUseDate: undefined,
         actualExpiryDate: undefined,
-        // Add child ID for pass purchases
+        // Add child ID for pass purchases (not for snacks or parties)
         childId: isPassPurchase ? selectedChildForPurchase : undefined
       };
 
@@ -947,17 +1001,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       };
 
       onUpdateCustomer(updatedCustomer);
-      
+
       // Clear selected child for next purchase
       if (isPassPurchase) {
         setSelectedChildForPurchase('');
       }
-      
+
       setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setPurchaseSuccess(''), 3000);
-      
+
     } catch (error) {
       console.error('Purchase failed:', error);
     } finally {
@@ -984,7 +1038,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     const start = new Date(startTime);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - start.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 60) {
       return `${diffInMinutes} minutes`;
     } else {
@@ -998,32 +1052,32 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     if (purchase.type !== 'party_package' || !purchase.partyDate || !purchase.partyStartTime) {
       return false;
     }
-    
+
     const now = new Date();
     const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
     const timeDifference = partyDateTime.getTime() - now.getTime();
     const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
-    
+
     // Allow check-in within ±30 minutes of party start time
     return Math.abs(timeDifference) <= thirtyMinutes;
   };
 
   const getPartyCheckInStatus = (purchase: Purchase) => {
     if (purchase.type !== 'party_package') return null;
-    
+
     if (!purchase.partyDate || !purchase.partyStartTime) return 'needs_scheduling';
-    
+
     const now = new Date();
     const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
     const timeDifference = partyDateTime.getTime() - now.getTime();
     const thirtyMinutes = 30 * 60 * 1000;
-    
+
     if (Math.abs(timeDifference) <= thirtyMinutes) {
       return 'available'; // Within ±30 minutes
     } else if (timeDifference > thirtyMinutes) {
       const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
       const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
-      
+
       if (hoursUntil >= 24) {
         const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
         return `too_early_days:${daysUntil}`;
@@ -1075,7 +1129,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               </Button>
             </div>
           </div>
-          
+
           {selectedCustomer && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-800">
@@ -1083,7 +1137,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               </p>
             </div>
           )}
-          
+
           {searchPhone.replace(/[^\d]/g, '').length === 10 && !selectedCustomer && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800">
@@ -1104,8 +1158,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 <div>
                   <p className="font-medium">{customer.name}</p>
                   <p className="text-sm text-gray-600">
-                    {formatPhoneNumber(customer.phone)} • 
-                    Checked in at {formatTime(customer.activeSessions![0].startTime)} • 
+                    {formatPhoneNumber(customer.phone)} •
+                    Checked in at {formatTime(customer.activeSessions![0].startTime)} •
                     Duration: {getSessionDuration(customer.activeSessions![0].startTime)}
                     {customer.activeSessions!.length > 1 && (
                       <span className="ml-2 text-blue-600">
@@ -1150,7 +1204,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   {displayCustomer.lastVisit && ` • Last visit: ${formatDate(displayCustomer.lastVisit)}`}
                 </p>
               </div>
-              
+
               {displayCustomer.activeSessions && displayCustomer.activeSessions.length > 0 && (
                 <div className="text-right">
                   <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg">
@@ -1199,6 +1253,16 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 }`}
               >
                 🎉 Parties
+              </button>
+              <button
+                onClick={() => setActiveTab('snacks')}
+                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                  activeTab === 'snacks'
+                    ? 'bg-orange-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                🍎 Snacks
               </button>
             </div>
           </Card>
@@ -1280,7 +1344,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
                         {/* Active Passes for this child */}
                         {(() => {
-                          const childPasses = displayCustomer.purchases.filter(p => 
+                          const childPasses = displayCustomer.purchases.filter(p =>
                             p.childId === child.id && p.status === 'active'
                           );
                           return childPasses.length > 0 && (
@@ -1315,7 +1379,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
               {/* Add Child Modal */}
               {showAddChild && (
-                <div 
+                <div
                   className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                   onClick={(e) => {
                     if (e.target === e.currentTarget) {
@@ -1344,7 +1408,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     >
                       ✕
                     </button>
-                    
+
                     <h3 className="text-lg font-semibold mb-4">Add New Child</h3>
                     <div className="space-y-4">
                       <div>
@@ -1402,7 +1466,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
               {/* Waiver Modal */}
               {showWaiverModal && waiverChild && (
-                <div 
+                <div
                   className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                   onClick={(e) => {
                     if (e.target === e.currentTarget) {
@@ -1428,24 +1492,24 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     >
                       ✕
                     </button>
-                    
+
                     <h3 className="text-lg font-semibold mb-4">Waiver for {waiverChild.name}</h3>
                     <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
                       <h4 className="font-medium mb-2">LIABILITY WAIVER AND RELEASE</h4>
                       <p className="text-sm text-gray-700 mb-2">
-                        I hereby acknowledge that I am the parent/guardian of {waiverChild.name}, 
-                        age {waiverChild.age}, and I understand that participation in activities at 
+                        I hereby acknowledge that I am the parent/guardian of {waiverChild.name},
+                        age {waiverChild.age}, and I understand that participation in activities at
                         Busy Bees Indoor Playground involves inherent risks.
                       </p>
                       <p className="text-sm text-gray-700 mb-2">
-                        I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground, 
-                        its owners, employees, and agents from any and all liability, claims, demands, 
-                        actions and causes of action whatsoever arising out of or related to any loss, 
+                        I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground,
+                        its owners, employees, and agents from any and all liability, claims, demands,
+                        actions and causes of action whatsoever arising out of or related to any loss,
                         damage, or injury that may be sustained by my child while participating in activities.
                       </p>
                       <p className="text-sm text-gray-700 mb-2">
-                        I acknowledge that I have read and understood this waiver and that I am signing 
-                        it voluntarily. This waiver shall be binding upon my heirs, executors, 
+                        I acknowledge that I have read and understood this waiver and that I am signing
+                        it voluntarily. This waiver shall be binding upon my heirs, executors,
                         administrators and assigns.
                       </p>
                       <p className="text-sm font-medium text-gray-800">
@@ -1480,12 +1544,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             <div className="space-y-10">
               {/* Currently Checked In Passes */}
               {(() => {
-                const checkedInPasses = displayCustomer.purchases.filter(p => 
-                  p.status === 'active' && 
+                const checkedInPasses = displayCustomer.purchases.filter(p =>
+                  p.status === 'active' &&
                   p.type !== 'party_package' &&
                   (displayCustomer.activeSessions || []).some(session => session.purchaseId === p.id)
                 );
-                
+
                 if (checkedInPasses.length > 0) {
                   return (
                     <div>
@@ -1547,12 +1611,12 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
               {/* Available Passes (Not Checked In) */}
               {(() => {
-                const availablePasses = displayCustomer.purchases.filter(p => 
-                  p.status === 'active' && 
+                const availablePasses = displayCustomer.purchases.filter(p =>
+                  p.status === 'active' &&
                   p.type !== 'party_package' &&
                   !(displayCustomer.activeSessions || []).some(session => session.purchaseId === p.id)
                 );
-                
+
                 return (
                   <div>
                     <h3 className="text-2xl font-bold mb-6">🎫 Available Passes</h3>
@@ -1620,7 +1684,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               {(() => {
                                 if (purchase.type === 'party_package') {
                                   const partyStatus = getPartyCheckInStatus(purchase);
-                                  
+
                                   if (partyStatus === 'needs_scheduling') {
                                     return (
                                       <Button
@@ -1656,7 +1720,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                     const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                                     type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                                     `${value} minute${value !== '1' ? 's' : ''}`;
-                                    
+
                                     return (
                                       <Button
                                         onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
@@ -1679,7 +1743,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                     );
                                   }
                                 }
-                                
+
                                 return (
                                   <div className="flex items-center space-x-4">
                                     <Button
@@ -1699,7 +1763,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                     >
                                       {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
                                     </Button>
-                                    
+
                                     {/* Auto-Renew Toggle for Weekly/Monthly Passes */}
                                     {(purchase.type === 'weekly_pass' || purchase.type === 'monthly_pass') && (
                                       <div className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -1711,8 +1775,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                             className="sr-only"
                                           />
                                           <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 border-2 ${
-                                            purchase.autoRenew 
-                                              ? 'bg-yellow-500 border-yellow-400 shadow-sm' 
+                                            purchase.autoRenew
+                                              ? 'bg-yellow-500 border-yellow-400 shadow-sm'
                                               : 'bg-gray-200 border-gray-300 hover:border-gray-400'
                                           }`}>
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-sm ${
@@ -1750,7 +1814,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               {/* Quick Purchase Passes - Always Visible */}
               <div>
                 <h3 className="text-2xl font-bold mb-6">🛒 Purchase New Passes</h3>
-                
+
                 {/* Child Selection Required */}
                 {displayCustomer.children.length === 0 && (
                   <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
@@ -1769,7 +1833,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     </div>
                   </Card>
                 )}
-                
+
                 <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
                   <div className="grid gap-4 text-left">
                     {AVAILABLE_PASS_PRODUCTS.map((product) => (
@@ -1806,7 +1870,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             })()}
                           </p>
                         </div>
-                        
+
                         {/* Quantity Controls */}
                         <div className="flex items-center space-x-3 mr-4">
                           <button
@@ -1832,20 +1896,20 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           onClick={() => {
                             const customer = selectedCustomer || currentCustomer;
                             if (!customer) return;
-                            
+
                             // Step 1: Add Child (highest priority)
                             if (customer.children.length === 0) {
                               setActiveTab('children');
                               return;
                             }
-                            
+
                             // Step 2: Add Payment Method
                             if (customer.savedCards.length === 0) {
                               // Show payment modal instead of alert
                               setShowPaymentModal(true);
                               return;
                             }
-                            
+
                             // Step 3: Show Child Selection Modal
                             if (confirmingProduct === product.id) {
                               handleConfirmPurchase(product.id);
@@ -1861,7 +1925,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             (() => {
                               const customer = selectedCustomer || currentCustomer;
                               if (!customer) return 'bg-gray-400';
-                              
+
                               if (customer.children.length === 0) {
                                 return 'bg-blue-500 hover:bg-blue-600';
                               }
@@ -1879,17 +1943,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           {(() => {
                             const customer = selectedCustomer || currentCustomer;
                             if (!customer) return 'No Customer';
-                            
+
                             if (customer.children.length === 0) {
                               return '👶 Add Child First';
                             }
                             if (customer.savedCards.length === 0) {
                               return '💳 Add Payment First';
                             }
-                            return purchasingProduct === product.id 
-                              ? 'Processing...' 
-                              : confirmingProduct === product.id 
-                              ? '✓ Confirm Purchase' 
+                            return purchasingProduct === product.id
+                              ? 'Processing...'
+                              : confirmingProduct === product.id
+                              ? '✓ Confirm Purchase'
                               : 'Buy Now';
                           })()}
                         </Button>
@@ -1906,11 +1970,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             <div className="space-y-10">
               {/* Party Packages */}
               {(() => {
-                const partyPackages = displayCustomer.purchases.filter(p => 
-                  p.status === 'active' && 
+                const partyPackages = displayCustomer.purchases.filter(p =>
+                  p.status === 'active' &&
                   p.type === 'party_package'
                 );
-                
+
                 return (
                   <div>
                     <h3 className="text-2xl font-bold mb-6">🎉 Your Party Packages</h3>
@@ -1960,7 +2024,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               </div>
                               {(() => {
                                 const partyStatus = getPartyCheckInStatus(purchase);
-                                
+
                                 if (partyStatus === 'needs_scheduling') {
                                   return (
                                     <Button
@@ -1986,7 +2050,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                   const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                                   type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                                   `${value} minute${value !== '1' ? 's' : ''}`;
-                                  
+
                                   return (
                                     <Button
                                       onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
@@ -2008,7 +2072,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                     </Button>
                                   );
                                 }
-                                
+
                                 return (
                                   <Button
                                     onClick={() => handleUsePassClick(displayCustomer, purchase.id)}
@@ -2063,7 +2127,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               setShowPaymentModal(true);
                               return;
                             }
-                            
+
                             if (confirmingProduct === product.id) {
                               handleConfirmPurchase(product.id);
                             } else {
@@ -2091,10 +2155,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             if (customer && customer.savedCards.length === 0) {
                               return '💳 Add Payment First';
                             }
-                            return purchasingProduct === product.id 
-                              ? 'Processing...' 
-                              : confirmingProduct === product.id 
-                              ? '✓ Confirm Purchase' 
+                            return purchasingProduct === product.id
+                              ? 'Processing...'
+                              : confirmingProduct === product.id
+                              ? '✓ Confirm Purchase'
                               : 'Buy Now';
                           })()}
                         </Button>
@@ -2106,11 +2170,139 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             </div>
           )}
 
+          {/* Snacks & Drinks Management */}
+          {activeTab === 'snacks' && (
+            <div className="space-y-10">
+              {/* Recent Snack Purchases */}
+              {(() => {
+                const snackPurchases = displayCustomer.purchases.filter(p =>
+                  p.type === 'food_beverage'
+                );
+
+                return snackPurchases.length > 0 ? (
+                  <div>
+                    <h3 className="text-2xl font-bold mb-6">🍿 Recent Snack Purchases</h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {snackPurchases.slice(0, 6).map((purchase) => (
+                        <Card key={purchase.id} className="p-6 border-l-8 border-l-orange-400">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="text-lg font-bold text-gray-900">{purchase.name}</h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {formatDate(purchase.purchaseDate)}
+                              </p>
+                              <p className="text-lg font-bold text-orange-600 mt-2">
+                                ${purchase.price.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Purchase Snacks & Drinks */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6">🛒 Purchase Snacks & Drinks</h3>
+                <Card className="p-6 border-l-8 border-l-orange-300 bg-orange-50">
+                  <div className="grid gap-4 text-left">
+                    {AVAILABLE_SNACKS.map((snack) => (
+                      <div key={snack.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900 text-lg">
+                            {snack.emoji} {snack.name}
+                          </span>
+                          <p className="text-sm text-gray-600">{snack.description}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">
+                            ${snack.price.toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center space-x-3 mr-4">
+                          <button
+                            onClick={() => decreaseQuantity(snack.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[snack.id] <= 1}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-semibold text-lg">
+                            {quantities[snack.id]}
+                          </span>
+                          <button
+                            onClick={() => increaseQuantity(snack.id)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                            disabled={quantities[snack.id] >= 10}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              // Show payment modal instead of alert
+                              setShowPaymentModal(true);
+                              return;
+                            }
+
+                            if (confirmingProduct === snack.id) {
+                              handleConfirmPurchase(snack.id);
+                            } else {
+                              handleQuickPurchase(snack.id);
+                            }
+                          }}
+                          size="lg"
+                          disabled={purchasingProduct === snack.id}
+                          className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
+                            (() => {
+                              const customer = selectedCustomer || currentCustomer;
+                              if (customer && customer.savedCards.length === 0) {
+                                return 'bg-yellow-500 hover:bg-yellow-600';
+                              }
+                              return confirmingProduct === snack.id
+                                ? 'bg-orange-600 hover:bg-orange-700 animate-pulse'
+                                : purchasingProduct === snack.id
+                                ? 'bg-orange-500'
+                                : 'bg-orange-600 hover:bg-orange-700';
+                            })()
+                          }`}
+                        >
+                          {(() => {
+                            const customer = selectedCustomer || currentCustomer;
+                            if (customer && customer.savedCards.length === 0) {
+                              return '💳 Add Payment First';
+                            }
+                            return purchasingProduct === snack.id
+                              ? 'Processing...'
+                              : confirmingProduct === snack.id
+                              ? '✓ Confirm Purchase'
+                              : 'Buy Now';
+                          })()}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 p-4 bg-white border border-orange-200 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">💡 Quick Purchase:</span> No child association required! Snacks can be purchased independently at any time.
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
           {/* Customer Details (Staff Mode) */}
           {isStaffMode && showCustomerDetails && (
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-4">Customer Details</h3>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Purchase History */}
                 <div>
@@ -2134,7 +2326,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             <div className="text-right">
                               <p className="text-sm font-medium">${purchase.price}</p>
                               <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                purchase.status === 'active' 
+                                purchase.status === 'active'
                                   ? 'bg-green-100 text-green-800'
                                   : purchase.status === 'used'
                                   ? 'bg-gray-100 text-gray-800'
@@ -2146,7 +2338,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           </div>
                           {purchase.status === 'active' && (
                             <div className="mt-2 text-xs text-gray-600">
-                              {purchase.totalSessions === 999 
+                              {purchase.totalSessions === 999
                                 ? `${purchase.usedSessions} visits used`
                                 : `${purchase.usedSessions}/${purchase.totalSessions} visits used`
                               }
@@ -2220,17 +2412,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 {confirmingPurchase.totalSessions === 1 ? 'Use Single-Use Pass?' : 'Activate Pass?'}
               </h3>
               <p className="text-gray-600 mb-4">
-                {confirmingPurchase.totalSessions === 1 ? 
+                {confirmingPurchase.totalSessions === 1 ?
                   `This ${confirmingPurchase.name} can only be used once. Once activated, it will expire in ${
-                    confirmingPurchase.type === 'day_pass' ? '12 hours' : 
-                    confirmingPurchase.type === 'weekly_pass' ? '7 days' : 
-                    confirmingPurchase.type === 'monthly_pass' ? '30 days' : 
+                    confirmingPurchase.type === 'day_pass' ? '12 hours' :
+                    confirmingPurchase.type === 'weekly_pass' ? '7 days' :
+                    confirmingPurchase.type === 'monthly_pass' ? '30 days' :
                     'the specified time'
                   }.` :
                   `Are you ready to start using your ${confirmingPurchase.name}?`
                 }
               </p>
-              
+
               <div className="flex space-x-4">
                 <Button
                   onClick={handleCancelUse}
@@ -2263,9 +2455,9 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     <h2 className="text-3xl font-bold text-gray-900">🎉 {selectedParty.name}</h2>
                     <p className="text-lg text-gray-600 mt-1">Party Details & Check-In Status</p>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setShowPartyModal(false);
                       setSelectedParty(null);
@@ -2343,11 +2535,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 {(() => {
                   const partyStatus = getPartyCheckInStatus(selectedParty);
                   const now = new Date();
-                  const partyDateTime = selectedParty.partyStartTime && selectedParty.partyDate 
+                  const partyDateTime = selectedParty.partyStartTime && selectedParty.partyDate
                     ? new Date(`${selectedParty.partyDate}T${selectedParty.partyStartTime}`)
                     : null;
                   const timeDifference = partyDateTime ? partyDateTime.getTime() - now.getTime() : 0;
-                  
+
                   if (partyStatus === 'needs_scheduling') {
                     return (
                       <Card className="p-6 mb-6 bg-orange-50 border-orange-200">
@@ -2362,7 +2554,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                     type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                     `${value} minute${value !== '1' ? 's' : ''}`;
-                    
+
                     return (
                       <Card className="p-6 mb-6 bg-orange-50 border-orange-200">
                         <h3 className="text-xl font-bold text-orange-900 mb-3">⏰ Too Early to Check In</h3>
@@ -2408,7 +2600,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   >
                     Close
                   </Button>
-                  
+
                   {selectedParty.partyDate && (
                     <Button
                       onClick={() => {
@@ -2421,7 +2613,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                       📅 Reschedule Party
                     </Button>
                   )}
-                  
+
                   {!selectedParty.partyDate && (
                     <Button
                       onClick={() => {
@@ -2607,11 +2799,11 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-4xl">✅</span>
               </div>
-              
+
               <h2 className="text-2xl font-bold text-gray-900 mb-3">
                 {paymentSuccessDetails.saved ? 'Payment Method Added!' : 'Payment Processed!'}
               </h2>
-              
+
               <div className="mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-center space-x-2 text-blue-800">
@@ -2629,14 +2821,14 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                     </p>
                   )}
                 </div>
-                
+
                 <p className="text-gray-600 mb-2">
-                  {paymentSuccessDetails.saved 
+                  {paymentSuccessDetails.saved
                     ? 'Thank you for adding your payment method! You can now make purchases quickly and easily.'
                     : 'Thank you for your payment! Your transaction has been processed successfully.'
                   }
                 </p>
-                
+
                 <p className="text-sm text-gray-500">
                   🐝 We appreciate your business at Busy Bees!
                 </p>
@@ -2648,7 +2840,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               >
                 Welcome to the Busy Bees Family!
               </button>
-              
+
               <div className="mt-4 text-xs text-gray-400 text-center">
                 🔒 Your payment information is secure and encrypted
               </div>
@@ -2665,21 +2857,21 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-3xl">🔄</span>
               </div>
-              
+
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Enable Auto-Renew?</h2>
-              
+
               <div className="mb-6">
                 {(() => {
                   const purchase = (selectedCustomer || currentCustomer)?.purchases.find(p => p.id === confirmingAutoRenewFor);
                   const passType = purchase?.type === 'weekly_pass' ? 'weekly' : 'monthly';
                   const price = purchase?.price || 0;
-                  
+
                   return (
                     <>
                       <p className="text-gray-600 mb-4">
                         Your {passType} pass will automatically renew when it expires.
                       </p>
-                      
+
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                         <p className="text-yellow-800 font-medium">
                           💰 ${price.toFixed(2)} will be charged automatically
@@ -2688,7 +2880,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                           You can disable this anytime in your account
                         </p>
                       </div>
-                      
+
                       <p className="text-sm text-gray-500">
                         🐝 Never worry about your pass expiring again!
                       </p>
@@ -2721,7 +2913,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
       {/* Child Selection Modal */}
       {showChildSelectionModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -2747,17 +2939,17 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
             >
               ✕
             </button>
-            
+
             <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
             <p className="text-gray-600 mb-4">
               Which child is this {[...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(p => p.id === selectedProductForPurchase)?.name} for?
             </p>
-            
+
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {(() => {
                 const customer = selectedCustomer || currentCustomer;
                 if (!customer) return null;
-                
+
                 return customer.children
                   .filter(child => child.waiverSigned)
                   .map(child => (
@@ -2779,14 +2971,14 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                   ));
               })()}
             </div>
-            
+
             {(() => {
               const customer = selectedCustomer || currentCustomer;
               return customer && customer.children.some(child => !child.waiverSigned) && (
                 <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    ⚠️ Some children don't have signed waivers and can't be selected. 
-                    <button 
+                    ⚠️ Some children don't have signed waivers and can't be selected.
+                    <button
                       onClick={() => {
                         setShowChildSelectionModal(false);
                         setActiveTab('children');
@@ -2799,7 +2991,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                 </div>
               );
             })()}
-            
+
             <div className="flex justify-end space-x-3 mt-6">
               <Button
                 onClick={() => {
