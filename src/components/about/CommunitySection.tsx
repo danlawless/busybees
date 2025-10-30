@@ -2,32 +2,11 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { Mail, Calendar, Bell, Gift, Send } from 'lucide-react'
+import { Mail, Calendar, Gift, Send } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp } from '@/lib/utils'
-
-const upcomingEvents = [
-  {
-    icon: Gift,
-    title: 'Holiday Celebration',
-    date: 'December 15, 2024',
-    description: 'Join us for our annual holiday party with special activities, treats, and festive fun!'
-  },
-  {
-    icon: Calendar,
-    title: 'New Year Open Play',
-    date: 'January 1, 2025',
-    description: 'Start the new year with family fun! Extended hours and special New Year activities.'
-  },
-  {
-    icon: Bell,
-    title: 'Parent Workshop Series',
-    date: 'Ongoing',
-    description: 'Monthly workshops on child development, safety, and parenting tips.'
-  }
-]
 
 export function NewsletterSection() {
   const [email, setEmail] = useState('')
@@ -172,42 +151,21 @@ export function NewsletterSection() {
               Upcoming <span className="text-honey-gradient">Events</span>
             </h3>
             
-            <div className="space-y-6">
-              {upcomingEvents.map((event, index) => {
-                const Icon = event.icon
-                return (
-                  <motion.div
-                    key={index}
-                    variants={fadeInUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                  >
-                    <Card className="card-pastel group hover:shadow-lg transition-all duration-300">
-                      <CardContent className="p-6">
-                        <div className="flex items-start space-x-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center flex-shrink-0">
-                            <Icon className="w-6 h-6 text-charcoal-700" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-lg font-semibold text-charcoal-800 mb-2">
-                              {event.title}
-                            </h4>
-                            <p className="text-sm text-honey-600 font-medium mb-2">
-                              {event.date}
-                            </p>
-                            <p className="text-sm text-charcoal-600 leading-relaxed">
-                              {event.description}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )
-              })}
-            </div>
+            <Card className="card-pastel">
+              <CardContent className="p-12">
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6 hexagon-pulse">
+                    <Calendar className="w-10 h-10 text-charcoal-700" />
+                  </div>
+                  <h4 className="text-2xl font-bold text-charcoal-800 mb-4">
+                    Stay Tuned! 🐝
+                  </h4>
+                  <p className="text-lg text-charcoal-600 leading-relaxed">
+                    Exciting events are coming soon! Subscribe to our newsletter to be the first to know about special celebrations, workshops, and family activities.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
         
