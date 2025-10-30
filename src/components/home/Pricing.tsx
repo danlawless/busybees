@@ -23,65 +23,33 @@ const pricingPlans = [
     icon: Ticket
   },
   {
-    name: 'Infants (Under 2)',
+    name: 'General Admission (Infants)',
     price: 7,
     description: 'Special pricing for our littlest visitors',
     features: [
       'Access to infant-safe areas',
       'FREE with paid sibling admission',
       'Dedicated infant play space',
-      'Parent supervision required'
+      'All-day access'
     ],
     popular: false,
     cta: 'Visit Us',
     icon: Users
   },
   {
-    name: 'Monthly Membership',
+    name: 'Monthly Membership (Toddler)',
     price: 100,
     description: 'Best value for regular families',
     features: [
-      'Unlimited visits for 1 child',
+      'Unlimited visits for 1 child (ages 2+)',
       'Pays for itself after 6 visits!',
-      '10% off second child ($90)',
-      '20% off third child ($80)',
+      '10% off 2nd child ($90)',
+      '20% off 3rd child ($80)',
       'Member exclusive events'
     ],
     popular: true,
     cta: 'Join Now',
     icon: Star
-  },
-  {
-    name: '10-Visit Punch Card (Toddler)',
-    price: 150,
-    originalPrice: 170,
-    description: 'Save with bulk visits',
-    features: [
-      '10 visits at $15 each (save $20)',
-      'One punch per child per visit',
-      'Never expires',
-      'Transferable to family/friends',
-      'All daily pass benefits'
-    ],
-    popular: false,
-    cta: 'Purchase',
-    icon: Ticket
-  },
-  {
-    name: '10-Visit Punch Card (Infant)',
-    price: 50,
-    originalPrice: 70,
-    description: 'Save with bulk visits for infants',
-    features: [
-      '10 visits at $5 each (save $20)',
-      'One punch per infant per visit',
-      'Never expires',
-      'Transferable to family/friends',
-      'All infant play area benefits'
-    ],
-    popular: false,
-    cta: 'Purchase',
-    icon: Users
   },
   {
     name: 'Monthly Membership (Infant)',
@@ -91,12 +59,41 @@ const pricingPlans = [
       'Unlimited visits for 1 infant',
       'Access to infant-safe areas',
       'Perfect for regular visitors',
-      'Member exclusive events',
-      'Dedicated infant play space'
+      'Member exclusive events'
     ],
     popular: false,
     cta: 'Join Now',
-    icon: Users
+    icon: Star
+  },
+  {
+    name: '10-Visit Punch Card (Toddler)',
+    price: 150,
+    originalPrice: 170,
+    description: 'Save $20 with bulk visits',
+    features: [
+      '10 visits at $15 each',
+      'Save $20 off regular price',
+      'Never expires',
+      'Transferable to family/friends'
+    ],
+    popular: false,
+    cta: 'Purchase',
+    icon: Ticket
+  },
+  {
+    name: '10-Visit Punch Card (Infant)',
+    price: 50,
+    originalPrice: 70,
+    description: 'Save $20 with bulk visits',
+    features: [
+      '10 visits at $5 each',
+      'Save $20 off regular price',
+      'Never expires',
+      'Transferable to family/friends'
+    ],
+    popular: false,
+    cta: 'Purchase',
+    icon: Ticket
   }
 ]
 
