@@ -7,7 +7,7 @@ import { Logo } from '@/components/ui/Logo'
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { fadeInUp, staggerContainer, isOpen, getBusinessHours } from '@/lib/utils'
+import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const quickInfo = [
   {
@@ -31,12 +31,10 @@ const quickInfo = [
 ]
 
 export function InfoHero() {
-  const businessOpen = isOpen()
-
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-honey-50 via-primary-50 to-charcoal-50 py-16 sm:py-20">
       <HoneycombPattern variant="medium" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-12"
@@ -59,7 +57,7 @@ export function InfoHero() {
           </motion.div>
 
           {/* Quick Info Cards */}
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
           >
@@ -82,13 +80,11 @@ export function InfoHero() {
 
           {/* Current Status */}
           <motion.div variants={fadeInUp} className="mt-8">
-            <div className="inline-flex items-center space-x-3 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full border border-neutral-200 shadow-soft">
-              <div className={`w-3 h-3 rounded-full ${businessOpen ? 'bg-secondary-500' : 'bg-neutral-400'}`}></div>
-              <span className="font-medium text-neutral-900">
-                We're currently {businessOpen ? 'OPEN' : 'CLOSED'}
+            <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-honey-100 to-yellow-100 backdrop-blur-sm px-6 py-3 rounded-full border-2 border-honey-300 shadow-lg">
+              <div className="w-3 h-3 rounded-full bg-honey-500 animate-pulse"></div>
+              <span className="font-bold text-charcoal-800">
+                Opening in January 2025! 🎉
               </span>
-              <span className="text-neutral-600">•</span>
-              <span className="text-neutral-600">{getBusinessHours()}</span>
             </div>
           </motion.div>
         </motion.div>

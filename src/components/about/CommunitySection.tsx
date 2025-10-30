@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { Mail, Calendar, Gift, Send } from 'lucide-react'
+import { Mail, Calendar, Bell, Gift, Send } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -44,7 +44,7 @@ export function NewsletterSection() {
   return (
     <section className="relative py-20 section-hexagon-medium overflow-hidden">
       <HoneycombPattern variant="medium" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16"
@@ -60,11 +60,11 @@ export function NewsletterSection() {
             Join Our <span className="text-honey-gradient">Hive</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            Subscribe to our newsletter and stay updated on upcoming events, special promotions, 
+            Subscribe to our newsletter and stay updated on upcoming events, special promotions,
             and exciting news from the Busy Bees family.
           </p>
         </motion.div>
-        
+
         <div className="grid lg:grid-cols-2 gap-12 items-start mb-16">
           {/* Newsletter Signup */}
           <motion.div
@@ -78,14 +78,14 @@ export function NewsletterSection() {
                 <div className="w-16 h-16 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6">
                   <Mail className="w-8 h-8 text-charcoal-700" />
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-charcoal-800 text-center mb-4">
                   Subscribe to Newsletters & Upcoming Events
                 </h3>
                 <p className="text-charcoal-600 text-center mb-8">
                   Be the first to know about special events, promotions, and new activities at Busy Bees!
                 </p>
-                
+
                 {!isSubmitted ? (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -102,7 +102,7 @@ export function NewsletterSection() {
                         placeholder="Enter your full name"
                       />
                     </div>
-                    
+
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-charcoal-700 mb-2">
                         Email Address
@@ -117,7 +117,7 @@ export function NewsletterSection() {
                         placeholder="Enter your email address"
                       />
                     </div>
-                    
+
                     <Button type="submit" size="lg" className="w-full flex items-center justify-center gap-2">
                       <Send className="w-4 h-4" />
                       Subscribe to Updates
@@ -139,7 +139,7 @@ export function NewsletterSection() {
               </CardContent>
             </Card>
           </motion.div>
-          
+
           {/* Upcoming Events */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -150,7 +150,7 @@ export function NewsletterSection() {
             <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center lg:text-left">
               Upcoming <span className="text-honey-gradient">Events</span>
             </h3>
-            
+
             <Card className="card-pastel">
               <CardContent className="p-12">
                 <div className="text-center">
@@ -168,7 +168,7 @@ export function NewsletterSection() {
             </Card>
           </motion.div>
         </div>
-        
+
         {/* Newsletter Benefits */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -182,7 +182,7 @@ export function NewsletterSection() {
               <h3 className="text-2xl font-bold text-charcoal-800 mb-8">
                 What You'll <span className="text-honey-gradient">Receive</span>
               </h3>
-              
+
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -191,7 +191,7 @@ export function NewsletterSection() {
                   <h4 className="font-semibold text-charcoal-800 mb-2">Event Updates</h4>
                   <p className="text-sm text-charcoal-600">Early access to special events and party bookings</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Gift className="w-6 h-6 text-charcoal-700" />
@@ -199,7 +199,7 @@ export function NewsletterSection() {
                   <h4 className="font-semibold text-charcoal-800 mb-2">Exclusive Offers</h4>
                   <p className="text-sm text-charcoal-600">Special discounts and promotions for subscribers only</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Bell className="w-6 h-6 text-charcoal-700" />
