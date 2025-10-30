@@ -9,6 +9,20 @@ import { formatPrice, fadeInUp, staggerContainer } from '@/lib/utils'
 
 const pricingPlans = [
   {
+    name: 'General Admission (Infants)',
+    price: 7,
+    description: 'Special pricing for our littlest visitors',
+    features: [
+      'Access to infant-safe areas',
+      'FREE with paid sibling admission',
+      'Dedicated infant play space',
+      'All-day access'
+    ],
+    popular: false,
+    cta: 'Visit Us',
+    icon: Users
+  },
+  {
     name: 'General Admission (Ages 2+)',
     price: 17,
     description: 'All day access for children ages 2+',
@@ -23,18 +37,18 @@ const pricingPlans = [
     icon: Ticket
   },
   {
-    name: 'General Admission (Infants)',
-    price: 7,
-    description: 'Special pricing for our littlest visitors',
+    name: 'Monthly Membership (Infant)',
+    price: 70,
+    description: 'Unlimited visits for your littlest one',
     features: [
+      'Unlimited visits for 1 infant',
       'Access to infant-safe areas',
-      'FREE with paid sibling admission',
-      'Dedicated infant play space',
-      'All-day access'
+      'Perfect for regular visitors',
+      'Member exclusive events'
     ],
     popular: false,
-    cta: 'Visit Us',
-    icon: Users
+    cta: 'Join Now',
+    icon: Star
   },
   {
     name: 'Monthly Membership (Toddler)',
@@ -52,26 +66,12 @@ const pricingPlans = [
     icon: Star
   },
   {
-    name: 'Monthly Membership (Infant)',
-    price: 70,
-    description: 'Unlimited visits for your littlest one',
-    features: [
-      'Unlimited visits for 1 infant',
-      'Access to infant-safe areas',
-      'Perfect for regular visitors',
-      'Member exclusive events'
-    ],
-    popular: false,
-    cta: 'Join Now',
-    icon: Star
-  },
-  {
-    name: '10-Visit Punch Card (Toddler)',
-    price: 150,
-    originalPrice: 170,
+    name: '10-Visit Punch Card (Infant)',
+    price: 50,
+    originalPrice: 70,
     description: 'Save $20 with bulk visits',
     features: [
-      '10 visits at $15 each',
+      '10 visits at $5 each',
       'Save $20 off regular price',
       'Never expires',
       'Transferable to family/friends'
@@ -81,12 +81,12 @@ const pricingPlans = [
     icon: Ticket
   },
   {
-    name: '10-Visit Punch Card (Infant)',
-    price: 50,
-    originalPrice: 70,
+    name: '10-Visit Punch Card (Toddler)',
+    price: 150,
+    originalPrice: 170,
     description: 'Save $20 with bulk visits',
     features: [
-      '10 visits at $5 each',
+      '10 visits at $15 each',
       'Save $20 off regular price',
       'Never expires',
       'Transferable to family/friends'
