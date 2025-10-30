@@ -6,6 +6,15 @@ import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from './CountdownTimer';
 import { PartySchedulingModal } from './PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import {
+  formatCurrency,
+  getPassesFromStorage,
+  getPartiesFromStorage,
+  getProductsFromStorage,
+  getActivePasses,
+  getActiveParties,
+  getAvailableProducts,
+} from '@/lib/utils/productHelpers';
 
 interface Child {
   id: string;
@@ -77,55 +86,77 @@ interface CustomerDashboardProps {
   onUpdateCustomer: (customer: Customer) => void;
 }
 
-const AVAILABLE_PASS_PRODUCTS = [
-  {
-    id: 'day_pass',
-    name: 'Single Day Pass',
-    price: 15.99,
-    description: '1 full day of unlimited play',
-    sessions: 1,
-    validity: '1 day'
-  },
-  {
-    id: 'weekly_pass',
-    name: 'Weekly Unlimited Pass',
-    price: 49.99,
-    description: '7 days of unlimited play',
-    sessions: 999,
-    validity: '7 days'
-  },
-  {
-    id: 'monthly_pass',
-    name: 'Monthly Unlimited Pass',
-    price: 89.99,
-    description: '30 days of unlimited play',
-    sessions: 999,
-    validity: '30 days'
-  }
-];
-
-const AVAILABLE_PARTY_PRODUCTS = [
-  {
-    id: 'party_basic',
-    name: 'Semi-Private Party Package',
-    price: 350.00,
-    description: 'Party for up to 12 kids, 2 hours',
-    sessions: 1,
-    validity: '90 days to book'
-  },
-  {
-    id: 'party_premium',
-    name: 'Private Party Package',
-    price: 425.00,
-    description: 'Party for up to 15 kids, 3 hours, decorations',
-    sessions: 1,
-    validity: '90 days to book'
-  }
-];
-
-const AVAILABLE_PRODUCTS = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS];
-
 export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashboardProps) {
+  // Load products from product management system
+  const [availablePasses, setAvailablePasses] = useState<any[]>([]);
+  const [availableParties, setAvailableParties] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productLoadError, setProductLoadError] = useState<string | null>(null);
+
+  // Load products from localStorage (client-side)
+  useEffect(() => {
+    const loadProducts = () => {
+      setIsLoadingProducts(true);
+      setProductLoadError(null);
+
+      try {
+        // Get active passes, parties, and available products from localStorage
+        const passes = getActivePasses(getPassesFromStorage());
+        const parties = getActiveParties(getPartiesFromStorage());
+        const products = getAvailableProducts(getProductsFromStorage());
+
+        // Convert to format expected by CustomerDashboard
+        const formattedPasses = passes.map(pass => ({
+          id: pass.id,
+          name: pass.name,
+          price: pass.price,
+          description: pass.description,
+          sessions: pass.sessionsIncluded,
+          validity: pass.category === 'day' ? `${pass.duration} hours` : `${pass.duration} days`,
+          stripePurchaseLink: pass.stripePurchaseLink,
+        }));
+
+        const formattedParties = parties.map(party => ({
+          id: party.id,
+          name: party.name,
+          price: party.basePrice,
+          description: `${party.description} (Up to ${party.capacity} kids, ${party.duration} hours)`,
+          sessions: 1,
+          validity: '90 days to book',
+          stripePurchaseLink: party.stripePurchaseLink,
+          capacity: party.capacity,
+          duration: party.duration,
+          includedItems: party.includedItems,
+          addOns: party.addOns,
+        }));
+
+        setAvailablePasses(formattedPasses);
+        setAvailableParties(formattedParties);
+        setAvailableProducts(products);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setProductLoadError('Failed to load products. Please refresh the page.');
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+
+    // Reload when localStorage changes (e.g., admin updates products)
+    // This provides real-time sync between admin and customer views
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.includes('busybees_passes') || e.key?.includes('busybees_parties') || e.key?.includes('busybees_products')) {
+        loadProducts();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const AVAILABLE_PRODUCTS = [...availablePasses, ...availableParties];
   const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties' | 'payments'>('children');
   const [showPurchase, setShowPurchase] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -168,11 +199,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     const birth = new Date(birthdate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -232,7 +263,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     let hasExpiredSessions = false;
     const hasAutoRenewals = false;
     const newPurchases: Purchase[] = [];
-    
+
     // Check for expired passes and auto-renewals
     const updatedPurchases = customer.purchases.map(purchase => {
       // Check for expiration
@@ -251,15 +282,15 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       if (purchase.autoRenew && purchase.nextRenewalDate && purchase.nextRenewalDate.trim() !== '' && purchase.status === 'active') {
         const renewalDate = new Date(purchase.nextRenewalDate);
         console.log(`Checking renewal for ${purchase.name}: now=${now.toISOString()}, renewalDate=${renewalDate.toISOString()}`);
-        
+
         // Prevent immediate renewals - must be at least 1 minute in the future when set
         const timeDiff = renewalDate.getTime() - now.getTime();
         const oneMinute = 60 * 1000;
-        
+
         if (now >= renewalDate && timeDiff < -oneMinute) { // Only renew if it's more than 1 minute overdue
           hasAutoRenewals = true;
           console.log(`Auto-renewing ${purchase.name} for customer ${customer.name}`);
-          
+
           // Create new purchase for renewal
           const renewalId = `r${Date.now()}_${purchase.type}_${Math.random().toString(36).substr(2, 9)}`;
           const newPurchase: Purchase = {
@@ -268,7 +299,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             name: purchase.name,
             price: purchase.price,
             purchaseDate: now.toISOString(),
-            expiryDate: purchase.type === 'weekly_pass' 
+            expiryDate: purchase.type === 'weekly_pass'
               ? new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
               : new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
             usedSessions: 0,
@@ -284,18 +315,18 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             ? new Date(now.getTime() + (7 - 7) * 24 * 60 * 60 * 1000).toISOString() // Will be set properly when first used
             : new Date(now.getTime() + (30 - 7) * 24 * 60 * 60 * 1000).toISOString();
 
-          return { 
-            ...purchase, 
+          return {
+            ...purchase,
             autoRenew: false, // Disable on old pass
-            nextRenewalDate: undefined 
+            nextRenewalDate: undefined
           };
         }
       }
       */
-      
+
       return purchase;
     });
-    
+
     // Check for sessions that need auto-checkout (12 hours after check-in)
     const activeSessions = customer.activeSessions || [];
     const updatedSessions = activeSessions.filter(session => {
@@ -307,10 +338,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       }
       return true; // Keep active session
     });
-    
+
     if (hasExpiredPasses || hasExpiredSessions) {
-      onUpdateCustomer({ 
-        ...customer, 
+      onUpdateCustomer({
+        ...customer,
         purchases: updatedPurchases,
         activeSessions: updatedSessions
       });
@@ -332,29 +363,29 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     if (purchase.type !== 'party_package' || !purchase.partyDate || !purchase.partyStartTime) {
       return false;
     }
-    
+
     const now = new Date();
     const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
     const timeDifference = partyDateTime.getTime() - now.getTime();
     const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-    
+
     return timeDifference <= oneHour && timeDifference >= -2 * oneHour; // 1 hour before to 2 hours after
   };
 
   const getPartyCheckInStatus = (purchase: Purchase) => {
     if (purchase.type !== 'party_package') return null;
-    
+
     if (!purchase.partyDate) return 'needs_scheduling';
-    
+
     const now = new Date();
     const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
     const timeDifference = partyDateTime.getTime() - now.getTime();
     const oneHour = 60 * 60 * 1000;
-    
+
     if (timeDifference > oneHour) {
       const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
       const minutesUntil = Math.ceil(timeDifference / (60 * 1000));
-      
+
       if (hoursUntil >= 24) {
         const daysUntil = Math.ceil(timeDifference / (24 * 60 * 60 * 1000));
         return `too_early_days:${daysUntil}`;
@@ -382,12 +413,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Set confirmation state
     setConfirmingProduct(productId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingProduct(null);
     }, 5000);
-    
+
     setConfirmTimeout(timeout);
   };
 
@@ -399,12 +430,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Set confirmation state
     setConfirmingCheckIn(purchaseId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingCheckIn(null);
     }, 5000);
-    
+
     setCheckInTimeout(timeout);
   };
 
@@ -428,12 +459,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Set confirmation state
     setConfirmingDelete(cardId);
-    
+
     // Set timeout to reset confirmation after 5 seconds
     const timeout = setTimeout(() => {
       setConfirmingDelete(null);
     }, 5000);
-    
+
     setDeleteTimeout(timeout);
   };
 
@@ -448,7 +479,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     // Check if this is the only card or the default card
     const cardToDelete = customer.savedCards.find(card => card.id === cardId);
     const remainingCards = customer.savedCards.filter(card => card.id !== cardId);
-    
+
     if (cardToDelete?.isDefault && remainingCards.length > 0) {
       // If deleting the default card and there are others, make the first remaining card default
       remainingCards[0].isDefault = true;
@@ -482,7 +513,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     };
 
     onUpdateCustomer(updatedCustomer);
-    
+
     // Reset form
     setChildName('');
     setChildBirthdate('');
@@ -503,8 +534,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   };
 
   const handleSignWaiver = (child: Child) => {
-    const updatedChildren = customer.children.map(c => 
-      c.id === child.id 
+    const updatedChildren = customer.children.map(c =>
+      c.id === child.id
         ? { ...c, waiverSigned: true, waiverSignedDate: new Date().toISOString() }
         : c
     );
@@ -527,7 +558,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
   const handleDeleteChild = (childId: string) => {
     // Check if child has any active passes
-    const hasActivePasses = customer.purchases.some(p => 
+    const hasActivePasses = customer.purchases.some(p =>
       p.childId === childId && p.status === 'active'
     );
 
@@ -552,7 +583,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const handleChildSelectionForPurchase = (childId: string) => {
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
-    
+
     // Now proceed with the purchase using the selected child
     if (selectedProductForPurchase) {
       handlePurchase(selectedProductForPurchase);
@@ -575,7 +606,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     }
 
     const isPassPurchase = !productId.includes('party');
-    
+
     if (isPassPurchase) {
       // For pass purchases, require child selection
       if (!selectedChildForPurchase) {
@@ -601,10 +632,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Prevent multiple simultaneous purchases
     if (isProcessing || processingProduct) return;
-    
+
     setIsProcessing(true);
     setProcessingProduct(productId);
-    
+
     try {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -660,17 +691,17 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       };
 
       onUpdateCustomer(updatedCustomer);
-      
+
       // Clear selected child for next purchase
       if (isPassPurchase) {
         setSelectedChildForPurchase('');
       }
-      
+
       setPurchaseSuccess(product.name);
-      
+
       // Clear success message after 5 seconds
       setTimeout(() => setPurchaseSuccess(''), 5000);
-      
+
     } catch (error) {
       console.error('Purchase failed:', error);
     } finally {
@@ -681,10 +712,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
   const handleAddCard = async () => {
     setIsProcessing(true);
-    
+
     // Simulate card processing
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     const newCard: SavedCard = {
       id: `c${Date.now()}`,
       last4: cardNumber.slice(-4),
@@ -725,7 +756,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         const partyDateTime = new Date(`${purchase.partyDate}T${purchase.partyStartTime}`);
         const timeDifference = partyDateTime.getTime() - now.getTime();
         const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-        
+
         if (timeDifference > oneHour) {
           // Too early to check in
           const hoursUntil = Math.ceil(timeDifference / (60 * 60 * 1000));
@@ -736,7 +767,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
             return `${displayHour}:${minutes} ${ampm}`;
           };
-          
+
           setSuccessDetails({
             title: '⏰ Too Early to Check In',
             message: `Your party is scheduled for ${formatTime(purchase.partyStartTime || '')} and check-in opens 1 hour before. Please return closer to your party time!`,
@@ -750,7 +781,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           setShowSuccessModal(true);
           return;
         }
-        
+
         // Within check-in window, use the 5-second confirmation system
         if (confirmingCheckIn === purchaseId) {
           handleConfirmCheckIn(purchaseId);
@@ -763,7 +794,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     // Check if it's a single-use pass (day pass)
     const isSingleUse = purchase.totalSessions === 1;
-    
+
     if (isSingleUse) {
       setConfirmingPurchase(purchase);
       setShowConfirmDialog(true);
@@ -779,7 +810,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
   const calculateActualExpiry = (type: Purchase['type'], firstUseDate: string): string => {
     const firstUse = new Date(firstUseDate);
-    
+
     switch (type) {
       case 'day_pass':
         // Expires 12 hours after first use
@@ -802,10 +833,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     console.log('Checking in with pass ID:', purchaseId);
     const now = new Date();
     const nowIso = now.toISOString();
-    
+
     // Create new session with 12-hour auto-checkout
     const autoCheckoutTime = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString();
-    
+
     const newSession: Session = {
       id: `s${Date.now()}`,
       customerId: customer.id,
@@ -818,19 +849,19 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       if (p.id === purchaseId) {
         const newUsedSessions = p.usedSessions + 1;
         const isFirstUse = !p.firstUseDate;
-        
+
         console.log(`Check-in with ${p.name}: ${p.usedSessions} -> ${newUsedSessions}`);
-        
+
         // Calculate actual expiry on first use
         let actualExpiryDate = p.actualExpiryDate;
         let firstUseDate = p.firstUseDate;
         let nextRenewalDate = p.nextRenewalDate;
-        
+
         if (isFirstUse) {
           firstUseDate = nowIso;
           actualExpiryDate = calculateActualExpiry(p.type, nowIso);
           console.log(`First use! Expiry set to: ${actualExpiryDate}`);
-          
+
           // If auto-renew is enabled and no renewal date is set, calculate it now
           if (p.autoRenew && (!p.nextRenewalDate || p.nextRenewalDate.trim() === '')) {
             const expiryDate = new Date(actualExpiryDate);
@@ -842,9 +873,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         // For unlimited passes (999 sessions), never mark as 'used'
         // For single-use passes, keep them active until they expire
         // For multi-use passes with limited sessions, mark as used when sessions are exhausted
-        const newStatus = p.totalSessions === 999 ? 
+        const newStatus = p.totalSessions === 999 ?
           p.status : // Unlimited passes stay active
-          p.totalSessions === 1 ? 
+          p.totalSessions === 1 ?
           p.status : // Single-use passes stay active until they expire
           (newUsedSessions >= p.totalSessions ? 'used' as const : p.status);
 
@@ -873,7 +904,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const handleCheckOut = (sessionId: string) => {
     console.log('Checking out session:', sessionId);
     const now = new Date().toISOString();
-    
+
     const activeSessions = customer.activeSessions || [];
     const updatedSessions = activeSessions.map(session => {
       if (session.id === sessionId) {
@@ -906,8 +937,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     if (purchase.autoRenew) {
       // Disable auto-renew immediately
-      const updatedPurchases = customer.purchases.map(p => 
-        p.id === purchaseId 
+      const updatedPurchases = customer.purchases.map(p =>
+        p.id === purchaseId
           ? { ...p, autoRenew: false, nextRenewalDate: undefined }
           : p
       );
@@ -948,8 +979,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       nextRenewalDate = '';
     }
 
-    const updatedPurchases = customer.purchases.map(p => 
-      p.id === purchaseId 
+    const updatedPurchases = customer.purchases.map(p =>
+      p.id === purchaseId
         ? { ...p, autoRenew: true, nextRenewalDate }
         : p
     );
@@ -986,13 +1017,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     if (!schedulingParty) return;
 
     // Update the party package with scheduling information
-    const updatedPurchases = customer.purchases.map(p => 
-      p.id === schedulingParty.id 
-        ? { 
-            ...p, 
+    const updatedPurchases = customer.purchases.map(p =>
+      p.id === schedulingParty.id
+        ? {
+            ...p,
             ...partyData,
             // Update price if more guests
-            price: partyData.partyGuests > 15 
+            price: partyData.partyGuests > 15
               ? p.price + ((partyData.partyGuests - 15) * 12)
               : p.price
           }
@@ -1024,7 +1055,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         date: partyData.partyDate,
         time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
         guests: partyData.partyGuests,
-        price: partyData.partyGuests > 15 
+        price: partyData.partyGuests > 15
           ? schedulingParty.price + ((partyData.partyGuests - 15) * 12)
           : schedulingParty.price,
         type: schedulingParty.name
@@ -1204,7 +1235,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
                     {/* Active Passes for this child */}
                     {(() => {
-                      const childPasses = customer.purchases.filter(p => 
+                      const childPasses = customer.purchases.filter(p =>
                         p.childId === child.id && p.status === 'active'
                       );
                       return childPasses.length > 0 && (
@@ -1239,7 +1270,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
           {/* Add Child Modal */}
           {showAddChild && (
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
@@ -1268,7 +1299,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 >
                   ✕
                 </button>
-                
+
                 <h3 className="text-lg font-semibold mb-4">Add New Child</h3>
                 <div className="space-y-4">
                   <div>
@@ -1326,7 +1357,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
           {/* Waiver Modal */}
           {showWaiverModal && waiverChild && (
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
@@ -1352,24 +1383,24 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 >
                   ✕
                 </button>
-                
+
                 <h3 className="text-lg font-semibold mb-4">Waiver for {waiverChild.name}</h3>
                 <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
                   <h4 className="font-medium mb-2">LIABILITY WAIVER AND RELEASE</h4>
                   <p className="text-sm text-gray-700 mb-2">
-                    I hereby acknowledge that I am the parent/guardian of {waiverChild.name}, 
-                    age {waiverChild.age}, and I understand that participation in activities at 
+                    I hereby acknowledge that I am the parent/guardian of {waiverChild.name},
+                    age {waiverChild.age}, and I understand that participation in activities at
                     Busy Bees Indoor Playground involves inherent risks.
                   </p>
                   <p className="text-sm text-gray-700 mb-2">
-                    I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground, 
-                    its owners, employees, and agents from any and all liability, claims, demands, 
-                    actions and causes of action whatsoever arising out of or related to any loss, 
+                    I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground,
+                    its owners, employees, and agents from any and all liability, claims, demands,
+                    actions and causes of action whatsoever arising out of or related to any loss,
                     damage, or injury that may be sustained by my child while participating in activities.
                   </p>
                   <p className="text-sm text-gray-700 mb-2">
-                    I acknowledge that I have read and understood this waiver and that I am signing 
-                    it voluntarily. This waiver shall be binding upon my heirs, executors, 
+                    I acknowledge that I have read and understood this waiver and that I am signing
+                    it voluntarily. This waiver shall be binding upon my heirs, executors,
                     administrators and assigns.
                   </p>
                   <p className="text-sm font-medium text-gray-800">
@@ -1418,7 +1449,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       </p>
                     )}
                     <p className="text-gray-600">
-                      {purchase.totalSessions === 999 ? 'Unlimited' : 
+                      {purchase.totalSessions === 999 ? 'Unlimited' :
                        `${purchase.totalSessions - purchase.usedSessions} visits remaining`}
                     </p>
                   </div>
@@ -1427,12 +1458,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       Active
                     </span>
                     {purchase.firstUseDate && purchase.actualExpiryDate && (
-                      <CountdownTimer 
+                      <CountdownTimer
                         expiryDate={purchase.actualExpiryDate}
                         type={purchase.type as 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package'}
                         onExpired={() => {
                           // Handle expiration
-                          const updatedPurchases = customer.purchases.map(p => 
+                          const updatedPurchases = customer.purchases.map(p =>
                             p.id === purchase.id ? { ...p, status: 'expired' as const } : p
                           );
                           onUpdateCustomer({ ...customer, purchases: updatedPurchases });
@@ -1441,8 +1472,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     )}
                   </div>
                 </div>
-                
-              
+
+
 
                 <div className="space-y-3">
                   {/* Show active sessions for this pass */}
@@ -1468,13 +1499,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   {(() => {
                     const activeSessions = (customer.activeSessions || []).filter(session => session.purchaseId === purchase.id);
                     const hasActiveSessions = activeSessions.length > 0;
-                    
+
                     // For single-use passes that haven't been used yet
                     if (purchase.totalSessions === 1 && !purchase.firstUseDate) {
                       return (() => {
                           if (purchase.type === 'party_package') {
                             const partyStatus = getPartyCheckInStatus(purchase);
-                            
+
                             if (partyStatus === 'needs_scheduling') {
                               return (
                                 <Button
@@ -1498,7 +1529,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                               const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                               type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                               `${value} minute${value !== '1' ? 's' : ''}`;
-                              
+
                               return (
                                 <Button
                                   onClick={() => handleUsePassClick(purchase.id)}
@@ -1519,7 +1550,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                               );
                             }
                           }
-                          
+
                             return (
                               <Button
                                 onClick={() => handleUsePassClick(purchase.id)}
@@ -1534,7 +1565,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                             );
                           })();
                     }
-                    
+
                     // For multi-use passes or passes with active sessions
                     if (purchase.totalSessions > 1 || hasActiveSessions) {
                       if (hasActiveSessions) {
@@ -1553,7 +1584,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         return (() => {
                             if (purchase.type === 'party_package') {
                               const partyStatus = getPartyCheckInStatus(purchase);
-                              
+
                               if (partyStatus === 'needs_scheduling') {
                                 return (
                                   <Button
@@ -1581,7 +1612,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                                 const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                                 type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                                 `${value} minute${value !== '1' ? 's' : ''}`;
-                                
+
                                 return (
                                   <Button
                                     onClick={() => handleUsePassClick(purchase.id)}
@@ -1602,7 +1633,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                                 );
                               }
                             }
-                            
+
                             return (
                               <Button
                                 onClick={() => handleUsePassClick(purchase.id)}
@@ -1618,7 +1649,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           })();
                       }
                     }
-                    
+
                     return null;
                   })()}
 
@@ -1647,8 +1678,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           <span className="text-sm font-medium text-gray-700">🔄 Auto-Renew</span>
                           {purchase.autoRenew && (
                             <span className={`text-xs px-2 py-1 rounded-full ${
-                              purchase.firstUseDate 
-                                ? 'bg-yellow-100 text-yellow-800' 
+                              purchase.firstUseDate
+                                ? 'bg-yellow-100 text-yellow-800'
                                 : 'bg-gray-100 text-gray-600'
                             }`}>
                               {purchase.firstUseDate ? 'Active' : 'Pending'}
@@ -1658,8 +1689,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         <button
                           onClick={() => handleAutoRenewToggle(purchase.id)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 border-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ${
-                            purchase.autoRenew 
-                              ? 'bg-yellow-500 border-yellow-400 shadow-sm' 
+                            purchase.autoRenew
+                              ? 'bg-yellow-500 border-yellow-400 shadow-sm'
                               : 'bg-gray-200 border-gray-300 hover:border-gray-400'
                           }`}
                         >
@@ -1753,7 +1784,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           {/* Purchase New Passes - Always Visible */}
           <div>
             <h3 className="text-xl font-semibold mb-4">🛒 Purchase New Passes</h3>
-            
+
             {/* Child Selection Required */}
             {customer.children.length === 0 && (
               <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
@@ -1778,7 +1809,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 </Button>
               </Card>
             )}
-            
+
             {/* No Payment Methods Warning */}
             {customer.savedCards.length === 0 && (
               <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
@@ -1800,15 +1831,24 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
             <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
               <div className="grid gap-4 text-left">
-                {AVAILABLE_PASS_PRODUCTS.map((product) => (
-                  <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900 text-lg">
-                        {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
-                      </span>
-                      <p className="text-sm text-gray-600">{product.description}</p>
-                      <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
-                    </div>
+                {availablePasses.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-lg mb-2">🎫 No passes available</p>
+                    <p className="text-sm">Please check back later or contact staff.</p>
+                  </div>
+                ) : (
+                  availablePasses.map((product) => (
+                    <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900 text-lg">
+                          {product.name.toLowerCase().includes('infant') ? '👶' : product.name.toLowerCase().includes('toddler') ? '🎫' : product.name.toLowerCase().includes('10') ? '📅' : '🗓️'} {product.name}
+                        </span>
+                        <p className="text-sm text-gray-600">{product.description}</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{formatCurrency(product.price)}</p>
+                        {product.stripePurchaseLink && (
+                          <p className="text-xs text-blue-600 mt-1">💳 Stripe payment available</p>
+                        )}
+                      </div>
                     <Button
                       onClick={() => {
                         // Step 1: Add Child (highest priority)
@@ -1816,13 +1856,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           setActiveTab('children');
                           return;
                         }
-                        
+
                         // Step 2: Add Payment Method
                         if (customer.savedCards.length === 0) {
                           setActiveTab('payments');
                           return;
                         }
-                        
+
                         // Step 3: Show Child Selection Modal
                         if (confirmingProduct === product.id) {
                           handleConfirmPurchase(product.id);
@@ -1846,10 +1886,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           : 'bg-green-600 hover:bg-green-700'
                       }`}
                     >
-                      {processingProduct === product.id 
-                        ? 'Processing...' 
-                        : confirmingProduct === product.id 
-                        ? '✓ Confirm Purchase' 
+                      {processingProduct === product.id
+                        ? 'Processing...'
+                        : confirmingProduct === product.id
+                        ? '✓ Confirm Purchase'
                         : customer.children.length === 0
                         ? '👶 Add Child First'
                         : customer.savedCards.length === 0
@@ -1858,7 +1898,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       }
                     </Button>
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </Card>
           </div>
@@ -1880,8 +1921,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       <div className="text-right">
                         <p className="font-medium">${purchase.price}</p>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          purchase.status === 'used' 
-                            ? 'bg-gray-100 text-gray-800' 
+                          purchase.status === 'used'
+                            ? 'bg-gray-100 text-gray-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {purchase.status === 'used' ? 'Used' : 'Expired'}
@@ -1923,7 +1964,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       {(() => {
                         if (purchase.type === 'party_package') {
                           const partyStatus = getPartyCheckInStatus(purchase);
-                          
+
                           if (partyStatus === 'needs_scheduling') {
                             return (
                               <Button
@@ -1951,7 +1992,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                             const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
                                             type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
                                             `${value} minute${value !== '1' ? 's' : ''}`;
-                            
+
                             return (
                               <Button
                                 onClick={() => handleUsePassClick(purchase.id)}
@@ -2040,7 +2081,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           {/* Purchase New Party Packages - Always Visible */}
           <div>
             <h3 className="text-xl font-semibold mb-4">🛒 Purchase Party Packages</h3>
-            
+
             {/* No Payment Methods Warning */}
             {customer.savedCards.length === 0 && (
               <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
@@ -2062,15 +2103,24 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
             <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
               <div className="grid gap-4 text-left">
-                {AVAILABLE_PARTY_PRODUCTS.map((product) => (
-                  <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-900 text-lg">
-                        🎉 {product.name}
-                      </span>
-                      <p className="text-sm text-gray-600">{product.description}</p>
-                      <p className="text-lg font-bold text-gray-900 mt-1">${product.price.toFixed(2)}</p>
-                    </div>
+                {availableParties.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-lg mb-2">🎉 No party packages available</p>
+                    <p className="text-sm">Please check back later or contact staff.</p>
+                  </div>
+                ) : (
+                  availableParties.map((product) => (
+                    <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900 text-lg">
+                          🎉 {product.name}
+                        </span>
+                        <p className="text-sm text-gray-600">{product.description}</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{formatCurrency(product.price)}</p>
+                        {product.stripePurchaseLink && (
+                          <p className="text-xs text-blue-600 mt-1">💳 Stripe payment available</p>
+                        )}
+                      </div>
                     <Button
                       onClick={() => {
                         if (customer.savedCards.length === 0) {
@@ -2095,17 +2145,18 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           : 'bg-purple-600 hover:bg-purple-700'
                       }`}
                     >
-                      {processingProduct === product.id 
-                        ? 'Processing...' 
-                        : confirmingProduct === product.id 
-                        ? '✓ Confirm Purchase' 
+                      {processingProduct === product.id
+                        ? 'Processing...'
+                        : confirmingProduct === product.id
+                        ? '✓ Confirm Purchase'
                         : customer.savedCards.length === 0
                         ? '💳 Add Payment First'
                         : 'Buy Now'
                       }
                     </Button>
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </Card>
           </div>
@@ -2132,8 +2183,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       <div className="text-right">
                         <p className="font-medium">${purchase.price}</p>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          purchase.status === 'used' 
-                            ? 'bg-gray-100 text-gray-800' 
+                          purchase.status === 'used'
+                            ? 'bg-gray-100 text-gray-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {purchase.status === 'used' ? 'Used' : 'Expired'}
@@ -2178,14 +2229,14 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     {card.isDefault && (
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                         Default
                       </span>
                     )}
-                    
+
                     {/* Delete Button with 5-second confirmation */}
                     <button
                       onClick={() => {
@@ -2232,7 +2283,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         {showAddCard && (
           <Card className="p-6 mt-4">
             <h4 className="font-semibold mb-4">Add New Payment Method</h4>
-            
+
             {/* Demo Card Button */}
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-center justify-between">
@@ -2268,7 +2319,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   placeholder="John Doe"
                 />
               </div>
-              
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Card Number
@@ -2282,7 +2333,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   maxLength={19}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Expiry Date
@@ -2302,7 +2353,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   maxLength={5}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   CVV
@@ -2317,7 +2368,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 />
               </div>
             </div>
-            
+
             <div className="flex space-x-4 mt-4">
               <Button
                 onClick={() => setShowAddCard(false)}
@@ -2365,11 +2416,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 )}
               </p>
               <p className="text-sm text-gray-500 mb-6">
-                {confirmingPurchase.totalSessions === 1 
+                {confirmingPurchase.totalSessions === 1
                   ? 'Are you sure you want to activate this single-use pass now?'
                   : 'Ready to start the timer for someone?'}
               </p>
-              
+
               <div className="flex space-x-4">
                 <Button
                   onClick={handleCancelUse}
@@ -2419,7 +2470,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex space-x-4">
                 <Button
                   onClick={() => setShowAutoRenewConfirm(null)}
@@ -2463,7 +2514,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
       {/* Child Selection Modal */}
       {showChildSelectionModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -2489,12 +2540,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             >
               ✕
             </button>
-            
+
             <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
             <p className="text-gray-600 mb-4">
               Which child is this {AVAILABLE_PRODUCTS.find(p => p.id === selectedProductForPurchase)?.name} for?
             </p>
-            
+
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {customer.children
                 .filter(child => child.waiverSigned)
@@ -2517,12 +2568,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 ))
               }
             </div>
-            
+
             {customer.children.some(child => !child.waiverSigned) && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  ⚠️ Some children don't have signed waivers and can't be selected. 
-                  <button 
+                  ⚠️ Some children don't have signed waivers and can't be selected.
+                  <button
                     onClick={() => {
                       setShowChildSelectionModal(false);
                       setActiveTab('children');
@@ -2534,7 +2585,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 </p>
               </div>
             )}
-            
+
             <div className="flex justify-end space-x-3 mt-6">
               <Button
                 onClick={() => {

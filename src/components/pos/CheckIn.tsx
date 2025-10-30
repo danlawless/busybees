@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PartySchedulingModal } from './PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import {
+  formatCurrency,
+  getPassesFromStorage,
+  getActivePasses,
+  getPartiesFromStorage,
+  getActiveParties,
+  getProductsFromStorage,
+  getAvailableProducts,
+} from '@/lib/utils/productHelpers';
 
 
 
@@ -115,18 +124,8 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
   const [confirmingAutoRenewFor, setConfirmingAutoRenewFor] = useState<string | null>(null);
 
-  // Quantity state for purchases
-  const [quantities, setQuantities] = useState<Record<string, number>>({
-    day_pass: 1,
-    weekly_pass: 1,
-    monthly_pass: 1,
-    party_package: 1,
-    apple_sauce_pouches: 1,
-    veggie_sticks: 1,
-    pirates_booty: 1,
-    goldfish: 1,
-    granola_bars: 1
-  });
+  // Quantity state for purchases - defaulting to 0 to avoid NaN issues
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   // Children-related state
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
@@ -137,6 +136,100 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [childBirthdate, setChildBirthdate] = useState('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+
+  // Load passes, parties, and products from localStorage
+  const [availablePasses, setAvailablePasses] = useState<any[]>([]);
+  const [availableParties, setAvailableParties] = useState<any[]>([]);
+  const [availableSnacks, setAvailableSnacks] = useState<any[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+  // Filter states
+  const [passFilter, setPassFilter] = useState<'all' | 'infant' | 'toddler'>('all');
+  const [partyFilter, setPartyFilter] = useState<'all' | 'semi-private' | 'private'>('all');
+
+  // Fetch passes, parties, and snacks from localStorage (client-side only)
+  useEffect(() => {
+    const loadProducts = () => {
+      setIsLoadingProducts(true);
+      try {
+        // Get active passes from localStorage
+        const allPasses = getPassesFromStorage();
+        const passes = getActivePasses(allPasses);
+
+        // Get active parties from localStorage
+        const allParties = getPartiesFromStorage();
+        const parties = getActiveParties(allParties);
+
+        // Get available products (snacks) from localStorage
+        const allProducts = getProductsFromStorage();
+        const products = getAvailableProducts(allProducts);
+
+        // Convert passes to format expected by CheckIn component
+        const formattedPasses = passes.map(pass => ({
+          id: pass.id,
+          name: pass.name,
+          price: pass.price,
+          description: pass.description,
+          sessions: pass.sessionsIncluded,
+          validity: pass.category === 'day' ? `${pass.duration} hours` : `${pass.duration} days`,
+        }));
+
+        // Convert parties to format expected by CheckIn component
+        const formattedParties = parties.map(party => ({
+          id: party.id,
+          name: party.name,
+          price: party.basePrice,
+          description: `${party.description} (Up to ${party.capacity} kids, ${party.duration} hours)`,
+          sessions: 1,
+          validity: '90 days to book',
+          capacity: party.capacity,
+          duration: party.duration,
+          includedItems: party.includedItems,
+          addOns: party.addOns,
+        }));
+
+        // Convert products (snacks) to format expected by CheckIn component
+        const formattedSnacks = products.map(product => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          description: product.description,
+          emoji: product.category === 'food' ? '🍎' : product.category === 'beverage' ? '🥤' : '🛍️',
+        }));
+
+        setAvailablePasses(formattedPasses);
+        setAvailableParties(formattedParties);
+        setAvailableSnacks(formattedSnacks);
+
+        // Initialize quantities for all products at 0
+        const initialQuantities: Record<string, number> = {};
+        [...formattedPasses, ...formattedParties, ...formattedSnacks].forEach(product => {
+          initialQuantities[product.id] = 0;
+        });
+        setQuantities(initialQuantities);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        // Set empty arrays on error so UI doesn't break
+        setAvailablePasses([]);
+        setAvailableParties([]);
+        setAvailableSnacks([]);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+
+    // Reload when localStorage changes (e.g., admin updates products)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.includes('busybees_passes') || e.key?.includes('busybees_parties') || e.key?.includes('busybees_products')) {
+        loadProducts();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Helper function to get child name by ID
   const getChildName = (childId: string, customer: Customer): string => {
@@ -290,14 +383,14 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const increaseQuantity = (productId: string) => {
     setQuantities(prev => ({
       ...prev,
-      [productId]: Math.min(prev[productId] + 1, 10) // Max 10 items
+      [productId]: Math.min((prev[productId] || 0) + 1, 10) // Max 10 items, default to 0 if undefined
     }));
   };
 
   const decreaseQuantity = (productId: string) => {
     setQuantities(prev => ({
       ...prev,
-      [productId]: Math.max(prev[productId] - 1, 1) // Min 1 item
+      [productId]: Math.max((prev[productId] || 0) - 1, 0) // Min 0 items, default to 0 if undefined
     }));
   };
 
@@ -316,16 +409,19 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
   // Get pricing breakdown for display
   const getPricingBreakdown = (basePrice: number, quantity: number) => {
-    if (quantity === 1) {
+    // Handle 0 or undefined quantities
+    const validQuantity = quantity || 0;
+
+    if (validQuantity <= 1) {
       return {
-        total: basePrice,
-        breakdown: `$${basePrice.toFixed(2)}`,
+        total: basePrice * validQuantity,
+        breakdown: `$${(basePrice * validQuantity).toFixed(2)}`,
         savings: 0
       };
     }
 
-    const regularTotal = basePrice * quantity;
-    const discountedTotal = calculateDiscountedTotal(basePrice, quantity);
+    const regularTotal = basePrice * validQuantity;
+    const discountedTotal = calculateDiscountedTotal(basePrice, validQuantity);
     const savings = regularTotal - discountedTotal;
     const discountedPrice = basePrice * 0.5;
 
@@ -365,92 +461,48 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     };
   }, [confirmTimeout, checkInTimeout]);
 
-  // Available products for quick purchase (passes only)
-  const AVAILABLE_PASS_PRODUCTS = [
-    {
-      id: 'day_pass',
-      name: 'Single Day Pass',
-      price: 0,
-      description: '1 day of unlimited play - Coming Soon',
-      sessions: 1,
-      validity: '1 day'
-    },
-    {
-      id: 'weekly_pass',
-      name: 'Weekly Unlimited Pass',
-      price: 0,
-      description: '7 days of unlimited play - Coming Soon',
-      sessions: 999,
-      validity: '7 days'
-    },
-    {
-      id: 'monthly_pass',
-      name: 'Monthly Unlimited Pass',
-      price: 0,
-      description: '30 days of unlimited play - Coming Soon',
-      sessions: 999,
-      validity: '30 days'
-    }
-  ];
+  // Filter and sort passes based on selected filter
+  const getFilteredPasses = () => {
+    let filtered = [...availablePasses];
 
-  // Available party packages
-  const AVAILABLE_PARTY_PRODUCTS = [
-    {
-      id: 'semi_private_party',
-      name: 'Semi-Private Party Package',
-      price: 0,
-      description: 'Exclusive party room, shared play area (2 hours) - Coming Soon',
-      sessions: 1,
-      validity: '30 days to book'
-    },
-    {
-      id: 'private_party',
-      name: 'Private Party Package',
-      price: 0,
-      description: 'Exclusive use of party room and play area (2 hours) - Coming Soon',
-      sessions: 1,
-      validity: '30 days to book'
+    // Apply filter
+    if (passFilter === 'infant') {
+      filtered = filtered.filter(pass =>
+        pass.name.toLowerCase().includes('infant')
+      );
+    } else if (passFilter === 'toddler') {
+      filtered = filtered.filter(pass =>
+        pass.name.toLowerCase().includes('toddler')
+      );
     }
-  ];
 
-  // Available snacks and drinks
-  const AVAILABLE_SNACKS = [
-    {
-      id: 'apple_sauce_pouches',
-      name: 'Apple Sauce Pouches',
-      price: 5.00,
-      description: 'Delicious apple sauce in convenient pouches',
-      emoji: '🍎'
-    },
-    {
-      id: 'veggie_sticks',
-      name: 'Veggie Sticks',
-      price: 5.00,
-      description: 'Fresh and crunchy veggie sticks',
-      emoji: '🥕'
-    },
-    {
-      id: 'pirates_booty',
-      name: 'Pirates Booty',
-      price: 5.00,
-      description: 'Puffed rice and corn snacks',
-      emoji: '🏴‍☠️'
-    },
-    {
-      id: 'goldfish',
-      name: 'Goldfish',
-      price: 5.00,
-      description: 'Classic cheesy goldfish crackers',
-      emoji: '🐠'
-    },
-    {
-      id: 'granola_bars',
-      name: 'Granola Bars',
-      price: 5.00,
-      description: 'Wholesome granola bars',
-      emoji: '🌾'
+    // Sort by price (lowest to highest)
+    return filtered.sort((a, b) => a.price - b.price);
+  };
+
+  // Filter and sort parties based on selected filter
+  const getFilteredParties = () => {
+    let filtered = [...availableParties];
+
+    // Apply filter
+    if (partyFilter === 'semi-private') {
+      filtered = filtered.filter(party =>
+        party.name.toLowerCase().includes('semi-private')
+      );
+    } else if (partyFilter === 'private') {
+      filtered = filtered.filter(party =>
+        party.name.toLowerCase().includes('private') && !party.name.toLowerCase().includes('semi')
+      );
     }
-  ];
+
+    // Sort by price (lowest to highest)
+    return filtered.sort((a, b) => a.price - b.price);
+  };
+
+  // Use filtered and sorted data
+  const AVAILABLE_PASS_PRODUCTS = getFilteredPasses();
+  const AVAILABLE_PARTY_PRODUCTS = getFilteredParties();
+  const AVAILABLE_SNACKS = [...availableSnacks].sort((a, b) => a.price - b.price); // Sort snacks by price too
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');
@@ -1815,6 +1867,40 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               <div>
                 <h3 className="text-2xl font-bold mb-6">🛒 Purchase New Passes</h3>
 
+                {/* Pass Filter Tabs */}
+                <div className="flex space-x-2 mb-4">
+                  <button
+                    onClick={() => setPassFilter('all')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      passFilter === 'all'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    All ({availablePasses.length})
+                  </button>
+                  <button
+                    onClick={() => setPassFilter('infant')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      passFilter === 'infant'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Infant ({availablePasses.filter(p => p.name.toLowerCase().includes('infant')).length})
+                  </button>
+                  <button
+                    onClick={() => setPassFilter('toddler')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      passFilter === 'toddler'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Toddler ({availablePasses.filter(p => p.name.toLowerCase().includes('toddler')).length})
+                  </button>
+                </div>
+
                 {/* Child Selection Required */}
                 {displayCustomer.children.length === 0 && (
                   <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
@@ -1843,10 +1929,10 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             {product.id === 'day_pass' ? '🎫' : product.id === 'weekly_pass' ? '📅' : '🗓️'} {product.name}
                           </span>
                           <p className="text-sm text-gray-600">{product.description}</p>
-                          <p className="text-lg font-bold text-gray-900 mt-1">
+                          <div className="text-lg font-bold text-gray-900 mt-1">
                             ${product.price.toFixed(2)} each
-                            {quantities[product.id] > 1 && (() => {
-                              const pricing = getPricingBreakdown(product.price, quantities[product.id]);
+                            {(quantities[product.id] || 0) > 1 && (() => {
+                              const pricing = getPricingBreakdown(product.price, quantities[product.id] || 0);
                               return (
                                 <div className="mt-1">
                                   <div className="text-green-600 text-base">
@@ -1868,25 +1954,25 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                                 </div>
                               );
                             })()}
-                          </p>
+                          </div>
                         </div>
 
                         {/* Quantity Controls */}
                         <div className="flex items-center space-x-3 mr-4">
                           <button
                             onClick={() => decreaseQuantity(product.id)}
-                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
-                            disabled={quantities[product.id] <= 1}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(quantities[product.id] || 0) <= 0}
                           >
                             −
                           </button>
                           <span className="w-8 text-center font-semibold text-lg">
-                            {quantities[product.id]}
+                            {quantities[product.id] || 0}
                           </span>
                           <button
                             onClick={() => increaseQuantity(product.id)}
-                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
-                            disabled={quantities[product.id] >= 10}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(quantities[product.id] || 0) >= 10}
                           >
                             +
                           </button>
@@ -1920,7 +2006,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             }
                           }}
                           size="lg"
-                          disabled={purchasingProduct === product.id}
+                          disabled={purchasingProduct === product.id || (quantities[product.id] || 0) <= 0}
                           className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
                             (() => {
                               const customer = selectedCustomer || currentCustomer;
@@ -2105,6 +2191,41 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
               {/* Quick Purchase Party Packages - Always Visible */}
               <div>
                 <h3 className="text-2xl font-bold mb-6">🛒 Purchase Party Packages</h3>
+
+                {/* Party Filter Tabs */}
+                <div className="flex space-x-2 mb-4">
+                  <button
+                    onClick={() => setPartyFilter('all')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      partyFilter === 'all'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    All ({availableParties.length})
+                  </button>
+                  <button
+                    onClick={() => setPartyFilter('semi-private')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      partyFilter === 'semi-private'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Semi-Private ({availableParties.filter(p => p.name.toLowerCase().includes('semi-private')).length})
+                  </button>
+                  <button
+                    onClick={() => setPartyFilter('private')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      partyFilter === 'private'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Private ({availableParties.filter(p => p.name.toLowerCase().includes('private') && !p.name.toLowerCase().includes('semi')).length})
+                  </button>
+                </div>
+
                 <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
                   <div className="grid gap-4 text-left">
                     {AVAILABLE_PARTY_PRODUCTS.map((product) => (
@@ -2159,7 +2280,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                               ? 'Processing...'
                               : confirmingProduct === product.id
                               ? '✓ Confirm Purchase'
-                              : 'Buy Now';
+                              : 'Book Party';
                           })()}
                         </Button>
                       </div>
@@ -2224,18 +2345,18 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                         <div className="flex items-center space-x-3 mr-4">
                           <button
                             onClick={() => decreaseQuantity(snack.id)}
-                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
-                            disabled={quantities[snack.id] <= 1}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(quantities[snack.id] || 0) <= 0}
                           >
                             −
                           </button>
                           <span className="w-8 text-center font-semibold text-lg">
-                            {quantities[snack.id]}
+                            {quantities[snack.id] || 0}
                           </span>
                           <button
                             onClick={() => increaseQuantity(snack.id)}
-                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
-                            disabled={quantities[snack.id] >= 10}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={(quantities[snack.id] || 0) >= 10}
                           >
                             +
                           </button>
@@ -2257,7 +2378,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
                             }
                           }}
                           size="lg"
-                          disabled={purchasingProduct === snack.id}
+                          disabled={purchasingProduct === snack.id || (quantities[snack.id] || 0) <= 0}
                           className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${
                             (() => {
                               const customer = selectedCustomer || currentCustomer;
