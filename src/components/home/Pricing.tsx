@@ -104,7 +104,7 @@ export function Pricing() {
     <section className="relative py-20 bg-neutral-50 overflow-hidden">
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
-        {/* General Admission */}
+        {/* Header */}
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
@@ -120,18 +120,61 @@ export function Pricing() {
           </p>
         </motion.div>
 
+        {/* General Admission */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-12"
         >
-          {pricingPlans.map((plan, index) => {
-            const Icon = plan.icon
-            return (
-              <motion.div key={index} variants={fadeInUp}>
-                <Card className={`h-full relative flex flex-col ${plan.popular ? 'ring-2 ring-primary-500 shadow-large' : ''}`}>
+          <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">General Admission</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {pricingPlans.slice(0, 2).map((plan, index) => {
+              const Icon = plan.icon
+              return (
+                <Card key={index} className="h-full relative flex flex-col">
+                  <CardHeader className="text-center pb-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-6 h-6 text-primary-600" />
+                    </div>
+                    <CardTitle className="text-lg">{plan.name}</CardTitle>
+                    <div className="mt-4">
+                      <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
+                    </div>
+                    <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
+                  </CardHeader>
+                  <CardContent className="pt-0 flex-1 flex flex-col">
+                    <ul className="space-y-2 mb-6 flex-1">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-neutral-600 text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button className="w-full mt-auto" variant="outline" size="sm">{plan.cta}</Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </motion.div>
+
+        {/* Monthly Memberships */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-12"
+        >
+          <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">Monthly Memberships</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {pricingPlans.slice(2, 4).map((plan, index) => {
+              const Icon = plan.icon
+              return (
+                <Card key={index} className={`h-full relative flex flex-col ${plan.popular ? 'ring-2 ring-primary-500 shadow-large' : ''}`}>
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <div className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
@@ -146,13 +189,50 @@ export function Pricing() {
                     </div>
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
-                      <div className="text-4xl font-bold text-primary-600">
-                        ${plan.price}
-                      </div>
+                      <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
+                    </div>
+                    <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
+                  </CardHeader>
+                  <CardContent className="pt-0 flex-1 flex flex-col">
+                    <ul className="space-y-2 mb-6 flex-1">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-neutral-600 text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button className="w-full mt-auto" variant={plan.popular ? 'primary' : 'outline'} size="sm">{plan.cta}</Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </motion.div>
+
+        {/* Punch Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-12"
+        >
+          <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">10-Visit Punch Cards</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {pricingPlans.slice(4, 6).map((plan, index) => {
+              const Icon = plan.icon
+              return (
+                <Card key={index} className="h-full relative flex flex-col">
+                  <CardHeader className="text-center pb-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-6 h-6 text-primary-600" />
+                    </div>
+                    <CardTitle className="text-lg">{plan.name}</CardTitle>
+                    <div className="mt-4">
+                      <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
                       {plan.originalPrice && (
-                        <div className="text-sm text-neutral-500 line-through">
-                          ${plan.originalPrice}
-                        </div>
+                        <div className="text-sm text-neutral-500 line-through">${plan.originalPrice}</div>
                       )}
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
@@ -166,18 +246,12 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className="w-full mt-auto"
-                      variant={plan.popular ? 'primary' : 'outline'}
-                      size="sm"
-                    >
-                      {plan.cta}
-                    </Button>
+                    <Button className="w-full mt-auto" variant="outline" size="sm">{plan.cta}</Button>
                   </CardContent>
                 </Card>
-              </motion.div>
-            )
-          })}
+              )
+            })}
+          </div>
         </motion.div>
 
       </div>
