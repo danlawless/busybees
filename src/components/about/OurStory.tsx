@@ -8,7 +8,7 @@ export function OurStory() {
   return (
     <section className="relative py-20 sm:py-24 section-hexagon-dense hexagon-overlay overflow-hidden">
       <HoneycombPattern variant="dense" size="xl" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <motion.div
@@ -22,7 +22,7 @@ export function OurStory() {
             </h1>
           </motion.div>
         </div>
-        
+
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Story Content */}
           <motion.div
@@ -34,14 +34,14 @@ export function OurStory() {
             <div className="space-y-6">
               <h3 className="text-2xl font-bold text-charcoal-800 mb-4">Our Story</h3>
               <p className="text-lg text-charcoal-600 leading-relaxed">
-                Once upon a time, a husband and wife had a dream: to create an indoor play center 
-                for young children in or around their hometown. Inspired by the many play spaces 
-                they visited with their two young kids, they envisioned something uniquely their 
+                Once upon a time, a husband and wife had a dream: to create an indoor play center
+                for young children in or around their hometown. Inspired by the many play spaces
+                they visited with their two young kids, they envisioned something uniquely their
                 own—something that reflected their values and love for family fun.
               </p>
               <p className="text-lg text-charcoal-600 leading-relaxed">
-                What began as a simple idea soon grew into a heartfelt mission: to provide a safe, 
-                playful, and inviting space where children could explore, imagine, and make 
+                What began as a simple idea soon grew into a heartfelt mission: to provide a safe,
+                playful, and inviting space where children could explore, imagine, and make
                 memories—while their parents and guardians could relax, connect, and feel at home.
               </p>
               <p className="text-lg text-charcoal-600 leading-relaxed">
@@ -49,7 +49,7 @@ export function OurStory() {
               </p>
             </div>
           </motion.div>
-          
+
           {/* Family Image */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -60,14 +60,14 @@ export function OurStory() {
             <div className="relative">
               <div className="aspect-[4/3] rounded-3xl shadow-lg overflow-hidden">
                 <Image
-                  src="/images/family/busy-bees-family.png"
-                  alt="The Busy Bees Family"
+                  src="/images/founders-photo.jpg"
+                  alt="The Busy Bees Family - Founders"
                   fill
                   className="object-cover rounded-3xl"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
-              
+
               {/* Decorative elements */}
               <div className="absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br from-honey-300 to-honey-400 rounded-full opacity-20"></div>
               <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-gradient-to-br from-pastel-yellow to-honey-200 rounded-full opacity-30"></div>

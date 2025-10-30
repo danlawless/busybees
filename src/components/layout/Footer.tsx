@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, Mail, Phone, Instagram, Facebook } from 'lucide-react'
+import { MapPin, Clock, Mail, Instagram, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
@@ -17,9 +17,9 @@ const topNavigation = [
 
 const businessHours = [
   { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play' },
-  { label: 'Sat - Sun', time: '9:00 AM - 12:00 PM', type: 'Open Play' },
+  { label: 'Sat - Sun', time: '9:00 AM - 12:30 PM', type: 'Open Play' },
   { label: 'Sat - Sun', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
-  { label: 'Sat - Sun', time: '4:00 PM - 6:00 PM', type: 'Private Parties' },
+  { label: 'Sat - Sun', time: '3:30 PM - 5:30 PM', type: 'Private Parties' },
 ]
 
 export function Footer() {
@@ -86,9 +86,8 @@ export function Footer() {
                 <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-medium">Lunenburg Crossing</p>
-                  <p>301 Massachusetts Avenue Rt. 2A</p>
-                  <p>Unit 4A</p>
-                  <p>Lunenburg, MA 01462</p>
+                  <p>321 Massachusetts Avenue Rt. 2A</p>
+                  <p>Lunenburg, Massachusetts 01462</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -96,10 +95,6 @@ export function Footer() {
                 <a href="mailto:info@busybeesipc.com" className="hover:text-primary-600 transition-colors">
                   info@busybeesipc.com
                 </a>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <span>(978) 555-BEES</span>
               </div>
             </div>
           </div>
