@@ -60,7 +60,7 @@ export function OurStory() {
             <div className="relative">
               <div className="aspect-[4/3] rounded-3xl shadow-lg overflow-hidden">
                 <Image
-                  src="/images/founders-photo.jpg"
+                  src="/family/image000000.jpeg"
                   alt="The Busy Bees Family - Founders"
                   fill
                   className="object-cover rounded-3xl"
