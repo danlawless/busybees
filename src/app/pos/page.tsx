@@ -6,6 +6,20 @@ import { CustomerDashboard } from '@/components/pos/CustomerDashboard';
 import { CheckIn } from '@/components/pos/CheckIn';
 import { AdminPanel } from '../../components/pos/AdminPanel';
 import { PromoSpecial, getPromosFromStorage, savePromosToStorage } from '@/lib/utils/promoHelpers';
+import {
+  PassProduct,
+  PartyProduct,
+  FoodProduct,
+  VolumeDiscount,
+  getPassesFromStorage,
+  savePassesToStorage,
+  getPartiesFromStorage,
+  savePartiesToStorage,
+  getProductsFromStorage,
+  saveProductsToStorage,
+  getVolumeDiscountsFromStorage,
+  saveVolumeDiscountsToStorage,
+} from '@/lib/utils/productHelpers';
 
 interface Customer {
   id: string;
@@ -84,6 +98,12 @@ export default function POSPage() {
   // Promo specials state
   const [promos, setPromos] = useState<PromoSpecial[]>([]);
 
+  // Product management state
+  const [passes, setPasses] = useState<PassProduct[]>([]);
+  const [parties, setParties] = useState<PartyProduct[]>([]);
+  const [products, setProducts] = useState<FoodProduct[]>([]);
+  const [volumeDiscounts, setVolumeDiscounts] = useState<VolumeDiscount[]>([]);
+
   // Initialize promos from localStorage or seed initial data
   useEffect(() => {
     const storedPromos = getPromosFromStorage();
@@ -96,7 +116,7 @@ export default function POSPage() {
           id: 'promo-1',
           name: 'Early Early Bird!',
           startDate: '2025-10-01',
-          endDate: '2025-11-30',
+          endDate: '2025-11-21',
           discountPercent: 25,
           description: 'Coming soon! Bee one of the first!',
           stripeCouponCode: 'EARLYEARLY25',
@@ -107,7 +127,7 @@ export default function POSPage() {
         {
           id: 'promo-2',
           name: 'Black Friday!',
-          startDate: '2025-10-21',
+          startDate: '2025-11-21',
           endDate: '2025-11-30',
           discountPercent: 40,
           description: 'Black Friday Deal! (Thanksgiving)',
@@ -120,7 +140,7 @@ export default function POSPage() {
           id: 'promo-3',
           name: 'Early Bird!',
           startDate: '2025-11-30',
-          endDate: '2025-12-31',
+          endDate: '2025-12-20',
           discountPercent: 20,
           description: 'Be an early bird member!',
           stripeCouponCode: 'EARLYBIRD20',
@@ -176,6 +196,409 @@ export default function POSPage() {
       savePromosToStorage(promos);
     }
   }, [promos]);
+
+  // Initialize passes from localStorage or seed initial data
+  useEffect(() => {
+    const storedPasses = getPassesFromStorage();
+    if (storedPasses.length > 0) {
+      setPasses(storedPasses);
+    } else {
+      // Seed initial passes with real pricing
+      const initialPasses: PassProduct[] = [
+        {
+          id: 'pass-1',
+          name: 'Daily Pass (Toddler)',
+          category: 'day',
+          price: 17.00,
+          duration: 8, // 8 hours
+          sessionsIncluded: 1,
+          description: 'Full day of play for toddlers! Valid for one entry, expires at closing time.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'pass-2',
+          name: 'Daily Pass (Infant)',
+          category: 'day',
+          price: 7.00,
+          duration: 8, // 8 hours
+          sessionsIncluded: 1,
+          description: 'Full day of play for infants! Valid for one entry, expires at closing time.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'pass-3',
+          name: 'Monthly (Toddler)',
+          category: 'monthly',
+          price: 100.00,
+          duration: 30, // 30 days
+          sessionsIncluded: 999, // unlimited
+          description: 'One month of unlimited play for toddlers! Best value for regular visitors.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'pass-4',
+          name: 'Monthly (Infant)',
+          category: 'monthly',
+          price: 70.00,
+          duration: 30, // 30 days
+          sessionsIncluded: 999, // unlimited
+          description: 'One month of unlimited play for infants! Best value for regular visitors.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'pass-5',
+          name: '10 Visit (Toddler)',
+          category: 'weekly',
+          price: 150.00,
+          duration: 90, // 90 days to use
+          sessionsIncluded: 10,
+          description: '10 visits for toddlers! Use within 90 days of first visit.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'pass-6',
+          name: '10 Visit (Infant)',
+          category: 'weekly',
+          price: 50.00,
+          duration: 90, // 90 days to use
+          sessionsIncluded: 10,
+          description: '10 visits for infants! Use within 90 days of first visit.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      setPasses(initialPasses);
+      savePassesToStorage(initialPasses);
+    }
+  }, []);
+
+  // Initialize parties from localStorage or seed initial data
+  useEffect(() => {
+    const storedParties = getPartiesFromStorage();
+    if (storedParties.length > 0) {
+      setParties(storedParties);
+    } else {
+      // Seed initial party packages with real pricing
+      const initialParties: PartyProduct[] = [
+        {
+          id: 'party-1',
+          name: 'Queen Bee (Private)',
+          basePrice: 575.00,
+          capacity: 20,
+          duration: 2,
+          includedItems: [
+            'Private party room',
+            'Premium decorations',
+            'Plates, cups, napkins',
+            'Dedicated party host',
+            'Setup & cleanup',
+            'Party favors for all kids',
+            'Digital photo package',
+          ],
+          addOns: [
+            { id: 'addon-1', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-2', name: 'Additional child (over 20)', price: 15, description: 'Per extra child' },
+            { id: 'addon-3', name: 'Pizza party pack', price: 75, description: '4 large pizzas' },
+            { id: 'addon-4', name: 'Face painting', price: 100, description: 'Professional face painter' },
+          ],
+          description: 'Our premium private party package! Perfect for up to 20 kids with all the bells and whistles.',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'party-2',
+          name: 'Worker Bee (Private)',
+          basePrice: 525.00,
+          capacity: 15,
+          duration: 2,
+          includedItems: [
+            'Private party room',
+            'Standard decorations',
+            'Plates, cups, napkins',
+            'Party host',
+            'Setup & cleanup',
+            'Party favors for all kids',
+          ],
+          addOns: [
+            { id: 'addon-5', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-6', name: 'Additional child (over 15)', price: 15, description: 'Per extra child' },
+            { id: 'addon-7', name: 'Pizza party pack', price: 65, description: '3 large pizzas' },
+            { id: 'addon-8', name: 'Face painting', price: 100, description: 'Professional face painter' },
+          ],
+          description: 'Great private party option for up to 15 kids with party favors included!',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'party-3',
+          name: 'Basic Bee (Private)',
+          basePrice: 475.00,
+          capacity: 12,
+          duration: 2,
+          includedItems: [
+            'Private party room',
+            'Basic decorations',
+            'Plates, cups, napkins',
+            'Party host',
+            'Setup & cleanup',
+          ],
+          addOns: [
+            { id: 'addon-9', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-10', name: 'Additional child (over 12)', price: 15, description: 'Per extra child' },
+            { id: 'addon-11', name: 'Pizza party pack', price: 55, description: '2 large pizzas' },
+            { id: 'addon-12', name: 'Party favors', price: 50, description: 'Favors for all kids' },
+          ],
+          description: 'Perfect private party starter package for up to 12 kids!',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'party-4',
+          name: 'Queen Bee (Semi-Private)',
+          basePrice: 500.00,
+          capacity: 20,
+          duration: 2,
+          includedItems: [
+            'Semi-private party area',
+            'Premium decorations',
+            'Plates, cups, napkins',
+            'Party host',
+            'Setup & cleanup',
+            'Party favors for all kids',
+          ],
+          addOns: [
+            { id: 'addon-13', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-14', name: 'Additional child (over 20)', price: 15, description: 'Per extra child' },
+            { id: 'addon-15', name: 'Pizza party pack', price: 75, description: '4 large pizzas' },
+            { id: 'addon-16', name: 'Face painting', price: 100, description: 'Professional face painter' },
+          ],
+          description: 'Premium semi-private party for up to 20 kids with all the extras!',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'party-5',
+          name: 'Worker Bee (Semi-Private)',
+          basePrice: 450.00,
+          capacity: 15,
+          duration: 2,
+          includedItems: [
+            'Semi-private party area',
+            'Standard decorations',
+            'Plates, cups, napkins',
+            'Party host',
+            'Setup & cleanup',
+          ],
+          addOns: [
+            { id: 'addon-17', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-18', name: 'Additional child (over 15)', price: 15, description: 'Per extra child' },
+            { id: 'addon-19', name: 'Pizza party pack', price: 65, description: '3 large pizzas' },
+            { id: 'addon-20', name: 'Party favors', price: 50, description: 'Favors for all kids' },
+          ],
+          description: 'Great semi-private party option for up to 15 kids!',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'party-6',
+          name: 'Basic Bee (Semi-Private)',
+          basePrice: 400.00,
+          capacity: 12,
+          duration: 2,
+          includedItems: [
+            'Semi-private party area',
+            'Basic decorations',
+            'Plates, cups, napkins',
+            'Party host',
+            'Setup & cleanup',
+          ],
+          addOns: [
+            { id: 'addon-21', name: 'Extra 30 minutes', price: 50, description: 'Extend party time' },
+            { id: 'addon-22', name: 'Additional child (over 12)', price: 15, description: 'Per extra child' },
+            { id: 'addon-23', name: 'Pizza party pack', price: 55, description: '2 large pizzas' },
+            { id: 'addon-24', name: 'Party favors', price: 50, description: 'Favors for all kids' },
+          ],
+          description: 'Perfect semi-private party starter package for up to 12 kids!',
+          stripePurchaseLink: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      setParties(initialParties);
+      savePartiesToStorage(initialParties);
+    }
+  }, []);
+
+  // Initialize products from localStorage or seed initial data
+  useEffect(() => {
+    const storedProducts = getProductsFromStorage();
+    if (storedProducts.length > 0) {
+      setProducts(storedProducts);
+    } else {
+      // Seed initial food/beverage products
+      const initialProducts: FoodProduct[] = [
+        {
+          id: 'product-1',
+          name: 'Cheese Pizza (Large)',
+          category: 'food',
+          price: 12.99,
+          description: 'Large cheese pizza, 8 slices',
+          allergens: ['gluten', 'dairy'],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'product-2',
+          name: 'Pepperoni Pizza (Large)',
+          category: 'food',
+          price: 14.99,
+          description: 'Large pepperoni pizza, 8 slices',
+          allergens: ['gluten', 'dairy'],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'product-3',
+          name: 'Juice Box (Apple)',
+          category: 'beverage',
+          price: 2.50,
+          description: 'Individual apple juice box',
+          allergens: [],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'product-4',
+          name: 'Bottled Water',
+          category: 'beverage',
+          price: 1.50,
+          description: '16oz bottled water',
+          allergens: [],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'product-5',
+          name: 'Birthday Cake',
+          category: 'food',
+          price: 25.00,
+          description: 'Custom birthday cake (serves 12)',
+          allergens: ['gluten', 'dairy', 'eggs'],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'product-6',
+          name: 'Busy Bees T-Shirt',
+          category: 'retail',
+          price: 18.99,
+          description: 'Official Busy Bees branded t-shirt',
+          allergens: [],
+          stripePurchaseLink: '',
+          isActive: true,
+          available: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      setProducts(initialProducts);
+      saveProductsToStorage(initialProducts);
+    }
+  }, []);
+
+  // Initialize volume discounts from localStorage or seed initial data
+  useEffect(() => {
+    const storedDiscounts = getVolumeDiscountsFromStorage();
+    if (storedDiscounts.length > 0) {
+      setVolumeDiscounts(storedDiscounts);
+    } else {
+      // Seed initial volume discounts
+      const initialDiscounts: VolumeDiscount[] = [
+        {
+          id: 'discount-1',
+          productId: 'pass-1', // Day pass
+          productType: 'pass',
+          minQuantity: 10,
+          discountPercent: 15,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      setVolumeDiscounts(initialDiscounts);
+      saveVolumeDiscountsToStorage(initialDiscounts);
+    }
+  }, []);
+
+  // Save passes to localStorage whenever they change
+  useEffect(() => {
+    if (passes.length > 0) {
+      savePassesToStorage(passes);
+    }
+  }, [passes]);
+
+  // Save parties to localStorage whenever they change
+  useEffect(() => {
+    if (parties.length > 0) {
+      savePartiesToStorage(parties);
+    }
+  }, [parties]);
+
+  // Save products to localStorage whenever they change
+  useEffect(() => {
+    if (products.length > 0) {
+      saveProductsToStorage(products);
+    }
+  }, [products]);
+
+  // Save volume discounts to localStorage whenever they change
+  useEffect(() => {
+    if (volumeDiscounts.length > 0) {
+      saveVolumeDiscountsToStorage(volumeDiscounts);
+    }
+  }, [volumeDiscounts]);
 
   // Mock data - in production, this would come from your backend
   const [customers, setCustomers] = useState<Customer[]>([
@@ -734,6 +1157,14 @@ export default function POSPage() {
               onUpdateCustomers={setCustomers}
               promos={promos}
               onUpdatePromos={setPromos}
+              passes={passes}
+              onUpdatePasses={setPasses}
+              parties={parties}
+              onUpdateParties={setParties}
+              products={products}
+              onUpdateProducts={setProducts}
+              volumeDiscounts={volumeDiscounts}
+              onUpdateVolumeDiscounts={setVolumeDiscounts}
             />
           )}
         </div>
