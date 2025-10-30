@@ -1,19 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
-import { MapPin, Clock, Mail, Instagram, Facebook } from 'lucide-react'
+import { MapPin, Mail, Instagram, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
-
-const topNavigation = [
-  { name: 'About', href: '/about' },
-  { name: 'Classes', href: '/classes' },
-  { name: 'Info', href: '/info' },
-  { name: 'Parties', href: '/parties' },
-  { name: 'Contact', href: '/contact' },
-  { name: 'Jobs', href: '/jobs' },
-]
 
 const businessHours = [
   { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play' },
@@ -59,21 +49,6 @@ export function Footer() {
       <HoneycombPattern variant="light" size="lg" />
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Top Navigation */}
-        <div className="mb-8">
-          <nav className="flex flex-wrap justify-center gap-6 text-sm">
-            {topNavigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-charcoal-600 hover:text-primary-600 uppercase tracking-wider font-medium transition-colors duration-200"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           {/* Find Us At */}
