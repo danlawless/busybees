@@ -13,20 +13,20 @@ const quickInfo = [
   {
     icon: Clock,
     title: 'Hours',
-    content: 'Mon-Fri: 10AM-4PM\nSat-Sun: 1PM-6PM',
-    subtext: 'Private Bookings Only (Weekends)'
+    content: 'Mon-Fri: 9:00 AM - 5:00 PM\nSat-Sun: 9:00 AM - 12:30 PM (Open Play)\nSat-Sun: 1:00 PM - 3:00 PM & 3:30 PM - 5:30 PM (Private Parties)',
+    subtext: ''
   },
   {
     icon: MapPin,
     title: 'Location',
-    content: 'Coming Soon',
+    content: '321 Massachusetts Avenue Rt. 2A\nUnit 4A\nLunenburg, Massachusetts 01462',
     subtext: ''
   },
   {
     icon: Phone,
     title: 'Contact',
-    content: 'Coming Soon',
-    subtext: 'Call for parties & info'
+    content: 'info@busybeesipc.com',
+    subtext: 'Email for parties & info'
   }
 ]
 

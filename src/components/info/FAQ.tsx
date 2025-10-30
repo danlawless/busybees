@@ -50,7 +50,7 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We offer three party packages (Basic Bee, Worker Bee, and Queen Bee) in both Private and Semi-Private options. Private packages ($475-$575) include exclusive use of the party room and play area, while Semi-Private packages ($400-$500) include an exclusive party room with shared play area.'
+        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We offer three party packages (Basic Birthday Bash, Super Fun Party, and Ultimate Celebration) in both Private and Semi-Private options. Semi-Private packages ($250-$450) include an exclusive party room with shared play area. Private packages ($350-$550) include exclusive use of the entire facility.'
       },
       {
         question: 'What\'s included in party packages?',
@@ -70,12 +70,16 @@ const faqs = [
     category: 'Memberships & Visits',
     questions: [
       {
+        question: 'How much is general admission?',
+        answer: 'General admission is $17 per child ages 2+, and $7 for infants under 2 years old. Infants are FREE with a paid sibling admission! This gives you all-day access to our play areas with no time limits.'
+      },
+      {
         question: 'How does the monthly membership work?',
-        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $100 for the first child, with discounts for additional children (10% off second child, 20% off third child). Infant membership (under 2) is $70. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 6 visits!'
+        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $100 for the first child, with discounts for additional children (10% off second child at $90, 20% off third child at $80). Infant membership (under 2) is $70. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 6 visits!'
       },
       {
         question: 'Do punch cards expire?',
-        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $150 (saving $20 at $15/visit) and infant punch cards are $50 (saving $20 at $5/visit).'
+        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $150 (10 visits at $15 each, saving $20) and infant punch cards are $50 (10 visits at $5 each, saving $20).'
       },
       {
         question: 'What if the weather is bad?',
