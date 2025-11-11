@@ -107,18 +107,18 @@ export default function POSPage() {
   // Initialize promos from localStorage or seed initial data
   useEffect(() => {
     // Check if we need to force-update promos (version check)
-    const PROMO_VERSION = 'v2_nov2025'; // Update this to force reload of new promo codes
+    const PROMO_VERSION = 'v3_nov11_2025'; // Update this to force reload of new promo codes
     const currentVersion = localStorage.getItem('busybees_promo_version');
-    
+
     let storedPromos = getPromosFromStorage();
-    
+
     // If version mismatch or no version, clear old promos and reseed
     if (currentVersion !== PROMO_VERSION || storedPromos.length === 0) {
       localStorage.removeItem('busybees_promos');
       localStorage.setItem('busybees_promo_version', PROMO_VERSION);
       storedPromos = [];
     }
-    
+
     if (storedPromos.length > 0) {
       setPromos(storedPromos);
     } else {
@@ -126,9 +126,9 @@ export default function POSPage() {
       const initialPromos: PromoSpecial[] = [
         {
           id: 'promo-1',
-          name: 'Early Bird!',
+          name: 'Early Bee!',
           startDate: '2025-10-01',
-          endDate: '2025-11-30',
+          endDate: '2025-11-20',
           discountPercent: 20,
           description: 'Coming soon!  Bee one of the first!',
           stripeCouponCode: 'EARLYBEE20',
