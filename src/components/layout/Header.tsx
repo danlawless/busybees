@@ -33,7 +33,7 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY
-      setIsScrolled(scrollPosition > 50)
+      setIsScrolled(scrollPosition > 100)
     }
 
     window.addEventListener('scroll', handleScroll)
@@ -48,120 +48,106 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
       )}
 
       {/* Condensed Header (shown when scrolled) */}
-      <motion.div
-        initial={false}
-        animate={{
-          height: isScrolled ? 'auto' : 0,
-          opacity: isScrolled ? 1 : 0,
-        }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="overflow-hidden bg-white/95 backdrop-blur-sm border-b border-neutral-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Desktop Condensed Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-8 py-3">
-            <Link href="/" className="flex-shrink-0">
-              <Logo size="md" animate={false} showText={false} />
-            </Link>
-            <div className="flex items-center justify-center gap-4 flex-1">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "font-medium text-sm tracking-wide uppercase py-2 px-3 rounded-md transition-all duration-200",
-                      isActive
-                        ? "text-gray-900 shadow-md border border-yellow-400"
-                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
-                    )}
-                    style={isActive ? { backgroundColor: '#fde047' } : {}}
-                  >
-                    {item.name}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Mobile menu button (condensed) */}
-          <div className="md:hidden flex items-center justify-between py-3">
-            <Link href="/" className="flex-shrink-0">
-              <Logo size="sm" animate={false} showText={false} />
-            </Link>
-            <button
-              type="button"
-              className="rounded-md p-2 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5" aria-hidden="true" />
-              <span className="ml-2 text-xs font-medium">MENU</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Full Header (shown when not scrolled) */}
-      <motion.div
-        initial={false}
-        animate={{
-          height: isScrolled ? 0 : 'auto',
-          opacity: isScrolled ? 0 : 1,
-        }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="overflow-hidden"
-      >
-        {/* Logo Section */}
-        <div className="bg-white/95 backdrop-blur-sm border-b border-white">
+      {isScrolled ? (
+        <div className="bg-white/95 backdrop-blur-sm border-b border-neutral-200 shadow-md">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center py-2">
-              <Link href="/" className="flex items-center">
-                <Logo size="2xl" animate={true} showText={false} />
+            {/* Desktop Condensed Navigation */}
+            <div className="hidden md:flex md:items-center md:gap-8 py-3">
+              <Link href="/" className="flex-shrink-0">
+                <Logo size="md" animate={false} showText={false} />
               </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Section */}
-        <nav className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex md:items-center md:justify-between md:px-8 lg:px-16 xl:px-24">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "font-medium text-lg tracking-wide uppercase flex-1 text-center py-2 px-2 rounded-md transition-all duration-200",
-                      isActive
-                        ? "text-gray-900 shadow-md border border-yellow-400"
-                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
-                    )}
-                    style={isActive ? { backgroundColor: '#fde047' } : {}}
-                  >
-                    {item.name}
-                  </Link>
-                )
-              })}
+              <div className="flex items-center justify-center gap-4 flex-1">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "font-medium text-sm tracking-wide uppercase py-2 px-3 rounded-md transition-all duration-200",
+                        isActive
+                          ? "text-gray-900 shadow-md border border-yellow-400"
+                          : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                      )}
+                      style={isActive ? { backgroundColor: '#fde047' } : {}}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex justify-center">
+            {/* Mobile menu button (condensed) */}
+            <div className="md:hidden flex items-center justify-between py-3">
+              <Link href="/" className="flex-shrink-0">
+                <Logo size="sm" animate={false} showText={false} />
+              </Link>
               <button
                 type="button"
-                className="rounded-md p-3 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
+                className="rounded-md p-2 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
                 onClick={() => setMobileMenuOpen(true)}
               >
-                <Menu className="h-6 w-6" aria-hidden="true" />
-                <span className="ml-2 text-sm font-medium">MENU</span>
+                <Menu className="h-5 w-5" aria-hidden="true" />
+                <span className="ml-2 text-xs font-medium">MENU</span>
               </button>
             </div>
           </div>
-        </nav>
-      </motion.div>
+        </div>
+      ) : (
+        /* Full Header (shown when not scrolled) */
+        <>
+          {/* Logo Section */}
+          <div className="bg-white/95 backdrop-blur-sm border-b border-white">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-center py-2">
+                <Link href="/" className="flex items-center">
+                  <Logo size="2xl" animate={true} showText={false} />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Section */}
+          <nav className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex md:items-center md:justify-between md:px-8 lg:px-16 xl:px-24">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        "font-medium text-lg tracking-wide uppercase flex-1 text-center py-2 px-2 rounded-md transition-all duration-200",
+                        isActive
+                          ? "text-gray-900 shadow-md border border-yellow-400"
+                          : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                      )}
+                      style={isActive ? { backgroundColor: '#fde047' } : {}}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </div>
+
+              {/* Mobile menu button */}
+              <div className="md:hidden flex justify-center">
+                <button
+                  type="button"
+                  className="rounded-md p-3 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <Menu className="h-6 w-6" aria-hidden="true" />
+                  <span className="ml-2 text-sm font-medium">MENU</span>
+                </button>
+              </div>
+            </div>
+          </nav>
+        </>
+      )}
 
       {/* Mobile menu */}
       <AnimatePresence>
