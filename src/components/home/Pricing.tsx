@@ -1,11 +1,12 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Star, Users, Ticket } from 'lucide-react'
+import { Check, Star, Users, Ticket, Tag } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatPrice, fadeInUp, staggerContainer } from '@/lib/utils'
+import { PromoSpecial, getActivePromo, getPromosFromStorage } from '@/lib/utils/promoHelpers'
 
 const pricingPlans = [
   {
@@ -104,6 +105,14 @@ const pricingPlans = [
 
 
 export function Pricing() {
+  const [activePromo, setActivePromo] = useState<PromoSpecial | null>(null)
+
+  useEffect(() => {
+    const promos = getPromosFromStorage()
+    const active = getActivePromo(promos)
+    setActivePromo(active)
+  }, [])
+
   return (
     <section className="relative py-20 bg-neutral-50 overflow-hidden">
 
@@ -122,6 +131,17 @@ export function Pricing() {
           <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
             Choose the option that works best for your family
           </p>
+          {activePromo && (
+            <div className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-yellow-100 to-yellow-200 px-6 py-3 rounded-full border-2 border-yellow-400 shadow-lg">
+              <Tag className="w-5 h-5 text-yellow-700" />
+              <span className="font-bold text-yellow-900">
+                {activePromo.discountPercent}% OFF Monthly & 10-Visit Passes!
+              </span>
+              <span className="text-yellow-800">
+                Use code: <span className="font-mono font-bold">{activePromo.stripeCouponCode}</span>
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* General Admission */}
@@ -201,6 +221,11 @@ export function Pricing() {
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
                       <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
+                      {activePromo && (
+                        <div className="mt-2 text-sm text-green-600 font-semibold">
+                          Save {activePromo.discountPercent}% with code {activePromo.stripeCouponCode}
+                        </div>
+                      )}
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
                   </CardHeader>
@@ -213,6 +238,13 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
+                    {activePromo && (
+                      <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-center">
+                        <span className="text-xs text-yellow-800 font-medium">
+                          🎉 {activePromo.discountPercent}% OFF at checkout!
+                        </span>
+                      </div>
+                    )}
                     <Button 
                       className="w-full mt-auto" 
                       variant={plan.popular ? 'primary' : 'outline'} 
@@ -249,6 +281,11 @@ export function Pricing() {
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
                       <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
+                      {activePromo && (
+                        <div className="mt-2 text-sm text-green-600 font-semibold">
+                          Save {activePromo.discountPercent}% with code {activePromo.stripeCouponCode}
+                        </div>
+                      )}
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
                   </CardHeader>
@@ -261,6 +298,13 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
+                    {activePromo && (
+                      <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-center">
+                        <span className="text-xs text-yellow-800 font-medium">
+                          🎉 {activePromo.discountPercent}% OFF at checkout!
+                        </span>
+                      </div>
+                    )}
                     <Button 
                       className="w-full mt-auto" 
                       variant="outline" 
