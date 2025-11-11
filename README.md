@@ -73,7 +73,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Ages: 0-6 years with dedicated areas for different age groups
 - Location: 380-432 John Fitch Highway, Suite A-190 & A-200
 - Hours: Mon-Fri 10AM-5PM, Sat-Sun 9AM-12PM (Open Play)
-- Pricing: $15 daily admission, $75 monthly membership
+- Pricing: Daily passes starting at $7 (infant) and $17 (toddler), Monthly memberships from $80-$115
 - Features: 4,000+ sq ft, private party room, snack bar, ample parking
 
 ## 🛠️ Development
