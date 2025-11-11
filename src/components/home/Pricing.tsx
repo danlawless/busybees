@@ -38,7 +38,7 @@ const pricingPlans = [
   },
   {
     name: 'Monthly Membership (Infant)',
-    price: 70,
+    price: 80,
     description: 'Unlimited visits for your littlest one',
     features: [
       'Unlimited visits for 1 infant',
@@ -52,13 +52,13 @@ const pricingPlans = [
   },
   {
     name: 'Monthly Membership (Toddler)',
-    price: 100,
+    price: 115,
     description: 'Best value for regular families',
     features: [
       'Unlimited visits for 1 child (ages 2+)',
-      'Pays for itself after 6 visits!',
-      '10% off 2nd child ($90)',
-      '20% off 3rd child ($80)',
+      'Pays for itself after 7 visits!',
+      '10% off 2nd child ($103.50)',
+      '20% off 3rd child ($92)',
       'Member exclusive events'
     ],
     popular: true,
@@ -67,12 +67,12 @@ const pricingPlans = [
   },
   {
     name: '10-Visit Punch Card (Infant)',
-    price: 50,
+    price: 67.50,
     originalPrice: 70,
-    description: 'Save $20 with bulk visits',
+    description: 'Save with bulk visits',
     features: [
-      '10 visits at $5 each',
-      'Save $20 off regular price',
+      '10 visits at $6.75 each',
+      'Save $2.50 off regular price',
       'Never expires',
       'Transferable to family/friends'
     ],
@@ -82,12 +82,12 @@ const pricingPlans = [
   },
   {
     name: '10-Visit Punch Card (Toddler)',
-    price: 150,
+    price: 175,
     originalPrice: 170,
-    description: 'Save $20 with bulk visits',
+    description: 'Save with bulk visits',
     features: [
-      '10 visits at $15 each',
-      'Save $20 off regular price',
+      '10 visits at $17.50 each',
+      'Bulk purchase convenience',
       'Never expires',
       'Transferable to family/friends'
     ],

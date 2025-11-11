@@ -15,13 +15,13 @@ Last Updated: October 29, 2025
 | Daily Pass (Infant - under 2) | $7.00 |
 | Infant FREE with paid sibling | $0.00 |
 | **Monthly Membership** | |
-| Monthly (Toddler) 1st child | $100.00 |
-| Monthly (Toddler) 2nd child | $90.00 (10% off) |
-| Monthly (Toddler) 3rd child | $80.00 (20% off) |
-| Monthly (Infant) | $70.00 |
+| Monthly (Toddler) 1st child | $115.00 |
+| Monthly (Toddler) 2nd child | $103.50 (10% off) |
+| Monthly (Toddler) 3rd child | $92.00 (20% off) |
+| Monthly (Infant) | $80.00 |
 | **10 Visit Punch Card** | |
-| 10 Visit (Toddler) | $150.00 |
-| 10 Visit (Infant) | $50.00 |
+| 10 Visit (Toddler) | $175.00 |
+| 10 Visit (Infant) | $67.50 |
 | **Party Packages - Private** | |
 | Queen Bee (Private) | $575.00 |
 | Worker Bee (Private) | $525.00 |

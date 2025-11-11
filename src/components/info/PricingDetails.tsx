@@ -25,12 +25,12 @@ const admissionPricing = [
 
 const membershipOptions = [
   {
-    title: '10-Visit Punch Card',
-    price: 150,
+    title: '10-Visit Punch Card (Toddler)',
+    price: 175,
     originalPrice: 170,
-    description: 'Save $20 with bulk visits',
+    description: 'Bulk purchase convenience',
     features: [
-      '10 visits at $15 each (save $20)',
+      '10 visits at $17.50 each',
       'Never expires',
       'Transferable to family/friends',
       'All daily pass benefits'
@@ -38,18 +38,43 @@ const membershipOptions = [
     popular: false
   },
   {
-    title: 'Monthly Membership',
-    price: 100,
+    title: '10-Visit Punch Card (Infant)',
+    price: 67.50,
+    originalPrice: 70,
+    description: 'Save with bulk visits',
+    features: [
+      '10 visits at $6.75 each',
+      'Save $2.50 off regular price',
+      'Never expires',
+      'Transferable to family/friends'
+    ],
+    popular: false
+  },
+  {
+    title: 'Monthly Membership (Toddler)',
+    price: 115,
     description: 'Best value for regular families',
     features: [
       'Unlimited visits for 1 child',
       '10% off birthday bookings',
       '10% off all classes (Mommy & Me, Story Time, Kids Yoga & more)',
       'Member exclusive events',
-      '20% off second child ($80)',
-      '30% off third child ($70)'
+      '10% off second child ($103.50)',
+      '20% off third child ($92)'
     ],
     popular: true
+  },
+  {
+    title: 'Monthly Membership (Infant)',
+    price: 80,
+    description: 'Perfect for regular infant visitors',
+    features: [
+      'Unlimited visits for 1 infant',
+      'Access to infant-safe areas',
+      'Perfect for regular visitors',
+      'Member exclusive events'
+    ],
+    popular: false
   }
 ]
 
@@ -175,8 +200,8 @@ export function PricingDetails() {
                         </li>
                       ))}
                     </ul>
-                    <Button 
-                      className="w-full" 
+                    <Button
+                      className="w-full"
                       variant={option.popular ? 'primary' : 'outline'}
                     >
                       <CreditCard className="w-4 h-4 mr-2" />
