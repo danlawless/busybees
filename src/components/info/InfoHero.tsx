@@ -19,7 +19,7 @@ const quickInfo = [
   {
     icon: MapPin,
     title: 'Location',
-    content: '321 Massachusetts Avenue Rt. 2A\nUnit 4A\nLunenburg, Massachusetts 01462',
+    content: '301 Massachusetts Avenue Rt. 2A\nUnit 4A\nLunenburg, Massachusetts 01462',
     subtext: ''
   },
   {

@@ -5,7 +5,7 @@ A modern, beautiful website for Busy Bees Indoor Play Center - where little drea
 ## ✨ Features
 
 - **🎨 Sophisticated Design System** with hexagonal honeycomb patterns and animations
-- **📱 Fully Responsive** design that works perfectly on all devices  
+- **📱 Fully Responsive** design that works perfectly on all devices
 - **✨ Advanced Animations** powered by Framer Motion with floating hexagons
 - **🎉 Complete Party Booking System** with packages, themes, and easy booking flow
 - **📖 Comprehensive About Section** with team profiles and company story
@@ -15,7 +15,7 @@ A modern, beautiful website for Busy Bees Indoor Play Center - where little drea
 ## 🎨 Design System
 
 - **Hexagonal Theme**: Mathematical precision hexagonal patterns throughout
-- **Color Palette**: Sophisticated pastel yellows and charcoal blacks  
+- **Color Palette**: Sophisticated pastel yellows and charcoal blacks
 - **Animations**: Floating honeycombs, pulsing hexagons, and smooth transitions
 - **Typography**: Inter font family with honey gradient text effects
 - **Logo Integration**: Custom logo with animation support
@@ -52,7 +52,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **📖 About** (`/about`) - Complete company story including:
   - Founder narrative and timeline
   - Team member profiles with specialties
-  - Core values and mission statement  
+  - Core values and mission statement
   - Community impact and testimonials
 - **📋 Info** (`/info`) - Comprehensive information including:
   - Detailed hours and schedule
@@ -71,8 +71,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 **Busy Bees Indoor Play Center**
 - Ages: 0-6 years with dedicated areas for different age groups
-- Location: 380-432 John Fitch Highway, Suite A-190 & A-200
-- Hours: Mon-Fri 10AM-5PM, Sat-Sun 9AM-12PM (Open Play)
+- Location: 301 Massachusetts Avenue Rt. 2A, Unit 4A, Lunenburg, MA 01462
+- Hours: Mon-Fri 9AM-5PM, Sat/Sun 9AM-12:30PM (Open Play)
 - Pricing: Daily passes starting at $7 (infant) and $17 (toddler), Monthly memberships from $80-$115
 - Features: 4,000+ sq ft, private party room, snack bar, ample parking
 

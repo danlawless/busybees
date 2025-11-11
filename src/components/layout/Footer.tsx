@@ -61,7 +61,7 @@ export function Footer() {
                 <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-medium">Lunenburg Crossing</p>
-                  <p>321 Massachusetts Avenue Rt. 2A</p>
+                  <p>301 Massachusetts Avenue Rt. 2A</p>
                   <p>Lunenburg, Massachusetts 01462</p>
                 </div>
               </div>
