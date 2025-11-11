@@ -106,7 +106,19 @@ export default function POSPage() {
 
   // Initialize promos from localStorage or seed initial data
   useEffect(() => {
-    const storedPromos = getPromosFromStorage();
+    // Check if we need to force-update promos (version check)
+    const PROMO_VERSION = 'v2_nov2025'; // Update this to force reload of new promo codes
+    const currentVersion = localStorage.getItem('busybees_promo_version');
+    
+    let storedPromos = getPromosFromStorage();
+    
+    // If version mismatch or no version, clear old promos and reseed
+    if (currentVersion !== PROMO_VERSION || storedPromos.length === 0) {
+      localStorage.removeItem('busybees_promos');
+      localStorage.setItem('busybees_promo_version', PROMO_VERSION);
+      storedPromos = [];
+    }
+    
     if (storedPromos.length > 0) {
       setPromos(storedPromos);
     } else {
