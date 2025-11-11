@@ -72,8 +72,7 @@ const pricingPlans = [
   {
     name: '10-Visit Punch Card (Infant)',
     price: 67.50,
-    originalPrice: 70,
-    description: 'Save with bulk visits',
+    description: 'Convenient bulk visits',
     features: [
       '10 visits at $6.75 each',
       'Save $2.50 off regular price',
@@ -88,8 +87,7 @@ const pricingPlans = [
   {
     name: '10-Visit Punch Card (Toddler)',
     price: 175,
-    originalPrice: 170,
-    description: 'Save with bulk visits',
+    description: 'Convenient bulk visits',
     features: [
       '10 visits at $17.50 each',
       'Bulk purchase convenience',
@@ -251,9 +249,6 @@ export function Pricing() {
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
                       <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
-                      {plan.originalPrice && (
-                        <div className="text-sm text-neutral-500 line-through">${plan.originalPrice}</div>
-                      )}
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
                   </CardHeader>
