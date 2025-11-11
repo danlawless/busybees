@@ -19,8 +19,9 @@ const pricingPlans = [
       'All-day access'
     ],
     popular: false,
-    cta: 'Visit Us',
-    icon: Users
+    cta: 'Buy Now',
+    icon: Users,
+    stripeLink: 'https://buy.stripe.com/dRm00ibE75Vzfyt5kgffy0a'
   },
   {
     name: 'General Admission (Ages 2+)',
@@ -33,8 +34,9 @@ const pricingPlans = [
       'No time limits'
     ],
     popular: false,
-    cta: 'Visit Us',
-    icon: Ticket
+    cta: 'Buy Now',
+    icon: Ticket,
+    stripeLink: 'https://buy.stripe.com/9B6bJ023x3Nr1HDeUQffy0b'
   },
   {
     name: 'Monthly Membership (Infant)',
@@ -47,8 +49,9 @@ const pricingPlans = [
       'Member exclusive events'
     ],
     popular: false,
-    cta: 'Join Now',
-    icon: Star
+    cta: 'Subscribe Now',
+    icon: Star,
+    stripeLink: 'https://buy.stripe.com/7sY5kC37B2Jn0Dz8wsffy06'
   },
   {
     name: 'Monthly Membership (Toddler)',
@@ -62,8 +65,9 @@ const pricingPlans = [
       'Member exclusive events'
     ],
     popular: true,
-    cta: 'Join Now',
-    icon: Star
+    cta: 'Subscribe Now',
+    icon: Star,
+    stripeLink: 'https://buy.stripe.com/6oU3cu8rV6ZDae93c8ffy07'
   },
   {
     name: '10-Visit Punch Card (Infant)',
@@ -77,8 +81,9 @@ const pricingPlans = [
       'Transferable to family/friends'
     ],
     popular: false,
-    cta: 'Purchase',
-    icon: Ticket
+    cta: 'Purchase Now',
+    icon: Ticket,
+    stripeLink: 'https://buy.stripe.com/9B6aEW8rVgAdcmh6okffy08'
   },
   {
     name: '10-Visit Punch Card (Toddler)',
@@ -92,8 +97,9 @@ const pricingPlans = [
       'Transferable to family/friends'
     ],
     popular: false,
-    cta: 'Purchase',
-    icon: Ticket
+    cta: 'Purchase Now',
+    icon: Ticket,
+    stripeLink: 'https://buy.stripe.com/14A00i0Ztes5bid3c8ffy09'
   }
 ]
 
@@ -153,7 +159,14 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button className="w-full mt-auto" variant="outline" size="sm">{plan.cta}</Button>
+                    <Button 
+                      className="w-full mt-auto" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(plan.stripeLink, '_blank')}
+                    >
+                      {plan.cta}
+                    </Button>
                   </CardContent>
                 </Card>
               )
@@ -202,7 +215,14 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button className="w-full mt-auto" variant={plan.popular ? 'primary' : 'outline'} size="sm">{plan.cta}</Button>
+                    <Button 
+                      className="w-full mt-auto" 
+                      variant={plan.popular ? 'primary' : 'outline'} 
+                      size="sm"
+                      onClick={() => window.open(plan.stripeLink, '_blank')}
+                    >
+                      {plan.cta}
+                    </Button>
                   </CardContent>
                 </Card>
               )
@@ -246,7 +266,14 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button className="w-full mt-auto" variant="outline" size="sm">{plan.cta}</Button>
+                    <Button 
+                      className="w-full mt-auto" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(plan.stripeLink, '_blank')}
+                    >
+                      {plan.cta}
+                    </Button>
                   </CardContent>
                 </Card>
               )
