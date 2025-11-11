@@ -1,15 +1,15 @@
 'use client'
 
 import React, { useState } from 'react'
-import { MapPin, Mail, Instagram, Facebook } from 'lucide-react'
+import { MapPin, Mail, Phone, Instagram, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
 const businessHours = [
   { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play' },
-  { label: 'Sat - Sun', time: '9:00 AM - 12:30 PM', type: 'Open Play' },
-  { label: 'Sat - Sun', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
-  { label: 'Sat - Sun', time: '3:30 PM - 5:30 PM', type: 'Private Parties' },
+  { label: 'Sat / Sun', time: '9:00 AM - 12:30 PM', type: 'Open Play' },
+  { label: '', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
+  { label: '', time: '3:30 PM - 5:30 PM', type: 'Private Parties' },
 ]
 
 export function Footer() {
@@ -64,6 +64,12 @@ export function Footer() {
                   <p>321 Massachusetts Avenue Rt. 2A</p>
                   <p>Lunenburg, Massachusetts 01462</p>
                 </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                <a href="tel:+19787850015" className="hover:text-primary-600 transition-colors">
+                  (978) 785-0015
+                </a>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-primary-500 flex-shrink-0" />
