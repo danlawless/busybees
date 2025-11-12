@@ -121,8 +121,8 @@ export function PartiesHero() {
               {/* Main Party Image */}
               <div className="aspect-[4/3] relative">
                 <Image
-                  src="/images/epic-party-action.jpg"
-                  alt="Epic party in action - kids celebrating with pure joy"
+                  src="/birthday-parties.png"
+                  alt="Happy kids celebrating birthday party at Busy Bees"
                   fill
                   className="object-cover"
                   priority
