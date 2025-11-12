@@ -31,99 +31,42 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
   const pathname = usePathname()
 
   useEffect(() => {
+    let ticking = false
+
     const handleScroll = () => {
-      const scrollPosition = window.scrollY
-      
-      // Hysteresis: switch to condensed at 1px, switch back only at 0px
-      if (scrollPosition > 1 && !isScrolled) {
-        setIsScrolled(true)
-      } else if (scrollPosition === 0 && isScrolled) {
-        setIsScrolled(false)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollPosition = window.scrollY
+          setIsScrolled(scrollPosition > 50)
+          ticking = false
+        })
+        ticking = true
       }
     }
 
     // Check initial scroll position
-    handleScroll()
+    setIsScrolled(window.scrollY > 50)
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isScrolled])
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 transition-all duration-200">
       {/* Promo Banner */}
       {activePromo && (
         <PromoBanner promo={activePromo} onDismiss={onDismissBanner} />
       )}
 
-      {/* Condensed Header (shown when scrolled) */}
-      <motion.div
-        initial={false}
-        animate={{
-          opacity: isScrolled ? 1 : 0,
-          y: isScrolled ? 0 : -20,
-        }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        style={{ display: isScrolled ? 'block' : 'none' }}
-        className="bg-white/95 backdrop-blur-sm border-b border-neutral-200 shadow-md"
+      {/* Single Unified Header - transitions smoothly between states */}
+      <div
+        className={cn(
+          "bg-white/95 backdrop-blur-sm border-b transition-all duration-200",
+          isScrolled ? "border-neutral-200 shadow-md" : "border-white"
+        )}
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Desktop Condensed Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-8 py-3">
-            <Link href="/" className="flex-shrink-0">
-              <Logo size="md" animate={false} showText={false} />
-            </Link>
-            <div className="flex items-center justify-center gap-4 flex-1">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "font-medium text-sm tracking-wide uppercase py-2 px-3 rounded-md transition-all duration-200",
-                      isActive
-                        ? "text-gray-900 shadow-md border border-yellow-400"
-                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
-                    )}
-                    style={isActive ? { backgroundColor: '#fde047' } : {}}
-                  >
-                    {item.name}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Mobile menu button (condensed) */}
-          <div className="md:hidden flex items-center justify-between py-3">
-            <Link href="/" className="flex-shrink-0">
-              <Logo size="sm" animate={false} showText={false} />
-            </Link>
-            <button
-              type="button"
-              className="rounded-md p-2 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5" aria-hidden="true" />
-              <span className="ml-2 text-xs font-medium">MENU</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Full Header (shown when not scrolled) */}
-      <motion.div
-        initial={false}
-        animate={{
-          opacity: !isScrolled ? 1 : 0,
-          y: !isScrolled ? 0 : -20,
-        }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        style={{ display: !isScrolled ? 'block' : 'none' }}
-      >
-        {/* Logo Section */}
-        <div className="bg-white/95 backdrop-blur-sm border-b border-white">
+        {/* Logo Section - only show when not scrolled */}
+        {!isScrolled && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center py-2">
               <Link href="/" className="flex items-center">
@@ -131,13 +74,28 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
               </Link>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Navigation Section */}
-        <nav className="bg-white/95 backdrop-blur-sm border-b border-neutral-200">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex md:items-center md:justify-between md:px-8 lg:px-16 xl:px-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Desktop Navigation */}
+          <div
+            className={cn(
+              "hidden md:flex md:items-center transition-all duration-200",
+              isScrolled ? "md:gap-8 py-3" : "md:justify-between md:px-8 lg:px-16 xl:px-24 py-4"
+            )}
+          >
+            {/* Compact logo when scrolled */}
+            {isScrolled && (
+              <Link href="/" className="flex-shrink-0">
+                <Logo size="md" animate={false} showText={false} />
+              </Link>
+            )}
+
+            <div className={cn(
+              "flex items-center transition-all duration-200",
+              isScrolled ? "justify-center gap-4 flex-1" : "justify-between flex-1"
+            )}>
               {navigation.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -145,7 +103,10 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "font-medium text-lg tracking-wide uppercase flex-1 text-center py-2 px-2 rounded-md transition-all duration-200",
+                      "font-medium tracking-wide uppercase rounded-md transition-all duration-200",
+                      isScrolled
+                        ? "text-sm py-2 px-3"
+                        : "text-lg py-2 px-2 flex-1 text-center",
                       isActive
                         ? "text-gray-900 shadow-md border border-yellow-400"
                         : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
@@ -157,21 +118,32 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                 )
               })}
             </div>
-
-            {/* Mobile menu button */}
-            <div className="md:hidden flex justify-center">
-              <button
-                type="button"
-                className="rounded-md p-3 text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200"
-                onClick={() => setMobileMenuOpen(true)}
-              >
-                <Menu className="h-6 w-6" aria-hidden="true" />
-                <span className="ml-2 text-sm font-medium">MENU</span>
-              </button>
-            </div>
           </div>
-        </nav>
-      </motion.div>
+
+          {/* Mobile menu button */}
+          <div className={cn(
+            "md:hidden flex items-center",
+            isScrolled ? "justify-between py-3" : "justify-center py-3"
+          )}>
+            {isScrolled && (
+              <Link href="/" className="flex-shrink-0">
+                <Logo size="sm" animate={false} showText={false} />
+              </Link>
+            )}
+            <button
+              type="button"
+              className={cn(
+                "rounded-md text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200",
+                isScrolled ? "p-2" : "p-3"
+              )}
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className={cn(isScrolled ? "h-5 w-5" : "h-6 w-6")} aria-hidden="true" />
+              <span className={cn("ml-2 font-medium", isScrolled ? "text-xs" : "text-sm")}>MENU</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Mobile menu */}
       <AnimatePresence>
