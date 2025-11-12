@@ -30,8 +30,17 @@ export function PartyPackageBackdrop() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          {/* Main Image Container */}
-          <div className="relative w-full">
+          {/* Mobile Image - Clean Graphic */}
+          <div className="md:hidden relative w-full">
+            <img
+              src="/party-packages-mobile.png"
+              alt="Party Package Options - Queen Bee, Worker Bee, Basic Bee"
+              className="w-full h-auto"
+            />
+          </div>
+
+          {/* Desktop Image Container with Overlays */}
+          <div className="hidden md:block relative w-full">
             <img
               src="/partypackage-backdrops.png"
               alt="Party Package Hexagon Layout"
