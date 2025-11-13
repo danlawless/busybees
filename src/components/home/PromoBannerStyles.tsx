@@ -26,6 +26,7 @@ export function HoneycombStyle({ children }: BannerStyleProps) {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 text-2xl"
+          style={{ transform: 'scaleX(-1)' }}
           animate={{ x: ['-100%', '100vw'] }}
           transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
         >

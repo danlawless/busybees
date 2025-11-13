@@ -29,9 +29,9 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
-      
+
       {/* Flying Bees beside Title */}
-      <motion.div 
+      <motion.div
         className="absolute left-1/2 top-32 transform -translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
         initial={{ x: -100, opacity: 0, scale: 0.8 }}
         animate={{ x: 0, opacity: 0.8, scale: 1 }}
@@ -45,8 +45,8 @@ export function Hero() {
           className="drop-shadow-lg"
         />
       </motion.div>
-      
-      <motion.div 
+
+      <motion.div
         className="absolute right-1/2 top-32 transform translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
         initial={{ x: 100, opacity: 0, scale: 0.8 }}
         animate={{ x: 0, opacity: 0.8, scale: 1 }}
@@ -60,7 +60,7 @@ export function Hero() {
           className="drop-shadow-lg"
         />
       </motion.div>
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
           className="text-center"
@@ -79,7 +79,7 @@ export function Hero() {
             </h1>
           </motion.div>
 
-          <motion.p 
+          <motion.p
             variants={fadeInUp}
             className="mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-600 mb-8"
           >
@@ -87,7 +87,7 @@ export function Hero() {
           </motion.p>
 
           {/* Feature Pills */}
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             className="flex flex-wrap justify-center gap-4 mb-10"
           >
@@ -106,7 +106,7 @@ export function Hero() {
           </motion.div>
 
           {/* CTA Buttons */}
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
@@ -118,7 +118,7 @@ export function Hero() {
           </motion.div>
 
           {/* Important Info */}
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             className="mt-12 p-6 card-pastel rounded-2xl shadow-soft max-w-3xl mx-auto"
           >
