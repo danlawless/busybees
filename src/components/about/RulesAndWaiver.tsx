@@ -238,21 +238,6 @@ export function RulesAndWaiver() {
                 ))}
               </ul>
 
-              {/* Electronic Waiver Button */}
-              <div className="mt-8 text-center">
-                <a
-                  href="https://docs.google.com/document/d/1P0KrCnrkhqofQwUcKW5EHZWdEuiaR15ldcTVxQSrHBw/edit?usp=sharing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-8 py-4 bg-gradient-to-r from-honey-400 to-honey-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:from-honey-500 hover:to-honey-600 transition-all duration-300"
-                >
-                  <FileText className="w-5 h-5 inline mr-2" />
-                  View & Sign Our Waiver
-                </a>
-                <p className="text-sm text-charcoal-600 mt-3">
-                  Opens in a new tab for your convenience
-                </p>
-              </div>
             </div>
 
             {/* Important Notice Card */}
