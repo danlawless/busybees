@@ -79,7 +79,7 @@ const faqs = [
       },
       {
         question: 'Do punch cards expire?',
-        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $175 (10 visits at $17.50 each) and infant punch cards are $67.50 (10 visits at $6.75 each, saving $2.50).'
+        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $150 (10 visits at $15 each) and infant punch cards are $50 (10 visits at $5 each).'
       },
       {
         question: 'What if the weather is bad?',

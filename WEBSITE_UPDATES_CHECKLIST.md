@@ -20,8 +20,8 @@ Last Updated: October 29, 2025
 | Monthly (Toddler) 3rd child | $92.00 (20% off) |
 | Monthly (Infant) | $80.00 |
 | **10 Visit Punch Card** | |
-| 10 Visit (Toddler) | $175.00 |
-| 10 Visit (Infant) | $67.50 |
+| 10 Visit (Toddler) | $150.00 |
+| 10 Visit (Infant) | $50.00 |
 | **Party Packages - Private** | |
 | Queen Bee (Private) | $575.00 |
 | Worker Bee (Private) | $525.00 |

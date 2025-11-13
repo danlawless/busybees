@@ -72,11 +72,10 @@ const pricingPlans = [
   },
   {
     name: '10-Visit Punch Card (Infant)',
-    price: 67.50,
+    price: 50,
     description: 'Convenient bulk visits',
     features: [
-      '10 visits at $6.75 each',
-      'Save $2.50 off regular price',
+      '10 visits at $5 each',
       'Never expires',
       'Transferable to family/friends'
     ],
@@ -87,10 +86,10 @@ const pricingPlans = [
   },
   {
     name: '10-Visit Punch Card (Toddler)',
-    price: 175,
+    price: 150,
     description: 'Convenient bulk visits',
     features: [
-      '10 visits at $17.50 each',
+      '10 visits at $15 each',
       'Bulk purchase convenience',
       'Never expires',
       'Transferable to family/friends'
@@ -177,9 +176,9 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button 
-                      className="w-full mt-auto" 
-                      variant="outline" 
+                    <Button
+                      className="w-full mt-auto"
+                      variant="outline"
                       size="sm"
                       onClick={() => window.open(plan.stripeLink, '_blank')}
                     >
@@ -245,9 +244,9 @@ export function Pricing() {
                         </span>
                       </div>
                     )}
-                    <Button 
-                      className="w-full mt-auto" 
-                      variant={plan.popular ? 'primary' : 'outline'} 
+                    <Button
+                      className="w-full mt-auto"
+                      variant={plan.popular ? 'primary' : 'outline'}
                       size="sm"
                       onClick={() => window.open(plan.stripeLink, '_blank')}
                     >
@@ -281,11 +280,6 @@ export function Pricing() {
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                     <div className="mt-4">
                       <div className="text-4xl font-bold text-primary-600">${plan.price}</div>
-                      {activePromo && (
-                        <div className="mt-2 text-sm text-green-600 font-semibold">
-                          Save {activePromo.discountPercent}% with code {activePromo.stripeCouponCode}
-                        </div>
-                      )}
                     </div>
                     <p className="text-neutral-600 mt-2 text-sm">{plan.description}</p>
                   </CardHeader>
@@ -298,16 +292,9 @@ export function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    {activePromo && (
-                      <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-center">
-                        <span className="text-xs text-yellow-800 font-medium">
-                          🎉 {activePromo.discountPercent}% OFF at checkout!
-                        </span>
-                      </div>
-                    )}
-                    <Button 
-                      className="w-full mt-auto" 
-                      variant="outline" 
+                    <Button
+                      className="w-full mt-auto"
+                      variant="outline"
                       size="sm"
                       onClick={() => window.open(plan.stripeLink, '_blank')}
                     >

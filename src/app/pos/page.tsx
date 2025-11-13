@@ -285,7 +285,7 @@ export default function POSPage() {
           id: 'pass-5',
           name: '10 Visit (Toddler)',
           category: 'weekly',
-          price: 175.00,
+          price: 150.00,
           duration: 90, // 90 days to use
           sessionsIncluded: 10,
           description: '10 visits for toddlers! Use within 90 days of first visit.',
@@ -298,7 +298,7 @@ export default function POSPage() {
           id: 'pass-6',
           name: '10 Visit (Infant)',
           category: 'weekly',
-          price: 67.50,
+          price: 50.00,
           duration: 90, // 90 days to use
           sessionsIncluded: 10,
           description: '10 visits for infants! Use within 90 days of first visit.',

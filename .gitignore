@@ -40,4 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
+# ai-coding-config submodule (not tracked)
+ai-coding-config/
+.gitmodules

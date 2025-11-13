@@ -26,11 +26,10 @@ const admissionPricing = [
 const membershipOptions = [
   {
     title: '10-Visit Punch Card (Toddler)',
-    price: 175,
-    originalPrice: 170,
+    price: 150,
     description: 'Bulk purchase convenience',
     features: [
-      '10 visits at $17.50 each',
+      '10 visits at $15 each',
       'Never expires',
       'Transferable to family/friends',
       'All daily pass benefits'
@@ -39,12 +38,10 @@ const membershipOptions = [
   },
   {
     title: '10-Visit Punch Card (Infant)',
-    price: 67.50,
-    originalPrice: 70,
+    price: 50,
     description: 'Save with bulk visits',
     features: [
-      '10 visits at $6.75 each',
-      'Save $2.50 off regular price',
+      '10 visits at $5 each',
       'Never expires',
       'Transferable to family/friends'
     ],
