@@ -67,10 +67,34 @@ export async function POST(request: NextRequest) {
     // Hash the PIN
     const pinHash = await hashPin(pin);
 
-    // Create user record (without Supabase auth for POS-only users)
+    // Create Supabase Auth user first (generates proper UUID)
+    // Use a random secure password since POS users login with PIN
+    const tempPassword = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}Aa1!`;
+    
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.trim(),
+      password: tempPassword,
+      email_confirm: false, // Don't require email verification for POS signups
+      user_metadata: {
+        name: name.trim(),
+        phone: cleanPhone,
+        role: 'customer',
+      },
+    });
+
+    if (authError || !authData.user) {
+      console.error('Error creating auth user:', authError);
+      return NextResponse.json(
+        { error: 'Failed to create account' },
+        { status: 500 }
+      );
+    }
+
+    // Create user profile record with the auth user's ID
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
+        id: authData.user.id, // Use the auth user's UUID
         phone: cleanPhone,
         name: name.trim(),
         email: email.trim(),
@@ -82,7 +106,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Error creating user:', insertError);
+      console.error('Error creating user profile:', insertError);
+      // Clean up auth user if profile creation fails
+      await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
         { error: 'Failed to create account' },
         { status: 500 }
