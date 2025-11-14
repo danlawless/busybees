@@ -82,7 +82,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [fullPhoneNumber, setFullPhoneNumber] = useState('');
-  
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -303,7 +303,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       if (response.ok) {
         // Show success message with email verification notice
         setSignupSuccess(true);
-        
+
         // After 5 seconds, log them in and redirect
         setTimeout(() => {
           const newCustomer: Customer = {

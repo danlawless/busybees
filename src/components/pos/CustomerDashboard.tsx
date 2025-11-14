@@ -1495,163 +1495,18 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       </div>
                     ))}
 
-                  {/* Dynamic Button: Check In or Check Out */}
-                  {(() => {
-                    const activeSessions = (customer.activeSessions || []).filter(session => session.purchaseId === purchase.id);
-                    const hasActiveSessions = activeSessions.length > 0;
-
-                    // For single-use passes that haven't been used yet
-                    if (purchase.totalSessions === 1 && !purchase.firstUseDate) {
-                      return (() => {
-                          if (purchase.type === 'party_package') {
-                            const partyStatus = getPartyCheckInStatus(purchase);
-
-                            if (partyStatus === 'needs_scheduling') {
-                              return (
-                                <Button
-                                  onClick={() => handleUsePassClick(purchase.id)}
-                                  className="w-full bg-purple-600 hover:bg-purple-700"
-                                >
-                                  🗓️ Schedule Party
-                                </Button>
-                              );
-                            } else if (partyStatus === 'available') {
-                              return (
-                                <Button
-                                  onClick={() => handleUsePassClick(purchase.id)}
-                                  className="w-full bg-green-600 hover:bg-green-700"
-                                >
-                                  🎉 Check In Party
-                                </Button>
-                              );
-                            } else if (partyStatus?.startsWith('too_early')) {
-                              const [type, value] = partyStatus.split(':');
-                              const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
-                                              type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
-                                              `${value} minute${value !== '1' ? 's' : ''}`;
-
-                              return (
-                                <Button
-                                  onClick={() => handleUsePassClick(purchase.id)}
-                                  className="w-full bg-orange-500 hover:bg-orange-600"
-                                  disabled={false}
-                                >
-                                  ⏰ Check-in in {timeText}
-                                </Button>
-                              );
-                            } else if (partyStatus === 'expired') {
-                              return (
-                                <Button
-                                  disabled
-                                  className="w-full bg-gray-400 cursor-not-allowed"
-                                >
-                                  ❌ Party Time Passed
-                                </Button>
-                              );
-                            }
-                          }
-
-                            return (
-                              <Button
-                                onClick={() => handleUsePassClick(purchase.id)}
-                                className={`w-full transition-colors ${
-                                  confirmingCheckIn === purchase.id
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : 'bg-blue-600 hover:bg-blue-700'
-                                }`}
-                              >
-                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
-                              </Button>
-                            );
-                          })();
-                    }
-
-                    // For multi-use passes or passes with active sessions
-                    if (purchase.totalSessions > 1 || hasActiveSessions) {
-                      if (hasActiveSessions) {
-                        // Show checkout button if there are active sessions
-                        return (
-                          <Button
-                            onClick={() => handleCheckOut(activeSessions[activeSessions.length - 1].id)}
-                            className="w-full"
-                            variant="outline"
-                          >
-                            Check Out
-                          </Button>
-                        );
-                      } else {
-                        // Show check in button if no active sessions
-                        return (() => {
-                            if (purchase.type === 'party_package') {
-                              const partyStatus = getPartyCheckInStatus(purchase);
-
-                              if (partyStatus === 'needs_scheduling') {
-                                return (
-                                  <Button
-                                    onClick={() => handleUsePassClick(purchase.id)}
-                                    className="w-full bg-purple-600 hover:bg-purple-700"
-                                  >
-                                    🗓️ Schedule Party
-                                  </Button>
-                                );
-                              } else if (partyStatus === 'available') {
-                                return (
-                                  <Button
-                                    onClick={() => handleUsePassClick(purchase.id)}
-                                    className={`w-full transition-colors ${
-                                      confirmingCheckIn === purchase.id
-                                        ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                        : 'bg-green-600 hover:bg-green-700'
-                                    }`}
-                                  >
-                                    {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : '🎉 Check In Party'}
-                                  </Button>
-                                );
-                              } else if (partyStatus?.startsWith('too_early')) {
-                                const [type, value] = partyStatus.split(':');
-                                const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
-                                                type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
-                                                `${value} minute${value !== '1' ? 's' : ''}`;
-
-                                return (
-                                  <Button
-                                    onClick={() => handleUsePassClick(purchase.id)}
-                                    className="w-full bg-orange-500 hover:bg-orange-600"
-                                    disabled={false}
-                                  >
-                                    ⏰ Check-in in {timeText}
-                                  </Button>
-                                );
-                              } else if (partyStatus === 'expired') {
-                                return (
-                                  <Button
-                                    disabled
-                                    className="w-full bg-gray-400 cursor-not-allowed"
-                                  >
-                                    ❌ Party Time Passed
-                                  </Button>
-                                );
-                              }
-                            }
-
-                            return (
-                              <Button
-                                onClick={() => handleUsePassClick(purchase.id)}
-                                className={`w-full transition-colors ${
-                                  confirmingCheckIn === purchase.id
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : 'bg-blue-600 hover:bg-blue-700'
-                                }`}
-                              >
-                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : 'Check In'}
-                              </Button>
-                            );
-                          })();
-                      }
-                    }
-
-                    return null;
-                  })()}
+                  {/* Account View - No Check-in (use Check In tab for that) */}
+                  {purchase.type === 'party_package' && !purchase.partyDate && (
+                    <div className="bg-purple-50 border border-purple-200 text-purple-700 px-4 py-3 rounded-lg text-center text-sm">
+                      🗓️ Visit the Check In tab to schedule your party
+                    </div>
+                  )}
+                  
+                  {purchase.type !== 'party_package' && !purchase.firstUseDate && (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-center text-sm">
+                      🎫 Visit the Check In tab to use this pass
+                    </div>
+                  )}
 
                   {/* Pass Status Info */}
                   {purchase.firstUseDate && purchase.actualExpiryDate && (
@@ -1960,61 +1815,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     </div>
 
                     <div className="space-y-3">
-                      {/* Dynamic Button: Schedule Party or Check In Party */}
-                      {(() => {
-                        if (purchase.type === 'party_package') {
-                          const partyStatus = getPartyCheckInStatus(purchase);
-
-                          if (partyStatus === 'needs_scheduling') {
-                            return (
-                              <Button
-                                onClick={() => handleUsePassClick(purchase.id)}
-                                className="w-full bg-purple-600 hover:bg-purple-700"
-                              >
-                                🗓️ Schedule Party
-                              </Button>
-                            );
-                          } else if (partyStatus === 'available') {
-                            return (
-                              <Button
-                                onClick={() => handleUsePassClick(purchase.id)}
-                                className={`w-full transition-colors ${
-                                  confirmingCheckIn === purchase.id
-                                    ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                                    : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                              >
-                                {confirmingCheckIn === purchase.id ? '✓ Confirm Check In' : '🎉 Check In Party'}
-                              </Button>
-                            );
-                          } else if (partyStatus?.startsWith('too_early')) {
-                            const [type, value] = partyStatus.split(':');
-                            const timeText = type === 'too_early_days' ? `${value} day${value !== '1' ? 's' : ''}` :
-                                            type === 'too_early_hours' ? `${value} hour${value !== '1' ? 's' : ''}` :
-                                            `${value} minute${value !== '1' ? 's' : ''}`;
-
-                            return (
-                              <Button
-                                onClick={() => handleUsePassClick(purchase.id)}
-                                className="w-full bg-orange-500 hover:bg-orange-600"
-                                disabled={false}
-                              >
-                                ⏰ Check-in in {timeText}
-                              </Button>
-                            );
-                          } else if (partyStatus === 'expired') {
-                            return (
-                              <Button
-                                disabled
-                                className="w-full bg-gray-400 cursor-not-allowed"
-                              >
-                                ❌ Party Time Passed
-                              </Button>
-                            );
-                          }
-                        }
-                        return null;
-                      })()}
+                      {/* Party scheduling info - use Check In tab for actual scheduling */}
+                      {!purchase.partyDate && (
+                        <div className="bg-purple-50 border border-purple-200 text-purple-700 px-4 py-3 rounded-lg text-center text-sm">
+                          🗓️ Visit the Check In tab to schedule your party
+                        </div>
+                      )}
 
                       {/* Party Scheduling Information */}
                       {purchase.type === 'party_package' && purchase.partyDate && (

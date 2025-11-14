@@ -102,23 +102,23 @@ Supabase provides several email templates you can customize:
       <div class="logo">🐝</div>
       <div class="brand">Busy Bees</div>
     </div>
-    
+
     <!-- Content -->
     <div class="content">
       <h1>Welcome to Busy Bees!</h1>
-      
+
       <p>Hi there! 👋</p>
-      
+
       <p>Thank you for creating an account at Busy Bees Indoor Playground! We're so excited to have you join our hive.</p>
-      
+
       <p>To complete your account setup and access all the features of your online portal, please verify your email address by clicking the button below:</p>
-      
+
       <center>
         <a href="{{ .ConfirmationURL }}" class="button">
           ✓ Verify Email Address
         </a>
       </center>
-      
+
       <p><strong>What you can do with your verified account:</strong></p>
       <ul>
         <li>🎫 Purchase passes and memberships online</li>
@@ -127,20 +127,20 @@ Supabase provides several email templates you can customize:
         <li>📋 View purchase history and active passes</li>
         <li>⚙️ Update your account settings</li>
       </ul>
-      
+
       <p><strong>Already visited us?</strong> You can still check in at our kiosk using your phone number and PIN!</p>
-      
+
       <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;">
         If you didn't create an account with Busy Bees, you can safely ignore this email.
       </p>
     </div>
-    
+
     <!-- Footer -->
     <div class="footer">
       <p><strong>Busy Bees Indoor Playground</strong></p>
       <p>Where Fun Takes Flight! 🐝</p>
       <p style="margin-top: 15px;">
-        <a href="{{ .SiteURL }}">Visit Our Website</a> · 
+        <a href="{{ .SiteURL }}">Visit Our Website</a> ·
         <a href="{{ .SiteURL }}/contact">Contact Us</a>
       </p>
       <p style="margin-top: 15px; font-size: 12px;">
@@ -227,25 +227,25 @@ Supabase provides several email templates you can customize:
       <div class="logo">🐝</div>
       <div class="brand">Busy Bees</div>
     </div>
-    
+
     <div class="content">
       <h1>Sign In to Your Account</h1>
-      
+
       <p>Hi there! 👋</p>
-      
+
       <p>Click the button below to sign in to your Busy Bees account:</p>
-      
+
       <center>
         <a href="{{ .ConfirmationURL }}" class="button">
           🔐 Sign In to Busy Bees
         </a>
       </center>
-      
+
       <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;">
         This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.
       </p>
     </div>
-    
+
     <div class="footer">
       <p><strong>Busy Bees Indoor Playground</strong></p>
       <p>Where Fun Takes Flight! 🐝</p>
@@ -333,27 +333,27 @@ Supabase provides several email templates you can customize:
       <div class="logo">🐝</div>
       <div class="brand">Busy Bees</div>
     </div>
-    
+
     <div class="content">
       <h1>Reset Your Password</h1>
-      
+
       <p>Hi there! 👋</p>
-      
+
       <p>We received a request to reset your password for your Busy Bees account.</p>
-      
+
       <p>Click the button below to create a new password:</p>
-      
+
       <center>
         <a href="{{ .ConfirmationURL }}" class="button">
           🔑 Reset Password
         </a>
       </center>
-      
+
       <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;">
         This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email - your password will not be changed.
       </p>
     </div>
-    
+
     <div class="footer">
       <p><strong>Busy Bees Indoor Playground</strong></p>
       <p>Where Fun Takes Flight! 🐝</p>
@@ -408,11 +408,11 @@ To use a custom email address like `hello@busybeesipc.com`:
 
 ## ✨ Features
 
-✅ **Mobile Responsive** - Looks great on all devices  
-✅ **Brand Consistent** - Matches website colors and style  
-✅ **Professional** - Clean, modern design  
-✅ **Clear CTAs** - Big, obvious buttons  
-✅ **Friendly Tone** - Welcoming and warm  
+✅ **Mobile Responsive** - Looks great on all devices
+✅ **Brand Consistent** - Matches website colors and style
+✅ **Professional** - Clean, modern design
+✅ **Clear CTAs** - Big, obvious buttons
+✅ **Friendly Tone** - Welcoming and warm
 ✅ **Security Info** - Explains what to do if email was sent in error
 
 ---
