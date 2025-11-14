@@ -1501,7 +1501,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       🗓️ Visit the Check In tab to schedule your party
                     </div>
                   )}
-                  
+
                   {purchase.type !== 'party_package' && !purchase.firstUseDate && (
                     <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-center text-sm">
                       🎫 Visit the Check In tab to use this pass

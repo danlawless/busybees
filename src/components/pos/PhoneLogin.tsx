@@ -210,9 +210,16 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         };
         onLogin(customer);
       } else if (response.status === 401) {
-        setError('Invalid phone number or PIN. Please try again.');
+        // Wrong PIN - let them retry
+        setError('Incorrect PIN. Please try again.');
+        // Clear PIN boxes to let them re-enter
+        setPin(['', '', '', '']);
+        // Focus first PIN box
+        setTimeout(() => {
+          inputRefs.current?.[4]?.focus();
+        }, 100);
       } else if (response.status === 404) {
-        // User doesn't exist - show signup form with the last 4 we have
+        // User doesn't exist - show signup form
         setIsNewCustomer(true);
       } else {
         setError(data.error || 'Login failed');
