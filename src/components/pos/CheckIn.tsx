@@ -107,8 +107,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successDetails, setSuccessDetails] = useState({
     title: '',
-    message: '',
-    details: {} as any
+    message: ''
   });
   const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties' | 'snacks'>('children');
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -280,8 +279,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     // Show success message for adding the child
     setSuccessDetails({
       title: 'Child Added Successfully!',
-      message: `${newChild.name} has been added to the customer's account. Next, you'll need to sign a waiver for them to purchase passes.`,
-      details: {}
+      message: `${newChild.name} has been added to the customer's account. Next, you'll need to sign a waiver for them to purchase passes.`
     });
     setShowSuccessModal(true);
 
@@ -313,8 +311,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
 
     setSuccessDetails({
       title: 'Waiver Signed Successfully',
-      message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`,
-      details: {}
+      message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`
     });
     setShowSuccessModal(true);
   };
@@ -331,8 +328,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
     if (hasActivePasses) {
       setSuccessDetails({
         title: 'Cannot Delete Child',
-        message: 'This child has active passes. Please wait for passes to expire or contact management.',
-        details: {}
+        message: 'This child has active passes. Please wait for passes to expire or contact management.'
       });
       setShowSuccessModal(true);
       return;
@@ -968,8 +964,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       if (!selectedChildForPurchase) {
         setSuccessDetails({
           title: 'Child Selection Required',
-          message: 'Please select which child this pass is for before purchasing.',
-          details: {}
+          message: 'Please select which child this pass is for before purchasing.'
         });
         setShowSuccessModal(true);
         return;
@@ -980,8 +975,7 @@ export function CheckIn({ customers, currentCustomer, isStaffMode, onUpdateCusto
       if (!selectedChild || !selectedChild.waiverSigned) {
         setSuccessDetails({
           title: 'Waiver Required',
-          message: 'The selected child must have a signed waiver before purchasing a pass.',
-          details: {}
+          message: 'The selected child must have a signed waiver before purchasing a pass.'
         });
         setShowSuccessModal(true);
         return;

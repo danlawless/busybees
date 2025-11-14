@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Try to create Supabase Auth user first (generates proper UUID)
     // Use a random secure password since POS users login with PIN
     const tempPassword = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}Aa1!`;
-    
+
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
       password: tempPassword,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('Error creating auth user:', authError);
-      
+
       // Check if it's a duplicate email error
       if (authError.message?.includes('already been registered') || authError.status === 422) {
         return NextResponse.json(
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      
+
       return NextResponse.json(
         { error: 'Failed to create account. Please try again.' },
         { status: 500 }

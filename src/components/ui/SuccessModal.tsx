@@ -20,13 +20,13 @@ interface SuccessModalProps {
   autoCloseDelay?: number; // Auto-close after X milliseconds
 }
 
-export function SuccessModal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  message, 
+export function SuccessModal({
+  isOpen,
+  onClose,
+  title,
+  message,
   details,
-  autoCloseDelay = 5000 
+  autoCloseDelay = 5000
 }: SuccessModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [countdown, setCountdown] = useState(Math.ceil(autoCloseDelay / 1000));
@@ -86,13 +86,13 @@ export function SuccessModal({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{ zIndex: 10000 }}
     >
-      <Card 
+      <Card
         className={`w-full max-w-md transform transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
@@ -114,7 +114,7 @@ export function SuccessModal({
           </p>
 
           {/* Details */}
-          {details && (
+          {details && (details.date || details.time || details.guests || details.price) && (
             <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-6">
               <h3 className="font-semibold text-gray-800 mb-3">Booking Details</h3>
               <div className="grid gap-2 text-sm">
