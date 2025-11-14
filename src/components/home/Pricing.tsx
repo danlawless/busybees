@@ -309,7 +309,7 @@ export function Pricing() {
                                         </div>
                                     )}
                                     <Card
-                                        className={`h-full relative flex flex-col overflow-visible ${
+                                        className={`h-full relative flex flex-col overflow-visible z-10 ${
                                             plan.popular
                                                 ? "ring-2 ring-primary-500 shadow-large"
                                                 : ""
@@ -462,7 +462,7 @@ export function Pricing() {
                                             </div>
                                         </div>
                                     </div>
-                                    <Card className="h-full relative flex flex-col overflow-visible ring-4 ring-purple-400 shadow-2xl">
+                                    <Card className="h-full relative flex flex-col overflow-visible z-10 ring-4 ring-purple-400 shadow-2xl">
                                         <CardHeader className="text-center pb-4">
                                             <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <Icon className="w-6 h-6 text-primary-600" />
