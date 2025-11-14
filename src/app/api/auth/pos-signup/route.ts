@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Create Supabase Auth user first (generates proper UUID)
     // Use a random secure password since POS users login with PIN
     const tempPassword = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}Aa1!`;
-    
+
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
       password: tempPassword,
@@ -113,6 +113,20 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create account' },
         { status: 500 }
       );
+    }
+
+    // Send verification email
+    try {
+      await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email.trim(),
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/customer/dashboard`,
+        },
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails - they can verify later
     }
 
     // Return user data (excluding sensitive fields)

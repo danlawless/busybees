@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { SignupSuccess } from './SignupSuccess';
 
 interface Child {
   id: string;
@@ -77,10 +78,11 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
 
   // Signup state
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [fullPhoneNumber, setFullPhoneNumber] = useState('');
-
+  
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -299,20 +301,25 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       const data = await response.json();
 
       if (response.ok) {
-        // Convert database user to Customer format
-        const newCustomer: Customer = {
-          id: data.user.id,
-          phone: data.user.phone,
-          name: data.user.name,
-          email: data.user.email,
-          children: [],
-          purchases: [],
-          activeSessions: [],
-          savedCards: [],
-          createdAt: data.user.created_at,
-          lastVisit: data.user.last_login,
-        };
-        onNewCustomer(newCustomer);
+        // Show success message with email verification notice
+        setSignupSuccess(true);
+        
+        // After 5 seconds, log them in and redirect
+        setTimeout(() => {
+          const newCustomer: Customer = {
+            id: data.user.id,
+            phone: data.user.phone,
+            name: data.user.name,
+            email: data.user.email,
+            children: [],
+            purchases: [],
+            activeSessions: [],
+            savedCards: [],
+            createdAt: data.user.created_at,
+            lastVisit: data.user.last_login,
+          };
+          onNewCustomer(newCustomer);
+        }, 5000);
       } else {
         setError(data.error || 'Failed to create account');
       }
@@ -326,6 +333,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
 
   const handleBackToLogin = () => {
     setIsNewCustomer(false);
+    setSignupSuccess(false);
     setCustomerName('');
     setCustomerEmail('');
     setFullPhoneNumber('');
@@ -363,6 +371,11 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setAdminPassword('');
     setAdminError('');
   };
+
+  // Show success message after signup
+  if (signupSuccess) {
+    return <SignupSuccess customerName={customerName} email={customerEmail} />;
+  }
 
   if (isNewCustomer) {
     return (

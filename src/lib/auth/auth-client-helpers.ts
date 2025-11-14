@@ -17,11 +17,12 @@ export async function signUp(email: string, password: string, userData: {
 }) {
   const supabase = createClient();
 
-  // Create auth user
+  // Create auth user with email verification
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${window.location.origin}/customer/dashboard`,
       data: {
         name: userData.name,
         phone: userData.phone,
