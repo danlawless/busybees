@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { verifyPin } from '@/lib/auth/pin';
 
 export async function POST(request: NextRequest) {
@@ -27,16 +27,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by last 4 digits of phone
-    const supabase = await createClient();
-    const { data: users, error: userError } = await supabase
+    // Find user by last 4 digits of phone (use admin client to bypass RLS)
+    const supabase = createAdminClient();
+    
+    // Get all users and filter by last 4 digits in code (more reliable than LIKE)
+    const { data: allUsers, error: userError } = await supabase
       .from('users')
-      .select('*')
-      .like('phone', `%${phoneLast4}`);
+      .select('*');
 
-    if (userError || !users || users.length === 0) {
+    if (userError) {
+      console.error('Error fetching users:', userError);
       return NextResponse.json(
-        { error: 'Invalid phone number or PIN' },
+        { error: 'Login failed' },
+        { status: 500 }
+      );
+    }
+
+    // Filter users whose phone ends with the last 4 digits
+    const users = allUsers?.filter(u => u.phone && u.phone.slice(-4) === phoneLast4) || [];
+
+    if (users.length === 0) {
+      return NextResponse.json(
+        { error: 'No account found with those digits' },
         { status: 404 }
       );
     }

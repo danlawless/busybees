@@ -50,16 +50,27 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Check if phone already exists
+    // Check if phone already exists in users table
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id, phone')
+      .select('id, phone, email')
       .eq('phone', cleanPhone)
       .single();
 
     if (existingUser) {
       return NextResponse.json(
         { error: 'Phone number already registered' },
+        { status: 409 }
+      );
+    }
+
+    // Check if email already exists in auth
+    const { data: { users: existingAuthUsers } } = await supabase.auth.admin.listUsers();
+    const emailExists = existingAuthUsers.some(u => u.email === email.trim());
+
+    if (emailExists) {
+      return NextResponse.json(
+        { error: 'Email address already registered. Please use a different email or contact staff.' },
         { status: 409 }
       );
     }
