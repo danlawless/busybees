@@ -87,12 +87,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Protect customer portal routes
-  if (url.pathname.startsWith('/customer')) {
+  // Protect customer portal routes (except login/signup pages)
+  if (url.pathname.startsWith('/customer') &&
+      !url.pathname.startsWith('/customer/login') &&
+      !url.pathname.startsWith('/customer/signup')) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      url.pathname = '/auth/login';
+      url.pathname = '/customer/login';
+      return NextResponse.redirect(url);
+    }
+
+    // Verify user has customer or admin role
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userData && !['customer', 'admin'].includes(userData.role)) {
+      url.pathname = '/customer/login';
       return NextResponse.redirect(url);
     }
   }

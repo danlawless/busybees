@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import {
-  FoodProduct,
-  getProductsFromStorage,
-  saveProductsToStorage,
-  getAvailableProducts,
+  getAllProducts,
+  getActiveProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from '@/lib/services/products';
+import {
   validateProductName,
   validatePrice,
   validateStripeLinkOptional,
-  generateId,
   Allergen,
   ProductCategory,
 } from '@/lib/utils/productHelpers';
@@ -22,13 +25,10 @@ export async function GET(request: NextRequest) {
     const availableOnly = searchParams.get('available') === 'true';
     const category = searchParams.get('category') as ProductCategory | null;
 
-    // Read from localStorage (in production, this would be a database query)
-    let products = getProductsFromStorage();
+    // Fetch from database
+    let products = availableOnly ? await getActiveProducts() : await getAllProducts();
 
-    if (availableOnly) {
-      products = getAvailableProducts(products);
-    }
-
+    // Filter by category if specified
     if (category && ['food', 'beverage', 'retail'].includes(category)) {
       products = products.filter(p => p.category === category);
     }
@@ -112,25 +112,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new product
-    const newProduct: FoodProduct = {
-      id: generateId('product'),
+    // Create product using service layer
+    const newProduct = await createProduct({
       name: name.trim(),
-      category: category as ProductCategory,
+      category: category as any,
       price: parseFloat(price),
       description: (body.description || '').trim(),
-      allergens,
-      stripePurchaseLink: stripePurchaseLink.trim(),
-      isActive: body.isActive ?? true,
+      allergens: JSON.stringify(allergens),
+      stripe_purchase_link: stripePurchaseLink.trim(),
+      is_active: body.isActive ?? true,
       available: body.available ?? true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Save to localStorage (in production, save to database)
-    const products = getProductsFromStorage();
-    products.push(newProduct);
-    saveProductsToStorage(products);
+    });
 
     return NextResponse.json({ product: newProduct }, { status: 201 });
   } catch (error) {
@@ -218,32 +210,17 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update product
-    const products = getProductsFromStorage();
-    const productIndex = products.findIndex(p => p.id === id);
-
-    if (productIndex === -1) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    const updatedProduct: FoodProduct = {
-      ...products[productIndex],
+    // Update product using service layer
+    const updatedProduct = await updateProduct(id, {
       name: name.trim(),
-      category: category as ProductCategory,
+      category: category as any,
       price: parseFloat(price),
       description: (body.description || '').trim(),
-      allergens,
-      stripePurchaseLink: stripePurchaseLink.trim(),
-      isActive: body.isActive ?? products[productIndex].isActive,
-      available: body.available ?? products[productIndex].available,
-      updatedAt: new Date().toISOString(),
-    };
-
-    products[productIndex] = updatedProduct;
-    saveProductsToStorage(products);
+      allergens: JSON.stringify(allergens),
+      stripe_purchase_link: stripePurchaseLink.trim(),
+      is_active: body.isActive,
+      available: body.available,
+    });
 
     return NextResponse.json({ product: updatedProduct }, { status: 200 });
   } catch (error) {
@@ -271,18 +248,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from localStorage (in production, delete from database)
-    const products = getProductsFromStorage();
-    const filteredProducts = products.filter(p => p.id !== id);
-
-    if (filteredProducts.length === products.length) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    saveProductsToStorage(filteredProducts);
+    // Delete from database using service layer
+    await deleteProduct(id);
 
     return NextResponse.json({ success: true, id }, { status: 200 });
   } catch (error) {

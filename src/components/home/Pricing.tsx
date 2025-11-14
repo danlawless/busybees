@@ -440,7 +440,7 @@ export function Pricing() {
                             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-full border-2 border-purple-400 shadow-lg">
                                 <Tag className="w-5 h-5 text-purple-700" />
                                 <span className="font-bold text-purple-900">
-                                    {activePromo.discountPercent}% OFF 10-Visit Passes!
+                                    $20 OFF 10-Visit Passes!
                                 </span>
                             </div>
                         </div>

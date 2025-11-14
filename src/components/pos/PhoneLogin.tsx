@@ -72,6 +72,7 @@ interface PhoneLoginProps {
 
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [pin, setPin] = useState('');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -84,7 +85,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
   const formatPhoneNumber = (value: string) => {
     // Remove all non-numeric characters
     const phoneNumber = value.replace(/[^\d]/g, '');
-    
+
     // Format as (XXX) XXX-XXXX
     if (phoneNumber.length <= 3) {
       return phoneNumber;
@@ -111,27 +112,65 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setError('');
 
     const cleanPhone = getCleanPhoneNumber(phoneNumber);
-    
+
     if (cleanPhone.length !== 10) {
       setError('Please enter a valid 10-digit phone number');
       setIsLoading(false);
       return;
     }
 
-    // Check if customer exists
-    const existingCustomer = customers.find(c => 
-      getCleanPhoneNumber(c.phone) === cleanPhone
-    );
+    if (!pin || pin.length !== 4) {
+      setError('Please enter your 4-digit PIN');
+      setIsLoading(false);
+      return;
+    }
 
-    if (existingCustomer) {
-      // Update last visit
-      const updatedCustomer = {
-        ...existingCustomer,
-        lastVisit: new Date().toISOString()
-      };
-      onLogin(updatedCustomer);
-    } else {
-      setIsNewCustomer(true);
+    try {
+      // Attempt login with phone + PIN
+      const response = await fetch('/api/auth/pos-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, pin }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Convert database user to Customer format
+        const customer: Customer = {
+          id: data.user.id,
+          phone: data.user.phone,
+          name: data.user.name,
+          email: data.user.email,
+          children: [],
+          purchases: [],
+          activeSessions: [],
+          savedCards: [],
+          createdAt: data.user.created_at,
+          lastVisit: data.user.last_login,
+        };
+        onLogin(customer);
+      } else if (response.status === 401) {
+        // Check if user exists but PIN is wrong, or if user doesn't exist
+        const checkResponse = await fetch(`/api/customers?phone=${cleanPhone}`);
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          if (checkData.customers && checkData.customers.length === 0) {
+            // User doesn't exist - show signup form
+            setIsNewCustomer(true);
+          } else {
+            // User exists but wrong PIN
+            setError('Invalid PIN. Please try again.');
+          }
+        } else {
+          setError(data.error || 'Login failed');
+        }
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect. Please try again.');
     }
 
     setIsLoading(false);
@@ -148,20 +187,58 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
-    const newCustomer: Customer = {
-      id: Date.now().toString(),
-      phone: getCleanPhoneNumber(phoneNumber),
-      name: customerName.trim(),
-      email: customerEmail.trim() || undefined,
-      children: [], // Initialize empty children array
-      purchases: [],
-      activeSessions: [],
-      savedCards: [],
-      createdAt: new Date().toISOString(),
-      lastVisit: new Date().toISOString()
-    };
+    if (!pin || pin.length !== 4) {
+      setError('Please enter a 4-digit PIN');
+      setIsLoading(false);
+      return;
+    }
 
-    onNewCustomer(newCustomer);
+    if (!/^\d{4}$/.test(pin)) {
+      setError('PIN must be exactly 4 digits');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const cleanPhone = getCleanPhoneNumber(phoneNumber);
+
+      // Create account via API
+      const response = await fetch('/api/auth/pos-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          pin,
+          name: customerName.trim(),
+          email: customerEmail.trim() || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Convert database user to Customer format
+        const newCustomer: Customer = {
+          id: data.user.id,
+          phone: data.user.phone,
+          name: data.user.name,
+          email: data.user.email,
+          children: [],
+          purchases: [],
+          activeSessions: [],
+          savedCards: [],
+          createdAt: data.user.created_at,
+          lastVisit: data.user.last_login,
+        };
+        onNewCustomer(newCustomer);
+      } else {
+        setError(data.error || 'Failed to create account');
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('Unable to connect. Please try again.');
+    }
+
     setIsLoading(false);
   };
 
@@ -169,6 +246,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setIsNewCustomer(false);
     setCustomerName('');
     setCustomerEmail('');
+    setPin('');
     setError('');
   };
 
@@ -205,7 +283,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         <div className="w-full max-w-md">
           <Card className="p-8">
           <div className="text-center mb-6">
-            <button 
+            <button
               type="button"
               onClick={handleBeeLogoClick}
               className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -259,6 +337,23 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               />
             </div>
 
+            <div>
+              <label htmlFor="signup-pin" className="block text-sm font-medium text-gray-700 mb-2">
+                Create 4-Digit PIN *
+              </label>
+              <input
+                type="password"
+                id="signup-pin"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="Enter 4-digit PIN"
+                maxLength={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-center text-2xl tracking-widest"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">You'll use this PIN to check in at the kiosk</p>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
@@ -295,7 +390,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       <div className="w-full max-w-md">
         <Card className="p-8">
         <div className="text-center mb-6">
-          <button 
+          <button
             type="button"
             onClick={handleBeeLogoClick}
             className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -323,6 +418,22 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             />
           </div>
 
+          <div className="text-center">
+            <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+              4-Digit PIN
+            </label>
+            <input
+              type="password"
+              id="pin"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="••••"
+              maxLength={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-center text-2xl tracking-widest"
+              required
+            />
+          </div>
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
@@ -334,13 +445,13 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? 'Looking up account...' : 'Continue'}
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            New to Busy Bees? No problem! 
+            New to Busy Bees? No problem!
             <br />
             Enter your phone number and we'll get started.
           </p>
@@ -382,7 +493,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                   autoFocus
                 />
               </div>
-              
+
               {adminError && (
                 <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
                   {adminError}

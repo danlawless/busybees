@@ -14,11 +14,11 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
-  
+
   if (!signature) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 });
   }
-  
+
   // Get webhook secret from database or env
   const supabase = createAdminClient();
   const { data: settingData } = await supabase
@@ -26,16 +26,16 @@ export async function POST(request: NextRequest) {
     .select('value')
     .eq('key', 'stripe_webhook_secret')
     .single();
-  
+
   const webhookSecret = settingData?.value || process.env.STRIPE_WEBHOOK_SECRET;
-  
+
   if (!webhookSecret) {
     console.error('STRIPE_WEBHOOK_SECRET is not configured');
     return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
   }
-  
+
   let event: Stripe.Event;
-  
+
   try {
     const stripe = await getStripeClient();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
@@ -50,6 +50,10 @@ export async function POST(request: NextRequest) {
   // Handle the event
   try {
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
         break;
@@ -89,6 +93,76 @@ export async function POST(request: NextRequest) {
       { error: 'Webhook handler failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
+  }
+}
+
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  console.log('Checkout session completed:', session.id);
+
+  const supabase = createAdminClient();
+  const metadata = session.metadata;
+
+  if (!metadata) {
+    console.log('Missing metadata in checkout session');
+    return;
+  }
+
+  const {
+    customer_id,
+    product_id,
+    purchase_type,
+    child_id,
+    party_date,
+    party_time,
+    party_guests,
+    party_notes,
+  } = metadata;
+
+  if (!customer_id || !product_id || !purchase_type) {
+    console.log('Missing required metadata fields');
+    return;
+  }
+
+  // Calculate expiry dates based on purchase type
+  const now = new Date();
+  let expiryDate = null;
+  let totalSessions = 1;
+
+  if (purchase_type === 'day_pass') {
+    expiryDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+    totalSessions = 1;
+  } else if (purchase_type === 'weekly_pass') {
+    expiryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    totalSessions = 999; // Unlimited
+  } else if (purchase_type === 'monthly_pass') {
+    expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    totalSessions = 999; // Unlimited
+  }
+
+  // Create purchase record
+  const { error } = await supabase.from('purchases').insert({
+    customer_id,
+    child_id: child_id || null,
+    type: purchase_type,
+    product_id,
+    name: session.line_items?.data[0]?.description || 'Purchase',
+    price: session.amount_total ? session.amount_total / 100 : 0,
+    purchase_date: now.toISOString(),
+    expiry_date: expiryDate?.toISOString() || null,
+    used_sessions: 0,
+    total_sessions: totalSessions,
+    status: 'active',
+    stripe_payment_intent_id: session.payment_intent as string,
+    party_date: party_date || null,
+    party_start_time: party_time || null,
+    party_guests: party_guests ? parseInt(party_guests) : null,
+    party_notes: party_notes || null,
+  });
+
+  if (error) {
+    console.error('Error creating purchase:', error);
+  } else {
+    console.log('Purchase created successfully for customer:', customer_id);
   }
 }
 
