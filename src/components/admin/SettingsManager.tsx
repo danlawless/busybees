@@ -34,10 +34,10 @@ export function SettingsManager() {
     try {
       const response = await fetch('/api/settings');
       if (!response.ok) throw new Error('Failed to fetch settings');
-      
+
       const data = await response.json();
       setSettings(data);
-      
+
       // Initialize edit values
       const initialValues: Record<string, string> = {};
       data.forEach((setting: Setting) => {
@@ -70,7 +70,7 @@ export function SettingsManager() {
 
       logger.info({ key }, '✅ Setting updated');
       setMessage(`${key} updated successfully!`);
-      
+
       // Refresh settings
       await fetchSettings();
     } catch (error) {
@@ -130,7 +130,7 @@ export function SettingsManager() {
             <div key={setting.key} className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
               <div className="mb-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {setting.key.split('_').map(word => 
+                  {setting.key.split('_').map(word =>
                     word.charAt(0).toUpperCase() + word.slice(1)
                   ).join(' ')}
                 </label>
@@ -207,7 +207,7 @@ export function SettingsManager() {
               <div key={setting.key} className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
                 <div className="mb-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {setting.key.split('_').map(word => 
+                    {setting.key.split('_').map(word =>
                       word.charAt(0).toUpperCase() + word.slice(1)
                     ).join(' ')}
                   </label>

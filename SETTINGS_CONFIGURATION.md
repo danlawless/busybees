@@ -119,7 +119,7 @@ Each environment manages its own keys independently.
 **Solution:** Go to Settings Manager and add your Stripe secret key
 
 ### "Failed to load settings"
-**Solution:** 
+**Solution:**
 1. Verify migration `004_add_settings_table.sql` was run
 2. Check Supabase Table Editor for `settings` table
 3. Verify you're logged in as admin
@@ -193,4 +193,5 @@ This allows the app to build without Stripe keys configured.
 ---
 
 **The Settings Manager makes Stripe configuration simple and secure!** 🎉
+
 

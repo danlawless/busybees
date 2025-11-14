@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { SignupSuccess } from './SignupSuccess';
 
 interface Child {
   id: string;
@@ -71,20 +72,170 @@ interface PhoneLoginProps {
 }
 
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  // Login state - 8 individual boxes (4 phone + 4 PIN)
+  const [phoneLast4, setPhoneLast4] = useState(['', '', '', '']);
+  const [pin, setPin] = useState(['', '', '', '']);
+
+  // Signup state
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [fullPhoneNumber, setFullPhoneNumber] = useState('');
+
+  // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
 
+  // Handle individual digit input with auto-advance
+  const handleDigitChange = (
+    value: string,
+    index: number,
+    type: 'phone' | 'pin',
+    inputRefs: React.RefObject<(HTMLInputElement | null)[]>
+  ) => {
+    // Only allow digits
+    const digit = value.replace(/\D/g, '').slice(-1);
+
+    if (type === 'phone') {
+      const newPhone = [...phoneLast4];
+      newPhone[index] = digit;
+      setPhoneLast4(newPhone);
+
+      // Auto-advance to next input
+      if (digit && index < 3) {
+        inputRefs.current?.[index + 1]?.focus();
+      } else if (digit && index === 3) {
+        // Move to first PIN input
+        inputRefs.current?.[4]?.focus();
+      }
+    } else {
+      const newPin = [...pin];
+      newPin[index] = digit;
+      setPin(newPin);
+
+      // Auto-advance to next input
+      if (digit && index < 3) {
+        inputRefs.current?.[index + 5]?.focus();
+      }
+    }
+
+    setError('');
+  };
+
+  // Handle backspace
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+    type: 'phone' | 'pin',
+    inputRefs: React.RefObject<(HTMLInputElement | null)[]>
+  ) => {
+    if (e.key === 'Backspace') {
+      if (type === 'phone') {
+        const newPhone = [...phoneLast4];
+        if (!newPhone[index] && index > 0) {
+          // If current is empty, move back and clear previous
+          inputRefs.current?.[index - 1]?.focus();
+          newPhone[index - 1] = '';
+          setPhoneLast4(newPhone);
+        } else {
+          newPhone[index] = '';
+          setPhoneLast4(newPhone);
+        }
+      } else {
+        const newPin = [...pin];
+        const baseIndex = 4;
+        if (!newPin[index] && index > 0) {
+          // If current is empty, move back to previous PIN input or last phone input
+          const prevIndex = index === 0 ? 3 : baseIndex + index - 1;
+          inputRefs.current?.[prevIndex]?.focus();
+          if (index > 0) {
+            newPin[index - 1] = '';
+            setPin(newPin);
+          }
+        } else {
+          newPin[index] = '';
+          setPin(newPin);
+        }
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    const last4Digits = phoneLast4.join('');
+    const pinDigits = pin.join('');
+
+    if (last4Digits.length !== 4) {
+      setError('Please enter last 4 digits of phone number');
+      setIsLoading(false);
+      return;
+    }
+
+    if (pinDigits.length !== 4) {
+      setError('Please enter your 4-digit PIN');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Attempt login with last 4 digits + PIN
+      const response = await fetch('/api/auth/pos-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneLast4: last4Digits, pin: pinDigits }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Convert database user to Customer format
+        const customer: Customer = {
+          id: data.user.id,
+          phone: data.user.phone,
+          name: data.user.name,
+          email: data.user.email,
+          children: [],
+          purchases: [],
+          activeSessions: [],
+          savedCards: [],
+          createdAt: data.user.created_at,
+          lastVisit: data.user.last_login,
+        };
+        onLogin(customer);
+      } else if (response.status === 401) {
+        // Wrong PIN - let them retry
+        setError('Incorrect PIN. Please try again.');
+        // Clear PIN boxes to let them re-enter
+        setPin(['', '', '', '']);
+        // Focus first PIN box
+        setTimeout(() => {
+          inputRefs.current?.[4]?.focus();
+        }, 100);
+      } else if (response.status === 404) {
+        // User doesn't exist - show signup form
+        setIsNewCustomer(true);
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect. Please try again.');
+    }
+
+    setIsLoading(false);
+  };
+
   const formatPhoneNumber = (value: string) => {
     // Remove all non-numeric characters
     const phoneNumber = value.replace(/[^\d]/g, '');
-    
+
     // Format as (XXX) XXX-XXXX
     if (phoneNumber.length <= 3) {
       return phoneNumber;
@@ -95,46 +246,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     }
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFullPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
-    setPhoneNumber(formatted);
+    setFullPhoneNumber(formatted);
     setError('');
-  };
-
-  const getCleanPhoneNumber = (phone: string) => {
-    return phone.replace(/[^\d]/g, '');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    const cleanPhone = getCleanPhoneNumber(phoneNumber);
-    
-    if (cleanPhone.length !== 10) {
-      setError('Please enter a valid 10-digit phone number');
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if customer exists
-    const existingCustomer = customers.find(c => 
-      getCleanPhoneNumber(c.phone) === cleanPhone
-    );
-
-    if (existingCustomer) {
-      // Update last visit
-      const updatedCustomer = {
-        ...existingCustomer,
-        lastVisit: new Date().toISOString()
-      };
-      onLogin(updatedCustomer);
-    } else {
-      setIsNewCustomer(true);
-    }
-
-    setIsLoading(false);
   };
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -148,29 +263,94 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
-    const newCustomer: Customer = {
-      id: Date.now().toString(),
-      phone: getCleanPhoneNumber(phoneNumber),
-      name: customerName.trim(),
-      email: customerEmail.trim() || undefined,
-      children: [], // Initialize empty children array
-      purchases: [],
-      activeSessions: [],
-      savedCards: [],
-      createdAt: new Date().toISOString(),
-      lastVisit: new Date().toISOString()
-    };
+    if (!customerEmail.trim()) {
+      setError('Please enter your email address');
+      setIsLoading(false);
+      return;
+    }
 
-    onNewCustomer(newCustomer);
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail.trim())) {
+      setError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
+    const cleanPhone = fullPhoneNumber.replace(/[^\d]/g, '');
+
+    if (cleanPhone.length !== 10) {
+      setError('Please enter a valid 10-digit phone number');
+      setIsLoading(false);
+      return;
+    }
+
+    const pinDigits = pin.join('');
+    if (pinDigits.length !== 4) {
+      setError('Please enter a 4-digit PIN');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Create account via API
+      const response = await fetch('/api/auth/pos-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          pin: pinDigits,
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Show success message with email verification notice
+        setSignupSuccess(true);
+
+        // After 5 seconds, log them in and redirect
+        setTimeout(() => {
+          const newCustomer: Customer = {
+            id: data.user.id,
+            phone: data.user.phone,
+            name: data.user.name,
+            email: data.user.email,
+            children: [],
+            purchases: [],
+            activeSessions: [],
+            savedCards: [],
+            createdAt: data.user.created_at,
+            lastVisit: data.user.last_login,
+          };
+          onNewCustomer(newCustomer);
+        }, 5000);
+      } else {
+        setError(data.error || 'Failed to create account');
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('Unable to connect. Please try again.');
+    }
+
     setIsLoading(false);
   };
 
   const handleBackToLogin = () => {
     setIsNewCustomer(false);
+    setSignupSuccess(false);
     setCustomerName('');
     setCustomerEmail('');
+    setFullPhoneNumber('');
+    setPin(['', '', '', '']);
+    setPhoneLast4(['', '', '', '']);
     setError('');
   };
+
+  // Create refs for input boxes
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleBeeLogoClick = () => {
     setShowAdminModal(true);
@@ -199,13 +379,18 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setAdminError('');
   };
 
+  // Show success message after signup
+  if (signupSuccess) {
+    return <SignupSuccess customerName={customerName} email={customerEmail} />;
+  }
+
   if (isNewCustomer) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-full max-w-md">
           <Card className="p-8">
           <div className="text-center mb-6">
-            <button 
+            <button
               type="button"
               onClick={handleBeeLogoClick}
               className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -219,14 +404,17 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           <form onSubmit={handleCreateCustomer} className="space-y-6">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
+                Full Phone Number *
               </label>
               <input
                 type="tel"
                 id="phone"
-                value={phoneNumber}
-                disabled
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                value={fullPhoneNumber}
+                onChange={handleFullPhoneChange}
+                placeholder="(555) 123-4567"
+                maxLength={14}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg text-center"
+                required
               />
             </div>
 
@@ -247,16 +435,42 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address (Optional)
+                Email Address *
               </label>
               <input
                 type="email"
                 id="email"
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
-                placeholder="Enter your email address"
+                placeholder="you@example.com"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Create 4-Digit PIN *
+              </label>
+              <div className="flex justify-center gap-2">
+                {pin.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => {
+                      if (inputRefs.current) inputRefs.current[index + 4] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(e.target.value, index, 'pin', inputRefs)}
+                    onKeyDown={(e) => handleKeyDown(e, index, 'pin', inputRefs)}
+                    className="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    required
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">You'll use this PIN to check in at the kiosk</p>
             </div>
 
             {error && (
@@ -295,7 +509,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       <div className="w-full max-w-md">
         <Card className="p-8">
         <div className="text-center mb-6">
-          <button 
+          <button
             type="button"
             onClick={handleBeeLogoClick}
             className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -306,21 +520,56 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           <p className="text-gray-600">Enter your phone number to access your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="text-center">
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Last 4 of Phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
+              Last 4 Digits of Phone Number
             </label>
-            <input
-              type="tel"
-              id="phone"
-              value={phoneNumber}
-              onChange={handlePhoneChange}
-              placeholder="(555) 123-4567"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg text-center"
-              maxLength={14}
-              required
-            />
+            <div className="flex justify-center gap-2">
+              {phoneLast4.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    if (inputRefs.current) inputRefs.current[index] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleDigitChange(e.target.value, index, 'phone', inputRefs)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'phone', inputRefs)}
+                  className="w-16 h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  required
+                  autoFocus={index === 0}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* PIN */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
+              4-Digit PIN
+            </label>
+            <div className="flex justify-center gap-2">
+              {pin.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    if (inputRefs.current) inputRefs.current[index + 4] = el;
+                  }}
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleDigitChange(e.target.value, index, 'pin', inputRefs)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'pin', inputRefs)}
+                  className="w-16 h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  required
+                />
+              ))}
+            </div>
           </div>
 
           {error && (
@@ -334,13 +583,13 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? 'Looking up account...' : 'Continue'}
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            New to Busy Bees? No problem! 
+            New to Busy Bees? No problem!
             <br />
             Enter your phone number and we'll get started.
           </p>
@@ -382,7 +631,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                   autoFocus
                 />
               </div>
-              
+
               {adminError && (
                 <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
                   {adminError}

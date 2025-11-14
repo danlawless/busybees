@@ -121,11 +121,11 @@ export async function createOrGetStripeCustomer(
     email,
     limit: 1,
   });
-  
+
   if (customers.data.length > 0) {
     return customers.data[0];
   }
-  
+
   // Create new customer
   return await stripe.customers.create({
     email,
