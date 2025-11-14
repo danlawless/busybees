@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-<<<<<<< HEAD
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   console.log('Checkout session completed:', session.id);
 
