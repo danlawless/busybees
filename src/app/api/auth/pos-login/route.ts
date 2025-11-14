@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by last 4 digits of phone (use admin client to bypass RLS)
     const supabase = createAdminClient();
-    
+
     // Get all users and filter by last 4 digits in code (more reliable than LIKE)
     const { data: allUsers, error: userError } = await supabase
       .from('users')

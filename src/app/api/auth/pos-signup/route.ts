@@ -64,24 +64,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists in auth
-    const { data: { users: existingAuthUsers } } = await supabase.auth.admin.listUsers();
-    const emailExists = existingAuthUsers.some(u => u.email === email.trim());
-
-    if (emailExists) {
-      return NextResponse.json(
-        { error: 'Email address already registered. Please use a different email or contact staff.' },
-        { status: 409 }
-      );
-    }
-
     // Hash the PIN
     const pinHash = await hashPin(pin);
 
-    // Create Supabase Auth user first (generates proper UUID)
+    // Try to create Supabase Auth user first (generates proper UUID)
     // Use a random secure password since POS users login with PIN
     const tempPassword = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}Aa1!`;
-
+    
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
       password: tempPassword,
@@ -93,8 +82,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (authError || !authData.user) {
+    if (authError) {
       console.error('Error creating auth user:', authError);
+      
+      // Check if it's a duplicate email error
+      if (authError.message?.includes('already been registered') || authError.status === 422) {
+        return NextResponse.json(
+          { error: 'This email is already registered. You may already have an account - try logging in with your phone and PIN.' },
+          { status: 409 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to create account. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    if (!authData.user) {
       return NextResponse.json(
         { error: 'Failed to create account' },
         { status: 500 }
