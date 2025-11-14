@@ -5,6 +5,8 @@
 
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUser } from '@/hooks/useUser';
 import { usePurchases } from '@/hooks/usePurchases';
