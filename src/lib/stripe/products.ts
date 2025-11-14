@@ -3,7 +3,7 @@
  * Create, update, and delete products in Stripe
  */
 
-import { stripe } from './client';
+import { getStripeClient } from './client';
 import Stripe from 'stripe';
 
 export interface CreateProductData {
@@ -28,6 +28,7 @@ export interface CreatePriceData {
  * Create a product in Stripe
  */
 export async function createStripeProduct(data: CreateProductData): Promise<Stripe.Product> {
+  const stripe = await getStripeClient();
   return await stripe.products.create({
     name: data.name,
     description: data.description,
@@ -43,6 +44,7 @@ export async function updateStripeProduct(
   productId: string,
   data: Partial<CreateProductData>
 ): Promise<Stripe.Product> {
+  const stripe = await getStripeClient();
   return await stripe.products.update(productId, {
     name: data.name,
     description: data.description,
@@ -55,6 +57,7 @@ export async function updateStripeProduct(
  * Delete (archive) a product in Stripe
  */
 export async function deleteStripeProduct(productId: string): Promise<Stripe.Product> {
+  const stripe = await getStripeClient();
   return await stripe.products.update(productId, {
     active: false,
   });
@@ -64,6 +67,7 @@ export async function deleteStripeProduct(productId: string): Promise<Stripe.Pro
  * Get a product from Stripe
  */
 export async function getStripeProduct(productId: string): Promise<Stripe.Product> {
+  const stripe = await getStripeClient();
   return await stripe.products.retrieve(productId);
 }
 
@@ -73,6 +77,7 @@ export async function getStripeProduct(productId: string): Promise<Stripe.Produc
 export async function listStripeProducts(
   active?: boolean
 ): Promise<Stripe.ApiList<Stripe.Product>> {
+  const stripe = await getStripeClient();
   return await stripe.products.list({
     active,
     limit: 100,
@@ -83,6 +88,7 @@ export async function listStripeProducts(
  * Create a price for a product in Stripe
  */
 export async function createStripePrice(data: CreatePriceData): Promise<Stripe.Price> {
+  const stripe = await getStripeClient();
   return await stripe.prices.create({
     product: data.product,
     unit_amount: data.unit_amount,
@@ -99,6 +105,7 @@ export async function updateStripePrice(
   priceId: string,
   metadata?: Record<string, string>
 ): Promise<Stripe.Price> {
+  const stripe = await getStripeClient();
   return await stripe.prices.update(priceId, {
     metadata: metadata || {},
   });
@@ -108,6 +115,7 @@ export async function updateStripePrice(
  * Archive a price in Stripe
  */
 export async function archiveStripePrice(priceId: string): Promise<Stripe.Price> {
+  const stripe = await getStripeClient();
   return await stripe.prices.update(priceId, {
     active: false,
   });
@@ -119,6 +127,7 @@ export async function archiveStripePrice(priceId: string): Promise<Stripe.Price>
 export async function listStripePrices(
   productId?: string
 ): Promise<Stripe.ApiList<Stripe.Price>> {
+  const stripe = await getStripeClient();
   return await stripe.prices.list({
     product: productId,
     limit: 100,
@@ -132,6 +141,7 @@ export async function createPaymentLink(
   priceId: string,
   quantity: number = 1
 ): Promise<Stripe.PaymentLink> {
+  const stripe = await getStripeClient();
   return await stripe.paymentLinks.create({
     line_items: [
       {

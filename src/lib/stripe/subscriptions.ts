@@ -3,7 +3,7 @@
  * Create, update, and cancel subscriptions
  */
 
-import { stripe } from './client';
+import { getStripeClient } from './client';
 import Stripe from 'stripe';
 
 export interface CreateSubscriptionData {
@@ -24,6 +24,7 @@ export interface CreateSubscriptionData {
 export async function createStripeSubscription(
   data: CreateSubscriptionData
 ): Promise<Stripe.Subscription> {
+  const stripe = await getStripeClient();
   return await stripe.subscriptions.create({
     customer: data.customer,
     items: data.items,
@@ -46,6 +47,7 @@ export async function updateStripeSubscription(
     metadata?: Record<string, string>;
   }
 ): Promise<Stripe.Subscription> {
+  const stripe = await getStripeClient();
   return await stripe.subscriptions.update(subscriptionId, {
     items: data.items,
     coupon: data.coupon,
@@ -60,6 +62,7 @@ export async function cancelStripeSubscription(
   subscriptionId: string,
   immediately: boolean = false
 ): Promise<Stripe.Subscription> {
+  const stripe = await getStripeClient();
   if (immediately) {
     return await stripe.subscriptions.cancel(subscriptionId);
   } else {
@@ -76,6 +79,7 @@ export async function cancelStripeSubscription(
 export async function resumeStripeSubscription(
   subscriptionId: string
 ): Promise<Stripe.Subscription> {
+  const stripe = await getStripeClient();
   return await stripe.subscriptions.update(subscriptionId, {
     cancel_at_period_end: false,
   });
@@ -87,6 +91,7 @@ export async function resumeStripeSubscription(
 export async function getStripeSubscription(
   subscriptionId: string
 ): Promise<Stripe.Subscription> {
+  const stripe = await getStripeClient();
   return await stripe.subscriptions.retrieve(subscriptionId);
 }
 
@@ -96,6 +101,7 @@ export async function getStripeSubscription(
 export async function listStripeSubscriptions(
   customerId?: string
 ): Promise<Stripe.ApiList<Stripe.Subscription>> {
+  const stripe = await getStripeClient();
   return await stripe.subscriptions.list({
     customer: customerId,
     limit: 100,
@@ -109,16 +115,17 @@ export async function createOrGetStripeCustomer(
   email: string,
   metadata?: Record<string, string>
 ): Promise<Stripe.Customer> {
+  const stripe = await getStripeClient();
   // Search for existing customer
   const customers = await stripe.customers.list({
     email,
     limit: 1,
   });
-
+  
   if (customers.data.length > 0) {
     return customers.data[0];
   }
-
+  
   // Create new customer
   return await stripe.customers.create({
     email,

@@ -111,7 +111,7 @@ Check your dev server logs - should see:
 
 ## 🎉 You're Done!
 
-You now have a fully-functional system! 
+You now have a fully-functional system!
 
 ## 🎯 What You Can Do Now
 

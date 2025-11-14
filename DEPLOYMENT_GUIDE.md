@@ -151,8 +151,8 @@ Should return JSON data
 
 ```sql
 -- After creating auth user in Supabase dashboard
-UPDATE users 
-SET role = 'admin' 
+UPDATE users
+SET role = 'admin'
 WHERE email = 'your-production-admin@busybees.com';
 ```
 
@@ -273,7 +273,7 @@ Deployment automatically triggers.
   - 500MB database
   - 2GB bandwidth
   - 50,000 monthly active users
-  
+
 - **Vercel Free Tier:**
   - 100GB bandwidth
   - Unlimited deployments
@@ -303,7 +303,7 @@ Before announcing to customers:
 ## 📞 Support Resources
 
 - **Vercel Support:** https://vercel.com/support
-- **Supabase Support:** https://supabase.com/support  
+- **Supabase Support:** https://supabase.com/support
 - **Stripe Support:** https://support.stripe.com
 
 ## 🎊 Congratulations!

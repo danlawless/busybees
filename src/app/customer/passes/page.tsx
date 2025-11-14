@@ -54,7 +54,7 @@ function PassesContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {activePasses.map((pass: any) => {
                 const usagePercent = (pass.used_sessions / pass.total_sessions) * 100;
-                
+
                 return (
                   <Card key={pass.id} className="p-6 border-2 border-green-300">
                     <div className="flex items-start justify-between mb-4">

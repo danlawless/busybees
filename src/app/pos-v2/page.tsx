@@ -23,7 +23,7 @@ type ViewMode = 'login' | 'customer' | 'checkin' | 'admin';
 export default function POSPageV2() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useUser();
-  
+
   const [currentView, setCurrentView] = useState<ViewMode>('login');
   const [isStaffMode, setIsStaffMode] = useState(false);
 
@@ -40,7 +40,7 @@ export default function POSPageV2() {
     if (profile) {
       const isStaff = ['staff', 'admin'].includes(profile.role);
       setIsStaffMode(isStaff);
-      
+
       if (isStaff) {
         setCurrentView('admin');
       } else if (user) {
@@ -115,7 +115,7 @@ export default function POSPageV2() {
                     </Button>
                   </div>
                 )}
-                
+
                 <Button
                   onClick={handleLogout}
                   variant="outline"

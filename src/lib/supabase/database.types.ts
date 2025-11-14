@@ -443,6 +443,35 @@ export interface Database {
           updated_at?: string;
         };
       };
+      settings: {
+        Row: {
+          id: string;
+          key: string;
+          value: string;
+          description: string | null;
+          is_encrypted: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          value: string;
+          description?: string | null;
+          is_encrypted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          value?: string;
+          description?: string | null;
+          is_encrypted?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -461,4 +490,3 @@ export interface Database {
     };
   };
 }
-

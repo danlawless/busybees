@@ -18,14 +18,14 @@ interface PhoneLoginProps {
 export function PhoneLoginV2({ onAdminAccess }: PhoneLoginProps) {
   const router = useRouter();
   const supabase = createClient();
-  
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Admin access
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
@@ -34,7 +34,7 @@ export function PhoneLoginV2({ onAdminAccess }: PhoneLoginProps) {
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');
-    
+
     if (phoneNumber.length <= 3) {
       return phoneNumber;
     } else if (phoneNumber.length <= 6) {

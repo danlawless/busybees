@@ -3,7 +3,7 @@
  * Create, update, and delete coupons in Stripe
  */
 
-import { stripe } from './client';
+import { getStripeClient } from './client';
 import Stripe from 'stripe';
 
 export interface CreateCouponData {
@@ -23,6 +23,7 @@ export interface CreateCouponData {
  * Create a coupon in Stripe
  */
 export async function createStripeCoupon(data: CreateCouponData): Promise<Stripe.Coupon> {
+  const stripe = await getStripeClient();
   return await stripe.coupons.create({
     id: data.id,
     name: data.name,
@@ -44,6 +45,7 @@ export async function updateStripeCoupon(
   couponId: string,
   data: { name?: string; metadata?: Record<string, string> }
 ): Promise<Stripe.Coupon> {
+  const stripe = await getStripeClient();
   return await stripe.coupons.update(couponId, {
     name: data.name,
     metadata: data.metadata,
@@ -54,6 +56,7 @@ export async function updateStripeCoupon(
  * Delete a coupon in Stripe
  */
 export async function deleteStripeCoupon(couponId: string): Promise<Stripe.DeletedCoupon> {
+  const stripe = await getStripeClient();
   return await stripe.coupons.del(couponId);
 }
 
@@ -61,6 +64,7 @@ export async function deleteStripeCoupon(couponId: string): Promise<Stripe.Delet
  * Get a coupon from Stripe
  */
 export async function getStripeCoupon(couponId: string): Promise<Stripe.Coupon> {
+  const stripe = await getStripeClient();
   return await stripe.coupons.retrieve(couponId);
 }
 
@@ -68,6 +72,7 @@ export async function getStripeCoupon(couponId: string): Promise<Stripe.Coupon> 
  * List all coupons from Stripe
  */
 export async function listStripeCoupons(): Promise<Stripe.ApiList<Stripe.Coupon>> {
+  const stripe = await getStripeClient();
   return await stripe.coupons.list({
     limit: 100,
   });
@@ -86,6 +91,7 @@ export async function createPromotionCode(
     metadata?: Record<string, string>;
   }
 ): Promise<Stripe.PromotionCode> {
+  const stripe = await getStripeClient();
   return await stripe.promotionCodes.create({
     coupon: couponId,
     code,
@@ -102,6 +108,7 @@ export async function createPromotionCode(
 export async function listPromotionCodes(
   couponId?: string
 ): Promise<Stripe.ApiList<Stripe.PromotionCode>> {
+  const stripe = await getStripeClient();
   return await stripe.promotionCodes.list({
     coupon: couponId,
     limit: 100,

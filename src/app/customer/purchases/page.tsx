@@ -90,7 +90,7 @@ function PurchasesContent() {
                           {statusIcons[purchase.status as keyof typeof statusIcons]} {purchase.status.toUpperCase()}
                         </span>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mt-4">
                         <div>
                           <p className="font-medium">Price</p>
@@ -152,7 +152,7 @@ function PurchasesContent() {
 export default function PurchasesPage() {
   return (
     <AuthGuard requireRole="customer">
-      <PassesContent />
+      <PurchasesContent />
     </AuthGuard>
   );
 }

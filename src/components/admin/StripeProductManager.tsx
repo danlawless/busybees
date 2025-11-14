@@ -19,7 +19,7 @@ export function StripeProductManager({ onProductCreated }: StripeProductManagerP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -72,15 +72,15 @@ export function StripeProductManager({ onProductCreated }: StripeProductManagerP
       }
 
       const result = await response.json();
-      
-      logger.info({ 
-        productId: result.product.id, 
-        priceId: result.price.id 
+
+      logger.info({
+        productId: result.product.id,
+        priceId: result.price.id
       }, '✨ Product created in Stripe');
 
       // Now save to appropriate database table
       let dbResponse;
-      
+
       if (formData.productType === 'pass') {
         dbResponse = await fetch('/api/passes', {
           method: 'POST',

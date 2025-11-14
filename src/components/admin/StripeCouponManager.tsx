@@ -19,7 +19,7 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   const [formData, setFormData] = useState({
     couponCode: '',
     name: '',
@@ -98,11 +98,11 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
       }
 
       const result = await response.json();
-      
+
       logger.info({ couponId: result.id }, '🎉 Coupon created in Stripe');
 
       setSuccess(`Coupon "${formData.couponCode}" created successfully!${formData.createPromo ? ' Promo also created.' : ''}`);
-      
+
       // Reset form
       setFormData({
         couponCode: '',
@@ -118,7 +118,7 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
         bannerStyle: 'honeycomb',
         createPromo: true,
       });
-      
+
       setShowForm(false);
 
       if (onCouponCreated) onCouponCreated();

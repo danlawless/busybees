@@ -16,11 +16,11 @@ import Link from 'next/link';
 function ProfileContent() {
   const { user, profile } = useUser();
   const supabase = createClient();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     email: profile?.email || '',
@@ -97,7 +97,7 @@ function ProfileContent() {
 
           {message && (
             <div className={`mb-4 p-3 rounded-lg ${
-              message.includes('success') 
+              message.includes('success')
                 ? 'bg-green-50 text-green-800 border border-green-200'
                 : 'bg-red-50 text-red-800 border border-red-200'
             }`}>

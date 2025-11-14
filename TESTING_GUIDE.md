@@ -474,7 +474,7 @@ WHERE id NOT IN (SELECT id FROM users);
 **Solution:** Check authentication token in browser devtools
 
 ### Issue: "Webhook signature verification failed"
-**Solution:** 
+**Solution:**
 1. Verify `STRIPE_WEBHOOK_SECRET` in `.env.local`
 2. Restart dev server
 3. Restart `stripe listen`

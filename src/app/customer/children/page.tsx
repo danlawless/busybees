@@ -26,13 +26,13 @@ interface Child {
 function ChildrenContent() {
   const { user } = useUser();
   const supabase = createClient();
-  
+
   const [children, setChildren] = useState<Child[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     birthdate: '',
@@ -220,7 +220,7 @@ function ChildrenContent() {
           <div className="space-y-4">
             {children.map((child) => {
               const age = calculateAge(child.birthdate);
-              
+
               return (
                 <Card key={child.id} className="p-6">
                   <div className="flex items-start justify-between">
