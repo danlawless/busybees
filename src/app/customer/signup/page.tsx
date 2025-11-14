@@ -85,8 +85,9 @@ export default function CustomerSignupPage() {
       });
 
       setSuccess(true);
+      // Redirect to verify email page
       setTimeout(() => {
-        router.push('/customer/dashboard');
+        router.push('/customer/verify-email');
       }, 2000);
     } catch (err) {
       console.error('Signup error:', err);
@@ -107,7 +108,7 @@ export default function CustomerSignupPage() {
             Account Created!
           </h2>
           <p className="text-gray-600 mb-4">
-            Welcome to Busy Bees! Redirecting to your dashboard...
+            Please verify your email to access your account online...
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
         </Card>

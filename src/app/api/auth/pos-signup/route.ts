@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { hashPin, validatePinFormat } from '@/lib/auth/pin';
 
 export async function POST(request: NextRequest) {
@@ -13,9 +13,18 @@ export async function POST(request: NextRequest) {
     const { phone, pin, name, email } = body;
 
     // Validate required fields
-    if (!phone || !pin || !name) {
+    if (!phone || !pin || !name || !email) {
       return NextResponse.json(
-        { error: 'Phone, PIN, and name are required' },
+        { error: 'Phone, PIN, name, and email are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
         { status: 400 }
       );
     }
@@ -39,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Check if phone already exists
     const { data: existingUser } = await supabase
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
       .insert({
         phone: cleanPhone,
         name: name.trim(),
-        email: email?.trim() || null,
+        email: email.trim(),
         pin_hash: pinHash,
         role: 'customer',
         last_login: new Date().toISOString(),

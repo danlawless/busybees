@@ -10,58 +10,59 @@ import { verifyPin } from '@/lib/auth/pin';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, pin } = body;
+    const { phoneLast4, pin } = body;
 
     // Validate inputs
-    if (!phone || !pin) {
+    if (!phoneLast4 || !pin) {
       return NextResponse.json(
-        { error: 'Phone and PIN are required' },
+        { error: 'Phone last 4 digits and PIN are required' },
         { status: 400 }
       );
     }
 
-    // Normalize phone (remove formatting)
-    const cleanPhone = phone.replace(/[^\d]/g, '');
-
-    if (cleanPhone.length !== 10) {
+    if (phoneLast4.length !== 4 || !/^\d{4}$/.test(phoneLast4)) {
       return NextResponse.json(
         { error: 'Invalid phone number format' },
         { status: 400 }
       );
     }
 
-    // Find user by phone
+    // Find user by last 4 digits of phone
     const supabase = await createClient();
-    const { data: user, error: userError } = await supabase
+    const { data: users, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('phone', cleanPhone)
-      .single();
+      .like('phone', `%${phoneLast4}`);
 
-    if (userError || !user) {
+    if (userError || !users || users.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid phone number or PIN' },
+        { status: 404 }
+      );
+    }
+
+    // If multiple users have same last 4 digits, we'll try to authenticate with PIN
+    // and return the first match
+    let authenticatedUser = null;
+
+    for (const user of users) {
+      if (!user.pin_hash) continue;
+
+      const isValidPin = await verifyPin(pin, user.pin_hash);
+      if (isValidPin) {
+        authenticatedUser = user;
+        break;
+      }
+    }
+
+    if (!authenticatedUser) {
       return NextResponse.json(
         { error: 'Invalid phone number or PIN' },
         { status: 401 }
       );
     }
 
-    // Check if user has a PIN set
-    if (!user.pin_hash) {
-      return NextResponse.json(
-        { error: 'PIN not set for this account. Please sign up at the POS.' },
-        { status: 401 }
-      );
-    }
-
-    // Verify PIN
-    const isValidPin = await verifyPin(pin, user.pin_hash);
-
-    if (!isValidPin) {
-      return NextResponse.json(
-        { error: 'Invalid phone number or PIN' },
-        { status: 401 }
-      );
-    }
+    const user = authenticatedUser;
 
     // Update last login timestamp
     await supabase
