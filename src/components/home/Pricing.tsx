@@ -1,8 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Check, Star, Users, Ticket, Tag, Sparkles, TrendingDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Check,
+    Star,
+    Users,
+    Ticket,
+    Tag,
+    Sparkles,
+    TrendingDown,
+    X,
+    Copy,
+    Check as CheckIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatPrice, fadeInUp, staggerContainer } from "@/lib/utils";
@@ -23,6 +34,153 @@ const calculateDiscountedPrice = (
 // Helper function to calculate savings
 const calculateSavings = (originalPrice: number, discountPercent: number): number => {
     return originalPrice * (discountPercent / 100);
+};
+
+// Countdown hook
+const useCountdown = (endDate: string) => {
+    const [timeLeft, setTimeLeft] = useState({
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+    });
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const end = new Date(endDate).getTime();
+            const now = new Date().getTime();
+            const difference = end - now;
+
+            if (difference > 0) {
+                setTimeLeft({
+                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+                    minutes: Math.floor((difference / 1000 / 60) % 60),
+                    seconds: Math.floor((difference / 1000) % 60),
+                });
+            } else {
+                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+            }
+        };
+
+        calculateTimeLeft();
+        const timer = setInterval(calculateTimeLeft, 1000);
+
+        return () => clearInterval(timer);
+    }, [endDate]);
+
+    return timeLeft;
+};
+
+// Compact Promo Banner Component
+const PromoBanner = ({
+    promo,
+    onDismiss,
+}: {
+    promo: PromoSpecial;
+    onDismiss: () => void;
+}) => {
+    const timeLeft = useCountdown(promo.endDate);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        await navigator.clipboard.writeText(promo.stripeCouponCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <motion.div
+            className="mt-6 mx-auto max-w-4xl"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <div className="relative bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 rounded-2xl shadow-2xl overflow-hidden">
+                {/* Close Button */}
+                <button
+                    onClick={onDismiss}
+                    className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                    aria-label="Dismiss banner"
+                >
+                    <X className="w-5 h-5 text-white" />
+                </button>
+
+                <div className="px-4 py-5 sm:px-6 sm:py-6">
+                    {/* Header Text */}
+                    <div className="text-center mb-4">
+                        <h3 className="text-xl sm:text-2xl font-black text-white drop-shadow-md mb-1">
+                            Save {promo.discountPercent}% with code
+                        </h3>
+                        <div className="text-2xl sm:text-3xl font-black text-white drop-shadow-md tracking-tight">
+                            {promo.stripeCouponCode}
+                        </div>
+                    </div>
+
+                    {/* Countdown Timer */}
+                    <div className="flex justify-center items-center gap-2 sm:gap-3 mb-4">
+                        <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-2 sm:px-4 sm:py-2 min-w-[60px] sm:min-w-[70px]">
+                            <div className="text-xl sm:text-2xl font-black text-orange-600 leading-none">
+                                {timeLeft.days}
+                            </div>
+                            <div className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase mt-1">
+                                Days
+                            </div>
+                        </div>
+                        <div className="text-white text-2xl font-black pb-3">:</div>
+                        <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-2 sm:px-4 sm:py-2 min-w-[60px] sm:min-w-[70px]">
+                            <div className="text-xl sm:text-2xl font-black text-orange-600 leading-none">
+                                {String(timeLeft.hours).padStart(2, "0")}
+                            </div>
+                            <div className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase mt-1">
+                                Hours
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Promo Code Box */}
+                    <div className="flex items-center justify-center">
+                        <div className="inline-flex items-center gap-2 bg-white rounded-xl px-4 py-3 shadow-lg">
+                            <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                            <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                                USE CODE
+                            </span>
+                            <span className="font-mono font-bold text-base sm:text-lg text-orange-600">
+                                {promo.stripeCouponCode}
+                            </span>
+                            <button
+                                onClick={handleCopy}
+                                className="ml-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                aria-label="Copy promo code"
+                            >
+                                {copied ? (
+                                    <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                                ) : (
+                                    <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Badge */}
+                    <div className="flex justify-center mt-4">
+                        <div className="bg-red-500 text-white px-6 py-2 rounded-full text-sm sm:text-base font-black shadow-lg transform -rotate-2">
+                            {promo.discountPercent}% OFF
+                        </div>
+                    </div>
+
+                    {/* Bee Illustrations - Hidden on very small screens */}
+                    <div className="hidden sm:block absolute left-4 bottom-4 text-4xl opacity-50">
+                        🐝
+                    </div>
+                    <div className="hidden sm:block absolute right-12 top-6 text-3xl opacity-50">
+                        🐝
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
 const pricingPlans = [
@@ -120,12 +278,24 @@ const pricingPlans = [
 
 export function Pricing() {
     const [activePromo, setActivePromo] = useState<PromoSpecial | null>(null);
+    const [showBanner, setShowBanner] = useState(true);
 
     useEffect(() => {
         const promos = getPromosFromStorage();
         const active = getActivePromo(promos);
         setActivePromo(active);
+
+        // Check if banner was dismissed in this session
+        const dismissed = sessionStorage.getItem("promo_banner_dismissed");
+        if (dismissed) {
+            setShowBanner(false);
+        }
     }, []);
+
+    const handleDismissBanner = () => {
+        setShowBanner(false);
+        sessionStorage.setItem("promo_banner_dismissed", "true");
+    };
 
     return (
         <section className="relative py-20 bg-neutral-50 overflow-visible">
@@ -144,46 +314,16 @@ export function Pricing() {
                     <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
                         Choose the option that works best for your family
                     </p>
-                    {activePromo && (
-                        <motion.div
-                            className="mt-8"
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <div className="inline-block bg-gradient-to-r from-red-500 via-pink-500 to-yellow-500 p-1 rounded-2xl shadow-2xl">
-                                <div className="bg-white px-8 py-6 rounded-xl">
-                                    <div className="flex items-center justify-center gap-3 mb-3">
-                                        <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
-                                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-yellow-600">
-                                            LIMITED TIME OFFER!
-                                        </span>
-                                        <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
-                                    </div>
-                                    <div className="text-center mb-4">
-                                        <div className="text-5xl font-black text-red-600 mb-2">
-                                            {activePromo.discountPercent}% OFF
-                                        </div>
-                                        <div className="text-xl font-bold text-gray-900">
-                                            Monthly Memberships
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-3 bg-yellow-50 border-2 border-yellow-400 rounded-lg px-6 py-3">
-                                        <Tag className="w-5 h-5 text-yellow-700" />
-                                        <span className="text-gray-700 font-medium">
-                                            Use code:
-                                        </span>
-                                        <span className="font-mono font-bold text-xl text-yellow-900 bg-yellow-100 px-4 py-1 rounded border-2 border-yellow-300">
-                                            {activePromo.stripeCouponCode}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-3">
-                                        Applied automatically at checkout!
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
+
+                    {/* New Compact Promo Banner */}
+                    <AnimatePresence>
+                        {activePromo && showBanner && (
+                            <PromoBanner
+                                promo={activePromo}
+                                onDismiss={handleDismissBanner}
+                            />
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 {/* General Admission */}
