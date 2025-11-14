@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { signUp } from '@/lib/auth/auth-helpers';
+import { signUp } from '@/lib/auth/auth-client-helpers';
 
 export default function CustomerSignupPage() {
   const router = useRouter();
