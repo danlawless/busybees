@@ -83,6 +83,28 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
+    // Pad PIN to meet Supabase's 6-character minimum
+    const authPassword = `PIN-${pin}`;
+
+    // Update user's password to PIN format (migration for existing users)
+    // This ensures existing users from old system can now use PIN-based auth
+    // Also confirm email since they're verified in person at POS
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      user.id,
+      {
+        password: authPassword,
+        email_confirm: true, // Staff verified them in person
+      }
+    );
+
+    if (updateError) {
+      console.error('Error updating user password:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update authentication' },
+        { status: 500 }
+      );
+    }
+
     // Use PIN as password for Supabase auth (simplest Supabase-native approach)
     // This creates a proper session with all the right cookies
     const response = NextResponse.json({}, { status: 200 });
@@ -106,9 +128,6 @@ export async function POST(request: NextRequest) {
     );
 
     // Sign in with email and PIN (PIN is stored as password during signup)
-    // Pad PIN to meet Supabase's 6-character minimum
-    const authPassword = `PIN-${pin}`;
-
     const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
       email: user.email,
       password: authPassword,
