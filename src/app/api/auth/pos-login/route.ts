@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { verifyPin } from '@/lib/auth/pin';
 
@@ -82,13 +83,75 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
+    // Pad PIN to meet Supabase's 6-character minimum
+    const authPassword = `PIN-${pin}`;
+
+    // Update user's password to PIN format (migration for existing users)
+    // This ensures existing users from old system can now use PIN-based auth
+    // Also confirm email since they're verified in person at POS
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      user.id,
+      {
+        password: authPassword,
+        email_confirm: true, // Staff verified them in person
+      }
+    );
+
+    if (updateError) {
+      console.error('Error updating user password:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update authentication' },
+        { status: 500 }
+      );
+    }
+
+    // Use PIN as password for Supabase auth (simplest Supabase-native approach)
+    // This creates a proper session with all the right cookies
+    const response = NextResponse.json({}, { status: 200 });
+
+    const supabaseResponse = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({ name, value: '', ...options });
+          },
+        },
+      }
+    );
+
+    // Sign in with email and PIN (PIN is stored as password during signup)
+    const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
+      email: user.email,
+      password: authPassword,
+    });
+
+    if (signInError || !signInData.session) {
+      console.error('Sign in error:', signInError);
+      return NextResponse.json(
+        { error: 'Failed to create session' },
+        { status: 500 }
+      );
+    }
+
     // Return user data (excluding sensitive fields)
     const { pin_hash, ...userWithoutPin } = user;
 
+    // Update the response with user data
     return NextResponse.json({
       user: userWithoutPin,
       message: 'Login successful'
-    }, { status: 200 });
+    }, {
+      status: 200,
+      headers: response.headers,
+    });
 
   } catch (error) {
     console.error('POS login error:', error);

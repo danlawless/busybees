@@ -26,11 +26,22 @@ import {
     saveVolumeDiscountsToStorage,
 } from "@/lib/utils/productHelpers";
 
+interface Child {
+    id: string;
+    name: string;
+    birthdate: string;
+    age: number;
+    waiverSigned: boolean;
+    waiverSignedDate?: string;
+    createdAt: string;
+}
+
 interface Customer {
     id: string;
     phone: string;
     name: string;
     email?: string;
+    children: Child[];
     purchases: Purchase[];
     activeSessions: Session[];
     savedCards: SavedCard[];
@@ -675,6 +686,7 @@ export default function POSPage() {
             phone: "5551234567",
             name: "Sarah Johnson",
             email: "sarah@example.com",
+            children: [],
             purchases: [
                 {
                     id: "p1",

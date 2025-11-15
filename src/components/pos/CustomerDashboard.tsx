@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from './CountdownTimer';
 import { PartySchedulingModal } from './PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { createClient } from '@/lib/supabase/client';
 import {
   formatCurrency,
   getPassesFromStorage,
@@ -192,6 +193,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+  const [isAddingChild, setIsAddingChild] = useState(false);
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false);
+  const [isDeletingChild, setIsDeletingChild] = useState(false);
 
   // Helper function to calculate age from birthdate
   const calculateAge = (birthdate: string): number => {
@@ -495,68 +499,111 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   };
 
   // Children management functions
-  const handleAddChild = () => {
+  const handleAddChild = async () => {
     if (!childName.trim() || !childBirthdate) return;
 
-    const newChild: Child = {
-      id: `child_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: childName.trim(),
-      birthdate: childBirthdate,
-      age: calculateAge(childBirthdate),
-      waiverSigned: false,
-      createdAt: new Date().toISOString()
-    };
+    setIsAddingChild(true);
 
-    const updatedCustomer = {
-      ...customer,
-      children: [...customer.children, newChild]
-    };
+    try {
+      const response = await fetch('/api/children', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          name: childName.trim(),
+          birthdate: childBirthdate,
+          waiver_signed: false,
+        }),
+      });
 
-    onUpdateCustomer(updatedCustomer);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add child');
+      }
 
-    // Reset form
-    setChildName('');
-    setChildBirthdate('');
-    setShowAddChild(false);
+      const newChild = await response.json();
 
-    // Show success message for adding the child
-    setSuccessDetails({
-      title: 'Child Added Successfully!',
-      message: `${newChild.name} has been added to your account. Next, you'll need to sign a waiver for them to purchase passes.`
-    });
-    setShowSuccessModal(true);
+      // Reset form
+      setChildName('');
+      setChildBirthdate('');
+      setShowAddChild(false);
 
-    // After success modal closes, show waiver modal
-    setTimeout(() => {
-      setWaiverChild(newChild);
-      setShowWaiverModal(true);
-    }, 5000); // Wait for success modal auto-close
+      // Show success message for adding the child
+      setSuccessDetails({
+        title: 'Child Added Successfully!',
+        message: `${childName.trim()} has been added to your account. Next, you'll need to sign a waiver for them to purchase passes.`
+      });
+      setShowSuccessModal(true);
+
+      // After success modal closes, show waiver modal
+      setTimeout(() => {
+        setWaiverChild({
+          id: newChild.id,
+          name: newChild.name,
+          birthdate: newChild.birthdate,
+          age: calculateAge(newChild.birthdate),
+          waiverSigned: newChild.waiver_signed,
+          waiverSignedDate: newChild.waiver_signed_date,
+          createdAt: newChild.created_at,
+        });
+        setShowWaiverModal(true);
+      }, 5000); // Wait for success modal auto-close
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error adding child:', error);
+      setSuccessDetails({
+        title: 'Error Adding Child',
+        message: error instanceof Error ? error.message : 'Failed to add child. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsAddingChild(false);
+    }
   };
 
-  const handleSignWaiver = (child: Child) => {
-    const updatedChildren = customer.children.map(c =>
-      c.id === child.id
-        ? { ...c, waiverSigned: true, waiverSignedDate: new Date().toISOString() }
-        : c
-    );
+  const handleSignWaiver = async (child: Child) => {
+    setIsSigningWaiver(true);
 
-    const updatedCustomer = {
-      ...customer,
-      children: updatedChildren
-    };
+    try {
+      const response = await fetch(`/api/children/${child.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sign_waiver: true,
+        }),
+      });
 
-    onUpdateCustomer(updatedCustomer);
-    setShowWaiverModal(false);
-    setWaiverChild(null);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to sign waiver');
+      }
 
-    setSuccessDetails({
-      title: 'Waiver Signed Successfully',
-      message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`
-    });
-    setShowSuccessModal(true);
+      setShowWaiverModal(false);
+      setWaiverChild(null);
+
+      setSuccessDetails({
+        title: 'Waiver Signed Successfully',
+        message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`
+      });
+      setShowSuccessModal(true);
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error signing waiver:', error);
+      setSuccessDetails({
+        title: 'Error Signing Waiver',
+        message: error instanceof Error ? error.message : 'Failed to sign waiver. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsSigningWaiver(false);
+    }
   };
 
-  const handleDeleteChild = (childId: string) => {
+  const handleDeleteChild = async (childId: string) => {
     // Check if child has any active passes
     const hasActivePasses = customer.purchases.some(p =>
       p.childId === childId && p.status === 'active'
@@ -571,13 +618,36 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       return;
     }
 
-    const updatedChildren = customer.children.filter(c => c.id !== childId);
-    const updatedCustomer = {
-      ...customer,
-      children: updatedChildren
-    };
+    setIsDeletingChild(true);
 
-    onUpdateCustomer(updatedCustomer);
+    try {
+      const response = await fetch(`/api/children/${childId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete child');
+      }
+
+      setSuccessDetails({
+        title: 'Child Deleted',
+        message: 'Child has been removed from your account.'
+      });
+      setShowSuccessModal(true);
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      setSuccessDetails({
+        title: 'Error Deleting Child',
+        message: error instanceof Error ? error.message : 'Failed to delete child. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsDeletingChild(false);
+    }
   };
 
   const handleChildSelectionForPurchase = (childId: string) => {
@@ -1346,9 +1416,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   <Button
                     onClick={handleAddChild}
                     className="bg-blue-500 hover:bg-blue-600 text-white"
-                    disabled={!childName.trim() || !childBirthdate}
+                    disabled={!childName.trim() || !childBirthdate || isAddingChild}
                   >
-                    Add Child
+                    {isAddingChild ? 'Adding...' : 'Add Child'}
                   </Button>
                 </div>
               </div>
@@ -1420,8 +1490,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   <Button
                     onClick={() => handleSignWaiver(waiverChild)}
                     className="bg-green-500 hover:bg-green-600 text-white"
+                    disabled={isSigningWaiver}
                   >
-                    I Agree and Sign
+                    {isSigningWaiver ? 'Signing...' : 'I Agree and Sign'}
                   </Button>
                 </div>
               </div>
