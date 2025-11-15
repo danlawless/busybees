@@ -3,6 +3,7 @@
  * Used in server components, API routes, and server actions
  */
 
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from './database.types';
@@ -41,16 +42,16 @@ export async function createClient() {
 
 /**
  * Create admin client with service role key for server-side operations that bypass RLS
+ * Uses the raw Supabase client (not SSR wrapper) to access admin methods
  */
 export function createAdminClient() {
-  return createServerClient<Database>(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        get() { return undefined; },
-        set() {},
-        remove() {},
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   );

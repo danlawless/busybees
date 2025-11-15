@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { hashPin, validatePinFormat } from '@/lib/auth/pin';
 
@@ -64,17 +65,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash the PIN
+    // Hash the PIN for database storage
     const pinHash = await hashPin(pin);
 
-    // Try to create Supabase Auth user first (generates proper UUID)
-    // Use a random secure password since POS users login with PIN
-    const tempPassword = `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}Aa1!`;
+    // Pad PIN to meet Supabase's 6-character minimum password requirement
+    const authPassword = `PIN-${pin}`;
 
+    // Try to create Supabase Auth user first (generates proper UUID)
+    // Use the padded PIN as the password for Supabase auth (simplest approach for POS)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
-      password: tempPassword,
-      email_confirm: false, // Don't require email verification for POS signups
+      password: authPassword,
+      email_confirm: true, // Staff verified in person at POS
       user_metadata: {
         name: name.trim(),
         phone: cleanPhone,
@@ -131,18 +133,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send verification email
-    try {
-      await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: email.trim(),
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/customer/dashboard`,
+    // Sign them in immediately using their PIN as password
+    const response = NextResponse.json({}, { status: 201 });
+
+    const supabaseResponse = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({ name, value: '', ...options });
+          },
         },
-      });
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Don't fail signup if email fails - they can verify later
+      }
+    );
+
+    // Sign in with email and padded PIN
+    const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
+      email: email.trim(),
+      password: authPassword,
+    });
+
+    if (signInError || !signInData.session) {
+      console.error('Sign in error after signup:', signInError);
+      // Still return success - user can login manually
+      const { pin_hash, ...userWithoutPin } = newUser;
+      return NextResponse.json({
+        user: userWithoutPin,
+        message: 'Account created successfully'
+      }, { status: 201 });
     }
 
     // Return user data (excluding sensitive fields)
@@ -151,7 +176,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       user: userWithoutPin,
       message: 'Account created successfully'
-    }, { status: 201 });
+    }, {
+      status: 201,
+      headers: response.headers,
+    });
 
   } catch (error) {
     console.error('POS signup error:', error);
