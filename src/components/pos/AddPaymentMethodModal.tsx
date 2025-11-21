@@ -34,9 +34,6 @@ function PaymentForm({ onSuccess, onError }: { onSuccess: () => void; onError: (
     try {
       const { error } = await stripe.confirmSetup({
         elements,
-        confirmParams: {
-          return_url: window.location.href,
-        },
         redirect: 'if_required',
       });
 
