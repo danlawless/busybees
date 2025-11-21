@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import * as Sentry from '@sentry/nextjs';
 import {
   getAllPromos,
   getActivePromos,
@@ -36,10 +35,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ promos });
   } catch (error) {
     logger.error({ error }, '❌ Failed to fetch promos');
-
-    Sentry.captureException(error, {
-      tags: { component: 'api', action: 'fetch_promos' },
-    });
 
     return NextResponse.json(
       { error: 'Failed to fetch promos' },
@@ -96,10 +91,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ promo }, { status: 201 });
   } catch (error) {
     logger.error({ error }, '❌ Failed to create promo');
-
-    Sentry.captureException(error, {
-      tags: { component: 'api', action: 'create_promo' },
-    });
 
     return NextResponse.json(
       { error: 'Failed to create promo' },
@@ -161,10 +152,6 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     logger.error({ error }, '❌ Failed to update promo');
 
-    Sentry.captureException(error, {
-      tags: { component: 'api', action: 'update_promo' },
-    });
-
     return NextResponse.json(
       { error: 'Failed to update promo' },
       { status: 500 }
@@ -197,10 +184,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error({ error }, '❌ Failed to delete promo');
-
-    Sentry.captureException(error, {
-      tags: { component: 'api', action: 'delete_promo' },
-    });
 
     return NextResponse.json(
       { error: 'Failed to delete promo' },
