@@ -130,30 +130,61 @@ export default function POSPage() {
     const [products, setProducts] = useState<FoodProduct[]>([]);
     const [volumeDiscounts, setVolumeDiscounts] = useState<VolumeDiscount[]>([]);
 
-    // Initialize promos from localStorage or seed initial data
+    // Initialize promos from database
     useEffect(() => {
-        // Check if we need to force-update promos (version check)
-        const currentVersion = localStorage.getItem("busybees_promo_version");
+        const loadPromos = async () => {
+            try {
+                const response = await fetch('/api/promos');
+                if (response.ok) {
+                    const { promos: dbPromos } = await response.json();
 
-        let storedPromos = getPromosFromStorage();
+                    // Convert database format to UI format
+                    const formattedPromos: PromoSpecial[] = dbPromos.map((promo: any) => ({
+                        id: promo.id,
+                        name: promo.name,
+                        startDate: promo.start_date,
+                        endDate: promo.end_date,
+                        discountPercent: promo.discount_percent,
+                        description: promo.description,
+                        stripeCouponCode: promo.stripe_coupon_code,
+                        bannerStyle: promo.banner_style,
+                        isActive: promo.is_active,
+                        createdAt: promo.created_at,
+                        updatedAt: promo.updated_at,
+                    }));
 
-        // If version mismatch or no version, clear old promos and reseed
-        if (currentVersion !== PROMO_VERSION || storedPromos.length === 0) {
-            localStorage.removeItem("busybees_promos");
-            localStorage.setItem("busybees_promo_version", PROMO_VERSION);
-            storedPromos = [];
-        }
+                    setPromos(formattedPromos);
 
-        if (storedPromos.length > 0) {
-            setPromos(storedPromos);
-        } else {
-            // Seed initial promos from shared constants
-            setPromos(INITIAL_PROMOS);
-            savePromosToStorage(INITIAL_PROMOS);
-        }
+                    // Also save to localStorage for offline access
+                    savePromosToStorage(formattedPromos);
+                } else {
+                    // Fallback to localStorage if API fails
+                    const storedPromos = getPromosFromStorage();
+                    if (storedPromos.length > 0) {
+                        setPromos(storedPromos);
+                    } else {
+                        // Last resort: use hardcoded initial promos
+                        setPromos(INITIAL_PROMOS);
+                        savePromosToStorage(INITIAL_PROMOS);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load promos:', error);
+                // Fallback to localStorage
+                const storedPromos = getPromosFromStorage();
+                if (storedPromos.length > 0) {
+                    setPromos(storedPromos);
+                } else {
+                    setPromos(INITIAL_PROMOS);
+                    savePromosToStorage(INITIAL_PROMOS);
+                }
+            }
+        };
+
+        loadPromos();
     }, []);
 
-    // Save promos to localStorage whenever they change
+    // Save promos to localStorage whenever they change (for offline caching)
     useEffect(() => {
         if (promos.length > 0) {
             savePromosToStorage(promos);
