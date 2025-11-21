@@ -61,6 +61,22 @@ export async function POST(request: NextRequest) {
         await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
         break;
 
+      case 'setup_intent.succeeded':
+        await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
+        break;
+
+      case 'setup_intent.setup_failed':
+        await handleSetupIntentFailed(event.data.object as Stripe.SetupIntent);
+        break;
+
+      case 'payment_method.attached':
+        await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
+        break;
+
+      case 'payment_method.detached':
+        await handlePaymentMethodDetached(event.data.object as Stripe.PaymentMethod);
+        break;
+
       case 'customer.subscription.created':
         await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
         break;
@@ -219,6 +235,108 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   console.log('PaymentIntent failed:', paymentIntent.id);
   // Log the failure for monitoring
   // Could send notification to admin
+}
+
+async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
+  console.log('SetupIntent succeeded:', setupIntent.id);
+
+  const supabase = createAdminClient();
+
+  // Get payment method and customer details
+  const paymentMethodId = setupIntent.payment_method as string;
+  const customerId = setupIntent.customer as string;
+
+  if (!paymentMethodId || !customerId) {
+    console.log('Missing payment method or customer in setup intent');
+    return;
+  }
+
+  // Get the Stripe customer to find the linked user
+  const stripe = await getStripeClient();
+  const customer = await stripe.customers.retrieve(customerId);
+
+  if (customer.deleted) {
+    console.log('Customer has been deleted');
+    return;
+  }
+
+  const userId = customer.metadata?.supabase_user_id;
+  if (!userId) {
+    console.log('No Supabase user ID in customer metadata');
+    return;
+  }
+
+  // Get payment method details
+  const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+  const card = paymentMethod.card;
+
+  if (!card) {
+    console.log('Payment method is not a card');
+    return;
+  }
+
+  // Check if this is the first/only payment method
+  const { data: existingCards } = await supabase
+    .from('saved_cards')
+    .select('id')
+    .eq('customer_id', userId);
+
+  const isDefault = !existingCards || existingCards.length === 0;
+
+  // If setting as default, unset other defaults first
+  if (isDefault) {
+    await supabase
+      .from('saved_cards')
+      .update({ is_default: false })
+      .eq('customer_id', userId);
+  }
+
+  // Save payment method to database
+  const { error } = await supabase.from('saved_cards').insert({
+    customer_id: userId,
+    stripe_payment_method_id: paymentMethodId,
+    last4: card.last4,
+    brand: card.brand,
+    expiry_month: card.exp_month,
+    expiry_year: card.exp_year,
+    is_default: isDefault,
+  });
+
+  if (error) {
+    console.error('Error saving payment method to database:', error);
+  } else {
+    console.log('Payment method saved successfully for user:', userId);
+  }
+}
+
+async function handleSetupIntentFailed(setupIntent: Stripe.SetupIntent) {
+  console.log('SetupIntent failed:', setupIntent.id);
+  // Log the failure for monitoring
+  // Could send notification to user
+}
+
+async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) {
+  console.log('Payment method attached:', paymentMethod.id);
+  // Payment method was attached to a customer
+  // This is typically handled via setup_intent.succeeded
+}
+
+async function handlePaymentMethodDetached(paymentMethod: Stripe.PaymentMethod) {
+  console.log('Payment method detached:', paymentMethod.id);
+
+  const supabase = createAdminClient();
+
+  // Remove from database
+  const { error } = await supabase
+    .from('saved_cards')
+    .delete()
+    .eq('stripe_payment_method_id', paymentMethod.id);
+
+  if (error) {
+    console.error('Error removing payment method from database:', error);
+  } else {
+    console.log('Payment method removed from database');
+  }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {

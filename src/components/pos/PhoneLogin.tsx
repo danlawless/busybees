@@ -71,6 +71,20 @@ interface PhoneLoginProps {
   onAdminAccess?: () => void;
 }
 
+// Helper function to calculate age from birthdate
+const calculateAge = (birthdate: string): number => {
+  const today = new Date();
+  const birth = new Date(birthdate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+};
+
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
   // Login state - 8 individual boxes (4 phone + 4 PIN)
   const [phoneLast4, setPhoneLast4] = useState(['', '', '', '']);
@@ -195,13 +209,35 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       const data = await response.json();
 
       if (response.ok) {
+        // Fetch customer's children from database
+        let children = [];
+        try {
+          const childrenResponse = await fetch(`/api/children?customer_id=${data.user.id}`);
+          if (childrenResponse.ok) {
+            const childrenData = await childrenResponse.json();
+            // Convert API format to component format
+            children = childrenData.map((child: any) => ({
+              id: child.id,
+              name: child.name,
+              birthdate: child.birthdate,
+              age: calculateAge(child.birthdate),
+              waiverSigned: child.waiver_signed,
+              waiverSignedDate: child.waiver_signed_date,
+              createdAt: child.created_at,
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching children:', err);
+          // Continue with empty children array
+        }
+
         // Convert database user to Customer format
         const customer: Customer = {
           id: data.user.id,
           phone: data.user.phone,
           name: data.user.name,
           email: data.user.email,
-          children: [],
+          children: children,
           purchases: [],
           activeSessions: [],
           savedCards: [],
