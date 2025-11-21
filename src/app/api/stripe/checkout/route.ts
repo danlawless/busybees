@@ -57,6 +57,10 @@ export async function POST(request: NextRequest) {
     const session = await createCheckoutSession({
       customerId: user.id,
       customerEmail: profile.email || user.email!,
+      customerName: profile.name,
+      customerPhone: profile.phone,
+      stripeCustomerId: profile.stripe_customer_id || undefined,
+      savePaymentMethod: true, // Always save payment methods for future use
       lineItems: [{
         price: productPrice,
         quantity,

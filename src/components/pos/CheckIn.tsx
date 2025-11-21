@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
+import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import {
     formatCurrency,
     getPassesFromStorage,
@@ -1002,68 +1003,47 @@ export function CheckIn({
         }
     };
 
-    const handleAddPaymentMethod = async () => {
-        if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-            alert("Please fill in all card details.");
-            return;
-        }
-
+    const fetchSavedCards = async () => {
         const customer = selectedCustomer || currentCustomer;
         if (!customer) return;
 
-        setProcessingPayment(true);
-
         try {
-            // Simulate payment processing delay
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-
-            const cardBrand = cardNumber.startsWith("4")
-                ? "Visa"
-                : cardNumber.startsWith("5")
-                ? "Mastercard"
-                : "Card";
-            const last4 = cardNumber.slice(-4);
-
-            if (saveCard) {
-                // Create new saved card
-                const newCard: SavedCard = {
-                    id: `card_${Date.now()}`,
-                    last4: last4,
-                    brand: cardBrand,
-                    expiryMonth: parseInt(expiryDate.split("/")[0]),
-                    expiryYear: parseInt("20" + expiryDate.split("/")[1]),
-                    isDefault: customer.savedCards.length === 0, // Make it default if it's the first card
-                };
+            const response = await fetch('/api/stripe/payment-methods');
+            if (response.ok) {
+                const { paymentMethods } = await response.json();
+                // Convert API format to component format
+                const savedCards = paymentMethods.map((pm: any) => ({
+                    id: pm.stripe_payment_method_id,
+                    last4: pm.last4,
+                    brand: pm.brand,
+                    expiryMonth: pm.expiry_month,
+                    expiryYear: pm.expiry_year,
+                    isDefault: pm.is_default,
+                }));
 
                 const updatedCustomer = {
                     ...customer,
-                    savedCards: [...customer.savedCards, newCard],
+                    savedCards,
                 };
-
                 onUpdateCustomer(updatedCustomer);
             }
-
-            // Set success details for modal
-            setPaymentSuccessDetails({
-                cardBrand: cardBrand,
-                last4: last4,
-                saved: saveCard,
-            });
-
-            // Reset form
-            setCardNumber("");
-            setExpiryDate("");
-            setCvv("");
-            setCardholderName("");
-            setShowPaymentModal(false);
-            setProcessingPayment(false);
-
-            // Show success modal
-            setShowPaymentSuccessModal(true);
         } catch (error) {
-            setProcessingPayment(false);
-            alert("Error processing payment method. Please try again.");
+            console.error('Error fetching saved cards:', error);
         }
+    };
+
+    // Fetch saved cards when customer is selected
+    useEffect(() => {
+        if (selectedCustomer || currentCustomer) {
+            fetchSavedCards();
+        }
+    }, [selectedCustomer?.id, currentCustomer?.id]);
+
+    const handleAddPaymentMethodSuccess = async () => {
+        // Fetch updated saved cards from API
+        await fetchSavedCards();
+        setShowPaymentModal(false);
+        alert('Payment method added successfully!');
     };
 
     const handleClosePaymentModal = () => {
@@ -3909,171 +3889,11 @@ export function CheckIn({
             )}
 
             {/* Payment Modal */}
-            {showPaymentModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-3xl">💳</span>
-                            </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                Add Payment Method
-                            </h2>
-                            <p className="text-gray-600">
-                                Enter your card details to make purchases
-                            </p>
-                        </div>
-
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                handleAddPaymentMethod();
-                            }}
-                            className="space-y-4"
-                        >
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Cardholder Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={cardholderName}
-                                    onChange={(e) => setCardholderName(e.target.value)}
-                                    placeholder="John Smith"
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                                    disabled={processingPayment}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Card Number
-                                </label>
-                                <input
-                                    type="text"
-                                    value={cardNumber}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, "");
-                                        if (value.length <= 16) {
-                                            setCardNumber(value);
-                                        }
-                                    }}
-                                    placeholder="1234 5678 9012 3456"
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
-                                    disabled={processingPayment}
-                                    maxLength={19}
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Expiry Date
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={expiryDate}
-                                        onChange={(e) => {
-                                            let value = e.target.value.replace(
-                                                /\D/g,
-                                                ""
-                                            );
-                                            if (value.length >= 2) {
-                                                value =
-                                                    value.substring(0, 2) +
-                                                    "/" +
-                                                    value.substring(2, 4);
-                                            }
-                                            if (value.length <= 5) {
-                                                setExpiryDate(value);
-                                            }
-                                        }}
-                                        placeholder="MM/YY"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
-                                        disabled={processingPayment}
-                                        maxLength={5}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        CVV
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={cvv}
-                                        onChange={(e) => {
-                                            const value = e.target.value.replace(
-                                                /\D/g,
-                                                ""
-                                            );
-                                            if (value.length <= 4) {
-                                                setCvv(value);
-                                            }
-                                        }}
-                                        placeholder="123"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono"
-                                        disabled={processingPayment}
-                                        maxLength={4}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                                <input
-                                    type="checkbox"
-                                    id="saveCard"
-                                    checked={saveCard}
-                                    onChange={(e) => setSaveCard(e.target.checked)}
-                                    className="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
-                                    disabled={processingPayment}
-                                />
-                                <label
-                                    htmlFor="saveCard"
-                                    className="text-sm text-gray-700"
-                                >
-                                    I'd like to store this card for future payments
-                                </label>
-                            </div>
-
-                            <div className="flex space-x-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={handleClosePaymentModal}
-                                    disabled={processingPayment}
-                                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors font-medium"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={
-                                        processingPayment ||
-                                        !cardNumber ||
-                                        !expiryDate ||
-                                        !cvv ||
-                                        !cardholderName
-                                    }
-                                    className="flex-1 px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                                >
-                                    {processingPayment
-                                        ? "💳 Processing..."
-                                        : saveCard
-                                        ? "💾 Save Card"
-                                        : "✓ Add Payment"}
-                                </button>
-                            </div>
-                        </form>
-
-                        <div className="mt-6 text-xs text-gray-500 text-center">
-                            🔒 Your payment information is secure and encrypted
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AddPaymentMethodModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onSuccess={handleAddPaymentMethodSuccess}
+            />
 
             {/* Payment Success Modal */}
             {showPaymentSuccessModal && (

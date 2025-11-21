@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { AddPaymentMethodModal } from './AddPaymentMethodModal';
 import { CountdownTimer } from './CountdownTimer';
 import { PartySchedulingModal } from './PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
@@ -166,6 +167,37 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [processingProduct, setProcessingProduct] = useState<string>('');
   const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Fetch saved cards from API
+  const fetchSavedCards = async () => {
+    try {
+      const response = await fetch('/api/stripe/payment-methods');
+      if (response.ok) {
+        const { paymentMethods } = await response.json();
+        const savedCards = paymentMethods.map((pm: any) => ({
+          id: pm.stripe_payment_method_id,
+          last4: pm.last4,
+          brand: pm.brand,
+          expiryMonth: pm.expiry_month,
+          expiryYear: pm.expiry_year,
+          isDefault: pm.is_default,
+        }));
+        onUpdateCustomer({ ...customer, savedCards });
+      }
+    } catch (error) {
+      console.error('Error fetching saved cards:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSavedCards();
+  }, []);
+
+  const handleAddPaymentMethodSuccess = async () => {
+    await fetchSavedCards();
+    setShowAddCard(false);
+    alert('Payment method added successfully!');
+  };
   const [confirmingPurchase, setConfirmingPurchase] = useState<Purchase | null>(null);
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState<{purchaseId: string, passName: string, price: number, type: string} | null>(null);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
@@ -2157,113 +2189,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           </Card>
         )}
 
-        {showAddCard && (
-          <Card className="p-6 mt-4">
-            <h4 className="font-semibold mb-4">Add New Payment Method</h4>
-
-            {/* Demo Card Button */}
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-yellow-800">🎯 Quick Demo Setup</p>
-                  <p className="text-sm text-yellow-600">Use our demo card to test purchases instantly</p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setCardholderName('Demo Customer');
-                    setCardNumber('4242 4242 4242 4242');
-                    setExpiryDate('12/28');
-                    setCvv('123');
-                  }}
-                  size="sm"
-                  className="bg-yellow-500 hover:bg-yellow-600"
-                >
-                  Use Demo Card
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cardholder Name
-                </label>
-                <input
-                  type="text"
-                  value={cardholderName}
-                  onChange={(e) => setCardholderName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Number
-                </label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim())}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expiry Date
-                </label>
-                <input
-                  type="text"
-                  value={expiryDate}
-                  onChange={(e) => {
-                    let value = e.target.value.replace(/\D/g, '');
-                    if (value.length >= 2) {
-                      value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                    }
-                    setExpiryDate(value);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="MM/YY"
-                  maxLength={5}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CVV
-                </label>
-                <input
-                  type="text"
-                  value={cvv}
-                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="123"
-                  maxLength={4}
-                />
-              </div>
-            </div>
-
-            <div className="flex space-x-4 mt-4">
-              <Button
-                onClick={() => setShowAddCard(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddCard}
-                className="flex-1"
-                disabled={isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName}
-              >
-                {isProcessing ? 'Adding Card...' : 'Add Card'}
-              </Button>
-            </div>
-            </Card>
-          )}
+        <AddPaymentMethodModal
+          isOpen={showAddCard}
+          onClose={() => setShowAddCard(false)}
+          onSuccess={handleAddPaymentMethodSuccess}
+        />
           </div>
         </div>
       )}

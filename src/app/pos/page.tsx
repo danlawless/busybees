@@ -5,6 +5,7 @@ import { PhoneLogin } from "@/components/pos/PhoneLogin";
 import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
 import { CheckIn } from "@/components/pos/CheckIn";
 import { AdminPanel } from "../../components/pos/AdminPanel";
+import { AddPaymentMethodModal } from "@/components/pos/AddPaymentMethodModal";
 import {
     PromoSpecial,
     getPromosFromStorage,
@@ -791,67 +792,38 @@ export default function POSPage() {
     };
 
     // Payment method management
-    const handleAddPaymentMethod = async () => {
-        if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-            alert("Please fill in all card details.");
-            return;
-        }
-
+    const fetchSavedCards = async () => {
         if (!currentCustomer) return;
 
-        setProcessingPayment(true);
-
         try {
-            // Simulate payment processing delay
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const response = await fetch('/api/stripe/payment-methods');
+            if (response.ok) {
+                const { paymentMethods } = await response.json();
+                // Convert API format to component format
+                const savedCards = paymentMethods.map((pm: any) => ({
+                    id: pm.stripe_payment_method_id,
+                    last4: pm.last4,
+                    brand: pm.brand,
+                    expiryMonth: pm.expiry_month,
+                    expiryYear: pm.expiry_year,
+                    isDefault: pm.is_default,
+                }));
 
-            const cardBrand = cardNumber.startsWith("4")
-                ? "Visa"
-                : cardNumber.startsWith("5")
-                ? "Mastercard"
-                : "Card";
-            const last4 = cardNumber.slice(-4);
-
-            if (saveCard) {
-                // Create new saved card
-                const newCard = {
-                    id: `card_${Date.now()}`,
-                    last4: last4,
-                    brand: cardBrand,
-                    expiryMonth: parseInt(expiryDate.split("/")[0]),
-                    expiryYear: parseInt("20" + expiryDate.split("/")[1]),
-                    isDefault: currentCustomer.savedCards.length === 0, // Make it default if it's the first card
-                };
-
-                const updatedCustomer = {
+                setCurrentCustomer({
                     ...currentCustomer,
-                    savedCards: [...currentCustomer.savedCards, newCard],
-                };
-
-                setCurrentCustomer(updatedCustomer);
+                    savedCards,
+                });
             }
-
-            // Set success details for modal
-            setPaymentSuccessDetails({
-                cardBrand: cardBrand,
-                last4: last4,
-                saved: saveCard,
-            });
-
-            // Reset form
-            setCardNumber("");
-            setExpiryDate("");
-            setCvv("");
-            setCardholderName("");
-            setShowPaymentModal(false);
-            setProcessingPayment(false);
-
-            // Show success modal
-            setShowPaymentSuccessModal(true);
         } catch (error) {
-            setProcessingPayment(false);
-            alert("Error processing payment method. Please try again.");
+            console.error('Error fetching saved cards:', error);
         }
+    };
+
+    const handleAddPaymentMethod = async () => {
+        // Note: This function is no longer used - the modal uses Stripe's Payment Element
+        // The actual card handling happens via the Stripe API in the modal
+        // This is kept for compatibility but should not be called
+        alert('Please use the Stripe payment form to add your card.');
     };
 
     const handleSetDefaultCard = (cardId: string) => {
@@ -1478,8 +1450,24 @@ export default function POSPage() {
                 </div>
             )}
 
-            {/* Payment Modal */}
-            {showPaymentModal && (
+            {/* Payment Modal - Integrated with Stripe */}
+            <AddPaymentMethodModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onSuccess={async () => {
+                    await fetchSavedCards();
+                    setShowPaymentModal(false);
+                    setShowPaymentSuccessModal(true);
+                    setPaymentSuccessDetails({
+                        cardBrand: 'Card',
+                        last4: '****',
+                        saved: true,
+                    });
+                }}
+            />
+
+            {/* Legacy Payment Modal - Keeping structure for reference but not rendered */}
+            {false && showPaymentModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
                         <div className="text-center mb-6">
