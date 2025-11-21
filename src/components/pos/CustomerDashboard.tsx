@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { AddPaymentMethodModal } from './AddPaymentMethodModal';
 import { CountdownTimer } from './CountdownTimer';
 import { PartySchedulingModal } from './PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { createClient } from '@/lib/supabase/client';
 import {
   formatCurrency,
   getPassesFromStorage,
@@ -165,6 +167,37 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [processingProduct, setProcessingProduct] = useState<string>('');
   const [purchaseSuccess, setPurchaseSuccess] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Fetch saved cards from API
+  const fetchSavedCards = async () => {
+    try {
+      const response = await fetch('/api/stripe/payment-methods');
+      if (response.ok) {
+        const { paymentMethods } = await response.json();
+        const savedCards = paymentMethods.map((pm: any) => ({
+          id: pm.stripe_payment_method_id,
+          last4: pm.last4,
+          brand: pm.brand,
+          expiryMonth: pm.expiry_month,
+          expiryYear: pm.expiry_year,
+          isDefault: pm.is_default,
+        }));
+        onUpdateCustomer({ ...customer, savedCards });
+      }
+    } catch (error) {
+      console.error('Error fetching saved cards:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSavedCards();
+  }, []);
+
+  const handleAddPaymentMethodSuccess = async () => {
+    await fetchSavedCards();
+    setShowAddCard(false);
+    alert('Payment method added successfully!');
+  };
   const [confirmingPurchase, setConfirmingPurchase] = useState<Purchase | null>(null);
   const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState<{purchaseId: string, passName: string, price: number, type: string} | null>(null);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
@@ -192,6 +225,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+  const [isAddingChild, setIsAddingChild] = useState(false);
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false);
+  const [isDeletingChild, setIsDeletingChild] = useState(false);
 
   // Helper function to calculate age from birthdate
   const calculateAge = (birthdate: string): number => {
@@ -495,68 +531,111 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   };
 
   // Children management functions
-  const handleAddChild = () => {
+  const handleAddChild = async () => {
     if (!childName.trim() || !childBirthdate) return;
 
-    const newChild: Child = {
-      id: `child_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: childName.trim(),
-      birthdate: childBirthdate,
-      age: calculateAge(childBirthdate),
-      waiverSigned: false,
-      createdAt: new Date().toISOString()
-    };
+    setIsAddingChild(true);
 
-    const updatedCustomer = {
-      ...customer,
-      children: [...customer.children, newChild]
-    };
+    try {
+      const response = await fetch('/api/children', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          name: childName.trim(),
+          birthdate: childBirthdate,
+          waiver_signed: false,
+        }),
+      });
 
-    onUpdateCustomer(updatedCustomer);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add child');
+      }
 
-    // Reset form
-    setChildName('');
-    setChildBirthdate('');
-    setShowAddChild(false);
+      const newChild = await response.json();
 
-    // Show success message for adding the child
-    setSuccessDetails({
-      title: 'Child Added Successfully!',
-      message: `${newChild.name} has been added to your account. Next, you'll need to sign a waiver for them to purchase passes.`
-    });
-    setShowSuccessModal(true);
+      // Reset form
+      setChildName('');
+      setChildBirthdate('');
+      setShowAddChild(false);
 
-    // After success modal closes, show waiver modal
-    setTimeout(() => {
-      setWaiverChild(newChild);
-      setShowWaiverModal(true);
-    }, 5000); // Wait for success modal auto-close
+      // Show success message for adding the child
+      setSuccessDetails({
+        title: 'Child Added Successfully!',
+        message: `${childName.trim()} has been added to your account. Next, you'll need to sign a waiver for them to purchase passes.`
+      });
+      setShowSuccessModal(true);
+
+      // After success modal closes, show waiver modal
+      setTimeout(() => {
+        setWaiverChild({
+          id: newChild.id,
+          name: newChild.name,
+          birthdate: newChild.birthdate,
+          age: calculateAge(newChild.birthdate),
+          waiverSigned: newChild.waiver_signed,
+          waiverSignedDate: newChild.waiver_signed_date,
+          createdAt: newChild.created_at,
+        });
+        setShowWaiverModal(true);
+      }, 5000); // Wait for success modal auto-close
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error adding child:', error);
+      setSuccessDetails({
+        title: 'Error Adding Child',
+        message: error instanceof Error ? error.message : 'Failed to add child. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsAddingChild(false);
+    }
   };
 
-  const handleSignWaiver = (child: Child) => {
-    const updatedChildren = customer.children.map(c =>
-      c.id === child.id
-        ? { ...c, waiverSigned: true, waiverSignedDate: new Date().toISOString() }
-        : c
-    );
+  const handleSignWaiver = async (child: Child) => {
+    setIsSigningWaiver(true);
 
-    const updatedCustomer = {
-      ...customer,
-      children: updatedChildren
-    };
+    try {
+      const response = await fetch(`/api/children/${child.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sign_waiver: true,
+        }),
+      });
 
-    onUpdateCustomer(updatedCustomer);
-    setShowWaiverModal(false);
-    setWaiverChild(null);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to sign waiver');
+      }
 
-    setSuccessDetails({
-      title: 'Waiver Signed Successfully',
-      message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`
-    });
-    setShowSuccessModal(true);
+      setShowWaiverModal(false);
+      setWaiverChild(null);
+
+      setSuccessDetails({
+        title: 'Waiver Signed Successfully',
+        message: `Waiver has been signed for ${child.name}. They can now purchase passes and play!`
+      });
+      setShowSuccessModal(true);
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error signing waiver:', error);
+      setSuccessDetails({
+        title: 'Error Signing Waiver',
+        message: error instanceof Error ? error.message : 'Failed to sign waiver. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsSigningWaiver(false);
+    }
   };
 
-  const handleDeleteChild = (childId: string) => {
+  const handleDeleteChild = async (childId: string) => {
     // Check if child has any active passes
     const hasActivePasses = customer.purchases.some(p =>
       p.childId === childId && p.status === 'active'
@@ -571,13 +650,36 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       return;
     }
 
-    const updatedChildren = customer.children.filter(c => c.id !== childId);
-    const updatedCustomer = {
-      ...customer,
-      children: updatedChildren
-    };
+    setIsDeletingChild(true);
 
-    onUpdateCustomer(updatedCustomer);
+    try {
+      const response = await fetch(`/api/children/${childId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete child');
+      }
+
+      setSuccessDetails({
+        title: 'Child Deleted',
+        message: 'Child has been removed from your account.'
+      });
+      setShowSuccessModal(true);
+
+      // Trigger refresh via parent component
+      onUpdateCustomer(customer);
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      setSuccessDetails({
+        title: 'Error Deleting Child',
+        message: error instanceof Error ? error.message : 'Failed to delete child. Please try again.'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsDeletingChild(false);
+    }
   };
 
   const handleChildSelectionForPurchase = (childId: string) => {
@@ -1346,9 +1448,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   <Button
                     onClick={handleAddChild}
                     className="bg-blue-500 hover:bg-blue-600 text-white"
-                    disabled={!childName.trim() || !childBirthdate}
+                    disabled={!childName.trim() || !childBirthdate || isAddingChild}
                   >
-                    Add Child
+                    {isAddingChild ? 'Adding...' : 'Add Child'}
                   </Button>
                 </div>
               </div>
@@ -1420,8 +1522,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                   <Button
                     onClick={() => handleSignWaiver(waiverChild)}
                     className="bg-green-500 hover:bg-green-600 text-white"
+                    disabled={isSigningWaiver}
                   >
-                    I Agree and Sign
+                    {isSigningWaiver ? 'Signing...' : 'I Agree and Sign'}
                   </Button>
                 </div>
               </div>
@@ -2086,113 +2189,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           </Card>
         )}
 
-        {showAddCard && (
-          <Card className="p-6 mt-4">
-            <h4 className="font-semibold mb-4">Add New Payment Method</h4>
-
-            {/* Demo Card Button */}
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-yellow-800">🎯 Quick Demo Setup</p>
-                  <p className="text-sm text-yellow-600">Use our demo card to test purchases instantly</p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setCardholderName('Demo Customer');
-                    setCardNumber('4242 4242 4242 4242');
-                    setExpiryDate('12/28');
-                    setCvv('123');
-                  }}
-                  size="sm"
-                  className="bg-yellow-500 hover:bg-yellow-600"
-                >
-                  Use Demo Card
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cardholder Name
-                </label>
-                <input
-                  type="text"
-                  value={cardholderName}
-                  onChange={(e) => setCardholderName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Number
-                </label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim())}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expiry Date
-                </label>
-                <input
-                  type="text"
-                  value={expiryDate}
-                  onChange={(e) => {
-                    let value = e.target.value.replace(/\D/g, '');
-                    if (value.length >= 2) {
-                      value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                    }
-                    setExpiryDate(value);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="MM/YY"
-                  maxLength={5}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CVV
-                </label>
-                <input
-                  type="text"
-                  value={cvv}
-                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="123"
-                  maxLength={4}
-                />
-              </div>
-            </div>
-
-            <div className="flex space-x-4 mt-4">
-              <Button
-                onClick={() => setShowAddCard(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddCard}
-                className="flex-1"
-                disabled={isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName}
-              >
-                {isProcessing ? 'Adding Card...' : 'Add Card'}
-              </Button>
-            </div>
-            </Card>
-          )}
+        <AddPaymentMethodModal
+          isOpen={showAddCard}
+          onClose={() => setShowAddCard(false)}
+          onSuccess={handleAddPaymentMethodSuccess}
+        />
           </div>
         </div>
       )}
