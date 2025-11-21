@@ -231,6 +231,84 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           // Continue with empty children array
         }
 
+        // Fetch customer's purchases from database
+        let purchases = [];
+        try {
+          const purchasesResponse = await fetch(`/api/purchases?customer_id=${data.user.id}`);
+          if (purchasesResponse.ok) {
+            const purchasesData = await purchasesResponse.json();
+            // Convert API format to component format
+            purchases = purchasesData.map((purchase: any) => ({
+              id: purchase.id,
+              type: purchase.type,
+              name: purchase.name,
+              price: purchase.price,
+              purchaseDate: purchase.purchase_date,
+              expiryDate: purchase.expiry_date,
+              usedSessions: purchase.used_sessions,
+              totalSessions: purchase.total_sessions,
+              status: purchase.status,
+              firstUseDate: purchase.first_use_date,
+              actualExpiryDate: purchase.actual_expiry_date,
+              childId: purchase.child_id,
+              autoRenew: purchase.auto_renew,
+              nextRenewalDate: purchase.next_renewal_date,
+              stripePaymentIntentId: purchase.stripe_payment_intent_id,
+              stripeSubscriptionId: purchase.stripe_subscription_id,
+              partyDate: purchase.party_date,
+              partyStartTime: purchase.party_start_time,
+              partyGuests: purchase.party_guests,
+              partyNotes: purchase.party_notes,
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching purchases:', err);
+          // Continue with empty purchases array
+        }
+
+        // Fetch customer's active sessions from database
+        let activeSessions = [];
+        try {
+          const sessionsResponse = await fetch(`/api/sessions?customer_id=${data.user.id}&status=active`);
+          if (sessionsResponse.ok) {
+            const sessionsData = await sessionsResponse.json();
+            // Convert API format to component format
+            activeSessions = sessionsData.map((session: any) => ({
+              id: session.id,
+              customerId: session.customer_id,
+              purchaseId: session.purchase_id,
+              startTime: session.start_time,
+              endTime: session.end_time,
+              autoCheckoutTime: session.auto_checkout_time,
+              status: session.status,
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching sessions:', err);
+          // Continue with empty sessions array
+        }
+
+        // Fetch customer's saved cards from database
+        let savedCards = [];
+        try {
+          const cardsResponse = await fetch(`/api/customers/${data.user.id}/cards`);
+          if (cardsResponse.ok) {
+            const cardsData = await cardsResponse.json();
+            // Convert API format to component format
+            savedCards = cardsData.map((card: any) => ({
+              id: card.id,
+              last4: card.last4,
+              brand: card.brand,
+              expiryMonth: card.expiry_month,
+              expiryYear: card.expiry_year,
+              isDefault: card.is_default,
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching saved cards:', err);
+          // Continue with empty cards array
+        }
+
         // Convert database user to Customer format
         const customer: Customer = {
           id: data.user.id,
@@ -238,9 +316,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           name: data.user.name,
           email: data.user.email,
           children: children,
-          purchases: [],
-          activeSessions: [],
-          savedCards: [],
+          purchases: purchases,
+          activeSessions: activeSessions,
+          savedCards: savedCards,
           createdAt: data.user.created_at,
           lastVisit: data.user.last_login,
         };

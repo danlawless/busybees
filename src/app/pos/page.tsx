@@ -711,43 +711,8 @@ export default function POSPage() {
         }
     }, [volumeDiscounts]);
 
-    // Mock data - in production, this would come from your backend
-    const [customers, setCustomers] = useState<Customer[]>([
-        {
-            id: "1",
-            phone: "5551234567",
-            name: "Sarah Johnson",
-            email: "sarah@example.com",
-            children: [],
-            purchases: [
-                {
-                    id: "p1",
-                    type: "monthly_pass",
-                    name: "Monthly Unlimited Pass",
-                    price: 89.99,
-                    purchaseDate: "2024-01-01",
-                    expiryDate: "2024-02-01",
-                    usedSessions: 8,
-                    totalSessions: 999,
-                    status: "active",
-                },
-                {
-                    id: "p2",
-                    type: "day_pass",
-                    name: "Single Day Pass",
-                    price: 15.99,
-                    purchaseDate: "2023-12-15",
-                    usedSessions: 1,
-                    totalSessions: 1,
-                    status: "used",
-                },
-            ],
-            activeSessions: [],
-            savedCards: [],
-            createdAt: "2023-11-01",
-            lastVisit: "2024-01-15",
-        },
-    ]);
+    // All customer data comes from API calls via PhoneLogin
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
     const handleLogin = (customer: Customer) => {
         setCurrentCustomer(customer);

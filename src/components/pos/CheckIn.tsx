@@ -1008,7 +1008,7 @@ export function CheckIn({
         if (!customer) return;
 
         try {
-            const response = await fetch('/api/stripe/payment-methods');
+            const response = await fetch("/api/stripe/payment-methods");
             if (response.ok) {
                 const { paymentMethods } = await response.json();
                 // Convert API format to component format
@@ -1028,7 +1028,7 @@ export function CheckIn({
                 onUpdateCustomer(updatedCustomer);
             }
         } catch (error) {
-            console.error('Error fetching saved cards:', error);
+            console.error("Error fetching saved cards:", error);
         }
     };
 
@@ -1043,7 +1043,7 @@ export function CheckIn({
         // Fetch updated saved cards from API
         await fetchSavedCards();
         setShowPaymentModal(false);
-        alert('Payment method added successfully!');
+        alert("Payment method added successfully!");
     };
 
     const handleClosePaymentModal = () => {
@@ -1171,14 +1171,6 @@ export function CheckIn({
         setPurchasingProduct(productId);
 
         try {
-            // Simulate payment processing
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-
-            // Create unique purchase ID
-            const purchaseId = `p${Date.now()}_${productId}_${Math.random()
-                .toString(36)
-                .substr(2, 9)}`;
-
             // Map product type correctly
             let purchaseType: Purchase["type"];
             if (isSnackPurchase) {
@@ -1193,49 +1185,66 @@ export function CheckIn({
                 purchaseType = "monthly_pass";
             }
 
-            // Set initial expiry date (for booking/purchase validity)
-            let expiryDate: string | undefined;
-            if (productId.includes("monthly")) {
-                expiryDate = new Date(
-                    Date.now() + 365 * 24 * 60 * 60 * 1000
-                ).toISOString(); // 1 year to start using
-            } else if (productId.includes("weekly")) {
-                expiryDate = new Date(
-                    Date.now() + 90 * 24 * 60 * 60 * 1000
-                ).toISOString(); // 90 days to start using
-            } else if (productId.includes("day")) {
-                expiryDate = new Date(
-                    Date.now() + 30 * 24 * 60 * 60 * 1000
-                ).toISOString(); // 30 days to start using
-            } else if (productId.includes("party")) {
-                expiryDate = new Date(
-                    Date.now() + 30 * 24 * 60 * 60 * 1000
-                ).toISOString(); // 30 days to book
+            // Call real API to process purchase
+            const response = await fetch("/api/purchases/pos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    product_id: productId,
+                    product_name: product.name,
+                    product_price: product.price,
+                    product_description: product.description || "",
+                    purchase_type: purchaseType,
+                    child_id: isPassPurchase ? selectedChildForPurchase : undefined,
+                    quantity: 1,
+                    metadata: {},
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Purchase failed");
             }
 
-            const newPurchase: Purchase = {
-                id: purchaseId,
-                type: purchaseType,
-                name: product.name,
-                price: product.price,
-                purchaseDate: new Date().toISOString(),
-                expiryDate,
-                usedSessions: 0,
-                totalSessions: isSnackPurchase ? 1 : product.sessions || 1,
-                status: isSnackPurchase ? "used" : "active", // Snacks are immediately used
-                // Explicitly ensure new purchases have no firstUseDate
-                firstUseDate: undefined,
-                actualExpiryDate: undefined,
-                // Add child ID for pass purchases (not for snacks or parties)
-                childId: isPassPurchase ? selectedChildForPurchase : undefined,
-            };
+            const { purchase } = await response.json();
 
-            const updatedCustomer = {
-                ...customer,
-                purchases: [...customer.purchases, newPurchase],
-            };
+            // Fetch updated purchases from database
+            const purchasesResponse = await fetch(
+                `/api/purchases?customer_id=${customer.id}`
+            );
+            if (purchasesResponse.ok) {
+                const purchasesData = await purchasesResponse.json();
+                const purchases = purchasesData.map((p: any) => ({
+                    id: p.id,
+                    type: p.type,
+                    name: p.name,
+                    price: p.price,
+                    purchaseDate: p.purchase_date,
+                    expiryDate: p.expiry_date,
+                    usedSessions: p.used_sessions,
+                    totalSessions: p.total_sessions,
+                    status: p.status,
+                    firstUseDate: p.first_use_date,
+                    actualExpiryDate: p.actual_expiry_date,
+                    childId: p.child_id,
+                    autoRenew: p.auto_renew,
+                    nextRenewalDate: p.next_renewal_date,
+                    stripePaymentIntentId: p.stripe_payment_intent_id,
+                    stripeSubscriptionId: p.stripe_subscription_id,
+                    partyDate: p.party_date,
+                    partyStartTime: p.party_start_time,
+                    partyGuests: p.party_guests,
+                    partyNotes: p.party_notes,
+                }));
 
-            onUpdateCustomer(updatedCustomer);
+                const updatedCustomer = {
+                    ...customer,
+                    purchases: purchases,
+                };
+
+                onUpdateCustomer(updatedCustomer);
+            }
 
             // Clear selected child for next purchase
             if (isPassPurchase) {
@@ -1248,6 +1257,14 @@ export function CheckIn({
             setTimeout(() => setPurchaseSuccess(""), 3000);
         } catch (error) {
             console.error("Purchase failed:", error);
+            setSuccessDetails({
+                title: "Purchase Failed",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to process purchase. Please try again.",
+            });
+            setShowSuccessModal(true);
         } finally {
             setPurchasingProduct(null);
         }
