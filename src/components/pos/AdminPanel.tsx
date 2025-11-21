@@ -632,7 +632,7 @@ export function AdminPanel({
     setShowPromoForm(true);
   };
 
-  const handleSavePromo = () => {
+  const handleSavePromo = async () => {
     const errors: Record<string, string> = {};
 
     // Validate all fields
@@ -674,58 +674,150 @@ export function AdminPanel({
       return;
     }
 
-    // Save promo
-    if (editingPromo) {
-      // Update existing promo
-      const updatedPromo: PromoSpecial = {
-        ...editingPromo,
-        name: promoFormData.name.trim(),
-        startDate: promoFormData.startDate,
-        endDate: promoFormData.endDate,
-        discountPercent: Number(promoFormData.discountPercent),
-        description: promoFormData.description.trim(),
-        stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
-        bannerStyle: promoFormData.bannerStyle as any,
-        isActive: promoFormData.isActive,
-        updatedAt: new Date().toISOString(),
-      };
-      onUpdatePromos(promos.map(p => p.id === editingPromo.id ? updatedPromo : p));
-    } else {
-      // Create new promo
-      const newPromo: PromoSpecial = {
-        id: `promo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: promoFormData.name.trim(),
-        startDate: promoFormData.startDate,
-        endDate: promoFormData.endDate,
-        discountPercent: Number(promoFormData.discountPercent),
-        description: promoFormData.description.trim(),
-        stripeCouponCode: promoFormData.stripeCouponCode.toUpperCase(),
-        bannerStyle: promoFormData.bannerStyle as any,
-        isActive: promoFormData.isActive,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      onUpdatePromos([...promos, newPromo]);
-    }
+    try {
+      // Save promo to database
+      if (editingPromo) {
+        // Update existing promo
+        const response = await fetch('/api/promos', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingPromo.id,
+            name: promoFormData.name.trim(),
+            start_date: promoFormData.startDate,
+            end_date: promoFormData.endDate,
+            discount_percent: Number(promoFormData.discountPercent),
+            description: promoFormData.description.trim(),
+            stripe_coupon_code: promoFormData.stripeCouponCode.toUpperCase(),
+            banner_style: promoFormData.bannerStyle,
+            is_active: promoFormData.isActive,
+          }),
+        });
 
-    setShowPromoForm(false);
-    setEditingPromo(null);
+        if (!response.ok) {
+          throw new Error('Failed to update promo');
+        }
+
+        const { promo } = await response.json();
+
+        // Convert database format to UI format
+        const updatedPromo: PromoSpecial = {
+          id: promo.id,
+          name: promo.name,
+          startDate: promo.start_date,
+          endDate: promo.end_date,
+          discountPercent: promo.discount_percent,
+          description: promo.description,
+          stripeCouponCode: promo.stripe_coupon_code,
+          bannerStyle: promo.banner_style,
+          isActive: promo.is_active,
+          createdAt: promo.created_at,
+          updatedAt: promo.updated_at,
+        };
+
+        onUpdatePromos(promos.map(p => p.id === editingPromo.id ? updatedPromo : p));
+      } else {
+        // Create new promo
+        const response = await fetch('/api/promos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: promoFormData.name.trim(),
+            start_date: promoFormData.startDate,
+            end_date: promoFormData.endDate,
+            discount_percent: Number(promoFormData.discountPercent),
+            description: promoFormData.description.trim(),
+            stripe_coupon_code: promoFormData.stripeCouponCode.toUpperCase(),
+            banner_style: promoFormData.bannerStyle,
+            is_active: promoFormData.isActive,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create promo');
+        }
+
+        const { promo } = await response.json();
+
+        // Convert database format to UI format
+        const newPromo: PromoSpecial = {
+          id: promo.id,
+          name: promo.name,
+          startDate: promo.start_date,
+          endDate: promo.end_date,
+          discountPercent: promo.discount_percent,
+          description: promo.description,
+          stripeCouponCode: promo.stripe_coupon_code,
+          bannerStyle: promo.banner_style,
+          isActive: promo.is_active,
+          createdAt: promo.created_at,
+          updatedAt: promo.updated_at,
+        };
+
+        onUpdatePromos([...promos, newPromo]);
+      }
+
+      setShowPromoForm(false);
+      setEditingPromo(null);
+    } catch (error) {
+      console.error('Failed to save promo:', error);
+      alert('Failed to save promo. Please try again.');
+    }
   };
 
-  const handleDeletePromo = (id: string) => {
+  const handleDeletePromo = async (id: string) => {
     if (confirmingDelete === id) {
-      onUpdatePromos(promos.filter(p => p.id !== id));
-      setConfirmingDelete(null);
+      try {
+        // Delete from database
+        const response = await fetch(`/api/promos?id=${id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete promo');
+        }
+
+        // Update local state
+        onUpdatePromos(promos.filter(p => p.id !== id));
+        setConfirmingDelete(null);
+      } catch (error) {
+        console.error('Failed to delete promo:', error);
+        alert('Failed to delete promo. Please try again.');
+        setConfirmingDelete(null);
+      }
     } else {
       setConfirmingDelete(id);
       setTimeout(() => setConfirmingDelete(null), 5000);
     }
   };
 
-  const handleTogglePromo = (id: string) => {
-    onUpdatePromos(promos.map(p =>
-      p.id === id ? { ...p, isActive: !p.isActive, updatedAt: new Date().toISOString() } : p
-    ));
+  const handleTogglePromo = async (id: string) => {
+    const promo = promos.find(p => p.id === id);
+    if (!promo) return;
+
+    try {
+      // Update in database
+      const response = await fetch('/api/promos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: promo.id,
+          is_active: !promo.isActive,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle promo');
+      }
+
+      // Update local state
+      onUpdatePromos(promos.map(p =>
+        p.id === id ? { ...p, isActive: !p.isActive, updatedAt: new Date().toISOString() } : p
+      ));
+    } catch (error) {
+      console.error('Failed to toggle promo:', error);
+      alert('Failed to toggle promo. Please try again.');
+    }
   };
 
   const renderMarketing = () => {
