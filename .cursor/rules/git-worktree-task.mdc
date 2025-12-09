@@ -5,107 +5,97 @@ alwaysApply: false
 
 # Git Worktree Task Workflow
 
-When completing tasks autonomously, we work in git worktrees. This isolates our work,
-keeps the main working directory clean, and allows context switching without losing
-state. The goal: deliver a pull request that passes all checks and merges without
-back-and-forth.
+<objective>
+Deliver a pull request that passes all checks and merges without back-and-forth. Work in isolated git worktrees to keep the main directory clean and allow context switching.
+</objective>
 
-## Why Git Worktrees
+<workspace-setup>
+Create git worktree in .gitworktrees/ directory:
 
-Worktrees let you work on multiple branches simultaneously without stashing or losing
-context. Your main directory stays on `main` for quick reference. Your task directory is
-isolated. You can switch between them instantly. When done, the worktree disappears
-cleanly.
+```bash
+mkdir -p .gitworktrees
+git worktree add -b feature/task-name .gitworktrees/task-name main
+cd .gitworktrees/task-name
+```
 
-## The Complete Cycle
+</workspace-setup>
 
-**Setup your workspace.** Create a git worktree for the task. Choose a branch name that
-describes what you're building. The worktree should be in a separate directory,
-typically parallel to your main repo directory.
+<environment-initialization>
+Run /setup-environment to prepare the worktree. This detects project type and sets up dependencies, code generation, and environment files.
 
-**Read the standards.** Before writing code, read all cursor rules in `.cursor/rules/`.
-These define how this project works. Every applicable rule must be followed. If
-`CLAUDE.md` or `AGENTS.md` exist at the project root, read those too.
+If /setup-environment doesn't exist, set up manually based on project type (Node.js:
+`pnpm install`, Python: `pip install -r requirements.txt`, Ruby: `bundle install`).
 
-**Implement the solution.** Write code that solves the problem. Follow all cursor rules.
-Make commits along the way as logical units of work are completed. Each commit should
-follow the git commit message guidelines in .cursor/rules/git-commit-message.md.
+Copy environment files from parent directory if needed. After proper setup, all tests
+(unit + integration) should pass. </environment-initialization>
 
-**Validate locally before pushing.** Run the project's pre-push validation. This catches
-issues before CI does, saving time and CI minutes. The project likely has
-`pnpm pre-push` or similar. Run it. Fix any issues it finds. Only proceed when
-everything passes locally. You can also run pre-commit if it exists, pytest, ruff,
-prettier, etc. For a clue, you can look for a CI job in the github workflows. It will
-save you time if you can run the steps locally rather than pushing and waiting for a
-build.
+<standards-discovery>
+Read all cursor rules in .cursor/rules/. If CLAUDE.md or AGENTS.md exist at project root, read those too. Every applicable rule must be followed.
+</standards-discovery>
 
-If validation fails, understand why and fix it. Don't push broken code hoping CI will
-tell you what's wrong - the local tooling already told you.
+<implementation>
+Write code that solves the problem following all cursor rules. Make commits along the way as logical units of work are completed. Follow git commit message guidelines in .cursor/rules/git-commit-message.mdc.
+</implementation>
 
-**Self-review your changes.** Invoke the code reviewer agent (Rivera in
-.claude/agents/rivera.md) to review your changes before pushing. The reviewer catches
-bugs, security issues, design problems, and maintainability concerns that you might have
-missed. Address critical issues. Consider warnings seriously. Evaluate suggestions for
-merit.
+<local-validation>
+Run project's pre-push validation before pushing. This catches issues before CI:
+- Node.js: `pnpm pre-push` or check package.json scripts
+- Python: `pre-commit run --all-files`, `pytest`, `ruff check`, `mypy`
+- Ruby: `bundle exec rake test`, `bundle exec rubocop`
+- Go: `go test ./...`, `golangci-lint run`
+- Rust: `cargo test`, `cargo clippy`
 
-The reviewer's feedback is educational - learn from it. If you disagree with feedback,
-explain your reasoning. But if the feedback points out an actual problem, fix it before
-pushing.
+Check .github/workflows/ to see what CI runs - run those steps locally.
 
-**Push and create the PR.** Once local validation passes and code review is addressed,
-push your commits. Create a pull request with a clear description of what changed and
-why. The PR description should help reviewers understand the context and the decisions
-you made.
+All tests should pass after environment setup. If tests fail, it's either incomplete
+setup or bugs in your code. Fix before pushing. </local-validation>
 
-**Wait for CI to complete.** - Let all CI jobs run to completion (usually about 3
-minutes). The project has multiple validation jobs (code quality, tests, build). All
-must pass. Green checks are required before merge.
+<self-review>
+Invoke code reviewer agent (Rivera in .claude/agents/rivera.md if available) to review changes before pushing. Address critical issues, consider warnings seriously, evaluate suggestions for merit. Learn from feedback.
+</self-review>
 
-This is a good time to review and update documentation while you are waiting for the PR
-to build. If you don't have anything to do, you can run a bash sleep 180 to sleep for a
-bit. Take a nap.
+<pull-request-creation>
+Once local validation passes and code review is addressed, push commits. Create pull request with clear description of what changed and why. Help reviewers understand context and decisions made.
+</pull-request-creation>
 
-Run gh to check on the build. If CI fails, read the logs carefully. Understand what
-broke and why. Fix the issue and push again. Don't guess - the CI logs contain the
-information you need.
+<ci-validation>
+Let all CI jobs run to completion. All must pass. Green checks required before merge. If CI fails, read logs carefully, understand what broke and why, fix and push again.
+</ci-validation>
 
-**Wait for AI bot reviews.** There are AI code review bots that will be operating on the
-pull request. AI bot reviews to complete. These bots analyze code for additional issues
-that automated checks might miss.
+<bot-review-handling>
+AI code review bots will analyze the pull request. Evaluate feedback critically - you have full project context, bots don't.
 
-**Address feedback intelligently.** When the code review bots provide feedback, evaluate
-it critically. You have full project context - the bots don't. Some feedback is valuable
-and should be addressed. Some feedback is incorrect or not applicable and should be
-marked WONTFIX with clear reasoning.
+Fix valuable feedback that identifies real issues. Mark as WONTFIX with clear reasoning
+if feedback is incorrect, not applicable, conflicts with project standards, or would
+break functionality.
 
-Be smarter than the bots. If feedback conflicts with project standards, follow project
-standards. If feedback suggests changes that would break functionality, explain why it's
-WONTFIX. If feedback identifies a real issue, fix it. Do not let them talk you into
-adding unnecessary complexity. Be discerning. Some feedback is eyeroll worthy. If it's
-helpful, you can use gh to mark the feedback as positive / negative with a github
-reaction.
+Be discerning. You are smarter than the bots. </bot-review-handling>
 
-**Merge when all checks pass.** Once CI is green, bot reviews are addressed, and all
-checks pass, the PR is ready. Either merge it yourself or wait for the human reviewer to
-merge it.
+<merge-and-cleanup>
+Once CI is green, bot reviews are addressed, and all checks pass, merge the PR.
 
-## Common Pitfalls
+After merge, clean up worktree:
 
-**Skipping local validation.** Don't push without running pre-push checks. You'll just
-waste time waiting for CI to tell you what your local tooling would have caught in
-seconds.
+```bash
+cd ../..  # Return to main directory
+git worktree remove .gitworktrees/task-name
+```
 
-**Blindly following bot feedback.** Bots provide suggestions, not mandates. Evaluate
-each piece of feedback. You have context they don't. Make informed decisions about what
-to fix and what to WONTFIX.
+</merge-and-cleanup>
 
-## Success Criteria
+<critical-success-factors>
+Environment setup is not optional. After creating worktree, run /setup-environment or manually install dependencies. Type errors and test failures often stem from missing code generation or dependencies.
 
-A successful autonomous task means: the original request is completed, all automated
-checks pass, code follows all cursor rules, tests are green, code review was addressed,
-bot feedback was evaluated intelligently, and the PR merges without human intervention
-requesting changes.
+Local validation saves time. Don't push without running pre-push checks. Local tooling
+catches issues in seconds vs waiting for CI.
 
-The tools are your friends. Use them. They catch issues early when they're easy to fix.
-They validate your work before it becomes someone else's problem. They help you deliver
-quality code that people trust.
+Bot feedback requires judgment. Bots provide suggestions, not mandates. Evaluate each
+piece based on your context and project standards.
+
+Full test suite must pass. After setup, all tests (unit + integration) should pass. Fix
+setup or code before pushing.
+
+Successful autonomous task means: original request completed, all automated checks pass,
+code follows all cursor rules, tests green, code review addressed, bot feedback
+evaluated intelligently, PR merges without human intervention requesting changes.
+</critical-success-factors>
