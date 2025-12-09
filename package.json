@@ -2,6 +2,11 @@
   "name": "busybees",
   "version": "0.1.0",
   "private": true,
+  "pnpm": {
+    "overrides": {
+      "@babel/core": "7.26.10"
+    }
+  },
   "scripts": {
     "dev": "TURBOPACK=0 next dev",
     "dev:turbo": "next dev --turbopack",
