@@ -16,8 +16,8 @@ INSERT INTO public.promos (
 VALUES
   (
     'Early Bee!',
-    '2025-10-01',
-    '2025-11-20',
+    '2024-10-01',
+    '2024-11-20',
     20,
     'Coming soon!  Bee one of the first!',
     'EARLYBEE20',
@@ -26,8 +26,8 @@ VALUES
   ),
   (
     'Black Friday!',
-    '2025-11-21',
-    '2025-11-30',
+    '2024-11-21',
+    '2024-11-30',
     30,
     'Black Friday Deal! (Thanksgiving)',
     'BLACKFRIDAY30',
@@ -36,8 +36,8 @@ VALUES
   ),
   (
     'Cyber Monday',
-    '2025-11-30',
-    '2025-12-01',
+    '2024-11-30',
+    '2024-12-01',
     40,
     'Cyber Monday!',
     'CYBERMONDAY40',
@@ -46,8 +46,8 @@ VALUES
   ),
   (
     'Winter Special!',
-    '2025-12-01',
-    '2025-12-19',
+    '2024-12-01',
+    '2024-12-19',
     15,
     'Warm up with winter special!',
     'WINTERSPECIAL15',
@@ -56,8 +56,8 @@ VALUES
   ),
   (
     'Christmas Special!',
-    '2025-12-20',
-    '2025-12-25',
+    '2024-12-20',
+    '2024-12-25',
     25,
     'Merry Christmas this week only!',
     'XMASSGIFT25',
@@ -66,8 +66,8 @@ VALUES
   ),
   (
     'New Years Special!',
-    '2025-12-29',
-    '2026-01-01',
+    '2024-12-29',
+    '2025-01-01',
     30,
     '2 Day New Years Special',
     'NEWYEARS30',
@@ -76,8 +76,8 @@ VALUES
   ),
   (
     'Opening Special',
-    '2026-01-01',
-    '2026-03-01',
+    '2025-01-01',
+    '2025-03-01',
     10,
     'Special to leave running for 1st 3 months Opening',
     'GRANDOPEN10',
