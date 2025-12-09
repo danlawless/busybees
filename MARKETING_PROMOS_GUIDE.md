@@ -48,14 +48,14 @@ npx tsx scripts/seed-promos.ts
 
 Both methods are idempotent - they won't create duplicates if you run them multiple times.
 
-This will create 7 promotional campaigns:
-- Early Bee! (20% off) - Oct 1 to Nov 20, 2025
-- Black Friday! (30% off) - Nov 21 to Nov 30, 2025
-- Cyber Monday (40% off) - Nov 30 to Dec 1, 2025
-- Winter Special! (15% off) - Dec 1 to Dec 19, 2025
-- Christmas Special! (25% off) - Dec 20 to Dec 25, 2025
-- New Years Special! (30% off) - Dec 29, 2025 to Jan 1, 2026
-- Opening Special (10% off) - Jan 1 to Mar 1, 2026
+This will create 7 promotional campaigns (currently disabled - dates set to 2024):
+- Early Bee! (20% off) - Oct 1 to Nov 20, 2024
+- Black Friday! (30% off) - Nov 21 to Nov 30, 2024
+- Cyber Monday (40% off) - Nov 30 to Dec 1, 2024
+- Winter Special! (15% off) - Dec 1 to Dec 19, 2024
+- Christmas Special! (25% off) - Dec 20 to Dec 25, 2024
+- New Years Special! (30% off) - Dec 29, 2024 to Jan 1, 2025
+- Opening Special (10% off) - Jan 1 to Mar 1, 2025
 
 **Note:** The seed script is idempotent - it won't create duplicates if you run it multiple times.
 
