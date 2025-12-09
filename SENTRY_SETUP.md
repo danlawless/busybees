@@ -57,13 +57,13 @@ The application should start without errors. Sentry will automatically initializ
 
 ### Configuration Files
 
-- **`instrumentation.ts`**: Next.js 15 instrumentation file that loads Sentry configs
-- **`sentry.client.config.ts`**: Client-side initialization with session replay
+- **`instrumentation.ts`**: Next.js 15 server instrumentation (loads server/edge configs, handles errors)
+- **`instrumentation-client.ts`**: Client-side instrumentation with session replay and navigation tracking
 - **`sentry.server.config.ts`**: Server-side initialization for API routes
 - **`sentry.edge.config.ts`**: Edge runtime initialization for middleware
 - **`next.config.ts`**: Wraps Next.js config with Sentry's build-time plugin
 
-The `instrumentation.ts` file is required for Next.js 15 and loads the appropriate Sentry configuration based on the runtime (Node.js server or Edge).
+The `instrumentation.ts` file loads the appropriate Sentry configuration based on the runtime (Node.js server or Edge) and exports an `onRequestError` hook to capture errors from nested React Server Components. The `instrumentation-client.ts` file initializes Sentry in the browser and exports an `onRouterTransitionStart` hook to track page navigations.
 
 ### Logging Integration
 

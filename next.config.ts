@@ -4,7 +4,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     turbo: undefined, // Disable Turbopack
-    instrumentationHook: true, // Enable instrumentation for Sentry
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if

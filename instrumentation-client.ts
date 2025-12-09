@@ -1,9 +1,16 @@
 /**
- * Sentry Client Configuration
+ * Client-Side Instrumentation
  * Initializes Sentry for client-side error tracking
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
  */
 
 import * as Sentry from "@sentry/nextjs";
+
+/**
+ * Capture navigation events for better tracking
+ * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#track-page-navigations
+ */
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
