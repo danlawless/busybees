@@ -1,10 +1,26 @@
-import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+/**
+ * Next.js Configuration
+ *
+ * IMPORTANT: We do NOT use withSentryConfig wrapper here.
+ *
+ * The Sentry webpack plugin (used by withSentryConfig) conflicts with
+ * Next.js 15.5.x's next-flight-loader, causing:
+ *   TypeError: Cannot read properties of undefined (reading 'createFilename')
+ *
+ * This happens because withSentryConfig modifies webpack's compilation context
+ * in a way that breaks ModuleFilenameHelpers access during RSC processing.
+ *
+ * Sentry still works via instrumentation files:
+ * - instrumentation.ts (server/edge initialization)
+ * - instrumentation-client.ts (client initialization)
+ * - sentry.server.config.ts (server runtime config)
+ * - sentry.edge.config.ts (edge runtime config)
+ *
+ * Source map uploading can be done via Sentry CLI in CI/CD if needed.
+ */
 const nextConfig: NextConfig = {
-  experimental: {
-    turbo: undefined, // Disable Turbopack
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -47,28 +63,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Sentry configuration for Next.js 15.5.x
-// The webpack plugin causes createFilename TypeError with flight-loader
-// Disabling it while keeping runtime error tracking
-export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: true,
-
-  // CRITICAL: Disable features that cause build conflicts with Next.js 15.5.x
-  reactComponentAnnotation: {
-    enabled: false,
-  },
-  automaticVercelMonitors: false,
-
-  // Disable the webpack plugin entirely to avoid flight-loader conflicts
-  // Runtime Sentry still works via instrumentation files
-  unstable_sentryWebpackPluginOptions: {
-    disable: true,
-  },
-
-  // These won't work with plugin disabled, but keeping for documentation
-  tunnelRoute: "/monitoring",
-  hideSourceMaps: true,
-  disableLogger: true,
-});
+export default nextConfig;
