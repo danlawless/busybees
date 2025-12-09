@@ -1,7 +1,9 @@
 /**
- * Structured Logger with Sentry Integration
- * Provides consistent logging throughout the app with automatic error tracking
+ * Client-Side Logger with Sentry Integration
+ * Provides consistent logging for browser-side code with automatic error tracking
  */
+
+"use client";
 
 import * as Sentry from "@sentry/nextjs";
 
@@ -11,7 +13,7 @@ interface LogContext {
   [key: string]: unknown;
 }
 
-class Logger {
+class ClientLogger {
   private log(level: LogLevel, context: LogContext, message: string) {
     const timestamp = new Date().toISOString();
     const logData = {
@@ -21,24 +23,19 @@ class Logger {
       ...context,
     };
 
-    // In development, use pretty console output
-    if (process.env.NODE_ENV === 'development') {
-      const emoji = {
-        debug: '🔍',
-        info: 'ℹ️',
-        warn: '⚠️',
-        error: '❌',
-      }[level];
+    // Use pretty console output in the browser
+    const emoji = {
+      debug: '🔍',
+      info: 'ℹ️',
+      warn: '⚠️',
+      error: '❌',
+    }[level];
 
-      console[level === 'debug' ? 'log' : level](
-        `${emoji} [${level.toUpperCase()}]`,
-        message,
-        context
-      );
-    } else {
-      // In production, use JSON for structured logging
-      console.log(JSON.stringify(logData));
-    }
+    console[level === 'debug' ? 'log' : level](
+      `${emoji} [${level.toUpperCase()}]`,
+      message,
+      context
+    );
 
     // Send errors and warnings to Sentry
     if (level === 'error' || level === 'warn') {
@@ -92,10 +89,10 @@ class Logger {
 
   /**
    * Create a child logger with persistent context
-   * Useful for request handlers where you want to include request ID, user email, etc.
+   * Useful for component logging where you want to include component name, user ID, etc.
    */
-  child(persistentContext: LogContext): Logger {
-    const childLogger = new Logger();
+  child(persistentContext: LogContext): ClientLogger {
+    const childLogger = new ClientLogger();
     const originalLog = childLogger.log.bind(childLogger);
 
     childLogger.log = (level: LogLevel, context: LogContext, message: string) => {
@@ -106,5 +103,4 @@ class Logger {
   }
 }
 
-export const logger = new Logger();
-
+export const logger = new ClientLogger();
