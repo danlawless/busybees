@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, HelpCircle, Calendar, Users, Gift, DollarSign, Clock, Utensils } from 'lucide-react'
+import { ChevronDown, ChevronUp, HelpCircle, Calendar, Gift, DollarSign, Utensils } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -87,13 +87,6 @@ const faqCategories = [
   }
 ]
 
-const quickAnswers = [
-  { icon: Clock, question: 'How long are parties?', answer: '1.5-2.5 hours depending on package' },
-  { icon: Users, question: 'Age range for parties?', answer: 'Perfect for ages 2-12 years old' },
-  { icon: Calendar, question: 'Available party times?', answer: 'Weekends 10am-6pm, Weekdays 4pm-7pm' },
-  { icon: Gift, question: 'What\'s included?', answer: 'Host, decorations, activities, cleanup & more!' }
-]
-
 export function PartyFAQ() {
   const [openFAQ, setOpenFAQ] = useState<string | null>(null)
 
@@ -123,36 +116,6 @@ export function PartyFAQ() {
             Everything you need to know about planning the perfect party at Busy Bees. 
             Can't find what you're looking for? Just give us a call!
           </p>
-        </motion.div>
-        
-        {/* Quick Answers */}
-        <motion.div
-          className="mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {quickAnswers.map((item, index) => {
-              const Icon = item.icon
-              return (
-                <Card key={index} className="card-pastel text-center group hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse">
-                      <Icon className="w-6 h-6 text-charcoal-700" />
-                    </div>
-                    <h3 className="font-semibold text-charcoal-800 text-sm mb-2">
-                      {item.question}
-                    </h3>
-                    <p className="text-xs text-charcoal-600 leading-relaxed">
-                      {item.answer}
-                    </p>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
         </motion.div>
         
         {/* Detailed FAQ Sections */}
