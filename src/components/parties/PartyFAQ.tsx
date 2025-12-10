@@ -62,7 +62,7 @@ const faqCategories = [
       },
       {
         question: 'What drinks are included?',
-        answer: 'All packages include water and juice boxes. Our higher-tier packages also include healthy snacks. You\'re also welcome to bring additional beverages if needed.'
+        answer: 'Our Queen Bee and Worker Bee Packages include a choice of water, juice boxes or soda. You\'re also welcome to bring additional beverages if needed.'
       }
     ]
   },
