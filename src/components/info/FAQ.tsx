@@ -62,7 +62,7 @@ const faqs = [
       },
       {
         question: 'What if I have more than 15 children?',
-        answer: 'No problem! Additional children are $15 each beyond the 15 included in both party packages. Just let us know your final headcount when you book.'
+        answer: 'Our packages include 15 kids, however we can accommodate up to 20 kids for each party. Each additional child over the included 15 is an additional $15/child.'
       }
     ]
   },
