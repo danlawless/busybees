@@ -144,8 +144,8 @@ export type CompleteBooking = z.infer<typeof CompleteBookingSchema>;
 export const PACKAGE_PRICING = {
   queen_bee: {
     name: 'Queen Bee',
-    semiPrivatePrice: 450,
-    privatePrice: 550,
+    semiPrivatePrice: 500,
+    privatePrice: 575,
     maxGuests: 25,
     duration: 2,
     description: 'The premium experience for truly unforgettable memories',
@@ -162,8 +162,8 @@ export const PACKAGE_PRICING = {
   },
   worker_bee: {
     name: 'Worker Bee',
-    semiPrivatePrice: 350,
-    privatePrice: 450,
+    semiPrivatePrice: 450,
+    privatePrice: 525,
     maxGuests: 20,
     duration: 2,
     description: 'Our most popular package with extra special party touches',
@@ -180,8 +180,8 @@ export const PACKAGE_PRICING = {
   },
   basic_bee: {
     name: 'Basic Bee',
-    semiPrivatePrice: 250,
-    privatePrice: 350,
+    semiPrivatePrice: 400,
+    privatePrice: 475,
     maxGuests: 15,
     duration: 2,
     description: 'Perfect for intimate celebrations with all the party essentials',

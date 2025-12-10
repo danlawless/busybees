@@ -15,8 +15,8 @@ const partyPackages = [
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
     accentColor: 'from-blue-500 to-blue-600',
-    semiPrivatePrice: 250,
-    privatePrice: 350,
+    semiPrivatePrice: 400,
+    privatePrice: 475,
     maxGuests: 15,
     duration: '2 hours',
     features: [
@@ -38,8 +38,8 @@ const partyPackages = [
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
     accentColor: 'from-purple-500 to-purple-600',
-    semiPrivatePrice: 350,
-    privatePrice: 450,
+    semiPrivatePrice: 450,
+    privatePrice: 525,
     maxGuests: 20,
     duration: '2 hours',
     features: [
@@ -61,8 +61,8 @@ const partyPackages = [
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
     accentColor: 'from-pink-500 to-pink-600',
-    semiPrivatePrice: 450,
-    privatePrice: 550,
+    semiPrivatePrice: 500,
+    privatePrice: 575,
     maxGuests: 25,
     duration: '2 hours',
     features: [
