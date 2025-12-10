@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SignupSuccess } from './SignupSuccess';
@@ -86,9 +86,8 @@ const calculateAge = (birthdate: string): number => {
 };
 
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
-  // Login state - 8 individual boxes (4 phone + 4 PIN)
-  const [phoneLast4, setPhoneLast4] = useState(['', '', '', '']);
-  const [pin, setPin] = useState(['', '', '', '']);
+  // Login state - 10 digit phone number
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Signup state
   const [isNewCustomer, setIsNewCustomer] = useState(false);
@@ -104,78 +103,11 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
 
-  // Handle individual digit input with auto-advance
-  const handleDigitChange = (
-    value: string,
-    index: number,
-    type: 'phone' | 'pin',
-    inputRefs: React.RefObject<(HTMLInputElement | null)[]>
-  ) => {
-    // Only allow digits
-    const digit = value.replace(/\D/g, '').slice(-1);
-
-    if (type === 'phone') {
-      const newPhone = [...phoneLast4];
-      newPhone[index] = digit;
-      setPhoneLast4(newPhone);
-
-      // Auto-advance to next input
-      if (digit && index < 3) {
-        inputRefs.current?.[index + 1]?.focus();
-      } else if (digit && index === 3) {
-        // Move to first PIN input
-        inputRefs.current?.[4]?.focus();
-      }
-    } else {
-      const newPin = [...pin];
-      newPin[index] = digit;
-      setPin(newPin);
-
-      // Auto-advance to next input
-      if (digit && index < 3) {
-        inputRefs.current?.[index + 5]?.focus();
-      }
-    }
-
+  // Handle phone number input change
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhoneNumber(formatted);
     setError('');
-  };
-
-  // Handle backspace
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    index: number,
-    type: 'phone' | 'pin',
-    inputRefs: React.RefObject<(HTMLInputElement | null)[]>
-  ) => {
-    if (e.key === 'Backspace') {
-      if (type === 'phone') {
-        const newPhone = [...phoneLast4];
-        if (!newPhone[index] && index > 0) {
-          // If current is empty, move back and clear previous
-          inputRefs.current?.[index - 1]?.focus();
-          newPhone[index - 1] = '';
-          setPhoneLast4(newPhone);
-        } else {
-          newPhone[index] = '';
-          setPhoneLast4(newPhone);
-        }
-      } else {
-        const newPin = [...pin];
-        const baseIndex = 4;
-        if (!newPin[index] && index > 0) {
-          // If current is empty, move back to previous PIN input or last phone input
-          const prevIndex = index === 0 ? 3 : baseIndex + index - 1;
-          inputRefs.current?.[prevIndex]?.focus();
-          if (index > 0) {
-            newPin[index - 1] = '';
-            setPin(newPin);
-          }
-        } else {
-          newPin[index] = '';
-          setPin(newPin);
-        }
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,27 +115,20 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setIsLoading(true);
     setError('');
 
-    const last4Digits = phoneLast4.join('');
-    const pinDigits = pin.join('');
+    const cleanPhone = phoneNumber.replace(/[^\d]/g, '');
 
-    if (last4Digits.length !== 4) {
-      setError('Please enter last 4 digits of phone number');
-      setIsLoading(false);
-      return;
-    }
-
-    if (pinDigits.length !== 4) {
-      setError('Please enter your 4-digit PIN');
+    if (cleanPhone.length !== 10) {
+      setError('Please enter a valid 10-digit phone number');
       setIsLoading(false);
       return;
     }
 
     try {
-      // Attempt login with last 4 digits + PIN
+      // Attempt login with full phone number
       const response = await fetch('/api/auth/pos-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneLast4: last4Digits, pin: pinDigits }),
+        body: JSON.stringify({ phone: cleanPhone }),
       });
 
       const data = await response.json();
@@ -323,17 +248,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           lastVisit: data.user.last_login,
         };
         onLogin(customer);
-      } else if (response.status === 401) {
-        // Wrong PIN - let them retry
-        setError('Incorrect PIN. Please try again.');
-        // Clear PIN boxes to let them re-enter
-        setPin(['', '', '', '']);
-        // Focus first PIN box
-        setTimeout(() => {
-          inputRefs.current?.[4]?.focus();
-        }, 100);
       } else if (response.status === 404) {
-        // User doesn't exist - show signup form
+        // User doesn't exist - show signup form with phone pre-filled
+        setFullPhoneNumber(phoneNumber);
         setIsNewCustomer(true);
       } else {
         setError(data.error || 'Login failed');
@@ -399,13 +316,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
-    const pinDigits = pin.join('');
-    if (pinDigits.length !== 4) {
-      setError('Please enter a 4-digit PIN');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       // Create account via API
       const response = await fetch('/api/auth/pos-signup', {
@@ -413,7 +323,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: cleanPhone,
-          pin: pinDigits,
           name: customerName.trim(),
           email: customerEmail.trim(),
         }),
@@ -458,13 +367,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setCustomerName('');
     setCustomerEmail('');
     setFullPhoneNumber('');
-    setPin(['', '', '', '']);
-    setPhoneLast4(['', '', '', '']);
+    setPhoneNumber('');
     setError('');
   };
-
-  // Create refs for input boxes
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleBeeLogoClick = () => {
     setShowAdminModal(true);
@@ -562,31 +467,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Create 4-Digit PIN *
-              </label>
-              <div className="flex justify-center gap-2">
-                {pin.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(el) => {
-                      if (inputRefs.current) inputRefs.current[index + 4] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleDigitChange(e.target.value, index, 'pin', inputRefs)}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'pin', inputRefs)}
-                    className="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    required
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">You'll use this PIN to check in at the kiosk</p>
-            </div>
-
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
@@ -634,56 +514,23 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           <p className="text-gray-600">Enter your phone number to access your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Last 4 of Phone */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Phone Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-              Last 4 Digits of Phone Number
+            <label htmlFor="login-phone" className="block text-sm font-medium text-gray-700 mb-3 text-center">
+              Phone Number
             </label>
-            <div className="flex justify-center gap-2">
-              {phoneLast4.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => {
-                    if (inputRefs.current) inputRefs.current[index] = el;
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(e.target.value, index, 'phone', inputRefs)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'phone', inputRefs)}
-                  className="w-16 h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  required
-                  autoFocus={index === 0}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* PIN */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-              4-Digit PIN
-            </label>
-            <div className="flex justify-center gap-2">
-              {pin.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => {
-                    if (inputRefs.current) inputRefs.current[index + 4] = el;
-                  }}
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(e.target.value, index, 'pin', inputRefs)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'pin', inputRefs)}
-                  className="w-16 h-20 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  required
-                />
-              ))}
-            </div>
+            <input
+              type="tel"
+              id="login-phone"
+              value={phoneNumber}
+              onChange={handlePhoneChange}
+              placeholder="(555) 123-4567"
+              maxLength={14}
+              className="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-2xl text-center font-medium"
+              required
+              autoFocus
+            />
           </div>
 
           {error && (
