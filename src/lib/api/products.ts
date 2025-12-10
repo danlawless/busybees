@@ -170,12 +170,12 @@ export async function createParty(partyData: Omit<PartyProduct, 'id' | 'createdA
  */
 export async function updateParty(partyId: string, partyData: Partial<PartyProduct>): Promise<PartyProduct> {
   try {
-    const response = await fetch('/api/parties', {
+    const response = await fetch(`/api/parties/${partyId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ id: partyId, ...partyData }),
+      body: JSON.stringify(partyData),
     });
 
     if (!response.ok) {
@@ -196,7 +196,7 @@ export async function updateParty(partyId: string, partyData: Partial<PartyProdu
  */
 export async function deleteParty(partyId: string): Promise<void> {
   try {
-    const response = await fetch(`/api/parties?id=${partyId}`, {
+    const response = await fetch(`/api/parties/${partyId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
