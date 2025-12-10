@@ -81,7 +81,7 @@ const faqCategories = [
       },
       {
         question: 'Do you offer any discounts?',
-        answer: 'Yes! We offer discounts for weekday parties, repeat customers, and military families. Check our current promotions or ask about available discounts when booking.'
+        answer: 'Yes! We offer a 10% discount for monthly membership holders. You can also sign up for our newsletter to be the first to know about promotions and special offers!'
       }
     ]
   }
