@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendContactFormEmail } from '@/lib/email/resend'
+import { saveContactSubmission, updateEmailStatus } from '@/lib/services/contact'
 import { logger } from '@/lib/logger'
 
 interface ContactFormData {
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send email to business
-    const result = await sendContactFormEmail({
+    // STEP 1: Save to database first (primary storage - ensures no data loss)
+    const saveResult = await saveContactSubmission({
       name: data.name,
       email: data.email,
       phone: data.phone,
@@ -40,19 +41,46 @@ export async function POST(request: NextRequest) {
       message: data.message,
     })
 
-    if (!result.success) {
+    if (!saveResult.success) {
       logger.error(
-        { error: result.error, email: data.email },
-        'Failed to send contact form email'
+        { error: saveResult.error, email: data.email },
+        'Failed to save contact form submission'
       )
       return NextResponse.json(
-        { error: 'Failed to send message. Please try again or email us directly at info@busybeesipc.com' },
+        { error: 'Failed to process your message. Please try again or email us directly at info@busybeesipc.com' },
         { status: 500 }
       )
     }
 
+    // STEP 2: Attempt to send email notification (best effort - non-blocking)
+    const emailResult = await sendContactFormEmail({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      userType: data.userType,
+      message: data.message,
+    })
+
+    // Update email status in database (fire and forget)
+    if (saveResult.submissionId) {
+      void updateEmailStatus(
+        saveResult.submissionId,
+        emailResult.success,
+        emailResult.error
+      )
+    }
+
+    if (!emailResult.success) {
+      // Log the email failure but don't fail the request
+      // The submission is already saved in the database
+      logger.warn(
+        { error: emailResult.error, email: data.email, submissionId: saveResult.submissionId },
+        'Email notification failed but contact form was saved'
+      )
+    }
+
     logger.info(
-      { email: data.email, userType: data.userType },
+      { email: data.email, userType: data.userType, submissionId: saveResult.submissionId, emailSent: emailResult.success },
       '📧 Contact form submitted successfully'
     )
 

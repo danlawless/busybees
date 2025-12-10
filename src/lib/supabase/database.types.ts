@@ -590,6 +590,47 @@ export interface Database {
           updated_at?: string;
         };
       };
+      contact_submissions: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          user_type: string;
+          message: string;
+          email_sent: boolean;
+          email_error: string | null;
+          submitted_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          phone?: string | null;
+          user_type: string;
+          message: string;
+          email_sent?: boolean;
+          email_error?: string | null;
+          submitted_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          phone?: string | null;
+          user_type?: string;
+          message?: string;
+          email_sent?: boolean;
+          email_error?: string | null;
+          submitted_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
