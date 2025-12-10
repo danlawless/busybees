@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendPartyBookingEmail } from '@/lib/email/resend'
+import { logger } from '@/lib/logger'
 
 interface PartyBookingData {
   contactName: string
@@ -17,9 +19,9 @@ interface PartyBookingData {
 export async function POST(request: NextRequest) {
   try {
     const data: PartyBookingData = await request.json()
-    
+
     // Validate required fields
-    if (!data.contactName || !data.email || !data.phone || !data.childName || 
+    if (!data.contactName || !data.email || !data.phone || !data.childName ||
         !data.selectedDate || !data.selectedTimeSlot || !data.partyPackage) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -36,47 +38,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create email content
-    const emailSubject = `New Party Booking Request - ${data.childName}'s Birthday`
-    const emailBody = `
-New party booking request from Busy Bees website:
+    // Send email to business
+    const result = await sendPartyBookingEmail({
+      contactName: data.contactName,
+      email: data.email,
+      phone: data.phone,
+      childName: data.childName,
+      childAge: data.childAge,
+      selectedDate: data.selectedDate,
+      selectedTimeSlot: data.selectedTimeSlot,
+      partyPackage: data.partyPackage,
+      guestCount: data.guestCount,
+      additionalInfo: data.additionalInfo,
+      dietaryRestrictions: data.dietaryRestrictions,
+    })
 
-PARTY DETAILS:
-Child's Name: ${data.childName}
-Child's Age: ${data.childAge}
-Party Date: ${data.selectedDate}
-Time Slot: ${data.selectedTimeSlot}
-Package: ${data.partyPackage}
-Number of Guests: ${data.guestCount}
+    if (!result.success) {
+      logger.error(
+        { error: result.error, email: data.email, childName: data.childName },
+        'Failed to send party booking email'
+      )
+      return NextResponse.json(
+        { error: 'Failed to submit booking request. Please try again or call us at (978) 785-0015' },
+        { status: 500 }
+      )
+    }
 
-CONTACT INFORMATION:
-Contact Name: ${data.contactName}
-Email: ${data.email}
-Phone: ${data.phone}
-
-ADDITIONAL INFORMATION:
-${data.additionalInfo || 'None provided'}
-
-DIETARY RESTRICTIONS:
-${data.dietaryRestrictions || 'None provided'}
-
----
-Please follow up with party booking confirmation and payment details.
-Submitted at: ${new Date().toLocaleString()}
-`
-
-    console.log('🎉 New party booking request:')
-    console.log('To: info@busybeesipc.com')
-    console.log('Subject:', emailSubject)
-    console.log('Body:', emailBody)
-    
-    // TODO: Replace with actual email sending service
-    // await sendEmail({
-    //   to: 'info@busybeesipc.com',
-    //   subject: emailSubject,
-    //   body: emailBody,
-    //   replyTo: data.email
-    // })
+    logger.info(
+      { email: data.email, childName: data.childName, partyPackage: data.partyPackage },
+      '🎉 Party booking request submitted'
+    )
 
     return NextResponse.json({
       success: true,
@@ -84,7 +75,7 @@ Submitted at: ${new Date().toLocaleString()}
     })
 
   } catch (error) {
-    console.error('Party booking error:', error)
+    logger.error({ error }, 'Party booking error')
     return NextResponse.json(
       { error: 'Failed to process party booking' },
       { status: 500 }

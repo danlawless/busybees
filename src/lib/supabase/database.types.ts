@@ -475,6 +475,38 @@ export interface Database {
           updated_at?: string;
         };
       };
+      newsletter_subscribers: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          subscribed_at: string;
+          is_active: boolean;
+          unsubscribed_at: string | null;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          subscribed_at?: string;
+          is_active?: boolean;
+          unsubscribed_at?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          subscribed_at?: string;
+          is_active?: boolean;
+          unsubscribed_at?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+      };
       party_bookings: {
         Row: {
           id: string;
