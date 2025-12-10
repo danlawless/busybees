@@ -201,13 +201,13 @@ export default function POSPage() {
             const initialPasses: PassProduct[] = [
                 {
                     id: "pass-1",
-                    name: "Daily Pass (Toddler)",
+                    name: "Day Pass - Toddler (2+)",
                     category: "day",
                     price: 17.0,
                     duration: 8, // 8 hours
                     sessionsIncluded: 1,
                     description:
-                        "Full day of play for toddlers! Valid for one entry, expires at closing time.",
+                        "Full day of play for toddlers (ages 2+)! Valid for one entry, expires at closing time.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/9B6bJ023x3Nr1HDeUQffy0b",
                     isActive: true,
@@ -216,7 +216,7 @@ export default function POSPage() {
                 },
                 {
                     id: "pass-2",
-                    name: "Daily Pass (Infant)",
+                    name: "Day Pass - Infant",
                     category: "day",
                     price: 7.0,
                     duration: 8, // 8 hours
@@ -230,10 +230,24 @@ export default function POSPage() {
                     updatedAt: new Date().toISOString(),
                 },
                 {
+                    id: "pass-7",
+                    name: "Day Pass - Toddler + Infant Discount",
+                    category: "day",
+                    price: 17.0,
+                    duration: 8, // 8 hours
+                    sessionsIncluded: 2, // covers both toddler and infant
+                    description:
+                        "Day pass for toddler and infant together - infant plays free! Best value for siblings.",
+                    stripePurchaseLink: "",
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                },
+                {
                     id: "pass-3",
-                    name: "Monthly (Toddler)",
+                    name: "Monthly Membership - Toddler",
                     category: "monthly",
-                    price: 115.0,
+                    price: 100.0,
                     duration: 30, // 30 days
                     sessionsIncluded: 999, // unlimited
                     description:
@@ -246,9 +260,9 @@ export default function POSPage() {
                 },
                 {
                     id: "pass-4",
-                    name: "Monthly (Infant)",
+                    name: "Monthly Membership - Infant",
                     category: "monthly",
-                    price: 80.0,
+                    price: 70.0,
                     duration: 30, // 30 days
                     sessionsIncluded: 999, // unlimited
                     description:
@@ -261,7 +275,7 @@ export default function POSPage() {
                 },
                 {
                     id: "pass-5",
-                    name: "10 Visit (Toddler)",
+                    name: "Punch Card (10 passes) - Toddler",
                     category: "weekly",
                     price: 150.0,
                     duration: 90, // 90 days to use
@@ -276,7 +290,7 @@ export default function POSPage() {
                 },
                 {
                     id: "pass-6",
-                    name: "10 Visit (Infant)",
+                    name: "Punch Card (10 passes) - Infant",
                     category: "weekly",
                     price: 50.0,
                     duration: 90, // 90 days to use
@@ -600,14 +614,14 @@ export default function POSPage() {
         if (storedProducts.length > 0) {
             setProducts(storedProducts);
         } else {
-            // Seed initial food/beverage products (pizzas excluded - party-only items)
+            // Seed initial food/beverage/retail products
             const initialProducts: FoodProduct[] = [
                 {
-                    id: "product-3",
-                    name: "Juice Box (Apple)",
-                    category: "beverage",
-                    price: 2.5,
-                    description: "Individual apple juice box",
+                    id: "product-1",
+                    name: "Apple Sauce Pouch",
+                    category: "food",
+                    price: 3.0,
+                    description: "Delicious apple sauce pouch snack",
                     allergens: [],
                     stripePurchaseLink: "",
                     isActive: true,
@@ -616,11 +630,37 @@ export default function POSPage() {
                     updatedAt: new Date().toISOString(),
                 },
                 {
+                    id: "product-2",
+                    name: "Veggie Sticks",
+                    category: "food",
+                    price: 3.0,
+                    description: "Crunchy veggie stick snacks",
+                    allergens: [],
+                    stripePurchaseLink: "",
+                    isActive: true,
+                    available: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                },
+                {
+                    id: "product-3",
+                    name: "Goldfish",
+                    category: "food",
+                    price: 3.0,
+                    description: "Classic Goldfish crackers",
+                    allergens: ["gluten", "dairy"],
+                    stripePurchaseLink: "",
+                    isActive: true,
+                    available: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                },
+                {
                     id: "product-4",
-                    name: "Bottled Water",
-                    category: "beverage",
-                    price: 1.5,
-                    description: "16oz bottled water",
+                    name: "Bee Bracelets",
+                    category: "retail",
+                    price: 2.0,
+                    description: "Cute bee-themed bracelets",
                     allergens: [],
                     stripePurchaseLink: "",
                     isActive: true,
@@ -630,11 +670,11 @@ export default function POSPage() {
                 },
                 {
                     id: "product-5",
-                    name: "Birthday Cake",
+                    name: "Granola Bar",
                     category: "food",
-                    price: 25.0,
-                    description: "Custom birthday cake (serves 12)",
-                    allergens: ["gluten", "dairy", "eggs"],
+                    price: 3.0,
+                    description: "Nutritious granola bar snack",
+                    allergens: ["gluten"],
                     stripePurchaseLink: "",
                     isActive: true,
                     available: true,
@@ -643,10 +683,36 @@ export default function POSPage() {
                 },
                 {
                     id: "product-6",
-                    name: "Busy Bees T-Shirt",
+                    name: "Honey Sticks",
+                    category: "food",
+                    price: 1.0,
+                    description: "Sweet honey stick treats",
+                    allergens: [],
+                    stripePurchaseLink: "",
+                    isActive: true,
+                    available: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                },
+                {
+                    id: "product-7",
+                    name: "Youth Socks",
                     category: "retail",
-                    price: 18.99,
-                    description: "Official Busy Bees branded t-shirt",
+                    price: 3.0,
+                    description: "Grip socks for kids - required for play",
+                    allergens: [],
+                    stripePurchaseLink: "",
+                    isActive: true,
+                    available: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                },
+                {
+                    id: "product-8",
+                    name: "Adult Socks",
+                    category: "retail",
+                    price: 5.0,
+                    description: "Grip socks for adults - required for play areas",
                     allergens: [],
                     stripePurchaseLink: "",
                     isActive: true,
