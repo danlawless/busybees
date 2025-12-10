@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Layout } from '@/components/layout/Layout'
 import { PartiesHero } from '@/components/parties/PartiesHero'
-import { PartyOptions } from '@/components/parties/PartyOptions'
-import { PartyPackages } from '@/components/parties/PartyPackages'
+import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
 import { PartyFAQ } from '@/components/parties/PartyFAQ'
 import { motion } from 'framer-motion'
@@ -123,12 +122,9 @@ function PartiesContent() {
         </div>
       </section>
 
-      {/* Party Options */}
-      <PartyOptions />
-
-      {/* Party Packages */}
+      {/* Party Packages with Hexagon Backdrop */}
       <div id="party-packages">
-        <PartyPackages />
+        <PartyPackageBackdrop />
       </div>
 
       {/* FAQ */}
