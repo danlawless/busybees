@@ -211,50 +211,6 @@ export function PartyPackages() {
           })}
         </motion.div>
 
-        {/* Add-ons Section */}
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-        >
-          <Card className="bg-gradient-to-r from-honey-50 to-yellow-50 border-2 border-honey-200 max-w-4xl mx-auto">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <Sparkles className="w-6 h-6 text-honey-600" />
-                <h3 className="text-2xl font-bold text-charcoal-800">Make It Even More Special!</h3>
-              </div>
-              <p className="text-charcoal-600 leading-relaxed mb-6">
-                Want to add extra magic to your celebration? Ask about our available add-ons including 
-                specialty entertainment, custom cake coordination, extended party time, and more!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50 font-semibold"
-                >
-                  <Gift className="w-5 h-5 mr-2" />
-                  View Add-Ons
-                </Button>
-                <Button 
-                  size="lg" 
-                  className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                  onClick={() => {
-                    document.getElementById('party-calendar-section')?.scrollIntoView({ 
-                      behavior: 'smooth',
-                      block: 'start'
-                    });
-                  }}
-                >
-                  <Star className="w-5 h-5 mr-2" />
-                  Book Your Party Now
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </section>
   )
