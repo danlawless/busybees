@@ -1,114 +1,182 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Layout } from '@/components/layout/Layout'
 import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyOptions } from '@/components/parties/PartyOptions'
 import { PartyPackages } from '@/components/parties/PartyPackages'
-import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
-// Temporarily removed imports for hidden components
-// import { BookingFlow } from '@/components/parties/BookingFlow'
-// import { PartyGallery } from '@/components/parties/PartyGallery'
-import { type PartyBooking } from '@/components/parties/PartyCalendar'
-// import { PartyBookingForm } from '@/components/parties/PartyBookingForm'
-// import { PartyFAQ } from '@/components/parties/PartyFAQ'
-// import { SuccessModal } from '@/components/ui/SuccessModal'
+import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
+import { PartyFAQ } from '@/components/parties/PartyFAQ'
+import { motion } from 'framer-motion'
+import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
-interface TimeSlot {
-  startTime: string;
-  endTime: string;
-  duration: 2;
-  available: boolean;
-}
+function PartiesContent() {
+  const searchParams = useSearchParams()
+  const [showBookingWizard, setShowBookingWizard] = useState(false)
+  const [showCancelledMessage, setShowCancelledMessage] = useState(false)
 
-export default function PartiesPage() {
-  const [showBookingForm, setShowBookingForm] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<{
-    date: string;
-    timeSlot: TimeSlot;
-  } | null>(null);
-  const [bookings, setBookings] = useState<PartyBooking[]>([]);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successDetails, setSuccessDetails] = useState<{
-    title: string;
-    message: string;
-    details?: any;
-  }>({ title: '', message: '' });
+  // Check for cancelled booking
+  useEffect(() => {
+    if (searchParams.get('cancelled') === 'true') {
+      setShowCancelledMessage(true)
+    }
+  }, [searchParams])
 
-  const handleBookingSelect = (date: string, timeSlot: TimeSlot) => {
-    console.log('handleBookingSelect called:', { date, timeSlot });
-    setSelectedBooking({ date, timeSlot });
-    setShowBookingForm(true);
-    console.log('Booking form should show now');
-  };
-
-  const handleBookingSubmit = (newBooking: Omit<PartyBooking, 'id' | 'createdAt'>) => {
-    const booking: PartyBooking = {
-      ...newBooking,
-      id: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString()
-    };
-    
-    setBookings(prev => [...prev, booking]);
-    setShowBookingForm(false);
-    setSelectedBooking(null);
-    
-    // Show beautiful success modal
-    setSuccessDetails({
-      title: '🎉 Party Booking Submitted!',
-      message: 'Your party booking request has been submitted successfully! We\'ll contact you within 24 hours to confirm all the details.',
-      details: {
-        date: booking.date,
-        time: `${booking.startTime.split(':').slice(0, 2).join(':')} - ${booking.endTime.split(':').slice(0, 2).join(':')}`,
-        guests: booking.guestCount,
-        price: booking.totalPrice,
-        type: booking.partyType
-      }
-    });
-    setShowSuccessModal(true);
-  };
-
-  const handleCloseBookingForm = () => {
-    setShowBookingForm(false);
-    setSelectedBooking(null);
-  };
+  const handleBookingSuccess = (bookingId: string) => {
+    // This typically won't be called as we redirect to Stripe
+    console.log('Booking created:', bookingId)
+  }
 
   return (
     <Layout>
-      <PartiesHero />
-      
-      {/* Hexagon Package Showcase - Now the primary party options */}
-      <PartyPackageBackdrop />
-      
-      {/* Temporarily hidden party option components
-      <PartyOptions />
-      <PartyPackages />
-      */}
-      
-      {/* Temporarily hidden sections
-      <BookingFlow />
-      <PartyGallery />
-      <PartyFAQ />
-      */}
-
-      {/* Temporarily hidden booking modals
-      {showBookingForm && selectedBooking && (
-        <PartyBookingForm
-          selectedDate={selectedBooking.date}
-          selectedTimeSlot={selectedBooking.timeSlot}
-          onClose={handleCloseBookingForm}
-          onSubmit={handleBookingSubmit}
-        />
+      {/* Cancelled Message */}
+      {showCancelledMessage && (
+        <div className="fixed top-4 right-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+          >
+            <Card className="p-4 bg-amber-50 border-amber-200 shadow-lg max-w-md">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800">
+                    Your booking was cancelled. No payment was processed.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCancelledMessage(false)}
+                  className="text-amber-600 hover:text-amber-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
       )}
 
-      <SuccessModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title={successDetails.title}
-        message={successDetails.message}
-        details={successDetails.details}
-      />
-      */}
+      <PartiesHero />
+
+      {/* Book Party CTA Section */}
+      <section className="relative py-16 bg-gradient-to-r from-honey-100 to-yellow-100">
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl font-bold text-charcoal-800 mb-4">
+              Ready to Plan Your Perfect Party?
+            </h2>
+            <p className="text-lg text-charcoal-600 mb-8 max-w-2xl mx-auto">
+              Book your child&apos;s birthday party at Busy Bees Indoor Play Center!
+              Our easy booking process takes just a few minutes.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                onClick={() => setShowBookingWizard(true)}
+                className="bg-gradient-to-r from-honey-500 to-yellow-500 hover:from-honey-600 hover:to-yellow-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <Gift className="w-6 h-6 mr-2" />
+                Book Your Party Now
+              </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => {
+                  document.getElementById('party-packages')?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                }}
+                className="border-2 border-charcoal-400 text-charcoal-700"
+              >
+                <Calendar className="w-5 h-5 mr-2" />
+                View Packages First
+              </Button>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-charcoal-600">
+              <span className="flex items-center gap-1">
+                ✓ 15 kids included
+              </span>
+              <span className="flex items-center gap-1">
+                ✓ 2-hour party
+              </span>
+              <span className="flex items-center gap-1">
+                ✓ Dedicated party host
+              </span>
+              <span className="flex items-center gap-1">
+                ✓ Secure online payment
+              </span>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Party Options */}
+      <PartyOptions />
+
+      {/* Party Packages */}
+      <div id="party-packages">
+        <PartyPackages />
+      </div>
+
+      {/* FAQ */}
+      <PartyFAQ />
+
+      {/* Bottom CTA */}
+      <section className="py-16 bg-charcoal-800">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Let&apos;s Celebrate Together!
+            </h2>
+            <p className="text-lg text-gray-300 mb-8">
+              Create magical memories at Busy Bees Indoor Play Center.
+              Book your party today!
+            </p>
+            <Button
+              size="lg"
+              onClick={() => setShowBookingWizard(true)}
+              className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-charcoal-800 font-bold text-lg"
+            >
+              <Gift className="w-6 h-6 mr-2" />
+              Start Booking Now
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Booking Wizard Modal */}
+      {showBookingWizard && (
+        <PartyBookingWizard
+          onClose={() => setShowBookingWizard(false)}
+          onSuccess={handleBookingSuccess}
+        />
+      )}
     </Layout>
+  )
+}
+
+export default function PartiesPage() {
+  return (
+    <Suspense fallback={<Layout><div className="min-h-screen" /></Layout>}>
+      <PartiesContent />
+    </Suspense>
   )
 }
