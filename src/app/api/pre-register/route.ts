@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { z } from 'zod';
@@ -27,18 +27,11 @@ const preRegisterSchema = z.object({
   marketingOptIn: z.boolean().optional(),
 });
 
-// Type definitions
-interface UserRecord {
+// Type definitions for pre-registration records
+interface PreRegistrationRecord {
   id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
-}
-
-interface ChildRecord {
-  name: string;
-  birthdate: string;
+  email: string;
+  phone: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -57,115 +50,96 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { parentName, email, phone, children, marketingOptIn } = validationResult.data;
+    const { parentName, email, children, marketingOptIn } = validationResult.data;
 
     // Clean phone number for storage (remove formatting)
-    const cleanPhone = phone.replace(/[^\d]/g, '');
+    const cleanPhone = validationResult.data.phone.replace(/[^\d]/g, '');
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS for public pre-registration
+    const supabase = createAdminClient();
 
-    // Check if user already exists by phone number
+    // Check if pre-registration already exists by phone or email
     // Note: Using type assertion due to Supabase client typing issues in this codebase
-    const existingUserResult = await supabase
-      .from('users')
-      .select('id')
-      .eq('phone', cleanPhone)
+    const existingResult = await supabase
+      .from('pre_registrations')
+      .select('id, email, phone')
+      .or(`phone.eq.${cleanPhone},email.eq.${email.toLowerCase()}`)
       .single();
 
-    const existingUser = existingUserResult.data as UserRecord | null;
+    const existing = existingResult.data as PreRegistrationRecord | null;
 
-    let customerId: string;
-
-    if (existingUser) {
-      // User already exists - update their info and add any new children
-      customerId = existingUser.id;
-
-      // Update user info
+    if (existing) {
+      // Update existing pre-registration with new info
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('users') as any)
+      const { error: updateError } = await (supabase.from('pre_registrations') as any)
         .update({
-          name: parentName,
-          email: email,
+          parent_name: parentName,
+          email: email.toLowerCase(),
+          phone: cleanPhone,
+          children: children,
+          marketing_opt_in: marketingOptIn ?? true,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', customerId);
+        .eq('id', existing.id);
 
-      logger.info({ customerId, email }, 'Updated existing pre-registration');
-    } else {
-      // Create new customer record
-      // Generate a UUID for the new user
-      const newUserId = crypto.randomUUID();
+      if (updateError) {
+        logger.error({ error: updateError, email }, 'Failed to update pre-registration');
+        return NextResponse.json(
+          { error: 'Failed to update registration', details: updateError.message },
+          { status: 500 }
+        );
+      }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertResult = await (supabase.from('users') as any)
-        .insert({
-          id: newUserId,
+      logger.info({ preRegistrationId: existing.id, email }, 'Updated existing pre-registration');
+
+      // Subscribe to newsletter if marketing opt-in is enabled
+      if (marketingOptIn !== false) {
+        await subscribeToNewsletter({
+          email,
           name: parentName,
-          email: email,
-          phone: cleanPhone,
-          role: 'customer',
-        })
-        .select()
-        .single();
-
-      if (insertResult.error) {
-        logger.error({ error: insertResult.error, email }, 'Failed to create pre-registration user');
-        return NextResponse.json(
-          { error: 'Failed to create registration', details: insertResult.error.message },
-          { status: 500 }
-        );
+          source: 'pre_register',
+        });
       }
 
-      const newUser = insertResult.data as UserRecord | null;
-
-      if (!newUser) {
-        logger.error({ email }, 'No user returned after insert');
-        return NextResponse.json(
-          { error: 'Failed to create registration' },
-          { status: 500 }
-        );
-      }
-
-      customerId = newUser.id;
-      logger.info({ customerId, email }, 'Created new pre-registration');
+      return NextResponse.json({
+        success: true,
+        message: 'Pre-registration updated! Your information has been refreshed.',
+        preRegistrationId: existing.id,
+      });
     }
 
-    // Add children
-    const childrenToInsert = children.map(child => ({
-      customer_id: customerId,
-      name: child.name,
-      birthdate: child.birthdate,
-      waiver_signed: false,
-    }));
+    // Create new pre-registration
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const insertResult = await (supabase.from('pre_registrations') as any)
+      .insert({
+        parent_name: parentName,
+        email: email.toLowerCase(),
+        phone: cleanPhone,
+        children: children,
+        marketing_opt_in: marketingOptIn ?? true,
+      })
+      .select('id')
+      .single();
 
-    // Get existing children for this customer
-    const existingChildrenResult = await supabase
-      .from('children')
-      .select('name, birthdate')
-      .eq('customer_id', customerId);
-
-    const existingChildren = (existingChildrenResult.data || []) as ChildRecord[];
-
-    // Filter out children that already exist (same name and birthdate)
-    const existingChildSet = new Set(
-      existingChildren.map(c => `${c.name.toLowerCase()}-${c.birthdate}`)
-    );
-
-    const newChildren = childrenToInsert.filter(
-      child => !existingChildSet.has(`${child.name.toLowerCase()}-${child.birthdate}`)
-    );
-
-    if (newChildren.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const childInsertResult = await (supabase.from('children') as any).insert(newChildren);
-
-      if (childInsertResult.error) {
-        logger.error({ error: childInsertResult.error, customerId }, 'Failed to add children');
-        // Don't fail the whole request - user was created successfully
-      } else {
-        logger.info({ customerId, childCount: newChildren.length }, 'Added children to pre-registration');
-      }
+    if (insertResult.error) {
+      logger.error({ error: insertResult.error, email }, 'Failed to create pre-registration');
+      return NextResponse.json(
+        { error: 'Failed to create registration', details: insertResult.error.message },
+        { status: 500 }
+      );
     }
+
+    const newRegistration = insertResult.data as { id: string } | null;
+
+    if (!newRegistration) {
+      logger.error({ email }, 'No pre-registration returned after insert');
+      return NextResponse.json(
+        { error: 'Failed to create registration' },
+        { status: 500 }
+      );
+    }
+
+    logger.info({ preRegistrationId: newRegistration.id, email }, 'Created new pre-registration');
 
     // Subscribe to newsletter if marketing opt-in is enabled (defaults to true)
     if (marketingOptIn !== false) {
@@ -179,7 +153,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Pre-registration successful! You\'re all set for your visit.',
-      customerId,
+      preRegistrationId: newRegistration.id,
     });
 
   } catch (error) {
