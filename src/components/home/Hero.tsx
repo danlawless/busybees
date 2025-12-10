@@ -4,7 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Star, Shield, Heart } from 'lucide-react'
+import { Star, Shield, Heart, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
@@ -110,9 +110,10 @@ export function Hero() {
             variants={fadeInUp}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link href="/parties">
-              <Button variant="primary" size="lg" className="min-w-48 btn-party">
-                Book a Party 🎉
+            <Link href="/pre-register">
+              <Button variant="primary" size="lg" className="min-w-48">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Pre-Register Now
               </Button>
             </Link>
           </motion.div>
