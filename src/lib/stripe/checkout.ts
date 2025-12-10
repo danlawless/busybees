@@ -97,6 +97,7 @@ export async function createCheckoutSession(params: CheckoutSessionParams): Prom
  * Retrieve a checkout session
  */
 export async function retrieveCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session> {
+  const stripe = await getStripeClient();
   return await stripe.checkout.sessions.retrieve(sessionId);
 }
 
@@ -104,10 +105,10 @@ export async function retrieveCheckoutSession(sessionId: string): Promise<Stripe
  * Create a Stripe customer
  */
 export async function createStripeCustomer(email: string, name: string, phone?: string): Promise<Stripe.Customer> {
+  const stripe = await getStripeClient();
   return await stripe.customers.create({
     email,
     name,
     phone,
   });
 }
-

@@ -539,4 +539,3 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
   console.log('Purchase marked as refunded');
 }
-
