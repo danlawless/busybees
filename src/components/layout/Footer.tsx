@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
 const businessHours = [
-  { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play' },
+  { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play', isWeekday: true },
   { label: 'Sat / Sun', time: '9:00 AM - 12:30 PM', type: 'Open Play' },
   { label: '', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
   { label: '', time: '3:30 PM - 5:30 PM', type: 'Private Parties' },
@@ -85,11 +85,18 @@ export function Footer() {
             <h3 className="text-sm font-bold text-charcoal-800 uppercase tracking-wider mb-4">
               Hours
             </h3>
-            <div className="space-y-1 text-sm text-charcoal-600">
+            <div className="text-sm text-charcoal-600">
               {businessHours.map((schedule, index) => (
-                <div key={index} className="leading-tight">
-                  <span className="font-medium">{schedule.label}</span>
-                  <br />
+                <div
+                  key={index}
+                  className={`leading-tight ${schedule.isWeekday ? 'mb-3' : 'mb-1'}`}
+                >
+                  {schedule.label && (
+                    <>
+                      <span className="font-medium">{schedule.label}</span>
+                      <br />
+                    </>
+                  )}
                   <span>{schedule.time}</span>
                   {schedule.type && (
                     <span className="text-xs text-charcoal-500 ml-2">({schedule.type})</span>
