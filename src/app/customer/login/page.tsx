@@ -26,6 +26,19 @@ export default function CustomerLoginPage() {
 
     try {
       await signIn(email, password);
+
+      // Auto-subscribe to newsletter on login (fire and forget)
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          source: 'login',
+        }),
+      }).catch(() => {
+        // Silently fail - newsletter subscription is optional
+      });
+
       router.push('/customer/dashboard');
     } catch (err) {
       console.error('Login error:', err);

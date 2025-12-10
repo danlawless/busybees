@@ -1,81 +1,50 @@
 /**
  * POS Login API Route
- * Authenticate users with phone + PIN for POS system
+ * Authenticate users with phone number for POS system
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
-import { verifyPin } from '@/lib/auth/pin';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phoneLast4, pin } = body;
+    const { phone } = body;
 
-    // Validate inputs
-    if (!phoneLast4 || !pin) {
+    // Validate input
+    if (!phone) {
       return NextResponse.json(
-        { error: 'Phone last 4 digits and PIN are required' },
+        { error: 'Phone number is required' },
         { status: 400 }
       );
     }
 
-    if (phoneLast4.length !== 4 || !/^\d{4}$/.test(phoneLast4)) {
+    // Normalize phone (remove formatting)
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+
+    if (cleanPhone.length !== 10 || !/^\d{10}$/.test(cleanPhone)) {
       return NextResponse.json(
         { error: 'Invalid phone number format' },
         { status: 400 }
       );
     }
 
-    // Find user by last 4 digits of phone (use admin client to bypass RLS)
+    // Find user by phone number (use admin client to bypass RLS)
     const supabase = createAdminClient();
 
-    // Get all users and filter by last 4 digits in code (more reliable than LIKE)
-    const { data: allUsers, error: userError } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
-      .select('*');
+      .select('*')
+      .eq('phone', cleanPhone)
+      .single();
 
-    if (userError) {
-      console.error('Error fetching users:', userError);
+    if (userError || !user) {
       return NextResponse.json(
-        { error: 'Login failed' },
-        { status: 500 }
-      );
-    }
-
-    // Filter users whose phone ends with the last 4 digits
-    const users = allUsers?.filter(u => u.phone && u.phone.slice(-4) === phoneLast4) || [];
-
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: 'No account found with those digits' },
+        { error: 'No account found with that phone number' },
         { status: 404 }
       );
     }
-
-    // If multiple users have same last 4 digits, we'll try to authenticate with PIN
-    // and return the first match
-    let authenticatedUser = null;
-
-    for (const user of users) {
-      if (!user.pin_hash) continue;
-
-      const isValidPin = await verifyPin(pin, user.pin_hash);
-      if (isValidPin) {
-        authenticatedUser = user;
-        break;
-      }
-    }
-
-    if (!authenticatedUser) {
-      return NextResponse.json(
-        { error: 'Invalid phone number or PIN' },
-        { status: 401 }
-      );
-    }
-
-    const user = authenticatedUser;
 
     // Update last login timestamp
     await supabase
@@ -83,11 +52,10 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
-    // Pad PIN to meet Supabase's 6-character minimum
-    const authPassword = `PIN-${pin}`;
+    // Use phone-based password for Supabase auth
+    const authPassword = `PHONE-${cleanPhone}`;
 
-    // Update user's password to PIN format (migration for existing users)
-    // This ensures existing users from old system can now use PIN-based auth
+    // Update user's password to phone-based format
     // Also confirm email since they're verified in person at POS
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       user.id,
@@ -105,8 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use PIN as password for Supabase auth (simplest Supabase-native approach)
-    // This creates a proper session with all the right cookies
+    // Create Supabase session with phone-based auth
     const response = NextResponse.json({}, { status: 200 });
 
     const supabaseResponse = createServerClient(
@@ -127,7 +94,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Sign in with email and PIN (PIN is stored as password during signup)
+    // Sign in with email and phone-based password
     const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
       email: user.email,
       password: authPassword,

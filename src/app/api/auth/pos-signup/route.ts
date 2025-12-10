@@ -1,22 +1,21 @@
 /**
  * POS Signup API Route
- * Create new customer account with phone + PIN for POS system
+ * Create new customer account with phone number for POS system
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
-import { hashPin, validatePinFormat } from '@/lib/auth/pin';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, pin, name, email } = body;
+    const { phone, name, email } = body;
 
     // Validate required fields
-    if (!phone || !pin || !name || !email) {
+    if (!phone || !name || !email) {
       return NextResponse.json(
-        { error: 'Phone, PIN, name, and email are required' },
+        { error: 'Phone, name, and email are required' },
         { status: 400 }
       );
     }
@@ -26,15 +25,6 @@ export async function POST(request: NextRequest) {
     if (!emailRegex.test(email)) {
       return NextResponse.json(
         { error: 'Invalid email address' },
-        { status: 400 }
-      );
-    }
-
-    // Validate PIN format
-    const pinValidation = validatePinFormat(pin);
-    if (!pinValidation.valid) {
-      return NextResponse.json(
-        { error: pinValidation.error },
         { status: 400 }
       );
     }
@@ -65,14 +55,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash the PIN for database storage
-    const pinHash = await hashPin(pin);
-
-    // Pad PIN to meet Supabase's 6-character minimum password requirement
-    const authPassword = `PIN-${pin}`;
+    // Use phone-based password for Supabase auth
+    const authPassword = `PHONE-${cleanPhone}`;
 
     // Try to create Supabase Auth user first (generates proper UUID)
-    // Use the padded PIN as the password for Supabase auth (simplest approach for POS)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim(),
       password: authPassword,
@@ -90,7 +76,7 @@ export async function POST(request: NextRequest) {
       // Check if it's a duplicate email error
       if (authError.message?.includes('already been registered') || authError.status === 422) {
         return NextResponse.json(
-          { error: 'This email is already registered. You may already have an account - try logging in with your phone and PIN.' },
+          { error: 'This email is already registered. You may already have an account - try logging in with your phone number.' },
           { status: 409 }
         );
       }
@@ -116,7 +102,6 @@ export async function POST(request: NextRequest) {
         phone: cleanPhone,
         name: name.trim(),
         email: email.trim(),
-        pin_hash: pinHash,
         role: 'customer',
         last_login: new Date().toISOString(),
       })
@@ -133,7 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sign them in immediately using their PIN as password
+    // Sign them in immediately using their phone-based password
     const response = NextResponse.json({}, { status: 201 });
 
     const supabaseResponse = createServerClient(
@@ -154,7 +139,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Sign in with email and padded PIN
+    // Sign in with email and phone-based password
     const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
       email: email.trim(),
       password: authPassword,
@@ -163,18 +148,15 @@ export async function POST(request: NextRequest) {
     if (signInError || !signInData.session) {
       console.error('Sign in error after signup:', signInError);
       // Still return success - user can login manually
-      const { pin_hash, ...userWithoutPin } = newUser;
       return NextResponse.json({
-        user: userWithoutPin,
+        user: newUser,
         message: 'Account created successfully'
       }, { status: 201 });
     }
 
-    // Return user data (excluding sensitive fields)
-    const { pin_hash, ...userWithoutPin } = newUser;
-
+    // Return user data
     return NextResponse.json({
-      user: userWithoutPin,
+      user: newUser,
       message: 'Account created successfully'
     }, {
       status: 201,

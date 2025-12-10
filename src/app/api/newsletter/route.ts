@@ -1,79 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { sendNewsletterSignupEmail } from '@/lib/email/resend'
-import { createSubscriber } from '@/lib/services/newsletter'
-import { logger } from '@/lib/logger'
+/**
+ * API Route: Newsletter Subscription
+ * POST - Subscribe to newsletter and store in database
+ */
 
-interface NewsletterSignupData {
-  name: string
-  email: string
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { subscribeToNewsletter } from '@/lib/services/newsletter';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const newsletterSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email('Invalid email format'),
+  source: z.enum(['website', 'signup', 'login', 'party_booking', 'pre_register']).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const data: NewsletterSignupData = await request.json()
+    const body = await request.json();
 
-    // Validate required fields
-    if (!data.name || !data.email) {
+    // Validate request body
+    const validationResult = newsletterSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errorMessages = validationResult.error.issues.map((issue) => issue.message).join(', ');
       return NextResponse.json(
-        { error: 'Name and email are required' },
+        { error: errorMessages },
         { status: 400 }
-      )
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
-    }
-
-    // Store subscriber in database
-    try {
-      await createSubscriber(data.name, data.email, 'website_footer');
-      logger.info(
-        { email: data.email, name: data.name },
-        '📧 Newsletter subscriber saved to database'
       );
-    } catch (dbError) {
-      logger.error(
-        { error: dbError, email: data.email },
-        'Failed to save newsletter subscriber to database'
-      );
-      // Continue anyway - we still want to send the notification email
     }
 
-    // Send notification email to business
-    const result = await sendNewsletterSignupEmail({
-      name: data.name,
-      email: data.email,
-    })
+    const { name, email, source } = validationResult.data;
+
+    // Subscribe to newsletter
+    const result = await subscribeToNewsletter({
+      email,
+      name: name || undefined,
+      source: source || 'website',
+    });
 
     if (!result.success) {
-      logger.error(
-        { error: result.error, email: data.email },
-        'Failed to send newsletter signup notification'
-      )
-      // Still return success to user - we don't want to block signups
-      // The subscriber is already saved in the database
+      logger.error({ email }, 'Newsletter signup failed');
+      return NextResponse.json(
+        { error: 'Failed to process newsletter signup' },
+        { status: 500 }
+      );
     }
 
-    logger.info(
-      { email: data.email, name: data.name },
-      '📧 Newsletter signup completed'
-    )
+    logger.info({ email, name, isNew: result.isNew }, 'Newsletter signup processed');
 
     return NextResponse.json({
       success: true,
-      message: 'Thank you for joining our newsletter! Welcome to the Busy Bees family.'
-    })
-
+      message: 'Thank you for joining our newsletter! Welcome to the Busy Bees family.',
+    });
   } catch (error) {
-    logger.error({ error }, 'Newsletter signup error')
+    logger.error({ error }, 'Newsletter signup error');
     return NextResponse.json(
       { error: 'Failed to process newsletter signup' },
       { status: 500 }
-    )
+    );
   }
 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
+import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import Stripe from 'stripe';
 
 // This is important for Next.js to treat this as raw body
@@ -131,7 +132,51 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     party_time,
     party_guests,
     party_notes,
+    booking_id,
   } = metadata;
+
+  // Handle party booking confirmation
+  if (purchase_type === 'party_package' && booking_id) {
+    console.log('Confirming party booking:', booking_id);
+
+    // Get booking details for email
+    const { data: booking } = await supabase
+      .from('party_bookings')
+      .select('*')
+      .eq('id', booking_id)
+      .single();
+
+    // Update booking status
+    const { error: updateError } = await supabase
+      .from('party_bookings')
+      .update({
+        status: 'confirmed',
+        payment_status: 'paid',
+        stripe_payment_intent_id: session.payment_intent as string,
+      })
+      .eq('id', booking_id);
+
+    if (updateError) {
+      console.error('Error confirming party booking:', updateError);
+    } else {
+      console.log('Party booking confirmed successfully:', booking_id);
+
+      // Log email details (TODO: implement actual email sending)
+      if (booking) {
+        console.log('📧 Sending confirmation email to:', booking.customer_email);
+        console.log('📧 Party details:', {
+          childName: booking.child_name,
+          date: booking.party_date,
+          time: `${booking.start_time} - ${booking.end_time}`,
+          package: booking.package_name,
+          guests: booking.guest_count,
+          total: booking.total_price,
+        });
+      }
+    }
+
+    return;
+  }
 
   if (!customer_id || !product_id || !purchase_type) {
     console.log('Missing required metadata fields');
@@ -178,6 +223,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error('Error creating purchase:', error);
   } else {
     console.log('Purchase created successfully for customer:', customer_id);
+  }
+
+  // Auto-subscribe to newsletter for party bookings
+  if (purchase_type === 'party_package' && session.customer_email) {
+    await subscribeToNewsletter({
+      email: session.customer_email,
+      source: 'party_booking',
+    });
   }
 }
 

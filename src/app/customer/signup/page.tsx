@@ -84,6 +84,19 @@ export default function CustomerSignupPage() {
         role: 'customer',
       });
 
+      // Auto-subscribe to newsletter (fire and forget)
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          source: 'signup',
+        }),
+      }).catch(() => {
+        // Silently fail - newsletter subscription is optional
+      });
+
       setSuccess(true);
       // Redirect to verify email page
       setTimeout(() => {

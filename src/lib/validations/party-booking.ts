@@ -1,0 +1,292 @@
+/**
+ * Zod validation schemas for party booking
+ * Ensures type-safe form validation with proper error messages
+ */
+
+import { z } from 'zod';
+
+// Phone number regex for (XXX) XXX-XXXX format
+const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+
+// Email regex for basic validation
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Party type enum
+export const PartyTypeSchema = z.enum(['private', 'semi_private'], {
+  message: 'Please select a party type',
+});
+
+// Package name enum (per issue requirements)
+export const PackageNameSchema = z.enum(['queen_bee', 'worker_bee', 'basic_bee'], {
+  message: 'Please select a party package',
+});
+
+// Contact information schema (Step 2)
+export const ContactInfoSchema = z.object({
+  customerName: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters'),
+  customerEmail: z
+    .string()
+    .regex(emailRegex, 'Please enter a valid email address'),
+  customerPhone: z
+    .string()
+    .regex(phoneRegex, 'Please enter a valid phone number: (XXX) XXX-XXXX'),
+  customerAddress: z
+    .string()
+    .min(10, 'Please enter a complete address')
+    .max(200, 'Address must be less than 200 characters'),
+});
+
+// Party type selection schema (Step 3)
+export const PartyTypeSelectionSchema = z.object({
+  partyType: PartyTypeSchema,
+});
+
+// Package selection schema (Step 4)
+export const PackageSelectionSchema = z.object({
+  packageName: PackageNameSchema,
+});
+
+// Date and time selection schema (Step 5)
+export const DateTimeSelectionSchema = z.object({
+  partyDate: z
+    .string()
+    .refine((date) => {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const minBookingDate = new Date(today);
+      minBookingDate.setDate(minBookingDate.getDate() + 7); // At least a week in advance
+      return selectedDate >= minBookingDate;
+    }, 'Parties must be booked at least 1 week in advance'),
+  startTime: z.string().min(1, 'Please select a time slot'),
+  endTime: z.string().min(1, 'End time is required'),
+});
+
+// Guest count schema (Step 6)
+export const GuestCountSchema = z.object({
+  childName: z
+    .string()
+    .min(2, 'Child name must be at least 2 characters')
+    .max(50, 'Child name must be less than 50 characters'),
+  childAge: z
+    .number()
+    .min(0, 'Age must be 0 or greater')
+    .max(12, 'Age must be 12 or less')
+    .optional(),
+  guestCount: z
+    .number()
+    .min(1, 'At least 1 guest is required')
+    .max(50, 'Maximum 50 guests allowed'),
+  additionalKids: z
+    .number()
+    .min(0, 'Additional kids cannot be negative')
+    .default(0),
+  notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
+});
+
+// Complete booking schema (all steps combined)
+export const CompleteBookingSchema = z.object({
+  // Contact Info
+  customerName: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters'),
+  customerEmail: z
+    .string()
+    .regex(emailRegex, 'Please enter a valid email address'),
+  customerPhone: z
+    .string()
+    .regex(phoneRegex, 'Please enter a valid phone number: (XXX) XXX-XXXX'),
+  customerAddress: z
+    .string()
+    .min(10, 'Please enter a complete address')
+    .max(200, 'Address must be less than 200 characters'),
+
+  // Party Type
+  partyType: PartyTypeSchema,
+
+  // Package
+  packageName: PackageNameSchema,
+
+  // Date & Time
+  partyDate: z.string().min(1, 'Please select a date'),
+  startTime: z.string().min(1, 'Please select a time slot'),
+  endTime: z.string().min(1, 'End time is required'),
+
+  // Guest Info
+  childName: z
+    .string()
+    .min(2, 'Child name must be at least 2 characters')
+    .max(50, 'Child name must be less than 50 characters'),
+  childAge: z.number().min(0).max(12).optional(),
+  guestCount: z
+    .number()
+    .min(1, 'At least 1 guest is required')
+    .max(50, 'Maximum 50 guests allowed'),
+  additionalKids: z.number().min(0).default(0),
+  notes: z.string().max(500).optional(),
+});
+
+// Type exports
+export type PartyType = z.infer<typeof PartyTypeSchema>;
+export type PackageName = z.infer<typeof PackageNameSchema>;
+export type ContactInfo = z.infer<typeof ContactInfoSchema>;
+export type PartyTypeSelection = z.infer<typeof PartyTypeSelectionSchema>;
+export type PackageSelection = z.infer<typeof PackageSelectionSchema>;
+export type DateTimeSelection = z.infer<typeof DateTimeSelectionSchema>;
+export type GuestCount = z.infer<typeof GuestCountSchema>;
+export type CompleteBooking = z.infer<typeof CompleteBookingSchema>;
+
+// Package pricing configuration
+export const PACKAGE_PRICING = {
+  queen_bee: {
+    name: 'Queen Bee',
+    semiPrivatePrice: 450,
+    privatePrice: 550,
+    maxGuests: 25,
+    duration: 2,
+    description: 'The premium experience for truly unforgettable memories',
+    features: [
+      'Everything in Worker Bee',
+      'Premium themed decoration package',
+      'Professional photo session included',
+      'Upgraded goodie bags with premium toys',
+      'Beautiful balloon bouquets for tables',
+      'Special birthday performance or show',
+      'Customized party favors & keepsakes',
+      'Take-home photo album as memento',
+    ],
+  },
+  worker_bee: {
+    name: 'Worker Bee',
+    semiPrivatePrice: 350,
+    privatePrice: 450,
+    maxGuests: 20,
+    duration: 2,
+    description: 'Our most popular package with extra special party touches',
+    features: [
+      'Everything in Basic Bee',
+      'Themed decorations & balloon setup',
+      'Special birthday throne for photos',
+      'Goodie bags for all party guests',
+      'Face painting or temporary tattoos',
+      'Music & entertainment coordination',
+      'Polaroid photos for lasting memories',
+      'Extended cleanup service included',
+    ],
+  },
+  basic_bee: {
+    name: 'Basic Bee',
+    semiPrivatePrice: 250,
+    privatePrice: 350,
+    maxGuests: 15,
+    duration: 2,
+    description: 'Perfect for intimate celebrations with all the party essentials',
+    features: [
+      'Exclusive party room access',
+      'Basic table setup with tablecloth',
+      'Paper plates, cups, napkins & utensils',
+      'Birthday crown for birthday child',
+      'Access to play area during party',
+      'Dedicated party host assistance',
+      'Basic cleanup service included',
+      'Party setup & breakdown handled',
+    ],
+  },
+} as const;
+
+// Time slot configuration per issue requirements
+export const TIME_SLOTS = {
+  private: {
+    // Saturday & Sunday only
+    weekend: [
+      { startTime: '13:00', endTime: '15:00', label: '1:00 PM - 3:00 PM' },
+      { startTime: '15:30', endTime: '17:30', label: '3:30 PM - 5:30 PM' },
+    ],
+    weekday: [], // Private parties not available weekdays per issue
+  },
+  semi_private: {
+    // Friday: 3-5 PM, Saturday & Sunday: 10 AM - 12 PM
+    friday: [{ startTime: '15:00', endTime: '17:00', label: '3:00 PM - 5:00 PM' }],
+    weekend: [{ startTime: '10:00', endTime: '12:00', label: '10:00 AM - 12:00 PM' }],
+  },
+} as const;
+
+// Additional kids pricing
+export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
+export const INCLUDED_KIDS = 15; // 15 kids included with each package
+
+/**
+ * Calculate total price for a party booking
+ */
+export function calculateBookingPrice(
+  packageName: PackageName,
+  partyType: PartyType,
+  guestCount: number
+): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
+  const packageInfo = PACKAGE_PRICING[packageName];
+  const basePrice = partyType === 'private' ? packageInfo.privatePrice : packageInfo.semiPrivatePrice;
+
+  const additionalKids = Math.max(0, guestCount - INCLUDED_KIDS);
+  const additionalKidsPrice = additionalKids * ADDITIONAL_KIDS_PRICE;
+  const totalPrice = basePrice + additionalKidsPrice;
+
+  return {
+    basePrice,
+    additionalKidsPrice,
+    totalPrice,
+    additionalKids,
+  };
+}
+
+/**
+ * Get available time slots for a given date and party type
+ */
+export function getAvailableTimeSlots(
+  date: Date,
+  partyType: PartyType
+): Array<{ startTime: string; endTime: string; label: string }> {
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+
+  if (partyType === 'private') {
+    // Private parties only on weekends
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return [...TIME_SLOTS.private.weekend];
+    }
+    return [];
+  }
+
+  // Semi-private parties
+  if (dayOfWeek === 5) {
+    // Friday
+    return [...TIME_SLOTS.semi_private.friday];
+  }
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    // Weekend
+    return [...TIME_SLOTS.semi_private.weekend];
+  }
+
+  return [];
+}
+
+/**
+ * Check if a date is valid for booking (at least 1 week in advance)
+ */
+export function isValidBookingDate(date: Date): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const minDate = new Date(today);
+  minDate.setDate(minDate.getDate() + 7);
+  return date >= minDate;
+}
+
+/**
+ * Check if a date has any available slots for a party type
+ */
+export function hasAvailableSlots(date: Date, partyType: PartyType): boolean {
+  const slots = getAvailableTimeSlots(date, partyType);
+  return slots.length > 0;
+}
