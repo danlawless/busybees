@@ -1,25 +1,19 @@
 /**
  * Next.js Instrumentation
- * Initializes Sentry and other instrumentation for server-side code
+ * Initializes Sentry for server-side code
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Server-side instrumentation
     await import('./sentry.server.config');
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    // Edge runtime instrumentation
     await import('./sentry.edge.config');
   }
 }
 
-/**
- * Captures errors from nested React Server Components
- * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
- */
 export async function onRequestError(
   err: Error & { digest?: string },
   request: {
@@ -33,9 +27,7 @@ export async function onRequestError(
     routeType: 'render' | 'route' | 'action' | 'middleware';
   }
 ) {
-  // Dynamically import Sentry to ensure it's initialized
   const Sentry = await import('@sentry/nextjs');
-
   Sentry.captureException(err, {
     tags: {
       routerKind: context.routerKind,

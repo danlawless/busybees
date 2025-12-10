@@ -21,7 +21,6 @@ class Logger {
       ...context,
     };
 
-    // In development, use pretty console output
     if (process.env.NODE_ENV === 'development') {
       const emoji = {
         debug: '🔍',
@@ -36,15 +35,12 @@ class Logger {
         context
       );
     } else {
-      // In production, use JSON for structured logging
       console.log(JSON.stringify(logData));
     }
 
-    // Send errors and warnings to Sentry
     if (level === 'error' || level === 'warn') {
       const sentryLevel = level === 'error' ? 'error' : 'warning';
 
-      // Add breadcrumb for context
       Sentry.addBreadcrumb({
         category: 'log',
         message,
@@ -52,20 +48,13 @@ class Logger {
         data: context,
       });
 
-      // If there's an error object in the context, capture it as an exception
       if (context.error && context.error instanceof Error) {
         Sentry.captureException(context.error, {
           level: sentryLevel,
-          tags: {
-            logMessage: message,
-          },
-          extra: {
-            ...context,
-            error: undefined, // Remove error from extra to avoid duplication
-          },
+          tags: { logMessage: message },
+          extra: { ...context, error: undefined },
         });
       } else {
-        // Otherwise capture as a message
         Sentry.captureMessage(message, {
           level: sentryLevel,
           extra: context,
@@ -90,21 +79,14 @@ class Logger {
     this.log('error', context, message);
   }
 
-  /**
-   * Create a child logger with persistent context
-   * Useful for request handlers where you want to include request ID, user email, etc.
-   */
   child(persistentContext: LogContext): Logger {
     const childLogger = new Logger();
     const originalLog = childLogger.log.bind(childLogger);
-
     childLogger.log = (level: LogLevel, context: LogContext, message: string) => {
       originalLog(level, { ...persistentContext, ...context }, message);
     };
-
     return childLogger;
   }
 }
 
 export const logger = new Logger();
-

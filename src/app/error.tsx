@@ -6,7 +6,6 @@
 
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { logger } from "@/lib/client-logger";
 
