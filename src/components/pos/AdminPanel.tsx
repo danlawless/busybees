@@ -149,6 +149,24 @@ export function AdminPanel({
   const [promoFormErrors, setPromoFormErrors] = useState<Record<string, string>>({});
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
+  // Membership discount states
+  const [membershipDiscount, setMembershipDiscount] = useState<{
+    exists: boolean;
+    active: boolean;
+    couponId: string;
+    discountPercent: number;
+    promotionCode?: string;
+    redemptions?: number;
+    loading: boolean;
+    error?: string;
+  }>({
+    exists: false,
+    active: false,
+    couponId: 'MEMBER10',
+    discountPercent: 10,
+    loading: true,
+  });
+
   // Passes states
   const [showPassForm, setShowPassForm] = useState(false);
   const [editingPass, setEditingPass] = useState<PassProduct | null>(null);
@@ -214,6 +232,38 @@ export function AdminPanel({
       }
     };
   }, [refundTimeout]);
+
+  // Fetch membership discount status on mount and when marketing view is opened
+  useEffect(() => {
+    const fetchMembershipDiscount = async () => {
+      try {
+        const response = await fetch('/api/membership-discount');
+        if (response.ok) {
+          const data = await response.json();
+          setMembershipDiscount({
+            ...data,
+            loading: false,
+          });
+        } else {
+          setMembershipDiscount(prev => ({
+            ...prev,
+            loading: false,
+            error: 'Failed to fetch membership discount status',
+          }));
+        }
+      } catch (error) {
+        setMembershipDiscount(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Network error fetching membership discount',
+        }));
+      }
+    };
+
+    if (currentView === 'marketing') {
+      fetchMembershipDiscount();
+    }
+  }, [currentView]);
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/[^\d]/g, '');
@@ -820,6 +870,49 @@ export function AdminPanel({
     }
   };
 
+  // Membership discount handlers
+  const handleToggleMembershipDiscount = async () => {
+    setMembershipDiscount(prev => ({ ...prev, loading: true, error: undefined }));
+
+    try {
+      if (membershipDiscount.active) {
+        // Deactivate the discount
+        const response = await fetch('/api/membership-discount', {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMembershipDiscount({
+            ...data,
+            loading: false,
+          });
+        } else {
+          throw new Error('Failed to deactivate membership discount');
+        }
+      } else {
+        // Activate/create the discount
+        const response = await fetch('/api/membership-discount', {
+          method: 'POST',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMembershipDiscount({
+            ...data,
+            loading: false,
+          });
+        } else {
+          throw new Error('Failed to activate membership discount');
+        }
+      }
+    } catch (error) {
+      setMembershipDiscount(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to toggle membership discount',
+      }));
+    }
+  };
+
   const renderMarketing = () => {
     const activePromo = getActivePromo(promos);
     const sortedPromos = [...promos].sort((a, b) => {
@@ -866,6 +959,79 @@ export function AdminPanel({
               <p className="text-sm text-gray-400">Create a promo to start advertising deals to customers</p>
             </div>
           )}
+        </Card>
+
+        {/* Membership Discounts Section */}
+        <Card className="p-6 border-2 border-amber-200 bg-amber-50/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">🎟️</span>
+              <div>
+                <h3 className="text-lg font-semibold text-amber-900">Membership Party Discount</h3>
+                <p className="text-sm text-amber-700">10% off party bookings for monthly membership holders</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {membershipDiscount.loading ? (
+                <span className="text-sm text-gray-500">Loading...</span>
+              ) : membershipDiscount.active ? (
+                <span className="px-3 py-1 rounded-full text-xs font-medium border bg-green-100 text-green-800 border-green-300">
+                  ACTIVE
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-xs font-medium border bg-gray-100 text-gray-600 border-gray-300">
+                  INACTIVE
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-4 border border-amber-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-sm text-gray-600">Discount Code</p>
+                <p className="font-mono font-bold text-lg text-amber-800">{membershipDiscount.couponId}</p>
+              </div>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-sm text-gray-600">Discount Amount</p>
+                <p className="font-bold text-lg text-amber-800">{membershipDiscount.discountPercent}% OFF</p>
+              </div>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-sm text-gray-600">Total Redemptions</p>
+                <p className="font-bold text-lg text-amber-800">{membershipDiscount.redemptions || 0}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-amber-200">
+              <div className="text-sm text-gray-600">
+                <p className="font-medium mb-1">How it works:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs text-gray-500">
+                  <li>Members with active monthly passes can use code <span className="font-mono font-bold">{membershipDiscount.couponId}</span></li>
+                  <li>Discount applies at Stripe checkout when booking a party</li>
+                  <li>One-time use per checkout session</li>
+                </ul>
+              </div>
+              <Button
+                onClick={handleToggleMembershipDiscount}
+                disabled={membershipDiscount.loading}
+                variant={membershipDiscount.active ? 'outline' : 'default'}
+                size="sm"
+                className={membershipDiscount.active ? 'border-red-300 text-red-600 hover:bg-red-50' : 'bg-amber-600 hover:bg-amber-700'}
+              >
+                {membershipDiscount.loading
+                  ? '⏳ Processing...'
+                  : membershipDiscount.active
+                    ? '🚫 Deactivate Discount'
+                    : '✅ Activate Discount'}
+              </Button>
+            </div>
+
+            {membershipDiscount.error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{membershipDiscount.error}</p>
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Create New Promo Button */}
