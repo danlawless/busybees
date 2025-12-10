@@ -16,8 +16,8 @@ const partyTypes = [
     borderColor: 'border-blue-300',
     accentColor: 'from-blue-500 to-blue-600',
     schedule: [
-      { day: 'Weekdays', time: '10am - 4pm', available: true },
-      { day: 'Saturday & Sunday', time: '9am - 12pm', available: true }
+      { day: 'Weekdays', time: '9am - 5pm (call to book)', available: true },
+      { day: 'Saturday & Sunday', time: '10am - 12pm', available: true }
     ],
     benefits: [
       'Access to exclusive party room',
@@ -37,8 +37,7 @@ const partyTypes = [
     accentColor: 'from-purple-500 to-purple-600',
 
     schedule: [
-      { day: 'Friday', time: '4pm - 6pm', available: true },
-      { day: 'Saturday & Sunday', time: '1pm - 3pm or 4pm - 6pm', available: true }
+      { day: 'Saturday & Sunday', time: '1pm - 3pm or 3:30pm - 5:30pm', available: true }
     ],
     benefits: [
       'Exclusive access to entire facility',
