@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   getAllProducts,
   getActiveProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
 } from '@/lib/services/products';
 import {
   validateProductName,
@@ -112,17 +109,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create product using service layer
-    const newProduct = await createProduct({
-      name: name.trim(),
-      category: category as any,
-      price: parseFloat(price),
-      description: (body.description || '').trim(),
-      allergens: JSON.stringify(allergens),
-      stripe_purchase_link: stripePurchaseLink.trim(),
-      is_active: body.isActive ?? true,
-      available: body.available ?? true,
-    });
+    // Create product using admin client (bypasses RLS for POS staff operations)
+    const supabase = createAdminClient();
+    const { data: newProduct, error } = await supabase
+      .from('products')
+      .insert({
+        name: name.trim(),
+        category: category as ProductCategory,
+        price: parseFloat(price),
+        description: (body.description || '').trim(),
+        allergens: JSON.stringify(allergens),
+        stripe_purchase_link: stripePurchaseLink.trim(),
+        is_active: body.isActive ?? true,
+        available: body.available ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating product:', error);
+      return NextResponse.json(
+        { error: 'Failed to create product' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ product: newProduct }, { status: 201 });
   } catch (error) {
@@ -210,17 +220,31 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update product using service layer
-    const updatedProduct = await updateProduct(id, {
-      name: name.trim(),
-      category: category as any,
-      price: parseFloat(price),
-      description: (body.description || '').trim(),
-      allergens: JSON.stringify(allergens),
-      stripe_purchase_link: stripePurchaseLink.trim(),
-      is_active: body.isActive,
-      available: body.available,
-    });
+    // Update product using admin client (bypasses RLS for POS staff operations)
+    const supabase = createAdminClient();
+    const { data: updatedProduct, error } = await supabase
+      .from('products')
+      .update({
+        name: name.trim(),
+        category: category as ProductCategory,
+        price: parseFloat(price),
+        description: (body.description || '').trim(),
+        allergens: JSON.stringify(allergens),
+        stripe_purchase_link: stripePurchaseLink.trim(),
+        is_active: body.isActive,
+        available: body.available,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating product:', error);
+      return NextResponse.json(
+        { error: 'Failed to update product' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ product: updatedProduct }, { status: 200 });
   } catch (error) {
@@ -248,8 +272,20 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from database using service layer
-    await deleteProduct(id);
+    // Delete from database using admin client (bypasses RLS for POS staff operations)
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting product:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete product' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, id }, { status: 200 });
   } catch (error) {
