@@ -50,7 +50,7 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Book your party online! We recommend booking 2-3 weeks in advance, especially for weekend slots. We offer three party packages (Basic Birthday Bash, Super Fun Party, and Ultimate Celebration) in both Private and Semi-Private options. Semi-Private packages ($250-$450) include an exclusive party room with shared play area. Private packages ($350-$550) include exclusive use of the entire facility.'
+        answer: 'Book your party online! We recommend booking at least a week in advance, especially for weekend slots. We offer three party packages (Basic Bee, Worker Bee and Queen Bee) in both Private and Semi-Private options. Semi-Private packages ($400 - $500) include an exclusive party room with shared play area. Private packages ($475 - $575) include exclusive use of the entire facility.'
       },
       {
         question: 'What\'s included in party packages?',
