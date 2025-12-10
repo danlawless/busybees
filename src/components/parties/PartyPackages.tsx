@@ -10,7 +10,7 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 const partyPackages = [
   {
     name: 'Basic Bee',
-    description: 'Perfect for intimate celebrations with all the party essentials',
+    description: 'Standard Package',
     icon: Gift,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
@@ -33,7 +33,7 @@ const partyPackages = [
   },
   {
     name: 'Worker Bee',
-    description: 'Our most popular package with extra special party touches',
+    description: 'Essential Package',
     icon: Sparkles,
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
