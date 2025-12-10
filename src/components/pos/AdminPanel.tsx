@@ -111,7 +111,24 @@ interface AdminPanelProps {
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'passes' | 'parties' | 'products';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products';
+
+interface NewsletterSubscriber {
+  id: string;
+  name: string;
+  email: string;
+  subscribedAt: string;
+  isActive: boolean;
+  unsubscribedAt: string | null;
+  source: string;
+  createdAt: string;
+}
+
+interface NewsletterStats {
+  total: number;
+  active: number;
+  unsubscribed: number;
+}
 
 export function AdminPanel({
   customers,
@@ -198,6 +215,12 @@ export function AdminPanel({
   // Volume discount states
   const [showDiscountForm, setShowDiscountForm] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<VolumeDiscount | null>(null);
+
+  // Newsletter states
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [newsletterStats, setNewsletterStats] = useState<NewsletterStats>({ total: 0, active: 0, unsubscribed: 0 });
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterSearchTerm, setNewsletterSearchTerm] = useState('');
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
@@ -214,6 +237,29 @@ export function AdminPanel({
       }
     };
   }, [refundTimeout]);
+
+  // Fetch newsletter subscribers when newsletter view is selected
+  const fetchNewsletterSubscribers = async () => {
+    setNewsletterLoading(true);
+    try {
+      const response = await fetch('/api/newsletter-subscribers');
+      if (response.ok) {
+        const data = await response.json();
+        setNewsletterSubscribers(data.subscribers || []);
+        setNewsletterStats(data.stats || { total: 0, active: 0, unsubscribed: 0 });
+      }
+    } catch (error) {
+      console.error('Failed to fetch newsletter subscribers:', error);
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'newsletter') {
+      fetchNewsletterSubscribers();
+    }
+  }, [currentView]);
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/[^\d]/g, '');
@@ -2170,6 +2216,248 @@ export function AdminPanel({
     );
   };
 
+  const handleUnsubscribe = async (subscriberId: string) => {
+    try {
+      const response = await fetch(`/api/newsletter-subscribers/${subscriberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unsubscribe' }),
+      });
+      if (response.ok) {
+        fetchNewsletterSubscribers();
+      }
+    } catch (error) {
+      console.error('Failed to unsubscribe:', error);
+    }
+  };
+
+  const handleReactivateSubscriber = async (subscriberId: string) => {
+    try {
+      const response = await fetch(`/api/newsletter-subscribers/${subscriberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reactivate' }),
+      });
+      if (response.ok) {
+        fetchNewsletterSubscribers();
+      }
+    } catch (error) {
+      console.error('Failed to reactivate subscriber:', error);
+    }
+  };
+
+  const handleDeleteSubscriber = async (subscriberId: string) => {
+    if (confirmingDelete === subscriberId) {
+      try {
+        const response = await fetch(`/api/newsletter-subscribers/${subscriberId}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          fetchNewsletterSubscribers();
+        }
+      } catch (error) {
+        console.error('Failed to delete subscriber:', error);
+      }
+      setConfirmingDelete(null);
+    } else {
+      setConfirmingDelete(subscriberId);
+      setTimeout(() => setConfirmingDelete(null), 3000);
+    }
+  };
+
+  const renderNewsletter = () => {
+    const filteredSubscribers = newsletterSubscribers.filter(sub =>
+      sub.name.toLowerCase().includes(newsletterSearchTerm.toLowerCase()) ||
+      sub.email.toLowerCase().includes(newsletterSearchTerm.toLowerCase())
+    );
+
+    const formatSubscribedDate = (dateString: string) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-yellow-600">{newsletterStats.total}</p>
+              <p className="text-sm text-gray-600">Total Subscribers</p>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-600">{newsletterStats.active}</p>
+              <p className="text-sm text-gray-600">Active Subscribers</p>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-500">{newsletterStats.unsubscribed}</p>
+              <p className="text-sm text-gray-600">Unsubscribed</p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Subscriber List */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Newsletter Subscribers</h3>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Search subscribers..."
+                value={newsletterSearchTerm}
+                onChange={(e) => setNewsletterSearchTerm(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+              />
+              <Button
+                onClick={fetchNewsletterSubscribers}
+                size="sm"
+                variant="outline"
+                disabled={newsletterLoading}
+              >
+                🔄 Refresh
+              </Button>
+            </div>
+          </div>
+
+          {newsletterLoading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading subscribers...</p>
+            </div>
+          ) : filteredSubscribers.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-lg mb-2">📧 No subscribers yet</p>
+              <p className="text-sm text-gray-400">
+                Newsletter signups from the website footer will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-semibold text-gray-600">Name</th>
+                    <th className="text-left py-3 px-2 font-semibold text-gray-600">Email</th>
+                    <th className="text-left py-3 px-2 font-semibold text-gray-600">Subscribed</th>
+                    <th className="text-left py-3 px-2 font-semibold text-gray-600">Source</th>
+                    <th className="text-left py-3 px-2 font-semibold text-gray-600">Status</th>
+                    <th className="text-right py-3 px-2 font-semibold text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSubscribers.map((subscriber) => (
+                    <tr key={subscriber.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-2 font-medium">{subscriber.name}</td>
+                      <td className="py-3 px-2">
+                        <a
+                          href={`mailto:${subscriber.email}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {subscriber.email}
+                        </a>
+                      </td>
+                      <td className="py-3 px-2 text-sm text-gray-600">
+                        {formatSubscribedDate(subscriber.subscribedAt)}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                          {subscriber.source.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        {subscriber.isActive ? (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                            Unsubscribed
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        <div className="flex justify-end space-x-2">
+                          {subscriber.isActive ? (
+                            <Button
+                              onClick={() => handleUnsubscribe(subscriber.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              Unsubscribe
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleReactivateSubscriber(subscriber.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleDeleteSubscriber(subscriber.id)}
+                            size="sm"
+                            variant="outline"
+                            className={`text-xs ${
+                              confirmingDelete === subscriber.id
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : ''
+                            }`}
+                          >
+                            {confirmingDelete === subscriber.id ? 'Confirm' : 'Delete'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {/* Export Section */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Export Subscribers</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Download your subscriber list for use in email marketing platforms like Mailchimp, ConvertKit, or Constant Contact.
+          </p>
+          <Button
+            onClick={() => {
+              const activeSubscribers = newsletterSubscribers.filter(s => s.isActive);
+              const csv = [
+                'Name,Email,Subscribed Date,Source',
+                ...activeSubscribers.map(s =>
+                  `"${s.name}","${s.email}","${formatSubscribedDate(s.subscribedAt)}","${s.source}"`
+                )
+              ].join('\n');
+
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `newsletter-subscribers-${new Date().toISOString().split('T')[0]}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            size="sm"
+            variant="outline"
+          >
+            📥 Export Active Subscribers (CSV)
+          </Button>
+        </Card>
+      </div>
+    );
+  };
+
   const renderPasses = () => {
     return (
       <div className="space-y-6">
@@ -2481,6 +2769,13 @@ export function AdminPanel({
             📢 Marketing
           </Button>
           <Button
+            onClick={() => setCurrentView('newsletter')}
+            variant={currentView === 'newsletter' ? 'default' : 'outline'}
+            size="sm"
+          >
+            📧 Newsletter
+          </Button>
+          <Button
             onClick={() => setCurrentView('passes')}
             variant={currentView === 'passes' ? 'default' : 'outline'}
             size="sm"
@@ -2510,6 +2805,7 @@ export function AdminPanel({
       {currentView === 'sales' && renderSales()}
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
       {currentView === 'marketing' && renderMarketing()}
+      {currentView === 'newsletter' && renderNewsletter()}
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}

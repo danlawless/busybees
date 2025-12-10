@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendNewsletterSignupEmail } from '@/lib/email/resend'
+import { createSubscriber } from '@/lib/services/newsletter'
 import { logger } from '@/lib/logger'
 
 interface NewsletterSignupData {
@@ -28,6 +29,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Store subscriber in database
+    try {
+      await createSubscriber(data.name, data.email, 'website_footer');
+      logger.info(
+        { email: data.email, name: data.name },
+        '📧 Newsletter subscriber saved to database'
+      );
+    } catch (dbError) {
+      logger.error(
+        { error: dbError, email: data.email },
+        'Failed to save newsletter subscriber to database'
+      );
+      // Continue anyway - we still want to send the notification email
+    }
+
     // Send notification email to business
     const result = await sendNewsletterSignupEmail({
       name: data.name,
@@ -40,12 +56,12 @@ export async function POST(request: NextRequest) {
         'Failed to send newsletter signup notification'
       )
       // Still return success to user - we don't want to block signups
-      // The form submission is logged and can be recovered
+      // The subscriber is already saved in the database
     }
 
     logger.info(
       { email: data.email, name: data.name },
-      '📧 Newsletter signup submitted'
+      '📧 Newsletter signup completed'
     )
 
     return NextResponse.json({
