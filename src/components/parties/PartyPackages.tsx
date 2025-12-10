@@ -157,12 +157,12 @@ export function PartyPackages() {
                     <div className="text-center mb-8">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-                          <span className="font-medium text-charcoal-700">Semi-Private:</span>
-                          <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
                           <span className="font-medium text-charcoal-700">Private:</span>
                           <span className="text-2xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                          <span className="font-medium text-charcoal-700">Semi-Private:</span>
+                          <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
                         </div>
                       </div>
                     </div>
