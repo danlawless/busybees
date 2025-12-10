@@ -2,10 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, HelpCircle, Calendar, Users, Gift, DollarSign, Clock, Utensils } from 'lucide-react'
+import { ChevronDown, ChevronUp, Calendar, Users, Gift, DollarSign, Clock, Utensils } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { fadeInUp } from '@/lib/utils'
 
 const faqCategories = [
@@ -238,43 +237,6 @@ export function PartyFAQ() {
           })}
         </motion.div>
         
-        {/* Still Have Questions CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          viewport={{ once: true }}
-          className="text-center mt-16"
-        >
-          <Card className="max-w-2xl mx-auto card-pastel">
-            <CardContent className="p-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-200 to-green-300 hexagon-shape flex items-center justify-center mx-auto mb-6 hexagon-pulse">
-                <HelpCircle className="w-8 h-8 text-charcoal-700" />
-              </div>
-              
-              <h3 className="text-2xl font-bold text-charcoal-800 mb-4">
-                Still Have <span className="text-honey-gradient">Questions?</span>
-              </h3>
-              <p className="text-charcoal-600 mb-6 leading-relaxed">
-                Our friendly party coordinators are here to help! We love talking about parties 
-                and making sure every detail is perfect for your special day.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-gradient-to-r from-blue-500 to-green-600 hover:from-blue-600 hover:to-green-700 text-white font-semibold">
-                  📞 Call (555) 123-BEES
-                </Button>
-                <Button variant="outline" size="lg">
-                  💬 Text Your Questions
-                </Button>
-              </div>
-              
-              <div className="mt-6 text-sm text-charcoal-500">
-                <p>📞 Phone: Mon-Fri 9AM-6PM | 💬 Text: Response within 1 hour</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </section>
   )
