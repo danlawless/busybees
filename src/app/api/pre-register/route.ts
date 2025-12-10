@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { z } from 'zod';
 
 // Child schema for validation
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { parentName, email, phone, children } = validationResult.data;
+    const { parentName, email, phone, children, marketingOptIn } = validationResult.data;
 
     // Clean phone number for storage (remove formatting)
     const cleanPhone = phone.replace(/[^\d]/g, '');
@@ -164,6 +165,15 @@ export async function POST(request: NextRequest) {
       } else {
         logger.info({ customerId, childCount: newChildren.length }, 'Added children to pre-registration');
       }
+    }
+
+    // Subscribe to newsletter if marketing opt-in is enabled (defaults to true)
+    if (marketingOptIn !== false) {
+      await subscribeToNewsletter({
+        email,
+        name: parentName,
+        source: 'pre_register',
+      });
     }
 
     return NextResponse.json({
