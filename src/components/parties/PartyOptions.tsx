@@ -26,7 +26,7 @@ const partyTypes = [
       'Perfect for younger children',
       'All party essentials included'
     ],
-    priceNote: 'First price listed in packages below'
+    priceNote: 'Second price listed in packages below'
   },
   {
     name: 'Private Party',
@@ -46,7 +46,7 @@ const partyTypes = [
       'Perfect for larger groups',
       'Maximum flexibility and customization'
     ],
-    priceNote: 'Second price listed in packages below'
+    priceNote: 'First price listed in packages below'
   }
 ]
 
@@ -173,9 +173,9 @@ export function PartyOptions() {
                 <h4 className="font-bold text-charcoal-800">Important Pricing Information</h4>
               </div>
               <p className="text-charcoal-600 leading-relaxed">
-                <strong>Please note:</strong> In our party packages below, the <strong>first price listed</strong> reflects our 
-                <strong> semi-private party rate</strong>, and the <strong>second price listed</strong> reflects our 
-                <strong> private party rate</strong>. Choose the experience that works best for your celebration!
+                <strong>Please note:</strong> In our party packages below, the <strong>first price listed</strong> reflects our
+                <strong> private party rate</strong>, and the <strong>second price listed</strong> reflects our
+                <strong> semi-private party rate</strong>. Choose the experience that works best for your celebration!
               </p>
             </CardContent>
           </Card>
