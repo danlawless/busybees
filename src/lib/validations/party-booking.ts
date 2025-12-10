@@ -166,7 +166,7 @@ export const PACKAGE_PRICING = {
     privatePrice: 450,
     maxGuests: 20,
     duration: 2,
-    description: 'Our most popular package with extra special party touches',
+    description: 'Essential Package',
     features: [
       'Everything in Basic Bee',
       'Themed decorations & balloon setup',
@@ -184,7 +184,7 @@ export const PACKAGE_PRICING = {
     privatePrice: 350,
     maxGuests: 15,
     duration: 2,
-    description: 'Perfect for intimate celebrations with all the party essentials',
+    description: 'Standard Package',
     features: [
       'Exclusive party room access',
       'Basic table setup with tablecloth',
