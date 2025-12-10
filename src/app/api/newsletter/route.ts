@@ -1,73 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server'
+/**
+ * API Route: Newsletter Subscription
+ * POST - Subscribe to newsletter and store in database
+ */
 
-interface NewsletterSignupData {
-  name: string
-  email: string
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { subscribeToNewsletter } from '@/lib/services/newsletter';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const newsletterSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email('Invalid email format'),
+  source: z.enum(['website', 'signup', 'login', 'party_booking', 'pre_register']).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const data: NewsletterSignupData = await request.json()
-    
-    // Validate required fields
-    if (!data.name || !data.email) {
+    const body = await request.json();
+
+    // Validate request body
+    const validationResult = newsletterSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errorMessages = validationResult.error.issues.map((issue) => issue.message).join(', ');
       return NextResponse.json(
-        { error: 'Name and email are required' },
+        { error: errorMessages },
         { status: 400 }
-      )
+      );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email)) {
+    const { name, email, source } = validationResult.data;
+
+    // Subscribe to newsletter
+    const result = await subscribeToNewsletter({
+      email,
+      name: name || undefined,
+      source: source || 'website',
+    });
+
+    if (!result.success) {
+      logger.error({ email }, 'Newsletter signup failed');
       return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
+        { error: 'Failed to process newsletter signup' },
+        { status: 500 }
+      );
     }
 
-    // Create email content
-    const emailSubject = 'New Newsletter Signup - Busy Bees'
-    const emailBody = `
-New newsletter signup from Busy Bees website:
-
-Name: ${data.name}
-Email: ${data.email}
-
----
-Please add this contact to the Busy Bees newsletter list.
-Signed up at: ${new Date().toLocaleString()}
-`
-
-    console.log('📧 New newsletter signup:')
-    console.log('To: info@busybeesipc.com')
-    console.log('Subject:', emailSubject)
-    console.log('Body:', emailBody)
-    
-    // TODO: Replace with actual email sending service (SendGrid, Nodemailer, etc.)
-    // You might also want to integrate with newsletter services like Mailchimp, ConvertKit, etc.
-    // await sendEmail({
-    //   to: 'info@busybeesipc.com',
-    //   subject: emailSubject,
-    //   body: emailBody,
-    //   replyTo: data.email
-    // })
-    
-    // await addToNewsletterList({
-    //   name: data.name,
-    //   email: data.email
-    // })
+    logger.info({ email, name, isNew: result.isNew }, 'Newsletter signup processed');
 
     return NextResponse.json({
       success: true,
-      message: 'Thank you for joining our newsletter! Welcome to the Busy Bees family.'
-    })
-
+      message: 'Thank you for joining our newsletter! Welcome to the Busy Bees family.',
+    });
   } catch (error) {
-    console.error('Newsletter signup error:', error)
+    logger.error({ error }, 'Newsletter signup error');
     return NextResponse.json(
       { error: 'Failed to process newsletter signup' },
       { status: 500 }
-    )
+    );
   }
 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
+import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import Stripe from 'stripe';
 
 // This is important for Next.js to treat this as raw body
@@ -222,6 +223,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error('Error creating purchase:', error);
   } else {
     console.log('Purchase created successfully for customer:', customer_id);
+  }
+
+  // Auto-subscribe to newsletter for party bookings
+  if (purchase_type === 'party_package' && session.customer_email) {
+    await subscribeToNewsletter({
+      email: session.customer_email,
+      source: 'party_booking',
+    });
   }
 }
 
