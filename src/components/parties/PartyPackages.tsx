@@ -9,7 +9,7 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const partyPackages = [
   {
-    name: 'Basic Birthday Bash',
+    name: 'Basic Bee',
     description: 'Perfect for intimate celebrations with all the party essentials',
     icon: Gift,
     color: 'from-blue-200 to-blue-300',
@@ -21,7 +21,7 @@ const partyPackages = [
     duration: '2 hours',
     features: [
       'Exclusive party room access',
-      'Basic table setup with tablecloth', 
+      'Basic table setup with tablecloth',
       'Paper plates, cups, napkins & utensils',
       'Birthday crown for birthday child',
       'Access to play area during party',
@@ -32,7 +32,7 @@ const partyPackages = [
     popular: false
   },
   {
-    name: 'Super Fun Party',
+    name: 'Worker Bee',
     description: 'Our most popular package with extra special party touches',
     icon: Sparkles,
     color: 'from-purple-200 to-purple-300',
@@ -43,7 +43,7 @@ const partyPackages = [
     maxGuests: 20,
     duration: '2 hours',
     features: [
-      'Everything in Basic Birthday Bash',
+      'Everything in Basic Bee',
       'Themed decorations & balloon setup',
       'Special birthday throne for photos',
       'Goodie bags for all party guests',
@@ -55,7 +55,7 @@ const partyPackages = [
     popular: true
   },
   {
-    name: 'Ultimate Celebration',
+    name: 'Queen Bee',
     description: 'The premium experience for truly unforgettable memories',
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
@@ -66,7 +66,7 @@ const partyPackages = [
     maxGuests: 25,
     duration: '2 hours',
     features: [
-      'Everything in Super Fun Party',
+      'Everything in Worker Bee',
       'Premium themed decoration package',
       'Professional photo session included',
       'Upgraded goodie bags with premium toys',
