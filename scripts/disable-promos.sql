@@ -1,14 +1,14 @@
--- Disable Promos Script: Set all promo dates to last year
+-- Disable Promos Script: Disable all promos by setting is_active to false
 -- Run this in Supabase SQL Editor to disable all active promotions
--- This preserves all data but sets dates to 2024 so no promos will be active
+-- This preserves all data and dates - just toggles is_active flag off
 
--- Update all promos to have dates from last year (2024)
+-- Disable all promos by setting is_active = false
+-- This is the most reliable way to disable promos as the isPromoActive()
+-- function checks this flag first before checking dates
 UPDATE public.promos
 SET
-  start_date = start_date - INTERVAL '1 year',
-  end_date = end_date - INTERVAL '1 year',
-  updated_at = NOW()
-WHERE start_date >= '2025-01-01';
+  is_active = false,
+  updated_at = NOW();
 
 -- Verify the update
 SELECT
@@ -19,9 +19,10 @@ SELECT
   end_date,
   is_active,
   CASE
+    WHEN is_active = false THEN 'DISABLED (is_active=false)'
     WHEN CURRENT_DATE BETWEEN start_date AND end_date THEN 'ACTIVE NOW'
     WHEN CURRENT_DATE < start_date THEN 'SCHEDULED'
-    ELSE 'EXPIRED (disabled)'
+    ELSE 'EXPIRED'
   END as status
 FROM public.promos
 ORDER BY start_date;

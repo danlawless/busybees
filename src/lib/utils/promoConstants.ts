@@ -6,7 +6,7 @@
 
 import { PromoSpecial } from "./promoHelpers";
 
-export const PROMO_VERSION = "v3_nov11_2025"; // Update this to force reload of new promo codes
+export const PROMO_VERSION = "v4_dec10_2025_disabled"; // Update this to force reload of new promo codes
 
 export const INITIAL_PROMOS: PromoSpecial[] = [
     {
@@ -18,7 +18,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Coming soon!  Bee one of the first!",
         stripeCouponCode: "EARLYBEE20",
         bannerStyle: "honeycomb",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -31,7 +31,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Black Friday Deal! (Thanksgiving)",
         stripeCouponCode: "BLACKFRIDAY30",
         bannerStyle: "bold-stripes",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -44,7 +44,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Cyber Monday!",
         stripeCouponCode: "CYBERMONDAY40",
         bannerStyle: "gradient-wave",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -57,7 +57,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Warm up with winter special!",
         stripeCouponCode: "WINTERSPECIAL15",
         bannerStyle: "honeycomb",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -70,7 +70,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Merry Christmas this week only!",
         stripeCouponCode: "XMASSGIFT25",
         bannerStyle: "confetti",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -83,7 +83,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "2 Day New Years Special",
         stripeCouponCode: "NEWYEARS30",
         bannerStyle: "confetti",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
@@ -96,7 +96,7 @@ export const INITIAL_PROMOS: PromoSpecial[] = [
         description: "Special to leave running for 1st 3 months Opening",
         stripeCouponCode: "GRANDOPEN10",
         bannerStyle: "honeycomb",
-        isActive: true,
+        isActive: false, // Disabled - promo data preserved for future use
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     },
