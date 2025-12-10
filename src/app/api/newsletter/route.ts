@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendNewsletterSignupEmail } from '@/lib/email/resend'
+import { logger } from '@/lib/logger'
 
 interface NewsletterSignupData {
   name: string
@@ -8,7 +10,7 @@ interface NewsletterSignupData {
 export async function POST(request: NextRequest) {
   try {
     const data: NewsletterSignupData = await request.json()
-    
+
     // Validate required fields
     if (!data.name || !data.email) {
       return NextResponse.json(
@@ -26,37 +28,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create email content
-    const emailSubject = 'New Newsletter Signup - Busy Bees'
-    const emailBody = `
-New newsletter signup from Busy Bees website:
+    // Send notification email to business
+    const result = await sendNewsletterSignupEmail({
+      name: data.name,
+      email: data.email,
+    })
 
-Name: ${data.name}
-Email: ${data.email}
+    if (!result.success) {
+      logger.error(
+        { error: result.error, email: data.email },
+        'Failed to send newsletter signup notification'
+      )
+      // Still return success to user - we don't want to block signups
+      // The form submission is logged and can be recovered
+    }
 
----
-Please add this contact to the Busy Bees newsletter list.
-Signed up at: ${new Date().toLocaleString()}
-`
-
-    console.log('📧 New newsletter signup:')
-    console.log('To: info@busybeesipc.com')
-    console.log('Subject:', emailSubject)
-    console.log('Body:', emailBody)
-    
-    // TODO: Replace with actual email sending service (SendGrid, Nodemailer, etc.)
-    // You might also want to integrate with newsletter services like Mailchimp, ConvertKit, etc.
-    // await sendEmail({
-    //   to: 'info@busybeesipc.com',
-    //   subject: emailSubject,
-    //   body: emailBody,
-    //   replyTo: data.email
-    // })
-    
-    // await addToNewsletterList({
-    //   name: data.name,
-    //   email: data.email
-    // })
+    logger.info(
+      { email: data.email, name: data.name },
+      '📧 Newsletter signup submitted'
+    )
 
     return NextResponse.json({
       success: true,
@@ -64,7 +54,7 @@ Signed up at: ${new Date().toLocaleString()}
     })
 
   } catch (error) {
-    console.error('Newsletter signup error:', error)
+    logger.error({ error }, 'Newsletter signup error')
     return NextResponse.json(
       { error: 'Failed to process newsletter signup' },
       { status: 500 }

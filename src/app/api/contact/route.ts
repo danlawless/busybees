@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendContactFormEmail } from '@/lib/email/resend'
+import { logger } from '@/lib/logger'
 
 interface ContactFormData {
   name: string
@@ -11,7 +13,7 @@ interface ContactFormData {
 export async function POST(request: NextRequest) {
   try {
     const data: ContactFormData = await request.json()
-    
+
     // Validate required fields
     if (!data.name || !data.email || !data.message || !data.userType) {
       return NextResponse.json(
@@ -29,39 +31,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create email content
-    const emailSubject = `New Contact Form Submission - ${data.userType}`
-    const emailBody = `
-New contact form submission from Busy Bees website:
+    // Send email to business
+    const result = await sendContactFormEmail({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      userType: data.userType,
+      message: data.message,
+    })
 
-Name: ${data.name}
-Email: ${data.email}
-Phone: ${data.phone || 'Not provided'}
-Inquiry Type: ${data.userType}
+    if (!result.success) {
+      logger.error(
+        { error: result.error, email: data.email },
+        'Failed to send contact form email'
+      )
+      return NextResponse.json(
+        { error: 'Failed to send message. Please try again or email us directly at info@busybeesipc.com' },
+        { status: 500 }
+      )
+    }
 
-Message:
-${data.message}
-
----
-Sent from Busy Bees Indoor Play Center website
-Submitted at: ${new Date().toLocaleString()}
-`
-
-    // For now, we'll use mailto: approach or you can integrate with a service like SendGrid/Nodemailer
-    // This is a basic implementation that formats the data
-    
-    console.log('📧 New contact form submission:')
-    console.log('To: info@busybeesipc.com')
-    console.log('Subject:', emailSubject)
-    console.log('Body:', emailBody)
-    
-    // TODO: Replace with actual email sending service (SendGrid, Nodemailer, etc.)
-    // await sendEmail({
-    //   to: 'info@busybeesipc.com',
-    //   subject: emailSubject,
-    //   body: emailBody,
-    //   replyTo: data.email
-    // })
+    logger.info(
+      { email: data.email, userType: data.userType },
+      '📧 Contact form submitted successfully'
+    )
 
     return NextResponse.json({
       success: true,
@@ -69,7 +62,7 @@ Submitted at: ${new Date().toLocaleString()}
     })
 
   } catch (error) {
-    console.error('Contact form error:', error)
+    logger.error({ error }, 'Contact form error')
     return NextResponse.json(
       { error: 'Failed to process contact form' },
       { status: 500 }
