@@ -216,7 +216,7 @@ const pricingPlans = [
     },
     {
         name: "Monthly Membership (Infant)",
-        price: 80,
+        price: 70,
         description: "Unlimited visits for your littlest one",
         features: [
             "Unlimited visits for 1 infant",
@@ -231,13 +231,13 @@ const pricingPlans = [
     },
     {
         name: "Monthly Membership (Toddler)",
-        price: 115,
+        price: 100,
         description: "Best value for regular families",
         features: [
             "Unlimited visits for 1 child (ages 2+)",
-            "Pays for itself after 7 visits!",
-            "10% off 2nd child ($103.50)",
-            "20% off 3rd child ($92)",
+            "Pays for itself after 6 visits!",
+            "10% off 2nd child ($90)",
+            "20% off 3rd child ($80)",
             "Member exclusive events",
         ],
         popular: true,

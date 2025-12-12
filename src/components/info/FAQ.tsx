@@ -75,7 +75,7 @@ const faqs = [
       },
       {
         question: 'How does the monthly membership work?',
-        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $115 for the first child, with discounts for additional children (10% off second child at $103.50, 20% off third child at $92). Infant membership (under 2) is $80. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 7 visits!'
+        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $100 for the first child, with discounts for additional children (10% off second child at $90, 20% off third child at $80). Infant membership (under 2) is $70. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 6 visits!'
       },
       {
         question: 'Do punch cards expire?',
