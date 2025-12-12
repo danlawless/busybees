@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Layout } from '@/components/layout/Layout'
+import { useAuth } from '@/hooks/useAuth'
 import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
@@ -14,8 +15,22 @@ import { Card } from '@/components/ui/Card'
 
 function PartiesContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const [showBookingWizard, setShowBookingWizard] = useState(false)
   const [showCancelledMessage, setShowCancelledMessage] = useState(false)
+
+  // Handle booking button click - redirect to signup if not authenticated
+  const handleBookParty = () => {
+    if (authLoading) return
+
+    if (isAuthenticated) {
+      setShowBookingWizard(true)
+    } else {
+      // Redirect to signup with return URL
+      router.push('/customer/signup?redirect=/parties')
+    }
+  }
 
   // Check for cancelled booking
   useEffect(() => {
@@ -81,7 +96,8 @@ function PartiesContent() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                onClick={() => setShowBookingWizard(true)}
+                onClick={handleBookParty}
+                disabled={authLoading}
                 className="bg-gradient-to-r from-honey-500 to-yellow-500 hover:from-honey-600 hover:to-yellow-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <Gift className="w-6 h-6 mr-2" />
@@ -148,7 +164,8 @@ function PartiesContent() {
             </p>
             <Button
               size="lg"
-              onClick={() => setShowBookingWizard(true)}
+              onClick={handleBookParty}
+              disabled={authLoading}
               className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-charcoal-800 font-bold text-lg"
             >
               <Gift className="w-6 h-6 mr-2" />
