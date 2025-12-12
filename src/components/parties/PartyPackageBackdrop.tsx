@@ -58,8 +58,8 @@ export function PartyPackageBackdrop() {
             {/* Queen Bee Details Box */}
             <div className="absolute top-[32%] left-[34%] transform -translate-x-1/2 -translate-y-1/2">
               <div className="text-gray-800 max-w-60 text-center">
-                <p className="text-xl font-extrabold text-orange-600 mb-1">Semi-Private: $500</p>
-                <p className="text-xl font-extrabold text-orange-600 mb-2">Private: $575</p>
+                <p className="text-xl font-extrabold text-orange-600 mb-1">Private: $575</p>
+                <p className="text-xl font-extrabold text-orange-600 mb-2">Semi-Private: $500</p>
                 <p className="text-sm text-gray-600 mb-2 italic">Semi-Private: Exclusive party room, shared play area</p>
                 <p className="text-base font-semibold text-gray-700 mb-2">2 hours</p>
                 <p className="text-base font-medium text-gray-600 mb-2">15 kids included</p>
@@ -85,8 +85,8 @@ export function PartyPackageBackdrop() {
             {/* Worker Bee Details Box */}
             <div className="absolute top-[52%] right-[31%] transform translate-x-1/2 -translate-y-1/2">
               <div className="text-gray-800 max-w-60 text-center">
-                <p className="text-xl font-extrabold text-yellow-600 mb-1">Semi-Private: $450</p>
-                <p className="text-xl font-extrabold text-yellow-600 mb-2">Private: $525</p>
+                <p className="text-xl font-extrabold text-yellow-600 mb-1">Private: $525</p>
+                <p className="text-xl font-extrabold text-yellow-600 mb-2">Semi-Private: $450</p>
                 <p className="text-sm text-gray-600 mb-2 italic">Semi-Private: Exclusive party room, shared play area</p>
                 <p className="text-base font-semibold text-gray-700 mb-2">2 hours</p>
                 <p className="text-base font-medium text-gray-600 mb-2">15 kids included</p>
@@ -111,8 +111,8 @@ export function PartyPackageBackdrop() {
             {/* Basic Bee Details Box */}
             <div className="absolute bottom-[28%] left-[34%] transform -translate-x-1/2 translate-y-1/2">
               <div className="text-gray-800 max-w-60 text-center">
-                <p className="text-xl font-extrabold text-amber-600 mb-1">Semi-Private: $400</p>
-                <p className="text-xl font-extrabold text-amber-600 mb-2">Private: $475</p>
+                <p className="text-xl font-extrabold text-amber-600 mb-1">Private: $475</p>
+                <p className="text-xl font-extrabold text-amber-600 mb-2">Semi-Private: $400</p>
                 <p className="text-sm text-gray-600 mb-2 italic">Semi-Private: Exclusive party room, shared play area</p>
                 <p className="text-base font-semibold text-gray-700 mb-2">2 hours</p>
                 <p className="text-base font-medium text-gray-600 mb-2">15 kids included</p>
