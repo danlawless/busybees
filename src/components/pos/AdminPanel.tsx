@@ -202,6 +202,7 @@ export function AdminPanel({
   // Parties states
   const [showPartyForm, setShowPartyForm] = useState(false);
   const [editingParty, setEditingParty] = useState<PartyProduct | null>(null);
+  const [savingParty, setSavingParty] = useState(false);
   const [partyFormData, setPartyFormData] = useState({
     name: '',
     basePrice: '',
@@ -1549,6 +1550,9 @@ export function AdminPanel({
       return;
     }
 
+    setSavingParty(true);
+    setPartyFormErrors({});
+
     try {
       const processedAddOns = partyFormData.addOns.map(a => ({
         id: a.id || generateId('addon'),
@@ -1582,6 +1586,8 @@ export function AdminPanel({
     } catch (error) {
       console.error('Error saving party:', error);
       setPartyFormErrors({ submit: error instanceof Error ? error.message : 'Failed to save party' });
+    } finally {
+      setSavingParty(false);
     }
   };
 
@@ -1935,6 +1941,13 @@ export function AdminPanel({
                 </div>
               </div>
 
+              {/* Submit Error */}
+              {partyFormErrors.submit && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600 text-sm font-medium">{partyFormErrors.submit}</p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex space-x-3 mt-8">
                 <Button
@@ -1945,12 +1958,15 @@ export function AdminPanel({
                   }}
                   variant="outline"
                   className="flex-1"
+                  disabled={savingParty}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSaveParty}
                   className="flex-1"
+                  loading={savingParty}
+                  disabled={savingParty}
                 >
                   {editingParty ? '💾 Update Party' : '✨ Create Party'}
                 </Button>
