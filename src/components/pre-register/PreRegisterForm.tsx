@@ -103,14 +103,9 @@ export function PreRegisterForm() {
         childError.birthdate = 'Birth date is required';
         hasChildError = true;
       } else {
-        // Validate age (0-6 years)
+        // Validate birthdate is not in the future
         const birthDate = new Date(child.birthdate);
         const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        if (age > 7 || (age === 7 && today < new Date(birthDate.setFullYear(birthDate.getFullYear() + 7)))) {
-          childError.birthdate = 'Children must be 6 years or younger';
-          hasChildError = true;
-        }
         if (birthDate > today) {
           childError.birthdate = 'Birth date cannot be in the future';
           hasChildError = true;
@@ -441,7 +436,7 @@ export function PreRegisterForm() {
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-charcoal-800 flex items-center gap-2">
                         <Baby className="w-5 h-5 text-primary-600" />
-                        Children (Ages 0-6)
+                        Children
                       </h3>
                       {formData.children.length < 5 && (
                         <Button
