@@ -64,9 +64,21 @@ export async function saveContactSubmission(options: SaveContactOptions): Promis
   const { name, email, phone, userType, message } = options;
   const normalizedEmail = email.toLowerCase().trim();
 
-  const supabase = createAdminClient();
-
   try {
+    // Check if SUPABASE_SERVICE_ROLE_KEY is configured
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      logger.error(
+        { email: normalizedEmail },
+        'SUPABASE_SERVICE_ROLE_KEY not configured - cannot save contact submission'
+      );
+      return {
+        success: false,
+        error: 'Database configuration error',
+      };
+    }
+
+    const supabase = createAdminClient();
+
     const insertData: ContactSubmissionInsert = {
       name: name.trim(),
       email: normalizedEmail,
@@ -83,10 +95,31 @@ export async function saveContactSubmission(options: SaveContactOptions): Promis
       .single();
 
     if (error) {
-      logger.error({ error, email: normalizedEmail }, 'Failed to save contact submission');
+      // Log detailed error info to help debug
+      logger.error(
+        {
+          error,
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          errorHint: error.hint,
+          email: normalizedEmail
+        },
+        'Failed to save contact submission to database'
+      );
+
+      // Provide more specific error messages based on the error type
+      if (error.code === '42P01') {
+        // Table doesn't exist
+        return {
+          success: false,
+          error: 'Database table not found - migration may need to be applied',
+        };
+      }
+
       return {
         success: false,
-        error: 'Failed to save submission',
+        error: `Database error: ${error.message}`,
       };
     }
 
@@ -100,10 +133,14 @@ export async function saveContactSubmission(options: SaveContactOptions): Promis
       submissionId: data.id,
     };
   } catch (error) {
-    logger.error({ error, email: normalizedEmail }, 'Contact submission save error');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(
+      { error, errorMessage, email: normalizedEmail },
+      'Contact submission save exception'
+    );
     return {
       success: false,
-      error: 'An error occurred while saving submission',
+      error: `Exception: ${errorMessage}`,
     };
   }
 }
