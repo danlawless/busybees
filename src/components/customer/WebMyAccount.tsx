@@ -706,7 +706,7 @@ export function WebMyAccount() {
   // Loading state
   if (userLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+      <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
       </div>
     );
@@ -714,7 +714,7 @@ export function WebMyAccount() {
 
   if (!user || !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+      <div className="py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
         <Card className="p-8 text-center">
           <p className="text-gray-600">Please log in to view your account.</p>
         </Card>
@@ -723,7 +723,7 @@ export function WebMyAccount() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
+    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-6 text-white">
