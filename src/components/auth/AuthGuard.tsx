@@ -15,7 +15,7 @@ interface AuthGuardProps {
   redirectTo?: string;
 }
 
-export function AuthGuard({ children, requireRole, redirectTo = '/auth/login' }: AuthGuardProps) {
+export function AuthGuard({ children, requireRole, redirectTo = '/customer/login' }: AuthGuardProps) {
   const { user, profile, loading } = useUser();
   const router = useRouter();
 
