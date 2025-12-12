@@ -1222,8 +1222,6 @@ function WebMyAccountContent() {
                       <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
                       <p className="text-yellow-600 text-sm">
                         You'll need to add a payment method in the Payments tab before you can purchase passes.
-                        <br />
-                        <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
                       </p>
                     </div>
                   </div>
@@ -1438,8 +1436,6 @@ function WebMyAccountContent() {
                       <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
                       <p className="text-yellow-600 text-sm">
                         You'll need to add a payment method in the Payments tab before you can purchase party packages.
-                        <br />
-                        <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
                       </p>
                     </div>
                   </div>
@@ -1612,8 +1608,6 @@ function WebMyAccountContent() {
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Add Your First Payment Method</h4>
                   <p className="text-gray-600 mb-6">
                     Save your card securely to purchase passes and check in easily.
-                    <br />
-                    <span className="text-yellow-700 font-medium">🎯 Use our demo card for instant testing!</span>
                   </p>
                   <Button onClick={() => setShowAddCard(true)} size="lg" className="min-w-[200px]">
                     🚀 Add Payment Method
