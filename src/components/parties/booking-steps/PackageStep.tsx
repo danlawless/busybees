@@ -146,7 +146,7 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
 
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
-          <strong>15 kids included</strong> with all packages. Additional kids are just $15 each!
+          <strong>15 kids included</strong> with all packages. Additional kids are $15 each (max 20 children total).
         </p>
       </div>
     </div>

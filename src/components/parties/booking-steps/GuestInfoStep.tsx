@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import {
   ADDITIONAL_KIDS_PRICE,
   INCLUDED_KIDS,
+  MAX_CHILDREN,
   calculateBookingPrice,
 } from '@/lib/validations/party-booking';
 import type { BookingFormData } from '../PartyBookingWizard';
@@ -32,8 +33,8 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
 
     if (formData.guestCount < 1) {
       newErrors.guestCount = 'At least 1 guest is required';
-    } else if (formData.guestCount > 50) {
-      newErrors.guestCount = 'Maximum 50 guests allowed';
+    } else if (formData.guestCount > MAX_CHILDREN) {
+      newErrors.guestCount = `Maximum ${MAX_CHILDREN} children allowed`;
     }
 
     setErrors(newErrors);
@@ -41,7 +42,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
   }, [formData.childName, formData.guestCount, onValidChange]);
 
   const handleGuestCountChange = (delta: number) => {
-    const newCount = Math.max(1, Math.min(50, formData.guestCount + delta));
+    const newCount = Math.max(1, Math.min(MAX_CHILDREN, formData.guestCount + delta));
     onUpdate({ guestCount: newCount });
   };
 
@@ -125,7 +126,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
             type="button"
             variant="outline"
             onClick={() => handleGuestCountChange(1)}
-            disabled={formData.guestCount >= 50}
+            disabled={formData.guestCount >= MAX_CHILDREN}
             className="w-12 h-12 rounded-full"
           >
             <Plus className="w-5 h-5" />
@@ -180,8 +181,8 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
           <strong>{INCLUDED_KIDS} children are included</strong> with your package. Each
-          additional child is ${ADDITIONAL_KIDS_PRICE}. The birthday child counts toward your
-          guest total.
+          additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {MAX_CHILDREN} children total).
+          The birthday child counts toward your guest total.
         </p>
       </div>
     </div>
