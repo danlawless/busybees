@@ -192,16 +192,6 @@ function LoginForm() {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600 mb-3">
-              Checking in at our facility?
-            </p>
-            <Link href="/pos">
-              <Button variant="outline" className="w-full">
-                Go to Check-In Kiosk
-              </Button>
-            </Link>
-          </div>
         </Card>
       </div>
     </div>
