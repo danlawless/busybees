@@ -4,8 +4,10 @@
  */
 
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 import { getStripeClient } from './client';
 import { getOrCreateStripeCustomer } from './payment-methods';
+import { logger } from '../logger';
 
 export interface CheckoutSessionParams {
   customerId: string;
@@ -35,16 +37,49 @@ export interface CheckoutSessionParams {
  * Create a Stripe checkout session
  */
 export async function createCheckoutSession(params: CheckoutSessionParams): Promise<Stripe.Checkout.Session> {
+  const logContext = {
+    customerId: params.customerId,
+    customerEmail: params.customerEmail,
+    purchaseType: params.metadata.purchase_type,
+    productId: params.metadata.product_id,
+  };
+
+  logger.info(logContext, '🛒 Creating checkout session');
+
   try {
     const stripe = await getStripeClient();
 
     // Get or create Stripe customer
-    const stripeCustomerId = params.stripeCustomerId || await getOrCreateStripeCustomer(
-      params.customerId,
-      params.customerEmail,
-      params.customerName,
-      params.customerPhone
-    );
+    let stripeCustomerId: string;
+    try {
+      stripeCustomerId = params.stripeCustomerId || await getOrCreateStripeCustomer(
+        params.customerId,
+        params.customerEmail,
+        params.customerName,
+        params.customerPhone
+      );
+
+      logger.info(
+        { ...logContext, stripeCustomerId },
+        '✅ Stripe customer ready for checkout'
+      );
+    } catch (customerError) {
+      // Log customer creation failure but rethrow - we can't proceed without a customer
+      logger.error(
+        { ...logContext, error: customerError },
+        '❌ Failed to get or create Stripe customer'
+      );
+
+      Sentry.captureException(customerError, {
+        tags: {
+          operation: 'checkout.customer',
+          purchase_type: params.metadata.purchase_type,
+        },
+        extra: logContext,
+      });
+
+      throw new Error('Unable to prepare payment. Please try again or contact support.');
+    }
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
@@ -86,10 +121,43 @@ export async function createCheckoutSession(params: CheckoutSessionParams): Prom
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
+    logger.info(
+      { ...logContext, sessionId: session.id, stripeCustomerId },
+      '✨ Checkout session created successfully'
+    );
+
+    Sentry.addBreadcrumb({
+      category: 'stripe.checkout',
+      message: 'Checkout session created',
+      level: 'info',
+      data: {
+        sessionId: session.id,
+        purchaseType: params.metadata.purchase_type,
+        customerId: params.customerId,
+      },
+    });
+
     return session;
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    throw new Error('Failed to create checkout session');
+    // Only log if we haven't already logged this error above
+    if (!(error instanceof Error && error.message.includes('Unable to prepare payment'))) {
+      logger.error({ ...logContext, error }, '❌ Failed to create checkout session');
+
+      Sentry.captureException(error, {
+        tags: {
+          operation: 'checkout.session',
+          purchase_type: params.metadata.purchase_type,
+        },
+        extra: logContext,
+      });
+    }
+
+    // Rethrow with user-friendly message if it's a generic error
+    if (error instanceof Error && !error.message.includes('Unable to prepare payment')) {
+      throw new Error('Failed to create checkout session. Please try again or contact support.');
+    }
+
+    throw error;
   }
 }
 

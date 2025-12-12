@@ -4,25 +4,37 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createPartyBooking, updateBookingWithStripeSession } from '@/lib/services/party-bookings';
 import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { createCheckoutSession } from '@/lib/stripe/checkout';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  let bookingId: string | undefined;
+  let logContext: Record<string, unknown> = {};
+
   try {
     const body = await request.json();
 
     // Validate the request body
     const validationResult = CompleteBookingSchema.safeParse(body);
     if (!validationResult.success) {
+      const validationErrors = validationResult.error.issues.map((issue) => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+      }));
+
+      logger.warn(
+        { validationErrors, bodyKeys: Object.keys(body) },
+        '❌ Party booking validation failed'
+      );
+
       return NextResponse.json(
         {
           error: 'Validation failed',
-          details: validationResult.error.issues.map((issue) => ({
-            field: issue.path.join('.'),
-            message: issue.message,
-          })),
+          details: validationErrors,
         },
         { status: 400 }
       );
@@ -34,9 +46,59 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const customerId = user?.id;
+    const isGuestUser = !customerId;
+
+    logContext = {
+      customerEmail: bookingData.customerEmail,
+      packageName: bookingData.packageName,
+      partyDate: bookingData.partyDate,
+      partyType: bookingData.partyType,
+      guestCount: bookingData.guestCount,
+      isGuestUser,
+      userId: customerId,
+    };
+
+    logger.info(logContext, '🎉 Creating party booking');
 
     // Create the booking in the database
-    const booking = await createPartyBooking(bookingData, customerId);
+    try {
+      const booking = await createPartyBooking(bookingData, customerId);
+      bookingId = booking.id;
+      logContext.bookingId = bookingId;
+
+      logger.info(
+        { ...logContext, bookingId },
+        '💾 Party booking created in database'
+      );
+    } catch (bookingError) {
+      logger.error(
+        { ...logContext, error: bookingError },
+        '❌ Failed to create party booking in database'
+      );
+
+      Sentry.captureException(bookingError, {
+        tags: { operation: 'party_booking.create' },
+        extra: logContext,
+      });
+
+      // Handle specific booking errors
+      if (bookingError instanceof Error) {
+        if (bookingError.message.includes('no longer available')) {
+          return NextResponse.json(
+            { error: 'This time slot is no longer available. Please select another time.' },
+            { status: 409 }
+          );
+        }
+        if (bookingError.message.includes('1 week in advance')) {
+          return NextResponse.json(
+            { error: 'Parties must be booked at least 1 week in advance.' },
+            { status: 400 }
+          );
+        }
+      }
+
+      throw bookingError;
+    }
 
     // Calculate pricing for Stripe
     const pricing = calculateBookingPrice(
@@ -84,58 +146,103 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create a temporary customer ID for non-logged-in users
-    const tempCustomerId = customerId || `temp_${booking.id}`;
+    const tempCustomerId = customerId || `temp_${bookingId}`;
+
+    logger.info(
+      { ...logContext, tempCustomerId, totalAmount: pricing.totalPrice },
+      '💳 Creating Stripe checkout session'
+    );
 
     // Create Stripe checkout session
-    const checkoutSession = await createCheckoutSession({
-      customerId: tempCustomerId,
-      customerEmail: bookingData.customerEmail,
-      customerName: bookingData.customerName,
-      customerPhone: bookingData.customerPhone,
-      lineItems,
-      metadata: {
-        purchase_type: 'party_package',
-        product_id: booking.id,
-        booking_id: booking.id,
-        party_date: bookingData.partyDate,
-        party_time: `${bookingData.startTime}-${bookingData.endTime}`,
-        party_guests: bookingData.guestCount.toString(),
-        party_notes: bookingData.notes || '',
-        child_name: bookingData.childName,
-        package_name: bookingData.packageName,
-        party_type: bookingData.partyType,
-      },
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
-    });
+    let checkoutSession;
+    try {
+      checkoutSession = await createCheckoutSession({
+        customerId: tempCustomerId,
+        customerEmail: bookingData.customerEmail,
+        customerName: bookingData.customerName,
+        customerPhone: bookingData.customerPhone,
+        lineItems,
+        metadata: {
+          purchase_type: 'party_package',
+          product_id: bookingId,
+          booking_id: bookingId,
+          party_date: bookingData.partyDate,
+          party_time: `${bookingData.startTime}-${bookingData.endTime}`,
+          party_guests: bookingData.guestCount.toString(),
+          party_notes: bookingData.notes || '',
+          child_name: bookingData.childName,
+          package_name: bookingData.packageName,
+          party_type: bookingData.partyType,
+        },
+        successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
+      });
+
+      logger.info(
+        { ...logContext, sessionId: checkoutSession.id },
+        '✅ Stripe checkout session created'
+      );
+    } catch (checkoutError) {
+      logger.error(
+        { ...logContext, error: checkoutError },
+        '❌ Failed to create Stripe checkout session'
+      );
+
+      Sentry.captureException(checkoutError, {
+        tags: { operation: 'party_booking.checkout' },
+        extra: { ...logContext, tempCustomerId },
+      });
+
+      // Return user-friendly error
+      return NextResponse.json(
+        { error: 'Unable to initiate payment. Please try again or contact support.' },
+        { status: 500 }
+      );
+    }
 
     // Update booking with Stripe session ID
-    await updateBookingWithStripeSession(booking.id, checkoutSession.id);
+    try {
+      await updateBookingWithStripeSession(bookingId, checkoutSession.id);
+
+      logger.info(
+        { ...logContext, sessionId: checkoutSession.id },
+        '💾 Updated booking with Stripe session ID'
+      );
+    } catch (updateError) {
+      // Log but don't fail - the checkout session is already created
+      logger.warn(
+        { ...logContext, sessionId: checkoutSession.id, error: updateError },
+        '⚠️ Failed to update booking with session ID, but checkout created successfully'
+      );
+
+      Sentry.captureException(updateError, {
+        level: 'warning',
+        tags: { operation: 'party_booking.update_session' },
+        extra: { ...logContext, sessionId: checkoutSession.id },
+      });
+    }
+
+    logger.info(
+      { ...logContext, sessionId: checkoutSession.id, checkoutUrl: checkoutSession.url },
+      '🎊 Party booking flow completed successfully'
+    );
 
     return NextResponse.json({
       success: true,
-      bookingId: booking.id,
+      bookingId,
       checkoutUrl: checkoutSession.url,
       sessionId: checkoutSession.id,
     });
   } catch (error) {
-    console.error('Party booking creation error:', error);
+    logger.error(
+      { ...logContext, error },
+      '💥 Unexpected error in party booking creation'
+    );
 
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (error.message.includes('no longer available')) {
-        return NextResponse.json(
-          { error: 'This time slot is no longer available. Please select another time.' },
-          { status: 409 }
-        );
-      }
-      if (error.message.includes('1 week in advance')) {
-        return NextResponse.json(
-          { error: 'Parties must be booked at least 1 week in advance.' },
-          { status: 400 }
-        );
-      }
-    }
+    Sentry.captureException(error, {
+      tags: { operation: 'party_booking.create', critical: 'true' },
+      extra: logContext,
+    });
 
     return NextResponse.json(
       { error: 'Failed to create party booking. Please try again.' },

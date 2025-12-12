@@ -4,11 +4,14 @@
  */
 
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 import { getStripeClient } from './client';
 import { createAdminClient } from '../supabase/server';
+import { logger } from '../logger';
 
 /**
  * Create or retrieve Stripe customer for a user
+ * Handles both logged-in users (with database records) and temporary/guest users
  */
 export async function getOrCreateStripeCustomer(
   userId: string,
@@ -17,36 +20,94 @@ export async function getOrCreateStripeCustomer(
   phone?: string
 ): Promise<string> {
   const stripe = await getStripeClient();
-  const supabase = createAdminClient();
 
-  // Check if user already has a Stripe customer ID
-  const { data: userData } = await supabase
-    .from('users')
-    .select('stripe_customer_id')
-    .eq('id', userId)
-    .single();
+  // For temporary/guest users (temp_*), skip database lookup and create Stripe customer directly
+  const isTempUser = userId.startsWith('temp_');
 
-  if (userData?.stripe_customer_id) {
-    return userData.stripe_customer_id;
+  logger.info(
+    { userId, email, isTempUser },
+    isTempUser ? '🎫 Creating Stripe customer for guest user' : '🔍 Looking up Stripe customer for registered user'
+  );
+
+  if (!isTempUser) {
+    // Only query database for registered users
+    const supabase = createAdminClient();
+
+    const { data: userData, error: queryError } = await supabase
+      .from('users')
+      .select('stripe_customer_id')
+      .eq('id', userId)
+      .single();
+
+    if (queryError) {
+      // User doesn't exist in public.users table - log but continue
+      logger.warn(
+        { userId, error: queryError, email },
+        '⚠️ User not found in database, creating Stripe customer without database record'
+      );
+
+      Sentry.addBreadcrumb({
+        category: 'stripe.customer',
+        message: 'User not found in database during Stripe customer creation',
+        level: 'warning',
+        data: { userId, email },
+      });
+    } else if (userData?.stripe_customer_id) {
+      logger.info({ userId, stripeCustomerId: userData.stripe_customer_id }, '✅ Found existing Stripe customer');
+      return userData.stripe_customer_id;
+    }
   }
 
   // Create new Stripe customer
-  const customer = await stripe.customers.create({
-    email,
-    name,
-    phone,
-    metadata: {
-      supabase_user_id: userId,
-    },
-  });
+  try {
+    const customer = await stripe.customers.create({
+      email,
+      name,
+      phone,
+      metadata: {
+        supabase_user_id: userId,
+        is_temp_user: isTempUser.toString(),
+      },
+    });
 
-  // Update user record with Stripe customer ID
-  await supabase
-    .from('users')
-    .update({ stripe_customer_id: customer.id })
-    .eq('id', userId);
+    logger.info({ userId, stripeCustomerId: customer.id, isTempUser }, '✨ Created new Stripe customer');
 
-  return customer.id;
+    // Update user record with Stripe customer ID (only for registered users)
+    if (!isTempUser) {
+      const supabase = createAdminClient();
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ stripe_customer_id: customer.id })
+        .eq('id', userId);
+
+      if (updateError) {
+        // Log the error but don't fail - the Stripe customer was created successfully
+        logger.warn(
+          { userId, stripeCustomerId: customer.id, error: updateError },
+          '⚠️ Failed to update user record with Stripe customer ID, but Stripe customer created successfully'
+        );
+
+        Sentry.captureException(updateError, {
+          level: 'warning',
+          tags: { operation: 'stripe.customer.update' },
+          extra: { userId, stripeCustomerId: customer.id },
+        });
+      } else {
+        logger.info({ userId, stripeCustomerId: customer.id }, '💾 Updated user record with Stripe customer ID');
+      }
+    }
+
+    return customer.id;
+  } catch (error) {
+    logger.error({ error, userId, email }, '❌ Failed to create Stripe customer');
+
+    Sentry.captureException(error, {
+      tags: { operation: 'stripe.customer.create' },
+      extra: { userId, email, isTempUser },
+    });
+
+    throw error;
+  }
 }
 
 /**

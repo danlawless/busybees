@@ -1,0 +1,80 @@
+/**
+ * Admin Party Booking Update API
+ * PATCH /api/admin/party-bookings/[id] - Update booking status and details
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const UpdateBookingSchema = z.object({
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
+  notes: z.string().optional(),
+  party_date: z.string().optional(),
+  start_time: z.string().optional(),
+  end_time: z.string().optional(),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    // Check authentication and admin role
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify admin role
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData || !['admin', 'staff'].includes(userData.role)) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validatedData = UpdateBookingSchema.parse(body);
+
+    // Update booking using admin client (bypass RLS)
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
+      .from('party_bookings')
+      .update({
+        ...validatedData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error, bookingId: id }, 'Failed to update party booking');
+      return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
+    }
+
+    logger.info({ bookingId: id, updates: validatedData, adminEmail: user.email }, 'Updated party booking');
+
+    return NextResponse.json(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+    }
+
+    logger.error({ error }, 'Unexpected error updating party booking');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
