@@ -49,21 +49,21 @@ const membershipOptions = [
   },
   {
     title: 'Monthly Membership (Toddler)',
-    price: 115,
+    price: 100,
     description: 'Best value for regular families',
     features: [
       'Unlimited visits for 1 child',
       '10% off birthday bookings',
       '10% off all classes (Mommy & Me, Story Time, Kids Yoga & more)',
       'Member exclusive events',
-      '10% off second child ($103.50)',
-      '20% off third child ($92)'
+      '10% off second child ($90)',
+      '20% off third child ($80)'
     ],
     popular: true
   },
   {
     title: 'Monthly Membership (Infant)',
-    price: 80,
+    price: 70,
     description: 'Perfect for regular infant visitors',
     features: [
       'Unlimited visits for 1 infant',
