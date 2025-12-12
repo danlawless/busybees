@@ -12,9 +12,7 @@ import { useUser } from '@/hooks/useUser';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
-import { AddPaymentMethodModal } from '@/components/pos/AddPaymentMethodModal';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
-import { SuccessModal } from '@/components/ui/SuccessModal';
 
 interface PartyPackage {
   id: string;
@@ -26,16 +24,6 @@ interface PartyPackage {
   included_items: string[];
   stripe_purchase_link?: string;
   is_active: boolean;
-}
-
-interface SavedCard {
-  id: string;
-  stripe_payment_method_id: string;
-  last4: string;
-  brand: string;
-  expiry_month: number;
-  expiry_year: number;
-  is_default: boolean;
 }
 
 interface PartyPurchase {
@@ -69,10 +57,8 @@ function formatDate(dateString: string): string {
 function PartiesContent() {
   const { user, profile } = useUser();
   const [packages, setPackages] = useState<PartyPackage[]>([]);
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [partyPurchases, setPartyPurchases] = useState<PartyPurchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddCard, setShowAddCard] = useState(false);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
   const [processingProduct, setProcessingProduct] = useState<string | null>(null);
@@ -82,31 +68,18 @@ function PartiesContent() {
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
   const [schedulingParty, setSchedulingParty] = useState<PartyPurchase | null>(null);
 
-  // Success modal state
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successDetails, setSuccessDetails] = useState<{
-    title: string;
-    message: string;
-  }>({ title: '', message: '' });
-
   // Fetch all required data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [packagesRes, cardsRes, purchasesRes] = await Promise.all([
+        const [packagesRes, purchasesRes] = await Promise.all([
           fetch('/api/parties'),
-          fetch('/api/stripe/payment-methods'),
           fetch('/api/purchases?type=party_package')
         ]);
 
         if (packagesRes.ok) {
           const { parties } = await packagesRes.json();
           setPackages(parties || []);
-        }
-
-        if (cardsRes.ok) {
-          const { paymentMethods } = await cardsRes.json();
-          setSavedCards(paymentMethods || []);
         }
 
         if (purchasesRes.ok) {
@@ -131,17 +104,6 @@ function PartiesContent() {
       }
     };
   }, [confirmTimeout]);
-
-  const handleAddPaymentMethodSuccess = async () => {
-    const response = await fetch('/api/stripe/payment-methods');
-    if (response.ok) {
-      const { paymentMethods } = await response.json();
-      setSavedCards(paymentMethods || []);
-    }
-    setShowAddCard(false);
-    setMessage({ type: 'success', text: 'Payment method added successfully!' });
-    setTimeout(() => setMessage(null), 3000);
-  };
 
   const handlePurchase = (productId: string) => {
     // Clear any existing timeout
@@ -179,46 +141,42 @@ function PartiesContent() {
     setProcessingProduct(productId);
 
     try {
-      const response = await fetch('/api/purchases/pos', {
+      // Use Stripe checkout flow for web purchases
+      const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: user?.id,
-          product_id: productId,
-          product_name: product.name,
-          product_price: product.base_price,
-          product_description: product.description,
-          purchase_type: 'party_package',
-          quantity: 1,
-          metadata: {},
+          productId: productId,
+          productName: product.name,
+          productPrice: product.base_price * 100, // Convert to cents
+          productDescription: product.description,
+          purchaseType: 'party_package',
+          metadata: {
+            capacity: product.capacity,
+            duration: product.duration,
+          },
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Purchase failed');
+        throw new Error(errorData.error || 'Failed to create checkout');
       }
 
-      // Refresh party purchases
-      const purchasesRes = await fetch('/api/purchases?type=party_package');
-      if (purchasesRes.ok) {
-        const purchases = await purchasesRes.json();
-        setPartyPurchases(purchases || []);
+      const { url } = await response.json();
+      if (url) {
+        // Redirect to Stripe checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
       }
-
-      setSuccessDetails({
-        title: 'Party Package Purchased!',
-        message: `You've successfully purchased the ${product.name} package. Visit the Check In tab in your account to schedule your party date.`
-      });
-      setShowSuccessModal(true);
     } catch (error) {
       console.error('Purchase error:', error);
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to complete purchase'
+        text: error instanceof Error ? error.message : 'Failed to start checkout'
       });
       setTimeout(() => setMessage(null), 5000);
-    } finally {
       setProcessingProduct(null);
     }
   };
@@ -395,25 +353,6 @@ function PartiesContent() {
           <div>
             <h3 className="text-xl font-semibold mb-4">🛒 Purchase Party Packages</h3>
 
-            {/* No Payment Methods Warning */}
-            {savedCards.length === 0 && (
-              <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white">💳</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
-                    <p className="text-yellow-600 text-sm">
-                      You'll need to add a payment method in the Payments tab before you can purchase party packages.
-                      <br />
-                      <strong>💡 Tip:</strong> Use the "Use Demo Card" button for quick testing!
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
             <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
               <div className="grid gap-4 text-left">
                 {packages.length === 0 ? (
@@ -436,10 +375,6 @@ function PartiesContent() {
                       </div>
                       <Button
                         onClick={() => {
-                          if (savedCards.length === 0) {
-                            setShowAddCard(true);
-                            return;
-                          }
                           if (confirmingProduct === product.id) {
                             handleConfirmPurchase(product.id);
                           } else {
@@ -453,8 +388,6 @@ function PartiesContent() {
                             ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
                             : processingProduct === product.id
                             ? 'bg-purple-500'
-                            : savedCards.length === 0
-                            ? 'bg-yellow-500 hover:bg-yellow-600'
                             : 'bg-purple-600 hover:bg-purple-700'
                         }`}
                       >
@@ -462,8 +395,6 @@ function PartiesContent() {
                           ? 'Processing...'
                           : confirmingProduct === product.id
                           ? '✓ Confirm Purchase'
-                          : savedCards.length === 0
-                          ? '💳 Add Payment First'
                           : 'Buy Now'
                         }
                       </Button>
@@ -511,13 +442,6 @@ function PartiesContent() {
           )}
         </div>
       </div>
-
-      {/* Add Payment Method Modal */}
-      <AddPaymentMethodModal
-        isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
-        onSuccess={handleAddPaymentMethodSuccess}
-      />
 
       {/* Party Scheduling Modal */}
       {showPartyScheduling && schedulingParty && (
@@ -574,14 +498,6 @@ function PartiesContent() {
           }}
         />
       )}
-
-      {/* Success Modal */}
-      <SuccessModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title={successDetails.title}
-        message={successDetails.message}
-      />
     </div>
   );
 }
