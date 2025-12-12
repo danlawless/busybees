@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 
+interface PartiesHeroProps {
+  onBookParty?: () => void
+}
+
 const partyHighlights = [
   { icon: Gift, text: 'Stress-Free Setup', color: 'from-pink-200 to-pink-300' },
   { icon: Users, text: 'Up to 20 Kids', color: 'from-blue-200 to-blue-300' },
@@ -23,7 +27,7 @@ const quickStats = [
   { number: '0', label: 'Stress for Parents', icon: Users }
 ]
 
-export function PartiesHero() {
+export function PartiesHero({ onBookParty }: PartiesHeroProps) {
   const router = useRouter()
   const { isAuthenticated, loading: authLoading } = useAuth()
 
@@ -32,11 +36,10 @@ export function PartiesHero() {
     if (authLoading) return
 
     if (isAuthenticated) {
-      // Scroll to party calendar section for logged-in users
-      document.getElementById('party-calendar-section')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
+      // Use the callback prop to show booking wizard if provided
+      if (onBookParty) {
+        onBookParty()
+      }
     } else {
       // Redirect to signup with return URL
       router.push('/customer/signup?redirect=/parties')

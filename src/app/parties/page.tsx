@@ -74,7 +74,7 @@ function PartiesContent() {
         </div>
       )}
 
-      <PartiesHero />
+      <PartiesHero onBookParty={handleBookParty} />
 
       {/* Book Party CTA Section */}
       <section className="relative py-16 bg-gradient-to-r from-honey-100 to-yellow-100">
