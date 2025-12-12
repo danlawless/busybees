@@ -11,6 +11,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 
 function LoginForm() {
   const router = useRouter();
@@ -98,7 +100,7 @@ function LoginForm() {
     : '/customer/signup';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <Card className="p-8">
           <div className="text-center mb-8">
@@ -208,12 +210,16 @@ function LoginForm() {
 
 export default function CustomerLoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <Suspense fallback={
+        <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+        </div>
+      }>
+        <LoginForm />
+      </Suspense>
+      <Footer />
+    </div>
   );
 }

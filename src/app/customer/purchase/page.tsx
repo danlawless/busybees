@@ -10,6 +10,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ShoppingCart, AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -127,121 +129,124 @@ export default function PurchasePage() {
     router.push('/');
   };
 
+  // Helper to wrap content with layout
+  const withLayout = (content: React.ReactNode) => (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
+        {content}
+      </div>
+      <Footer />
+    </div>
+  );
+
   // Show loading while checking auth
   if (!mounted || authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
-        <Card className="p-8 max-w-md w-full text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Loading...
-          </h2>
-        </Card>
-      </div>
+    return withLayout(
+      <Card className="p-8 max-w-md w-full text-center">
+        <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          Loading...
+        </h2>
+      </Card>
     );
   }
 
   // No purchase intent found
   if (!purchaseIntent && !error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
-        <Card className="p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShoppingCart className="w-8 h-8 text-yellow-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            No Pass Selected
-          </h2>
-          <p className="text-gray-600 mb-6">
-            It looks like you haven't selected a pass to purchase yet.
-            Browse our options and select the one that's right for your family.
-          </p>
-          <Button
-            onClick={() => router.push('/')}
-            className="w-full"
-            size="lg"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Browse Passes
-          </Button>
-        </Card>
-      </div>
+    return withLayout(
+      <Card className="p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <ShoppingCart className="w-8 h-8 text-yellow-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          No Pass Selected
+        </h2>
+        <p className="text-gray-600 mb-6">
+          It looks like you haven't selected a pass to purchase yet.
+          Browse our options and select the one that's right for your family.
+        </p>
+        <Button
+          onClick={() => router.push('/')}
+          className="w-full"
+          size="lg"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Browse Passes
+        </Button>
+      </Card>
     );
   }
 
   // Error state
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
-        <Card className="p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Checkout Error
-          </h2>
-          <p className="text-gray-600 mb-2">
-            {error}
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
-            Don't worry - no payment was processed.
-          </p>
-          <div className="space-y-3">
-            <Button
-              onClick={handleRetry}
-              className="w-full"
-              size="lg"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                'Try Again'
-              )}
-            </Button>
-            <Button
-              onClick={handleGoBack}
-              variant="outline"
-              className="w-full"
-              size="lg"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Passes
-            </Button>
-          </div>
-        </Card>
-      </div>
+    return withLayout(
+      <Card className="p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8 text-red-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Checkout Error
+        </h2>
+        <p className="text-gray-600 mb-2">
+          {error}
+        </p>
+        <p className="text-sm text-gray-500 mb-6">
+          Don't worry - no payment was processed.
+        </p>
+        <div className="space-y-3">
+          <Button
+            onClick={handleRetry}
+            className="w-full"
+            size="lg"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Try Again'
+            )}
+          </Button>
+          <Button
+            onClick={handleGoBack}
+            variant="outline"
+            className="w-full"
+            size="lg"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Passes
+          </Button>
+        </div>
+      </Card>
     );
   }
 
   // Processing state
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
-      <Card className="p-8 max-w-md w-full text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Preparing Your Checkout
-        </h2>
-        {purchaseIntent && (
-          <div className="bg-yellow-50 rounded-lg p-4 mb-4">
-            <p className="text-lg font-semibold text-gray-900">
-              {purchaseIntent.passName}
-            </p>
-            <p className="text-2xl font-bold text-yellow-600">
-              ${purchaseIntent.price}
-            </p>
-          </div>
-        )}
-        <p className="text-gray-600 mb-4">
-          Redirecting you to secure payment...
-        </p>
-        <p className="text-sm text-gray-500">
-          You'll be redirected to Stripe to complete your purchase.
-        </p>
-      </Card>
-    </div>
+  return withLayout(
+    <Card className="p-8 max-w-md w-full text-center">
+      <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mx-auto mb-4" />
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        Preparing Your Checkout
+      </h2>
+      {purchaseIntent && (
+        <div className="bg-yellow-50 rounded-lg p-4 mb-4">
+          <p className="text-lg font-semibold text-gray-900">
+            {purchaseIntent.passName}
+          </p>
+          <p className="text-2xl font-bold text-yellow-600">
+            ${purchaseIntent.price}
+          </p>
+        </div>
+      )}
+      <p className="text-gray-600 mb-4">
+        Redirecting you to secure payment...
+      </p>
+      <p className="text-sm text-gray-500">
+        You'll be redirected to Stripe to complete your purchase.
+      </p>
+    </Card>
   );
 }
