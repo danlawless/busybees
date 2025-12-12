@@ -7,12 +7,22 @@ import { Resend } from 'resend';
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 // Business email addresses
 const BUSINESS_EMAIL = 'info@busybeesipc.com';
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@busybeesipc.com';
+
+// Lazy-initialize Resend client to prevent crashes when API key is missing
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 interface SendEmailOptions {
   to: string;
@@ -33,8 +43,11 @@ interface EmailResult {
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
   const { to, subject, text, replyTo } = options;
 
+  // Get lazy-initialized client (returns null if API key is missing)
+  const resend = getResendClient();
+
   // Check if API key is configured
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     logger.warn(
       { to, subject },
       'RESEND_API_KEY not configured - email not sent'
