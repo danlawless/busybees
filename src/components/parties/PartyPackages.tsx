@@ -7,22 +7,23 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
+// Party packages updated per issue #101
 const partyPackages = [
   {
     name: 'Basic Bee',
-    description: 'Standard Package',
+    description: 'Standard package with paper goods',
     icon: Gift,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
     accentColor: 'from-blue-500 to-blue-600',
-    semiPrivatePrice: 250,
-    privatePrice: 350,
-    maxGuests: 15,
+    semiPrivatePrice: 400,
+    privatePrice: 475,
+    maxGuests: 20,
     duration: '2 hours',
     features: [
-      'Exclusive party room access',
-      'Basic table setup with tablecloth',
-      'Paper plates, cups, napkins & utensils',
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
       'Birthday crown for birthday child',
       'Access to play area during party',
       'Dedicated party host assistance',
@@ -32,48 +33,48 @@ const partyPackages = [
     popular: false
   },
   {
-    name: 'Worker Bee',
-    description: 'Essential Package',
+    name: 'Worker Bee+',
+    description: 'Essential package with pizza and soda',
     icon: Sparkles,
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
     accentColor: 'from-purple-500 to-purple-600',
-    semiPrivatePrice: 350,
-    privatePrice: 450,
+    semiPrivatePrice: 450,
+    privatePrice: 525,
     maxGuests: 20,
     duration: '2 hours',
     features: [
-      'Everything in Basic Bee',
-      'Themed decorations & balloon setup',
-      'Special birthday throne for photos',
-      'Goodie bags for all party guests',
-      'Face painting or temporary tattoos',
-      'Music & entertainment coordination',
-      'Polaroid photos for lasting memories',
-      'Extended cleanup service included'
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
+      'Pizza for all guests',
+      'Soda for all guests',
+      'Dedicated party host assistance',
+      'Party setup & breakdown handled',
+      'Access to play area during party'
     ],
     popular: true
   },
   {
-    name: 'Queen Bee',
-    description: 'The premium experience for truly unforgettable memories',
+    name: 'Queen Bee+',
+    description: 'Premium package with pizza, soda, cake and balloons',
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
     accentColor: 'from-pink-500 to-pink-600',
-    semiPrivatePrice: 450,
-    privatePrice: 550,
-    maxGuests: 25,
+    semiPrivatePrice: 500,
+    privatePrice: 575,
+    maxGuests: 20,
     duration: '2 hours',
     features: [
-      'Everything in Worker Bee',
-      'Premium themed decoration package',
-      'Professional photo session included',
-      'Upgraded goodie bags with premium toys',
-      'Beautiful balloon bouquets for tables',
-      'Special birthday performance or show',
-      'Customized party favors & keepsakes',
-      'Take-home photo album as memento'
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
+      'Pizza for all guests',
+      'Soda for all guests',
+      'Birthday cake included',
+      'Balloon decorations',
+      'Dedicated party host assistance'
     ],
     popular: false
   }

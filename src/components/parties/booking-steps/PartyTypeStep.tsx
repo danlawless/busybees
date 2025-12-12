@@ -13,6 +13,7 @@ interface PartyTypeStepProps {
   onValidChange: (isValid: boolean) => void;
 }
 
+// Party types updated per issue #101
 const partyTypes = [
   {
     id: 'semi_private' as PartyType,
@@ -23,7 +24,7 @@ const partyTypes = [
     borderColor: 'border-blue-400',
     bgColor: 'bg-blue-50',
     schedule: [
-      { day: 'Friday', time: '3:00 PM - 5:00 PM' },
+      { day: 'Monday - Friday', time: '9:00 AM - 5:00 PM' },
       { day: 'Saturday & Sunday', time: '10:00 AM - 12:00 PM' },
     ],
     benefits: [

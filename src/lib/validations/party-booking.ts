@@ -65,7 +65,7 @@ export const DateTimeSelectionSchema = z.object({
   endTime: z.string().min(1, 'End time is required'),
 });
 
-// Guest count schema (Step 6)
+// Guest count schema (Step 6) - Max 20 children per issue #101
 export const GuestCountSchema = z.object({
   childName: z
     .string()
@@ -79,10 +79,11 @@ export const GuestCountSchema = z.object({
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')
-    .max(50, 'Maximum 50 guests allowed'),
+    .max(20, 'Maximum 20 children allowed'),
   additionalKids: z
     .number()
     .min(0, 'Additional kids cannot be negative')
+    .max(5, 'Maximum 5 additional kids allowed')
     .default(0),
   notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
 });
@@ -116,7 +117,7 @@ export const CompleteBookingSchema = z.object({
   startTime: z.string().min(1, 'Please select a time slot'),
   endTime: z.string().min(1, 'End time is required'),
 
-  // Guest Info
+  // Guest Info - Max 20 children per issue #101
   childName: z
     .string()
     .min(2, 'Child name must be at least 2 characters')
@@ -125,8 +126,8 @@ export const CompleteBookingSchema = z.object({
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')
-    .max(50, 'Maximum 50 guests allowed'),
-  additionalKids: z.number().min(0).default(0),
+    .max(20, 'Maximum 20 children allowed'),
+  additionalKids: z.number().min(0).max(5).default(0),
   notes: z.string().max(500).optional(),
 });
 
@@ -140,55 +141,55 @@ export type DateTimeSelection = z.infer<typeof DateTimeSelectionSchema>;
 export type GuestCount = z.infer<typeof GuestCountSchema>;
 export type CompleteBooking = z.infer<typeof CompleteBookingSchema>;
 
-// Package pricing configuration
+// Package pricing configuration - Updated per issue #101
 export const PACKAGE_PRICING = {
   queen_bee: {
-    name: 'Queen Bee',
-    semiPrivatePrice: 450,
-    privatePrice: 550,
-    maxGuests: 25,
+    name: 'Queen Bee+',
+    semiPrivatePrice: 500,
+    privatePrice: 575,
+    maxGuests: 20,
     duration: 2,
-    description: 'The premium experience for truly unforgettable memories',
+    description: 'Premium package with pizza, soda, cake and balloons',
     features: [
-      'Everything in Worker Bee',
-      'Premium themed decoration package',
-      'Professional photo session included',
-      'Upgraded goodie bags with premium toys',
-      'Beautiful balloon bouquets for tables',
-      'Special birthday performance or show',
-      'Customized party favors & keepsakes',
-      'Take-home photo album as memento',
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
+      'Pizza for all guests',
+      'Soda for all guests',
+      'Birthday cake included',
+      'Balloon decorations',
+      'Dedicated party host assistance',
     ],
   },
   worker_bee: {
-    name: 'Worker Bee',
-    semiPrivatePrice: 350,
-    privatePrice: 450,
+    name: 'Worker Bee+',
+    semiPrivatePrice: 450,
+    privatePrice: 525,
     maxGuests: 20,
     duration: 2,
-    description: 'Essential Package',
+    description: 'Essential package with pizza and soda',
     features: [
-      'Everything in Basic Bee',
-      'Themed decorations & balloon setup',
-      'Special birthday throne for photos',
-      'Goodie bags for all party guests',
-      'Face painting or temporary tattoos',
-      'Music & entertainment coordination',
-      'Polaroid photos for lasting memories',
-      'Extended cleanup service included',
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
+      'Pizza for all guests',
+      'Soda for all guests',
+      'Dedicated party host assistance',
+      'Party setup & breakdown handled',
+      'Access to play area during party',
     ],
   },
   basic_bee: {
     name: 'Basic Bee',
-    semiPrivatePrice: 250,
-    privatePrice: 350,
-    maxGuests: 15,
+    semiPrivatePrice: 400,
+    privatePrice: 475,
+    maxGuests: 20,
     duration: 2,
-    description: 'Standard Package',
+    description: 'Standard package with paper goods',
     features: [
-      'Exclusive party room access',
-      'Basic table setup with tablecloth',
-      'Paper plates, cups, napkins & utensils',
+      '15 kids included',
+      'Paper goods (plates, cups, napkins, utensils)',
+      'Exclusive use of party room',
       'Birthday crown for birthday child',
       'Access to play area during party',
       'Dedicated party host assistance',
@@ -198,26 +199,28 @@ export const PACKAGE_PRICING = {
   },
 } as const;
 
-// Time slot configuration per issue requirements
+// Time slot configuration per issue #101 requirements
 export const TIME_SLOTS = {
   private: {
-    // Saturday & Sunday only
+    // Saturday & Sunday only: 1:00-3:00 or 3:30-5:30
     weekend: [
       { startTime: '13:00', endTime: '15:00', label: '1:00 PM - 3:00 PM' },
       { startTime: '15:30', endTime: '17:30', label: '3:30 PM - 5:30 PM' },
     ],
-    weekday: [], // Private parties not available weekdays per issue
+    weekday: [], // Private parties not available weekdays
   },
   semi_private: {
-    // Friday: 3-5 PM, Saturday & Sunday: 10 AM - 12 PM
-    friday: [{ startTime: '15:00', endTime: '17:00', label: '3:00 PM - 5:00 PM' }],
+    // Monday-Friday: 9:00 AM - 5:00 PM (call to book)
+    weekday: [{ startTime: '09:00', endTime: '17:00', label: '9:00 AM - 5:00 PM' }],
+    // Saturday & Sunday: 10:00 AM - 12:00 PM
     weekend: [{ startTime: '10:00', endTime: '12:00', label: '10:00 AM - 12:00 PM' }],
   },
 } as const;
 
-// Additional kids pricing
+// Additional kids pricing - per issue #101
 export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
 export const INCLUDED_KIDS = 15; // 15 kids included with each package
+export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
 /**
  * Calculate total price for a party booking
@@ -244,15 +247,18 @@ export function calculateBookingPrice(
 
 /**
  * Get available time slots for a given date and party type
+ * Per issue #101:
+ * - Private: Sat/Sun 1:00-3:00 or 3:30-5:30
+ * - Semi-Private: Mon-Fri 9:00-5:00, Sat/Sun 10:00-12:00
  */
 export function getAvailableTimeSlots(
   date: Date,
   partyType: PartyType
 ): Array<{ startTime: string; endTime: string; label: string }> {
-  const dayOfWeek = date.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 1-5 = Mon-Fri, 6 = Saturday
 
   if (partyType === 'private') {
-    // Private parties only on weekends
+    // Private parties only on weekends (Sat/Sun)
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       return [...TIME_SLOTS.private.weekend];
     }
@@ -260,13 +266,13 @@ export function getAvailableTimeSlots(
   }
 
   // Semi-private parties
-  if (dayOfWeek === 5) {
-    // Friday
-    return [...TIME_SLOTS.semi_private.friday];
-  }
   if (dayOfWeek === 0 || dayOfWeek === 6) {
-    // Weekend
+    // Weekend (Sat/Sun): 10:00 AM - 12:00 PM
     return [...TIME_SLOTS.semi_private.weekend];
+  }
+  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    // Weekdays (Mon-Fri): 9:00 AM - 5:00 PM
+    return [...TIME_SLOTS.semi_private.weekday];
   }
 
   return [];
