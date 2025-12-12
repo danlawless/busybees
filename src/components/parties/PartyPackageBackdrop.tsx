@@ -78,7 +78,7 @@ export function PartyPackageBackdrop() {
             <div className="absolute top-[52%] right-[4%] transform translate-x-1/2 -translate-y-1/2">
               <div className="bg-yellow-600 text-white px-6 py-3 rounded-lg shadow-xl border-2 border-white">
                 <h3 className="text-xl font-bold">Worker Bee</h3>
-                <p className="text-sm">Standard Package</p>
+                <p className="text-sm">Essential Package</p>
               </div>
             </div>
 
@@ -104,7 +104,7 @@ export function PartyPackageBackdrop() {
             <div className="absolute bottom-[29%] left-[7%] transform -translate-x-1/2 translate-y-1/2">
               <div className="bg-amber-500 text-black px-6 py-3 rounded-lg shadow-xl border-2 border-white">
                 <h3 className="text-xl font-bold">Basic Bee</h3>
-                <p className="text-sm">Essential Package</p>
+                <p className="text-sm">Standard Package</p>
               </div>
             </div>
 
