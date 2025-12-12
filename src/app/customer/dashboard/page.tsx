@@ -86,7 +86,7 @@ function DashboardContent() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Link href="/customer/passes">
             <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
@@ -110,6 +110,15 @@ function DashboardContent() {
               <div className="text-center">
                 <span className="text-4xl mb-2 block">👨‍👩‍👧‍👦</span>
                 <p className="font-semibold text-gray-900">My Children</p>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/customer/payments">
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="text-center">
+                <span className="text-4xl mb-2 block">💳</span>
+                <p className="font-semibold text-gray-900">Payment Methods</p>
               </div>
             </Card>
           </Link>

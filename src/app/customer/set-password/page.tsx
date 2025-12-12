@@ -1,22 +1,25 @@
 /**
- * Customer Portal Signup Page
- * Create new customer account with phone number and password
+ * Set Password Page
+ * For users who signed up at the facility (POS) and need to set a web password
  */
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-export default function CustomerSignupPage() {
+function SetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialPhone = searchParams.get('phone') || '';
+
   const [formData, setFormData] = useState({
-    name: '',
+    phone: initialPhone ? formatPhoneNumber(initialPhone) : '',
     email: '',
-    phone: '',
+    name: '',
     password: '',
     confirmPassword: '',
   });
@@ -24,15 +27,7 @@ export default function CustomerSignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-    setError('');
-  };
-
-  const formatPhoneNumber = (value: string) => {
+  function formatPhoneNumber(value: string) {
     const phoneNumber = value.replace(/[^\d]/g, '');
     if (phoneNumber.length <= 3) {
       return phoneNumber;
@@ -41,6 +36,14 @@ export default function CustomerSignupPage() {
     } else {
       return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
     }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+    setError('');
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,13 +80,13 @@ export default function CustomerSignupPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/web-signup', {
+      const response = await fetch('/api/auth/set-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
           phone: cleanPhone,
+          email: formData.email,
+          name: formData.name,
           password: formData.password,
         }),
       });
@@ -91,30 +94,17 @@ export default function CustomerSignupPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create account');
+        throw new Error(data.error || 'Failed to set password');
       }
 
-      // Auto-subscribe to newsletter (fire and forget)
-      fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          source: 'signup',
-        }),
-      }).catch(() => {
-        // Silently fail - newsletter subscription is optional
-      });
-
       setSuccess(true);
-      // Redirect to dashboard
+      // Redirect to login page
       setTimeout(() => {
-        router.push('/customer/dashboard');
+        router.push('/customer/login?passwordSet=true');
       }, 2000);
     } catch (err) {
-      console.error('Signup error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
+      console.error('Set password error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to set password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -128,10 +118,10 @@ export default function CustomerSignupPage() {
             <span className="text-3xl">✓</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Account Created!
+            Password Set!
           </h2>
           <p className="text-gray-600 mb-4">
-            Redirecting to your dashboard...
+            Redirecting to login page...
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
         </Card>
@@ -145,33 +135,17 @@ export default function CustomerSignupPage() {
         <Card className="p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">🐝</span>
+              <span className="text-3xl">🔐</span>
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Join Busy Bees!
+              Set Up Online Access
             </h2>
             <p className="text-gray-600">
-              Create your account to start playing
+              Already signed up at our facility? Set a password to access your account online.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                required
-              />
-            </div>
-
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number *
@@ -188,7 +162,7 @@ export default function CustomerSignupPage() {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                This will be used to log in to your account
+                Enter the phone number you used when signing up
               </p>
             </div>
 
@@ -206,11 +180,33 @@ export default function CustomerSignupPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Must match the email on your account
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="John Doe"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Must match the name on your account
+              </p>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
+                New Password *
               </label>
               <input
                 type="password"
@@ -253,41 +249,44 @@ export default function CustomerSignupPage() {
               size="lg"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading ? 'Setting Password...' : 'Set Password'}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
+          <div className="mt-6 text-center space-y-2">
+            <div className="text-sm text-gray-600">
+              Already have a password?{' '}
               <Link
                 href="/customer/login"
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
                 Sign in
               </Link>
-            </p>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Previously signed up at our facility?{' '}
+            </div>
+            <div className="text-sm text-gray-600">
+              New to Busy Bees?{' '}
               <Link
-                href="/customer/set-password"
+                href="/customer/signup"
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
-                Set up online access
+                Create an account
               </Link>
-            </p>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              By creating an account, you agree to our Terms of Service and Privacy Policy
-            </p>
+            </div>
           </div>
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function SetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <SetPasswordForm />
+    </Suspense>
   );
 }

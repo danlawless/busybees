@@ -1,43 +1,84 @@
 /**
  * Customer Portal Login Page
- * Email/password authentication for customer account access
+ * Phone + password authentication for customer account access
  */
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { signIn } from '@/lib/auth/auth-client-helpers';
 
-export default function CustomerLoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const searchParams = useSearchParams();
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+
+  // Check for success message from set-password page
+  const passwordSet = searchParams.get('passwordSet') === 'true';
+
+  const formatPhoneNumber = (value: string) => {
+    const phoneNumber = value.replace(/[^\d]/g, '');
+    if (phoneNumber.length <= 3) {
+      return phoneNumber;
+    } else if (phoneNumber.length <= 6) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    } else {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+    setError('');
+    setNeedsPasswordSetup(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setNeedsPasswordSetup(false);
 
     try {
-      await signIn(email, password);
-
-      // Auto-subscribe to newsletter on login (fire and forget)
-      fetch('/api/newsletter', {
+      const response = await fetch('/api/auth/web-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
-          source: 'login',
+          phone: phone.replace(/[^\d]/g, ''),
+          password,
         }),
-      }).catch(() => {
-        // Silently fail - newsletter subscription is optional
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.needsPasswordSetup) {
+          setNeedsPasswordSetup(true);
+        }
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Auto-subscribe to newsletter on login (fire and forget)
+      if (data.user?.email) {
+        fetch('/api/newsletter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.user.email,
+            source: 'login',
+          }),
+        }).catch(() => {
+          // Silently fail - newsletter subscription is optional
+        });
+      }
 
       router.push('/customer/dashboard');
     } catch (err) {
@@ -64,17 +105,24 @@ export default function CustomerLoginPage() {
             </p>
           </div>
 
+          {passwordSet && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
+              Password set successfully! You can now log in.
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
               </label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder="(555) 123-4567"
+                maxLength={14}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 required
               />
@@ -88,7 +136,10 @@ export default function CustomerLoginPage() {
                 type="password"
                 id="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
                 placeholder="Enter your password"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 required
@@ -98,6 +149,18 @@ export default function CustomerLoginPage() {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
+              </div>
+            )}
+
+            {needsPasswordSetup && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+                <p className="mb-2">Your account was created at our facility.</p>
+                <Link
+                  href={`/customer/set-password?phone=${phone.replace(/[^\d]/g, '')}`}
+                  className="text-yellow-700 hover:text-yellow-900 font-medium underline"
+                >
+                  Click here to set a password for online access
+                </Link>
               </div>
             )}
 
@@ -142,5 +205,17 @@ export default function CustomerLoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function CustomerLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
