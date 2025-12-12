@@ -6,7 +6,7 @@
  * Uses web authentication (Supabase) instead of POS phone login
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -67,7 +67,8 @@ interface SavedCard {
 
 type TabType = 'children' | 'passes' | 'parties' | 'payments';
 
-export function WebMyAccount() {
+// Inner component that uses searchParams - must be in its own Suspense boundary
+function WebMyAccountContent() {
   const { user, profile, loading: userLoading } = useUser();
   const searchParams = useSearchParams();
 
@@ -82,9 +83,16 @@ export function WebMyAccount() {
   const [availablePasses, setAvailablePasses] = useState<any[]>([]);
   const [availableParties, setAvailableParties] = useState<any[]>([]);
 
-  // Tab state - check URL param first
-  const initialTab = (searchParams.get('tab') as TabType) || 'children';
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  // Tab state - default to children, update from URL after mount
+  const [activeTab, setActiveTab] = useState<TabType>('children');
+
+  // Read tab from URL on mount
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') as TabType;
+    if (tabParam && ['children', 'passes', 'parties', 'payments'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // UI state
   const [showAddCard, setShowAddCard] = useState(false);
@@ -1733,6 +1741,24 @@ export function WebMyAccount() {
         />
       </div>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function DashboardLoading() {
+  return (
+    <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+    </div>
+  );
+}
+
+// Main export with Suspense boundary for useSearchParams
+export function WebMyAccount() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <WebMyAccountContent />
+    </Suspense>
   );
 }
 
