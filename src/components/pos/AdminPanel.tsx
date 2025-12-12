@@ -111,7 +111,7 @@ interface AdminPanelProps {
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products';
+type AdminView = 'dashboard' | 'customers' | 'pre-registrations' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products';
 
 interface NewsletterSubscriber {
   id: string;
@@ -128,6 +128,28 @@ interface NewsletterStats {
   total: number;
   active: number;
   unsubscribed: number;
+}
+
+interface PreRegistrationChild {
+  name: string;
+  birthdate: string;
+}
+
+interface PreRegistration {
+  id: string;
+  parent_name: string;
+  email: string;
+  phone: string;
+  children: PreRegistrationChild[];
+  marketing_opt_in: boolean;
+  submitted_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PreRegistrationStats {
+  total: number;
+  totalChildren: number;
 }
 
 export function AdminPanel({
@@ -239,6 +261,12 @@ export function AdminPanel({
   const [newsletterStats, setNewsletterStats] = useState<NewsletterStats>({ total: 0, active: 0, unsubscribed: 0 });
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterSearchTerm, setNewsletterSearchTerm] = useState('');
+
+  // Pre-registration states
+  const [preRegistrations, setPreRegistrations] = useState<PreRegistration[]>([]);
+  const [preRegistrationStats, setPreRegistrationStats] = useState<PreRegistrationStats>({ total: 0, totalChildren: 0 });
+  const [preRegistrationsLoading, setPreRegistrationsLoading] = useState(false);
+  const [preRegistrationSearchTerm, setPreRegistrationSearchTerm] = useState('');
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
@@ -276,6 +304,29 @@ export function AdminPanel({
   useEffect(() => {
     if (currentView === 'newsletter') {
       fetchNewsletterSubscribers();
+    }
+  }, [currentView]);
+
+  // Fetch pre-registrations when pre-registrations view is selected
+  const fetchPreRegistrations = async () => {
+    setPreRegistrationsLoading(true);
+    try {
+      const response = await fetch('/api/pre-register');
+      if (response.ok) {
+        const data = await response.json();
+        setPreRegistrations(data.preRegistrations || []);
+        setPreRegistrationStats(data.stats || { total: 0, totalChildren: 0 });
+      }
+    } catch (error) {
+      console.error('Failed to fetch pre-registrations:', error);
+    } finally {
+      setPreRegistrationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'pre-registrations') {
+      fetchPreRegistrations();
     }
   }, [currentView]);
 
@@ -628,6 +679,141 @@ export function AdminPanel({
       </Card>
     </div>
   );
+
+  const renderPreRegistrations = () => {
+    const filteredPreRegistrations = preRegistrations.filter(reg =>
+      reg.parent_name.toLowerCase().includes(preRegistrationSearchTerm.toLowerCase()) ||
+      reg.email.toLowerCase().includes(preRegistrationSearchTerm.toLowerCase()) ||
+      reg.phone.includes(preRegistrationSearchTerm)
+    );
+
+    const formatSubmittedDate = (dateString: string) => {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    };
+
+    const calculateAge = (birthdate: string): string => {
+      const birth = new Date(birthdate);
+      const today = new Date();
+      const months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+      if (months < 12) {
+        return `${months} mo`;
+      }
+      const years = Math.floor(months / 12);
+      const remainingMonths = months % 12;
+      if (remainingMonths === 0) {
+        return `${years} yr${years > 1 ? 's' : ''}`;
+      }
+      return `${years} yr${years > 1 ? 's' : ''} ${remainingMonths} mo`;
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="p-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-yellow-600">{preRegistrationStats.total}</p>
+              <p className="text-sm text-gray-600">Families Pre-Registered</p>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-600">{preRegistrationStats.totalChildren}</p>
+              <p className="text-sm text-gray-600">Total Children</p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Pre-Registration List */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Pre-Registered Families</h3>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                value={preRegistrationSearchTerm}
+                onChange={(e) => setPreRegistrationSearchTerm(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+              />
+              <Button
+                onClick={fetchPreRegistrations}
+                size="sm"
+                variant="outline"
+                disabled={preRegistrationsLoading}
+              >
+                🔄 Refresh
+              </Button>
+            </div>
+          </div>
+
+          {preRegistrationsLoading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading pre-registrations...</p>
+            </div>
+          ) : filteredPreRegistrations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-lg mb-2">📋 No pre-registrations yet</p>
+              <p className="text-sm text-gray-400">
+                Families who pre-register online will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {filteredPreRegistrations.map((reg) => (
+                <div key={reg.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-semibold">{reg.parent_name}</h4>
+                        {reg.marketing_opt_in && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            Marketing Opt-in
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {formatPhoneNumber(reg.phone)}
+                        {reg.email && ` • ${reg.email}`}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Submitted: {formatSubmittedDate(reg.submitted_at)}
+                      </p>
+
+                      {/* Children */}
+                      {reg.children && reg.children.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs text-gray-500 mb-2">
+                            Children ({reg.children.length}):
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {reg.children.map((child, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-sm"
+                              >
+                                {child.name} ({calculateAge(child.birthdate)})
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  };
 
   const renderSales = () => (
     <div className="space-y-6">
@@ -2914,6 +3100,13 @@ export function AdminPanel({
             👥 Customers
           </Button>
           <Button
+            onClick={() => setCurrentView('pre-registrations')}
+            variant={currentView === 'pre-registrations' ? 'default' : 'outline'}
+            size="sm"
+          >
+            📋 Pre-Registrations
+          </Button>
+          <Button
             onClick={() => setCurrentView('sales')}
             variant={currentView === 'sales' ? 'default' : 'outline'}
             size="sm"
@@ -2968,6 +3161,7 @@ export function AdminPanel({
       {/* Content */}
       {currentView === 'dashboard' && renderDashboard()}
       {currentView === 'customers' && renderCustomers()}
+      {currentView === 'pre-registrations' && renderPreRegistrations()}
       {currentView === 'sales' && renderSales()}
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
       {currentView === 'marketing' && renderMarketing()}

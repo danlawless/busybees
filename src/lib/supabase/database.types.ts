@@ -769,6 +769,41 @@ export interface Database {
           created_at?: string;
         };
       };
+      pre_registrations: {
+        Row: {
+          id: string;
+          parent_name: string;
+          email: string;
+          phone: string;
+          children: Json;
+          marketing_opt_in: boolean;
+          submitted_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          parent_name: string;
+          email: string;
+          phone: string;
+          children: Json;
+          marketing_opt_in?: boolean;
+          submitted_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          parent_name?: string;
+          email?: string;
+          phone?: string;
+          children?: Json;
+          marketing_opt_in?: boolean;
+          submitted_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

@@ -1,5 +1,6 @@
 /**
  * API Route: Pre-Registration
+ * GET - List all pre-registrations (staff/admin only)
  * POST - Submit pre-registration for Grand Opening
  *
  * This allows families to pre-register before their first visit
@@ -7,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { z } from 'zod';
@@ -32,6 +33,92 @@ interface PreRegistrationRecord {
   id: string;
   email: string;
   phone: string;
+}
+
+// Type for child data in pre-registrations
+interface PreRegistrationChild {
+  name: string;
+  birthdate: string;
+}
+
+// Type for full pre-registration row
+interface PreRegistrationRow {
+  id: string;
+  parent_name: string;
+  email: string;
+  phone: string;
+  children: PreRegistrationChild[];
+  marketing_opt_in: boolean;
+  submitted_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * GET /api/pre-register
+ * List all pre-registrations (staff/admin only)
+ */
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check user role - only staff and admin can view pre-registrations
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData || !['staff', 'admin'].includes(userData.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Use admin client to fetch all pre-registrations
+    const adminSupabase = createAdminClient();
+    const { data: preRegistrations, error } = await adminSupabase
+      .from('pre_registrations')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      logger.error({ error }, 'Failed to fetch pre-registrations');
+      return NextResponse.json(
+        { error: 'Failed to fetch pre-registrations' },
+        { status: 500 }
+      );
+    }
+
+    // Calculate stats
+    const total = preRegistrations?.length || 0;
+    const totalChildren = (preRegistrations as PreRegistrationRow[] || []).reduce(
+      (sum, reg) => sum + (Array.isArray(reg.children) ? reg.children.length : 0),
+      0
+    );
+
+    logger.info(
+      { userId: user.id, count: total },
+      'Pre-registrations fetched'
+    );
+
+    return NextResponse.json({
+      preRegistrations: preRegistrations || [],
+      stats: {
+        total,
+        totalChildren,
+      },
+    });
+  } catch (error) {
+    logger.error({ error }, 'Failed to fetch pre-registrations');
+    return NextResponse.json(
+      { error: 'Failed to fetch pre-registrations' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
