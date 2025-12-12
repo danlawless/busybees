@@ -23,6 +23,10 @@ export interface Database {
           name: string;
           email: string | null;
           stripe_customer_id: string | null;
+          web_password_hash: string | null;
+          has_web_password: boolean;
+          last_login: string | null;
+          pin_hash: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -33,6 +37,10 @@ export interface Database {
           name: string;
           email?: string | null;
           stripe_customer_id?: string | null;
+          web_password_hash?: string | null;
+          has_web_password?: boolean;
+          last_login?: string | null;
+          pin_hash?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +51,10 @@ export interface Database {
           name?: string;
           email?: string | null;
           stripe_customer_id?: string | null;
+          web_password_hash?: string | null;
+          has_web_password?: boolean;
+          last_login?: string | null;
+          pin_hash?: string | null;
           created_at?: string;
           updated_at?: string;
         };
