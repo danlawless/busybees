@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
+import { createGiftCard, markGiftCardAsSent } from '@/lib/services/gift-cards';
+import { sendGiftCardEmail } from '@/lib/email/resend';
 import Stripe from 'stripe';
 
 // This is important for Next.js to treat this as raw body
@@ -120,6 +122,56 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   if (!metadata) {
     console.log('Missing metadata in checkout session');
+    return;
+  }
+
+  // Handle gift card purchase
+  if (metadata.type === 'gift_card') {
+    console.log('Processing gift card purchase');
+
+    try {
+      // Create the gift card
+      const giftCard = await createGiftCard({
+        amount: parseFloat(metadata.amount),
+        purchaser_email: metadata.purchaser_email,
+        purchaser_name: metadata.purchaser_name,
+        recipient_email: metadata.recipient_email,
+        recipient_name: metadata.recipient_name,
+        personal_message: metadata.personal_message || undefined,
+        delivery_method: metadata.delivery_method as 'email_recipient' | 'email_self',
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: session.payment_intent as string,
+      });
+
+      console.log('Gift card created:', giftCard.id, giftCard.code);
+
+      // Determine recipient email based on delivery method
+      const deliveryEmail = metadata.delivery_method === 'email_self'
+        ? metadata.purchaser_email
+        : metadata.recipient_email;
+
+      // Send gift card email
+      const emailResult = await sendGiftCardEmail({
+        to: deliveryEmail,
+        giftCard: {
+          code: giftCard.code,
+          amount: giftCard.amount,
+          recipientName: metadata.recipient_name,
+          purchaserName: metadata.purchaser_name,
+          personalMessage: metadata.personal_message || undefined,
+        },
+      });
+
+      if (emailResult.success) {
+        await markGiftCardAsSent(giftCard.id);
+        console.log('🎁 Gift card email sent successfully to:', deliveryEmail);
+      } else {
+        console.error('Failed to send gift card email:', emailResult.error);
+      }
+    } catch (error) {
+      console.error('Error processing gift card purchase:', error);
+    }
+
     return;
   }
 

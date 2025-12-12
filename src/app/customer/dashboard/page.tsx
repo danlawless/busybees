@@ -47,7 +47,7 @@ function DashboardContent() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="p-6">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -83,10 +83,24 @@ function DashboardContent() {
               </div>
             </div>
           </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">🎁</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Gift Card Balance</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  ${(profile?.gift_card_balance || 0).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Link href="/customer/passes">
             <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
@@ -114,6 +128,15 @@ function DashboardContent() {
             </Card>
           </Link>
 
+          <Link href="/gift-cards">
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="text-center">
+                <span className="text-4xl mb-2 block">🎁</span>
+                <p className="font-semibold text-gray-900">Gift Cards</p>
+              </div>
+            </Card>
+          </Link>
+
           <Link href="/customer/payments">
             <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
               <div className="text-center">
@@ -132,6 +155,31 @@ function DashboardContent() {
             </Card>
           </Link>
         </div>
+
+        {/* Gift Card Balance */}
+        {(profile?.gift_card_balance || 0) > 0 && (
+          <Card className="p-6 mb-8 bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-2xl">🎁</span>
+                </div>
+                <div className="ml-4">
+                  <h2 className="text-lg font-bold text-gray-900">Gift Card Balance</h2>
+                  <p className="text-3xl font-bold text-amber-600">
+                    ${(profile?.gift_card_balance || 0).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-600">Available for any purchase</p>
+                </div>
+              </div>
+              <Link href="/gift-cards/redeem">
+                <Button variant="outline" size="sm" className="border-amber-500 text-amber-700 hover:bg-amber-50">
+                  Redeem Another
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        )}
 
         {/* Active Passes */}
         {activePurchases.length > 0 && (

@@ -27,6 +27,7 @@ export interface Database {
           has_web_password: boolean;
           last_login: string | null;
           pin_hash: string | null;
+          gift_card_balance: number;
           created_at: string;
           updated_at: string;
         };
@@ -41,6 +42,7 @@ export interface Database {
           has_web_password?: boolean;
           last_login?: string | null;
           pin_hash?: string | null;
+          gift_card_balance?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,6 +57,7 @@ export interface Database {
           has_web_password?: boolean;
           last_login?: string | null;
           pin_hash?: string | null;
+          gift_card_balance?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -643,6 +646,129 @@ export interface Database {
           updated_at?: string;
         };
       };
+      gift_card_denominations: {
+        Row: {
+          id: string;
+          amount: number;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          amount: number;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          amount?: number;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      gift_cards: {
+        Row: {
+          id: string;
+          code: string;
+          amount: number;
+          remaining_amount: number;
+          purchaser_email: string;
+          purchaser_name: string;
+          recipient_email: string;
+          recipient_name: string;
+          personal_message: string | null;
+          delivery_method: 'email_recipient' | 'email_self';
+          email_sent_at: string | null;
+          status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+          redeemed_by: string | null;
+          redeemed_at: string | null;
+          stripe_payment_intent_id: string | null;
+          stripe_checkout_session_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          amount: number;
+          remaining_amount: number;
+          purchaser_email: string;
+          purchaser_name: string;
+          recipient_email: string;
+          recipient_name: string;
+          personal_message?: string | null;
+          delivery_method: 'email_recipient' | 'email_self';
+          email_sent_at?: string | null;
+          status?: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+          redeemed_by?: string | null;
+          redeemed_at?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_checkout_session_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          amount?: number;
+          remaining_amount?: number;
+          purchaser_email?: string;
+          purchaser_name?: string;
+          recipient_email?: string;
+          recipient_name?: string;
+          personal_message?: string | null;
+          delivery_method?: 'email_recipient' | 'email_self';
+          email_sent_at?: string | null;
+          status?: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+          redeemed_by?: string | null;
+          redeemed_at?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_checkout_session_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      gift_card_redemptions: {
+        Row: {
+          id: string;
+          gift_card_id: string;
+          user_id: string;
+          amount: number;
+          balance_before: number;
+          balance_after: number;
+          purchase_id: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gift_card_id: string;
+          user_id: string;
+          amount: number;
+          balance_before: number;
+          balance_after: number;
+          purchase_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          gift_card_id?: string;
+          user_id?: string;
+          amount?: number;
+          balance_before?: number;
+          balance_after?: number;
+          purchase_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -658,6 +784,8 @@ export interface Database {
       purchase_status: 'active' | 'expired' | 'used';
       product_type: 'pass' | 'party' | 'product';
       banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
+      gift_card_status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+      gift_card_delivery_method: 'email_recipient' | 'email_self';
     };
   };
 }

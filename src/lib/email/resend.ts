@@ -214,3 +214,101 @@ Submitted at: ${new Date().toLocaleString()}
     replyTo: data.email,
   });
 }
+
+/**
+ * Send gift card to recipient
+ */
+export async function sendGiftCardEmail(data: {
+  to: string;
+  giftCard: {
+    code: string;
+    amount: number;
+    recipientName: string;
+    purchaserName: string;
+    personalMessage?: string;
+  };
+}): Promise<EmailResult> {
+  const { giftCard } = data;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  const subject = `🎁 You've received a $${giftCard.amount.toFixed(2)} Busy Bees Gift Card!`;
+
+  // Create a beautiful text email with the gift card details
+  const text = `
+═══════════════════════════════════════════════════════════
+🎁 You've Received a Gift Card from Busy Bees! 🐝
+═══════════════════════════════════════════════════════════
+
+Hi ${giftCard.recipientName}!
+
+${giftCard.purchaserName} sent you a Busy Bees Indoor Play Center gift card!
+
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║   GIFT CARD VALUE: $${giftCard.amount.toFixed(2).padStart(6, ' ')}                              ║
+║                                                          ║
+║   REDEMPTION CODE: ${giftCard.code}                     ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+
+${giftCard.personalMessage ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Personal Message from ${giftCard.purchaserName}:
+
+"${giftCard.personalMessage}"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : ''}
+
+HOW TO REDEEM:
+─────────────────────────────────────────────────────────────
+1. Visit ${siteUrl}/gift-cards
+2. Click "Redeem Gift Card"
+3. Log in or create an account
+4. Enter your code: ${giftCard.code}
+5. Your credit will be added instantly!
+─────────────────────────────────────────────────────────────
+
+WHAT CAN I USE IT FOR?
+• Day passes for open play
+• Weekly or monthly memberships
+• Birthday party bookings
+• Snacks and merchandise
+
+This gift card never expires. Valid for all purchases at
+Busy Bees Indoor Play Center.
+
+───────────────────────────────────────────────────────────
+Busy Bees Indoor Play Center
+📍 Visit us for a day of fun and play!
+🌐 ${siteUrl}
+───────────────────────────────────────────────────────────
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+  });
+}
+
+/**
+ * Send test/preview gift card email
+ */
+export async function sendTestGiftCardEmail(data: {
+  to: string;
+  amount: number;
+  recipientName: string;
+  purchaserName: string;
+  personalMessage?: string;
+}): Promise<EmailResult> {
+  return sendGiftCardEmail({
+    to: data.to,
+    giftCard: {
+      code: 'BBGC-TEST-XXXX-XXXX',
+      amount: data.amount,
+      recipientName: data.recipientName,
+      purchaserName: data.purchaserName,
+      personalMessage: data.personalMessage,
+    },
+  });
+}

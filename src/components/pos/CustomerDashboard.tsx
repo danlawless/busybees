@@ -215,6 +215,64 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     details?: any;
   }>({ title: '', message: '' });
 
+  // Gift card state
+  const [giftCardBalance, setGiftCardBalance] = useState<number>(0);
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [redeemingGiftCard, setRedeemingGiftCard] = useState(false);
+  const [giftCardError, setGiftCardError] = useState<string | null>(null);
+  const [giftCardSuccess, setGiftCardSuccess] = useState<string | null>(null);
+
+  // Fetch gift card balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const response = await fetch('/api/gift-cards/balance');
+        if (response.ok) {
+          const data = await response.json();
+          setGiftCardBalance(data.balance || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching gift card balance:', error);
+      }
+    };
+    fetchBalance();
+  }, [customer.id]);
+
+  const handleRedeemGiftCard = async () => {
+    if (!giftCardCode.trim()) {
+      setGiftCardError('Please enter a gift card code');
+      return;
+    }
+
+    setRedeemingGiftCard(true);
+    setGiftCardError(null);
+    setGiftCardSuccess(null);
+
+    try {
+      const response = await fetch('/api/gift-cards/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: giftCardCode }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setGiftCardBalance(data.new_balance || 0);
+        setGiftCardSuccess(`$${data.amount_credited?.toFixed(2)} added to account!`);
+        setGiftCardCode('');
+        setTimeout(() => setGiftCardSuccess(null), 5000);
+      } else {
+        setGiftCardError(data.error || 'Failed to redeem gift card');
+      }
+    } catch (error) {
+      console.error('Error redeeming gift card:', error);
+      setGiftCardError('Failed to redeem gift card. Please try again.');
+    } finally {
+      setRedeemingGiftCard(false);
+    }
+  };
+
   // Children management state
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -1199,12 +1257,64 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Welcome back, {customer.name}! 🐝</h2>
-        <p className="text-yellow-100">
-          Member since {formatDate(customer.createdAt)}
-          {customer.lastVisit && ` • Last visit: ${formatDate(customer.lastVisit)}`}
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Welcome back, {customer.name}! 🐝</h2>
+            <p className="text-yellow-100">
+              Member since {formatDate(customer.createdAt)}
+              {customer.lastVisit && ` • Last visit: ${formatDate(customer.lastVisit)}`}
+            </p>
+          </div>
+          {giftCardBalance > 0 && (
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-yellow-100 uppercase tracking-wide">Gift Card Balance</p>
+              <p className="text-2xl font-bold">${giftCardBalance.toFixed(2)}</p>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Gift Card Redemption */}
+      <Card className="p-4 bg-amber-50 border-amber-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+              <span className="text-xl">🎁</span>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">Redeem Gift Card</p>
+              <p className="text-sm text-gray-600">Enter code to add credit</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={giftCardCode}
+              onChange={(e) => {
+                setGiftCardCode(e.target.value.toUpperCase());
+                setGiftCardError(null);
+              }}
+              placeholder="BBGC-XXXX-XXXX-XXXX"
+              className="px-3 py-2 border rounded-lg font-mono text-sm w-52"
+              disabled={redeemingGiftCard}
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleRedeemGiftCard}
+              disabled={redeemingGiftCard || !giftCardCode.trim()}
+            >
+              {redeemingGiftCard ? 'Redeeming...' : 'Redeem'}
+            </Button>
+          </div>
+        </div>
+        {giftCardError && (
+          <p className="mt-2 text-red-600 text-sm">{giftCardError}</p>
+        )}
+        {giftCardSuccess && (
+          <p className="mt-2 text-green-600 text-sm font-semibold">✓ {giftCardSuccess}</p>
+        )}
+      </Card>
 
       {/* Purchase Success Alert */}
       {purchaseSuccess && (
