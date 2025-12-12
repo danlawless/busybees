@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -157,14 +156,6 @@ export default function VerifyEmailPage() {
               {isSending ? 'Sending...' : 'Send Verification Email'}
             </Button>
 
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">
-                You can still use the POS kiosk at our facility
-              </p>
-              <Link href="/pos" className="text-sm text-yellow-600 hover:text-yellow-700">
-                Go to Check-In Kiosk →
-              </Link>
-            </div>
           </div>
         </Card>
       </div>
