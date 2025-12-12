@@ -2,11 +2,12 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Gift, Calendar, Users, Star, Sparkles, Clock } from 'lucide-react'
 import { HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
-import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
 
 const partyHighlights = [
   { icon: Gift, text: 'Stress-Free Setup', color: 'from-pink-200 to-pink-300' },
@@ -23,6 +24,25 @@ const quickStats = [
 ]
 
 export function PartiesHero() {
+  const router = useRouter()
+  const { isAuthenticated, loading: authLoading } = useAuth()
+
+  // Handle booking button click - redirect to signup if not authenticated
+  const handleBookParty = () => {
+    if (authLoading) return
+
+    if (isAuthenticated) {
+      // Scroll to party calendar section for logged-in users
+      document.getElementById('party-calendar-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    } else {
+      // Redirect to signup with return URL
+      router.push('/customer/signup?redirect=/parties')
+    }
+  }
+
   return (
     <section className="relative overflow-hidden section-hexagon-dense hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" animated />
@@ -70,15 +90,11 @@ export function PartiesHero() {
             
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-gradient-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => {
-                  document.getElementById('party-calendar-section')?.scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                  });
-                }}
+                onClick={handleBookParty}
+                disabled={authLoading}
               >
                 <Calendar className="w-5 h-5 mr-2" />
                 Book Your Party Now
