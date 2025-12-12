@@ -1,6 +1,7 @@
 /**
  * Customer Portal Login Page
  * Phone + password authentication for customer account access
+ * Supports redirect parameter to return users to their intended destination
  */
 
 'use client';
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/customer/dashboard';
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +82,8 @@ function LoginForm() {
         });
       }
 
-      router.push('/customer/dashboard');
+      // Redirect to the intended destination (or dashboard)
+      router.push(redirectTo);
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
@@ -88,6 +91,11 @@ function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  // Build signup link with redirect parameter if present
+  const signupHref = redirectTo !== '/customer/dashboard'
+    ? `/customer/signup?redirect=${encodeURIComponent(redirectTo)}`
+    : '/customer/signup';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -184,7 +192,7 @@ function LoginForm() {
             <div className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
-                href="/customer/signup"
+                href={signupHref}
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
                 Sign up

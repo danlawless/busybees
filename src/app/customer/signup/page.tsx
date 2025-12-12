@@ -1,18 +1,22 @@
 /**
  * Customer Portal Signup Page
  * Create new customer account with phone number and password
+ * Supports redirect parameter to return users to their intended destination
  */
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-export default function CustomerSignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/customer/dashboard';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -108,9 +112,9 @@ export default function CustomerSignupPage() {
       });
 
       setSuccess(true);
-      // Redirect to dashboard
+      // Redirect to the intended destination (or dashboard)
       setTimeout(() => {
-        router.push('/customer/dashboard');
+        router.push(redirectTo);
       }, 2000);
     } catch (err) {
       console.error('Signup error:', err);
@@ -131,13 +135,18 @@ export default function CustomerSignupPage() {
             Account Created!
           </h2>
           <p className="text-gray-600 mb-4">
-            Redirecting to your dashboard...
+            Redirecting...
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
         </Card>
       </div>
     );
   }
+
+  // Build login link with redirect parameter if present
+  const loginHref = redirectTo !== '/customer/dashboard'
+    ? `/customer/login?redirect=${encodeURIComponent(redirectTo)}`
+    : '/customer/login';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -261,7 +270,7 @@ export default function CustomerSignupPage() {
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
               <Link
-                href="/customer/login"
+                href={loginHref}
                 className="text-yellow-600 hover:text-yellow-700 font-medium"
               >
                 Sign in
@@ -289,5 +298,17 @@ export default function CustomerSignupPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function CustomerSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }
