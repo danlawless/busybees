@@ -341,7 +341,7 @@ export default function POSPage() {
                         },
                         {
                             id: "addon-2",
-                            name: "Additional child (over 20)",
+                            name: "Additional child (over 15)",
                             price: 15,
                             description: "Per extra child",
                         },
@@ -359,7 +359,7 @@ export default function POSPage() {
                         },
                     ],
                     description:
-                        "Our premium private party package! Perfect for up to 20 kids with all the bells and whistles.",
+                        "Our premium private party package! Pricing includes 15 kids with pizza, drinks, cake and balloons.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/9B6fZgbE797L3PLfYUffy05",
                     isActive: true,
@@ -370,7 +370,7 @@ export default function POSPage() {
                     id: "party-2",
                     name: "Worker Bee (Private)",
                     basePrice: 525.0,
-                    capacity: 15,
+                    capacity: 20,
                     duration: 2,
                     includedItems: [
                         "Private party room",
@@ -407,7 +407,7 @@ export default function POSPage() {
                         },
                     ],
                     description:
-                        "Great private party option for up to 15 kids with party favors included!",
+                        "Great private party option that includes 15 kids with pizza and drinks.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/3cI5kC7nRbfTbid284ffy04",
                     isActive: true,
@@ -418,7 +418,7 @@ export default function POSPage() {
                     id: "party-3",
                     name: "Basic Bee (Private)",
                     basePrice: 475.0,
-                    capacity: 12,
+                    capacity: 20,
                     duration: 2,
                     includedItems: [
                         "Private party room",
@@ -436,7 +436,7 @@ export default function POSPage() {
                         },
                         {
                             id: "addon-10",
-                            name: "Additional child (over 12)",
+                            name: "Additional child (over 15)",
                             price: 15,
                             description: "Per extra child",
                         },
@@ -454,7 +454,7 @@ export default function POSPage() {
                         },
                     ],
                     description:
-                        "Perfect private party starter package for up to 12 kids!",
+                        "Perfect private party starter package that includes 15 kids with standard party paper goods.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/4gMbJ023x83H5XT6okffy03",
                     isActive: true,
@@ -484,7 +484,7 @@ export default function POSPage() {
                         },
                         {
                             id: "addon-14",
-                            name: "Additional child (over 20)",
+                            name: "Additional child (over 15)",
                             price: 15,
                             description: "Per extra child",
                         },
@@ -502,7 +502,7 @@ export default function POSPage() {
                         },
                     ],
                     description:
-                        "Premium semi-private party for up to 20 kids with all the extras!",
+                        "Premium semi-private party! Pricing includes 15 kids with pizza, drinks, cake and balloons.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/bJeeVc7nRbfTeup6okffy02",
                     isActive: true,
@@ -513,7 +513,7 @@ export default function POSPage() {
                     id: "party-5",
                     name: "Worker Bee (Semi-Private)",
                     basePrice: 450.0,
-                    capacity: 15,
+                    capacity: 20,
                     duration: 2,
                     includedItems: [
                         "Semi-private party area",
@@ -548,7 +548,7 @@ export default function POSPage() {
                             description: "Favors for all kids",
                         },
                     ],
-                    description: "Great semi-private party option for up to 15 kids!",
+                    description: "Great semi-private party option that includes 15 kids with pizza and drinks.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/cNidR8gYr0Bf4TP4gcffy01",
                     isActive: true,
@@ -559,7 +559,7 @@ export default function POSPage() {
                     id: "party-6",
                     name: "Basic Bee (Semi-Private)",
                     basePrice: 400.0,
-                    capacity: 12,
+                    capacity: 20,
                     duration: 2,
                     includedItems: [
                         "Semi-private party area",
@@ -577,7 +577,7 @@ export default function POSPage() {
                         },
                         {
                             id: "addon-22",
-                            name: "Additional child (over 12)",
+                            name: "Additional child (over 15)",
                             price: 15,
                             description: "Per extra child",
                         },
@@ -595,7 +595,7 @@ export default function POSPage() {
                         },
                     ],
                     description:
-                        "Perfect semi-private party starter package for up to 12 kids!",
+                        "Perfect semi-private party starter that includes 15 kids with standard party paper goods.",
                     stripePurchaseLink:
                         "https://buy.stripe.com/14A3cu6jNgAddql5kgffy00",
                     isActive: true,
