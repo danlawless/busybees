@@ -1,8 +1,8 @@
 /**
  * API Route: Pre-Registration
- * POST - Submit pre-registration for Grand Opening
+ * POST - Create user account and children for families pre-registering before their visit
  *
- * This allows families to pre-register before their first visit
+ * This allows families to sign up before their first visit
  * so they don't hold up the line at the kiosk during check-in.
  */
 
@@ -27,13 +27,6 @@ const preRegisterSchema = z.object({
   marketingOptIn: z.boolean().optional(),
 });
 
-// Type definitions for pre-registration records
-interface PreRegistrationRecord {
-  id: string;
-  email: string;
-  phone: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -55,91 +48,120 @@ export async function POST(request: NextRequest) {
     // Clean phone number for storage (remove formatting)
     const cleanPhone = validationResult.data.phone.replace(/[^\d]/g, '');
 
-    // Use admin client to bypass RLS for public pre-registration
+    // Use admin client to bypass RLS
     const supabase = createAdminClient();
 
-    // Check if pre-registration already exists by phone or email
-    // Note: Using type assertion due to Supabase client typing issues in this codebase
-    const existingResult = await supabase
-      .from('pre_registrations')
-      .select('id, email, phone')
-      .or(`phone.eq.${cleanPhone},email.eq.${email.toLowerCase()}`)
+    // Check if user already exists by phone or email
+    const { data: existingByPhone } = await supabase
+      .from('users')
+      .select('id, phone, email')
+      .eq('phone', cleanPhone)
       .single();
 
-    const existing = existingResult.data as PreRegistrationRecord | null;
+    if (existingByPhone) {
+      logger.info({ phone: cleanPhone }, 'Pre-registration: Phone already registered');
+      return NextResponse.json(
+        { error: 'This phone number is already registered. You can check in at the kiosk using your phone number.' },
+        { status: 409 }
+      );
+    }
 
-    if (existing) {
-      // Update existing pre-registration with new info
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase.from('pre_registrations') as any)
-        .update({
-          parent_name: parentName,
-          email: email.toLowerCase(),
-          phone: cleanPhone,
-          children: children,
-          marketing_opt_in: marketingOptIn ?? true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id);
+    // Check email in auth users
+    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers();
+    const existingByEmail = existingAuthUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase()
+    );
 
-      if (updateError) {
-        logger.error({ error: updateError, email }, 'Failed to update pre-registration');
+    if (existingByEmail) {
+      logger.info({ email }, 'Pre-registration: Email already registered');
+      return NextResponse.json(
+        { error: 'This email is already registered. You may already have an account - try checking in with your phone number.' },
+        { status: 409 }
+      );
+    }
+
+    // Create Supabase Auth user with phone-based password (same as POS signup)
+    const authPassword = `PHONE-${cleanPhone}`;
+
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: authPassword,
+      email_confirm: true, // Pre-confirmed since they verified email by submitting
+      user_metadata: {
+        name: parentName.trim(),
+        phone: cleanPhone,
+        role: 'customer',
+      },
+    });
+
+    if (authError) {
+      logger.error({ error: authError, email }, 'Failed to create auth user for pre-registration');
+
+      if (authError.message?.includes('already been registered') || authError.status === 422) {
         return NextResponse.json(
-          { error: 'Failed to update registration', details: updateError.message },
-          { status: 500 }
+          { error: 'This email is already registered. You may already have an account - try checking in with your phone number.' },
+          { status: 409 }
         );
       }
 
-      logger.info({ preRegistrationId: existing.id, email }, 'Updated existing pre-registration');
-
-      // Subscribe to newsletter if marketing opt-in is enabled
-      if (marketingOptIn !== false) {
-        await subscribeToNewsletter({
-          email,
-          name: parentName,
-          source: 'pre_register',
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Pre-registration updated! Your information has been refreshed.',
-        preRegistrationId: existing.id,
-      });
+      return NextResponse.json(
+        { error: 'Failed to create account. Please try again.' },
+        { status: 500 }
+      );
     }
 
-    // Create new pre-registration
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: 'Failed to create account' },
+        { status: 500 }
+      );
+    }
+
+    // Create user profile record
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const insertResult = await (supabase.from('pre_registrations') as any)
+    const { data: newUser, error: userError } = await (supabase.from('users') as any)
       .insert({
-        parent_name: parentName,
-        email: email.toLowerCase(),
+        id: authData.user.id,
         phone: cleanPhone,
-        children: children,
-        marketing_opt_in: marketingOptIn ?? true,
+        name: parentName.trim(),
+        email: email.trim().toLowerCase(),
+        role: 'customer',
       })
-      .select('id')
+      .select()
       .single();
 
-    if (insertResult.error) {
-      logger.error({ error: insertResult.error, email }, 'Failed to create pre-registration');
+    if (userError) {
+      logger.error({ error: userError, email }, 'Failed to create user profile for pre-registration');
+      // Clean up auth user if profile creation fails
+      await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
-        { error: 'Failed to create registration', details: insertResult.error.message },
+        { error: 'Failed to create account' },
         { status: 500 }
       );
     }
 
-    const newRegistration = insertResult.data as { id: string } | null;
+    // Create children records
+    const childrenToInsert = children.map((child) => ({
+      customer_id: authData.user.id,
+      name: child.name.trim(),
+      birthdate: child.birthdate,
+      waiver_signed: false,
+    }));
 
-    if (!newRegistration) {
-      logger.error({ email }, 'No pre-registration returned after insert');
-      return NextResponse.json(
-        { error: 'Failed to create registration' },
-        { status: 500 }
-      );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: childrenError } = await (supabase.from('children') as any)
+      .insert(childrenToInsert);
+
+    if (childrenError) {
+      logger.error({ error: childrenError, userId: authData.user.id }, 'Failed to create children for pre-registration');
+      // Don't fail the whole registration if children creation fails
+      // The user can add children later at the kiosk
     }
 
-    logger.info({ preRegistrationId: newRegistration.id, email }, 'Created new pre-registration');
+    logger.info(
+      { userId: authData.user.id, email, childrenCount: children.length },
+      'Pre-registration successful - user account created'
+    );
 
     // Subscribe to newsletter if marketing opt-in is enabled (defaults to true)
     if (marketingOptIn !== false) {
@@ -152,8 +174,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Pre-registration successful! You\'re all set for your visit.',
-      preRegistrationId: newRegistration.id,
+      message: 'Account created! You\'re all set for your visit.',
+      userId: newUser.id,
     });
 
   } catch (error) {

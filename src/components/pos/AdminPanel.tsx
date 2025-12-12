@@ -239,6 +239,7 @@ export function AdminPanel({
   const [newsletterStats, setNewsletterStats] = useState<NewsletterStats>({ total: 0, active: 0, unsubscribed: 0 });
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterSearchTerm, setNewsletterSearchTerm] = useState('');
+
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
