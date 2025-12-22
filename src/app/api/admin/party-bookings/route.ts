@@ -6,6 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import type { Database } from '@/lib/supabase/database.types';
+
+type BookingStatus = Database['public']['Tables']['party_bookings']['Row']['status'];
+type PartyType = Database['public']['Tables']['party_bookings']['Row']['party_type'];
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (status && status !== 'all') {
-      query = query.eq('status', status);
+      query = query.eq('status', status as BookingStatus);
     }
 
     if (startDate) {
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (partyType && partyType !== 'all') {
-      query = query.eq('party_type', partyType);
+      query = query.eq('party_type', partyType as PartyType);
     }
 
     if (searchQuery) {
