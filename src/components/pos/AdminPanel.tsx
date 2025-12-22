@@ -240,6 +240,10 @@ export function AdminPanel({
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterSearchTerm, setNewsletterSearchTerm] = useState('');
 
+  // Customer loading state
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customersStats, setCustomersStats] = useState({ total: 0, withPurchases: 0, active: 0 });
+
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
@@ -278,6 +282,30 @@ export function AdminPanel({
     if (currentView === 'newsletter') {
       fetchNewsletterSubscribers();
     }
+  }, [currentView]);
+
+  // Fetch customers from database when customers view is selected
+  const fetchCustomers = async () => {
+    setCustomersLoading(true);
+    try {
+      const response = await fetch('/api/admin/customers');
+      if (response.ok) {
+        const data = await response.json();
+        onUpdateCustomers(data.customers || []);
+        setCustomersStats(data.stats || { total: 0, withPurchases: 0, active: 0 });
+      }
+    } catch (error) {
+      console.error('Failed to fetch customers:', error);
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'customers' || currentView === 'dashboard') {
+      fetchCustomers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
 
   // Fetch membership discount status on mount and when marketing view is opened
@@ -547,6 +575,43 @@ export function AdminPanel({
 
   const renderCustomers = () => (
     <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">👥</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Total Customers</p>
+              <p className="text-xl font-bold text-gray-900">{customersStats.total}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🛒</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">With Purchases</p>
+              <p className="text-xl font-bold text-green-600">{customersStats.withPurchases}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🎮</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Currently Active</p>
+              <p className="text-xl font-bold text-yellow-600">{customersStats.active}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       {/* Search */}
       <Card className="p-4">
         <div className="flex items-center space-x-4">
@@ -562,6 +627,13 @@ export function AdminPanel({
           <Button onClick={() => setSearchTerm('')} variant="outline">
             Clear
           </Button>
+          <Button
+            onClick={fetchCustomers}
+            variant="outline"
+            disabled={customersLoading}
+          >
+            {customersLoading ? '⏳' : '🔄'} Refresh
+          </Button>
         </div>
       </Card>
 
@@ -570,6 +642,20 @@ export function AdminPanel({
         <h3 className="text-lg font-semibold mb-4">
           Customers ({filteredCustomers.length})
         </h3>
+        {customersLoading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-lg">⏳ Loading customers...</p>
+          </div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-lg mb-2">👥 No customers found</p>
+            <p className="text-sm text-gray-400">
+              {customers.length === 0
+                ? 'Customers who sign up via pre-registration or at the kiosk will appear here'
+                : 'Try adjusting your search terms'}
+            </p>
+          </div>
+        ) : (
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {filteredCustomers.map((customer) => (
             <div key={customer.id} className="p-4 border border-gray-200 rounded-lg">
@@ -626,6 +712,7 @@ export function AdminPanel({
             </div>
           ))}
         </div>
+        )}
       </Card>
     </div>
   );
