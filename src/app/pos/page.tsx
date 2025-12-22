@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { logger } from "@/lib/client-logger";
 import { PhoneLogin } from "@/components/pos/PhoneLogin";
 import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
 import { CheckIn } from "@/components/pos/CheckIn";
@@ -779,6 +780,31 @@ export default function POSPage() {
 
     // All customer data comes from API calls via PhoneLogin
     const [customers, setCustomers] = useState<Customer[]>([]);
+
+    // Fetch customers when entering admin mode
+    useEffect(() => {
+        if (currentView === "admin" && isStaffMode) {
+            const fetchCustomers = async () => {
+                try {
+                    const response = await fetch("/api/pos/customers", {
+                        headers: {
+                            "x-pos-pin": "1234",
+                        },
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setCustomers(data);
+                        logger.info({ customerCount: data.length }, "Loaded customers for admin panel");
+                    } else {
+                        logger.error({ status: response.status }, "Failed to fetch customers");
+                    }
+                } catch (error) {
+                    logger.error({ error }, "Error fetching customers");
+                }
+            };
+            fetchCustomers();
+        }
+    }, [currentView, isStaffMode]);
 
     const handleLogin = (customer: Customer) => {
         setCurrentCustomer(customer);
