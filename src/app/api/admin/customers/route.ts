@@ -90,7 +90,24 @@ function calculateAge(birthdate: string): number {
 export async function GET(_request: NextRequest) {
   try {
     logger.info({}, '📊 Admin customers API called');
-    const supabase = createAdminClient();
+
+    // Create admin client - will throw if env vars are missing
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (envError) {
+      logger.error(
+        { error: envError },
+        'Failed to create admin client - check environment variables'
+      );
+      return NextResponse.json(
+        {
+          error: 'Server configuration error',
+          details: envError instanceof Error ? envError.message : 'Unknown configuration error',
+        },
+        { status: 500 }
+      );
+    }
 
     // Fetch all customers with role 'customer'
     // Using explicit type cast to ensure proper type inference

@@ -245,6 +245,11 @@ export function AdminPanel({
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersStats, setCustomersStats] = useState({ total: 0, withPurchases: 0, active: 0 });
   const [customersError, setCustomersError] = useState<string | null>(null);
+  const [diagnosticsResult, setDiagnosticsResult] = useState<{
+    checks: { name: string; status: string; message: string; details?: unknown }[];
+    summary: { passed: number; failed: number; warnings: number };
+  } | null>(null);
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
@@ -316,6 +321,25 @@ export function AdminPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
+
+  // Run diagnostics to debug customer loading issues
+  const runDiagnostics = async () => {
+    setRunningDiagnostics(true);
+    setDiagnosticsResult(null);
+    try {
+      const response = await fetch('/api/admin/diagnostics');
+      const data = await response.json();
+      setDiagnosticsResult(data);
+    } catch (error) {
+      console.error('Failed to run diagnostics:', error);
+      setDiagnosticsResult({
+        checks: [{ name: 'Network', status: 'fail', message: 'Failed to reach diagnostics endpoint' }],
+        summary: { passed: 0, failed: 1, warnings: 0 },
+      });
+    } finally {
+      setRunningDiagnostics(false);
+    }
+  };
 
   // Fetch membership discount status on mount and when marketing view is opened
   useEffect(() => {
@@ -668,11 +692,60 @@ export function AdminPanel({
         ) : filteredCustomers.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg mb-2">👥 No customers found</p>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 mb-4">
               {customers.length === 0
                 ? 'Customers who sign up via pre-registration or at the kiosk will appear here'
                 : 'Try adjusting your search terms'}
             </p>
+            {customers.length === 0 && (
+              <div className="space-y-4">
+                <Button
+                  onClick={runDiagnostics}
+                  variant="outline"
+                  size="sm"
+                  disabled={runningDiagnostics}
+                >
+                  {runningDiagnostics ? '🔍 Running diagnostics...' : '🔧 Run Diagnostics'}
+                </Button>
+                {diagnosticsResult && (
+                  <div className="mt-4 text-left bg-gray-50 rounded-lg p-4 max-w-2xl mx-auto">
+                    <h4 className="font-semibold mb-3 text-gray-700">
+                      Diagnostics Results
+                      <span className="ml-2 text-sm font-normal">
+                        ({diagnosticsResult.summary.passed} passed, {diagnosticsResult.summary.failed} failed, {diagnosticsResult.summary.warnings} warnings)
+                      </span>
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      {diagnosticsResult.checks.map((check, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-2 rounded ${
+                            check.status === 'pass'
+                              ? 'bg-green-50 border border-green-200'
+                              : check.status === 'fail'
+                              ? 'bg-red-50 border border-red-200'
+                              : 'bg-yellow-50 border border-yellow-200'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <span className="mr-2">
+                              {check.status === 'pass' ? '✅' : check.status === 'fail' ? '❌' : '⚠️'}
+                            </span>
+                            <span className="font-medium">{check.name}</span>
+                          </div>
+                          <p className="text-gray-600 ml-6">{check.message}</p>
+                          {check.details && (
+                            <pre className="text-xs text-gray-500 ml-6 mt-1 overflow-auto">
+                              {JSON.stringify(check.details, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
         <div className="space-y-4 max-h-96 overflow-y-auto">
