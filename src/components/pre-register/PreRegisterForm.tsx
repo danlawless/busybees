@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   User,
   Mail,
@@ -14,13 +15,15 @@ import {
   Home,
   ArrowRight,
   Calendar,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon';
 import { fadeInUp, staggerContainer } from '@/lib/utils';
 import { logger } from '@/lib/client-logger';
+import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 
 interface Child {
   id: string;
@@ -56,6 +59,40 @@ export function PreRegisterForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Show Coming Soon message when purchasing is disabled
+  if (!PURCHASING_ENABLED) {
+    return (
+      <section className="relative overflow-hidden py-12 sm:py-20 bg-gradient-to-b from-charcoal-50 to-white min-h-screen">
+        <HoneycombPattern variant="light" size="lg" />
+        <div className="relative mx-auto max-w-md px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Card className="p-8">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-amber-600" />
+              </div>
+              <h2 className="text-3xl font-bold text-charcoal-800 mb-2">
+                Coming Soon
+              </h2>
+              <p className="text-charcoal-600 mb-6">
+                Pre-registration will be available soon. Check back later!
+              </p>
+              <Link href="/">
+                <Button variant="outline" className="w-full">
+                  <Home className="w-4 h-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+            </Card>
+          </motion.div>
+        </div>
+      </section>
+    );
+  }
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');

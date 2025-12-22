@@ -25,6 +25,7 @@ import {
 } from "@/lib/utils/promoHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { Database } from "@/lib/supabase/database.types";
+import { PURCHASING_ENABLED } from "@/lib/feature-flags";
 
 type Pass = Database["public"]["Tables"]["passes"]["Row"];
 
@@ -478,9 +479,11 @@ export function Pricing() {
                                                 variant="primary"
                                                 size="sm"
                                                 onClick={() => handlePurchase(plan)}
-                                                disabled={authLoading || isPurchasing}
+                                                disabled={!PURCHASING_ENABLED || authLoading || isPurchasing}
                                             >
-                                                {isPurchasing ? (
+                                                {!PURCHASING_ENABLED ? (
+                                                    "Coming Soon"
+                                                ) : isPurchasing ? (
                                                     <>
                                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                         Processing...
@@ -648,9 +651,11 @@ export function Pricing() {
                                                     variant="primary"
                                                     size="sm"
                                                     onClick={() => handlePurchase(plan)}
-                                                    disabled={authLoading || isPurchasing}
+                                                    disabled={!PURCHASING_ENABLED || authLoading || isPurchasing}
                                                 >
-                                                    {isPurchasing ? (
+                                                    {!PURCHASING_ENABLED ? (
+                                                        "Coming Soon"
+                                                    ) : isPurchasing ? (
                                                         <>
                                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                             Processing...
@@ -743,9 +748,11 @@ export function Pricing() {
                                                     variant="primary"
                                                     size="sm"
                                                     onClick={() => handlePurchase(plan)}
-                                                    disabled={authLoading || isPurchasing}
+                                                    disabled={!PURCHASING_ENABLED || authLoading || isPurchasing}
                                                 >
-                                                    {isPurchasing ? (
+                                                    {!PURCHASING_ENABLED ? (
+                                                        "Coming Soon"
+                                                    ) : isPurchasing ? (
                                                         <>
                                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                             Processing...

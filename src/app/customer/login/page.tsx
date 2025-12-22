@@ -9,10 +9,12 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Clock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 
 function LoginForm() {
   const router = useRouter();
@@ -26,6 +28,32 @@ function LoginForm() {
 
   // Check for success message from set-password page
   const passwordSet = searchParams.get('passwordSet') === 'true';
+
+  // Show Coming Soon message when purchasing is disabled
+  if (!PURCHASING_ENABLED) {
+    return (
+      <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          <Card className="p-8 text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Coming Soon
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Customer accounts will be available soon. Check back later!
+            </p>
+            <Link href="/">
+              <Button variant="outline" className="w-full">
+                Back to Home
+              </Button>
+            </Link>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 const features = [
   {
@@ -110,12 +111,19 @@ export function Hero() {
             variants={fadeInUp}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link href="/pre-register">
-              <Button variant="primary" size="lg" className="min-w-48">
+            {PURCHASING_ENABLED ? (
+              <Link href="/pre-register">
+                <Button variant="primary" size="lg" className="min-w-48">
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Pre-Register Now
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="primary" size="lg" className="min-w-48" disabled>
                 <UserPlus className="w-5 h-5 mr-2" />
-                Pre-Register Now
+                Coming Soon
               </Button>
-            </Link>
+            )}
           </motion.div>
 
           {/* Important Info */}
