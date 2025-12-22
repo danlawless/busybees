@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { logger } from "@/lib/client-logger";
 import { PhoneLogin } from "@/components/pos/PhoneLogin";
 import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
 import { CheckIn } from "@/components/pos/CheckIn";
@@ -787,11 +788,12 @@ export default function POSPage() {
             if (response.ok) {
                 const data = await response.json();
                 setCustomers(data.customers || []);
+                logger.info({ customerCount: (data.customers || []).length }, "Loaded customers for admin panel");
             } else {
-                console.error('Failed to fetch customers:', await response.text());
+                logger.error({ status: response.status }, "Failed to fetch customers");
             }
         } catch (error) {
-            console.error('Error fetching customers:', error);
+            logger.error({ error }, "Error fetching customers");
         }
     }, []);
 
