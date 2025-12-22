@@ -294,9 +294,13 @@ export function AdminPanel({
         const data = await response.json();
         onUpdateCustomers(data.customers || []);
         setCustomersStats(data.stats || { total: 0, withPurchases: 0, active: 0 });
+      } else {
+        // Log error response for debugging
+        const errorText = await response.text();
+        console.error('Failed to fetch customers - API returned error:', response.status, errorText);
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
+      console.error('Failed to fetch customers - network error:', error);
     } finally {
       setCustomersLoading(false);
     }

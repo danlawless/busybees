@@ -96,7 +96,7 @@ export async function GET(_request: NextRequest) {
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('*')
-      .eq('role', 'customer')
+      .eq('role', 'customer' as const)
       .order('created_at', { ascending: false });
 
     if (usersError) {
@@ -117,6 +117,8 @@ export async function GET(_request: NextRequest) {
         stats: { total: 0, withPurchases: 0, active: 0 }
       });
     }
+
+    logger.info({ count: users.length }, '📊 Found customers in database');
 
     // Get all customer IDs for batch queries
     const customerIds = users.map(u => u.id);
