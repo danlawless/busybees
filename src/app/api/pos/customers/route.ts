@@ -55,6 +55,7 @@ function calculateAge(birthdate: string): number {
 
 export async function GET() {
   try {
+    logger.info({}, '📊 POS customers API called');
     const supabase = createAdminClient();
 
     // Fetch all customers with their children
@@ -73,9 +74,12 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (usersError) {
-      logger.error({ error: usersError }, 'Failed to fetch customers');
+      logger.error(
+        { error: usersError, code: usersError.code, details: usersError.details },
+        'Failed to fetch customers from database'
+      );
       return NextResponse.json(
-        { error: 'Failed to fetch customers' },
+        { error: 'Failed to fetch customers', details: usersError.message },
         { status: 500 }
       );
     }
