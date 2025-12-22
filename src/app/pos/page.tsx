@@ -780,6 +780,28 @@ export default function POSPage() {
     // All customer data comes from API calls via PhoneLogin
     const [customers, setCustomers] = useState<Customer[]>([]);
 
+    // Fetch customers from database when entering admin mode
+    const fetchCustomers = useCallback(async () => {
+        try {
+            const response = await fetch('/api/pos/customers');
+            if (response.ok) {
+                const data = await response.json();
+                setCustomers(data.customers || []);
+            } else {
+                console.error('Failed to fetch customers:', await response.text());
+            }
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+        }
+    }, []);
+
+    // Fetch customers when entering admin mode
+    useEffect(() => {
+        if (isStaffMode && currentView === "admin") {
+            fetchCustomers();
+        }
+    }, [isStaffMode, currentView, fetchCustomers]);
+
     const handleLogin = (customer: Customer) => {
         setCurrentCustomer(customer);
         setCurrentView("checkin"); // Automatically go to Check In screen
