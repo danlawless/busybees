@@ -6,6 +6,7 @@ import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 // Party packages updated per issue #101
 const partyPackages = [
@@ -84,7 +85,7 @@ export function PartyPackages() {
   return (
     <section className="relative py-20 section-hexagon-subtle overflow-hidden">
       <HoneycombPattern variant="scattered" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -101,7 +102,7 @@ export function PartyPackages() {
             Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Package</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-4xl mx-auto leading-relaxed">
-            Now that you know about our party options, choose your package! Every package is available as both 
+            Now that you know about our party options, choose your package! Every package is available as both
             semi-private and private - <strong>no hidden fees, no stress, just pure birthday magic!</strong>
           </p>
         </motion.div>
@@ -126,7 +127,7 @@ export function PartyPackages() {
                     </div>
                   </div>
                 )}
-                
+
                 <Card className={`card-pastel border-2 ${pkg.borderColor} hover:scale-105 transition-all duration-300 group ${pkg.popular ? 'shadow-xl ring-2 ring-purple-200' : ''} h-full flex flex-col`}>
                   <CardContent className="p-8 flex-1 flex flex-col">
                     {/* Header Section */}
@@ -134,11 +135,11 @@ export function PartyPackages() {
                       <div className={`w-20 h-20 bg-gradient-to-br ${pkg.color} hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
                         <Icon className="w-10 h-10 text-charcoal-700" />
                       </div>
-                      
+
                       <h3 className="text-2xl font-bold text-charcoal-800 mb-4">
                         {pkg.name}
                       </h3>
-                      
+
                       <p className="text-charcoal-600 leading-relaxed mb-6 min-h-[3rem] flex items-center justify-center px-2">
                         {pkg.description}
                       </p>
@@ -188,21 +189,22 @@ export function PartyPackages() {
 
                     {/* CTA Button Section */}
                     <div className="mt-auto">
-                      <Button 
-                        size="lg" 
-                        className={`w-full ${pkg.popular 
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg' 
+                      <Button
+                        size="lg"
+                        className={`w-full ${pkg.popular
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg'
                           : `bg-gradient-to-r ${pkg.accentColor} text-white hover:shadow-lg`
                         } font-semibold transition-all duration-300 transform hover:scale-105`}
                         onClick={() => {
-                          document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                          document.getElementById('party-calendar-section')?.scrollIntoView({
                             behavior: 'smooth',
                             block: 'start'
                           });
                         }}
+                        disabled={!PURCHASING_ENABLED}
                       >
                         <Gift className="w-5 h-5 mr-2" />
-                        Choose This Package
+                        {PURCHASING_ENABLED ? 'Choose This Package' : 'Coming Soon'}
                       </Button>
                     </div>
                   </CardContent>

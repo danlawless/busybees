@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { PromoSpecial } from '@/lib/utils/promoHelpers'
 import { PromoBanner } from '@/components/home/PromoBanner'
 import { createClient } from '@/lib/supabase/client'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -89,32 +90,34 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
               })}
             </div>
 
-            {/* Auth section */}
-            <div className="flex-shrink-0">
-              {isLoggedIn ? (
-                <Link
-                  href="/customer/dashboard"
-                  className={cn(
-                    "flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3",
-                    pathname.startsWith('/customer')
-                      ? "text-gray-900 shadow-md border border-yellow-400"
-                      : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
-                  )}
-                  style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
-                >
-                  <User className="h-4 w-4" />
-                  My Account
-                </Link>
-              ) : (
-                <Link
-                  href="/customer/login"
-                  className="flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3 text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
-                >
-                  <User className="h-4 w-4" />
-                  Login
-                </Link>
-              )}
-            </div>
+            {/* Auth section - hidden when purchasing is disabled */}
+            {PURCHASING_ENABLED && (
+              <div className="flex-shrink-0">
+                {isLoggedIn ? (
+                  <Link
+                    href="/customer/dashboard"
+                    className={cn(
+                      "flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3",
+                      pathname.startsWith('/customer')
+                        ? "text-gray-900 shadow-md border border-yellow-400"
+                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                    )}
+                    style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
+                  >
+                    <User className="h-4 w-4" />
+                    My Account
+                  </Link>
+                ) : (
+                  <Link
+                    href="/customer/login"
+                    className="flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3 text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                  >
+                    <User className="h-4 w-4" />
+                    Login
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -184,33 +187,36 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                     </Link>
                   )
                 })}
-                <div className="mt-6 pt-6 border-t border-neutral-200">
-                  {isLoggedIn ? (
-                    <Link
-                      href="/customer/dashboard"
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide transition-all duration-200",
-                        pathname.startsWith('/customer')
-                          ? "text-gray-900 shadow-md border border-yellow-400"
-                          : "text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
-                      )}
-                      style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <User className="h-5 w-5" />
-                      My Account
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/customer/login"
-                      className="flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <User className="h-5 w-5" />
-                      Login
-                    </Link>
-                  )}
-                </div>
+                {/* Auth section - hidden when purchasing is disabled */}
+                {PURCHASING_ENABLED && (
+                  <div className="mt-6 pt-6 border-t border-neutral-200">
+                    {isLoggedIn ? (
+                      <Link
+                        href="/customer/dashboard"
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide transition-all duration-200",
+                          pathname.startsWith('/customer')
+                            ? "text-gray-900 shadow-md border border-yellow-400"
+                            : "text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
+                        )}
+                        style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="h-5 w-5" />
+                        My Account
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/customer/login"
+                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="h-5 w-5" />
+                        Login
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

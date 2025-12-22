@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { HoneycombPattern } from '@/components/ui/BeeIcon';
 import { fadeInUp, staggerContainer } from '@/lib/utils';
+import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 
 const features = [
   {
@@ -121,12 +122,19 @@ export function GiftCardsHero() {
                     Instant email delivery
                   </li>
                 </ul>
-                <Link href="/gift-cards/purchase">
-                  <Button variant="primary" size="lg" className="w-full">
+                {PURCHASING_ENABLED ? (
+                  <Link href="/gift-cards/purchase">
+                    <Button variant="primary" size="lg" className="w-full">
+                      <Gift className="w-5 h-5 mr-2" />
+                      Purchase Gift Card
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant="primary" size="lg" className="w-full" disabled>
                     <Gift className="w-5 h-5 mr-2" />
-                    Purchase Gift Card
+                    Coming Soon
                   </Button>
-                </Link>
+                )}
               </div>
             </Card>
 
@@ -162,12 +170,19 @@ export function GiftCardsHero() {
                     Balance never expires
                   </li>
                 </ul>
-                <Link href="/gift-cards/redeem">
-                  <Button variant="outline" size="lg" className="w-full border-emerald-500 text-emerald-700 hover:bg-emerald-50">
+                {PURCHASING_ENABLED ? (
+                  <Link href="/gift-cards/redeem">
+                    <Button variant="outline" size="lg" className="w-full border-emerald-500 text-emerald-700 hover:bg-emerald-50">
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Redeem Gift Card
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant="outline" size="lg" className="w-full border-gray-300 text-gray-500" disabled>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Redeem Gift Card
+                    Coming Soon
                   </Button>
-                </Link>
+                )}
               </div>
             </Card>
           </motion.div>

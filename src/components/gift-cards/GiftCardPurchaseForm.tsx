@@ -16,6 +16,7 @@ import {
   CreditCard,
   Check,
   Loader2,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -23,6 +24,7 @@ import { HoneycombPattern } from '@/components/ui/BeeIcon';
 import { fadeInUp, staggerContainer } from '@/lib/utils';
 import { GiftCardPreview } from './GiftCardPreview';
 import { logger } from '@/lib/client-logger';
+import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 
 interface Denomination {
   id: string;
@@ -188,6 +190,30 @@ export function GiftCardPurchaseForm() {
       });
     }
   };
+
+  // Show Coming Soon message when purchasing is disabled
+  if (!PURCHASING_ENABLED) {
+    return (
+      <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-16 sm:py-20 min-h-[600px] flex items-center justify-center">
+        <HoneycombPattern variant="dense" size="xl" />
+        <div className="relative z-20 text-center max-w-md mx-auto px-4">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-charcoal-800 mb-4">Coming Soon</h2>
+          <p className="text-charcoal-600 mb-6">
+            Gift card purchases will be available soon. Check back later!
+          </p>
+          <Link href="/gift-cards">
+            <Button variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Gift Cards
+            </Button>
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   if (loading) {
     return (

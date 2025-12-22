@@ -8,6 +8,7 @@ import { HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 interface PartiesHeroProps {
   onBookParty?: () => void
@@ -50,7 +51,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
     <section className="relative overflow-hidden section-hexagon-dense hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" animated />
       <FloatingHoneycombs />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content Side */}
@@ -62,17 +63,17 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
           >
             <motion.div variants={fadeInUp}>
 
-              
+
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-6">
                 Let's Party!
               </h1>
             </motion.div>
-            
+
             <motion.p variants={fadeInUp} className="text-lg text-charcoal-600 mb-8 leading-relaxed">
-              Let us handle everything while you enjoy watching your child's face light up! 
+              Let us handle everything while you enjoy watching your child's face light up!
               Our all-inclusive party packages make celebrating stress-free and absolutely magical.
             </motion.p>
-            
+
             {/* Party Highlights */}
             <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
               {partyHighlights.map((highlight, index) => {
@@ -90,24 +91,24 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 )
               })}
             </motion.div>
-            
+
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 onClick={handleBookParty}
-                disabled={authLoading}
+                disabled={!PURCHASING_ENABLED || authLoading}
               >
                 <Calendar className="w-5 h-5 mr-2" />
-                Book Your Party Now
+                {PURCHASING_ENABLED ? 'Book Your Party Now' : 'Coming Soon'}
               </Button>
               <Button variant="outline" size="lg" className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50">
                 <Gift className="w-5 h-5 mr-2" />
                 View Packages
               </Button>
             </motion.div>
-            
+
             {/* Quick Stats hidden until opening */}
             {/* <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {quickStats.map((stat, index) => {
@@ -128,7 +129,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
               })}
             </motion.div> */}
           </motion.div>
-          
+
           {/* Image Side */}
           <motion.div
             className="relative"
@@ -148,20 +149,20 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                
+
                 {/* Floating party elements */}
                 <div className="absolute top-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200 to-pink-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-float">
                   <Sparkles className="w-8 h-8 text-charcoal-600" />
                 </div>
-                
+
                 <div className="absolute top-4 right-4 w-14 h-14 bg-gradient-to-br from-purple-200 to-purple-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-rotate">
                   <Star className="w-7 h-7 text-charcoal-600" />
                 </div>
-                
+
                 <div className="absolute bottom-4 left-4 w-12 h-12 bg-gradient-to-br from-blue-200 to-blue-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-pulse">
                   <Users className="w-6 h-6 text-charcoal-600" />
                 </div>
-                
+
                 <div className="absolute bottom-4 right-4 w-18 h-18 bg-gradient-to-br from-green-200 to-green-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape">
                   <div className="text-center text-charcoal-600">
                     <Calendar className="w-6 h-6 mx-auto mb-1" />
@@ -170,15 +171,15 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 </div>
               </div>
             </div>
-            
+
             {/* Floating testimonial bubble */}
-            <motion.div 
+            <motion.div
               className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 max-w-xs card-pastel"
-              animate={{ 
+              animate={{
                 y: [0, -5, 0],
                 rotate: [0, 1, 0]
               }}
-              transition={{ 
+              transition={{
                 duration: 4,
                 repeat: Infinity,
                 ease: "easeInOut"

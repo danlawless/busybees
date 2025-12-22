@@ -12,6 +12,7 @@ import { motion } from 'framer-motion'
 import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 function PartiesContent() {
   const searchParams = useSearchParams()
@@ -97,11 +98,11 @@ function PartiesContent() {
               <Button
                 size="lg"
                 onClick={handleBookParty}
-                disabled={authLoading}
+                disabled={!PURCHASING_ENABLED || authLoading}
                 className="bg-gradient-to-r from-honey-500 to-yellow-500 hover:from-honey-600 hover:to-yellow-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <Gift className="w-6 h-6 mr-2" />
-                Book Your Party Now
+                {PURCHASING_ENABLED ? 'Book Your Party Now' : 'Coming Soon'}
               </Button>
 
               <Button
@@ -165,11 +166,11 @@ function PartiesContent() {
             <Button
               size="lg"
               onClick={handleBookParty}
-              disabled={authLoading}
+              disabled={!PURCHASING_ENABLED || authLoading}
               className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-charcoal-800 font-bold text-lg"
             >
               <Gift className="w-6 h-6 mr-2" />
-              Start Booking Now
+              {PURCHASING_ENABLED ? 'Start Booking Now' : 'Coming Soon'}
             </Button>
           </motion.div>
         </div>

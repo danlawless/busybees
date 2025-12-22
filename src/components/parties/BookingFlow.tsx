@@ -6,6 +6,7 @@ import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+import { PURCHASING_ENABLED } from '@/lib/feature-flags'
 
 const bookingSteps = [
   {
@@ -80,7 +81,7 @@ export function BookingFlow() {
   return (
     <section className="relative py-20 section-hexagon-light overflow-hidden">
       <HoneycombPattern variant="subtle" size="lg" />
-      
+
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-16"
@@ -96,11 +97,11 @@ export function BookingFlow() {
             Book Your Party in <span className="text-gradient bg-gradient-to-r from-green-500 to-blue-600 bg-clip-text text-transparent">4 Easy Steps</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            Our simple booking process makes planning your child's perfect party stress-free. 
+            Our simple booking process makes planning your child's perfect party stress-free.
             Get confirmed in minutes, not days!
           </p>
         </motion.div>
-        
+
         {/* Booking Steps */}
         <motion.div
           className="mb-20"
@@ -120,7 +121,7 @@ export function BookingFlow() {
                       <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-honey-300 rounded-full"></div>
                     </div>
                   )}
-                  
+
                   <Card className="h-full card-pastel group hover:shadow-xl transition-all duration-300 relative z-10">
                     <CardContent className="p-6 text-center">
                       {/* Step Number */}
@@ -129,12 +130,12 @@ export function BookingFlow() {
                           {step.step}
                         </div>
                       </div>
-                      
+
                       {/* Icon */}
                       <div className={`w-16 h-16 bg-gradient-to-br ${step.color} hexagon-shape flex items-center justify-center mx-auto mb-6 mt-4 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
                         <Icon className="w-8 h-8 text-charcoal-700" />
                       </div>
-                      
+
                       {/* Content */}
                       <h3 className="text-lg font-semibold text-charcoal-800 mb-3">
                         {step.title}
@@ -142,7 +143,7 @@ export function BookingFlow() {
                       <p className="text-sm text-charcoal-600 mb-4 leading-relaxed">
                         {step.description}
                       </p>
-                      
+
                       {/* Details */}
                       <div className="space-y-2">
                         {step.details.map((detail, idx) => (
@@ -159,7 +160,7 @@ export function BookingFlow() {
             })}
           </div>
         </motion.div>
-        
+
         {/* Contact Methods */}
         <motion.div
           className="mb-16"
@@ -176,7 +177,7 @@ export function BookingFlow() {
               We make it easy to get started - pick the method that works best for you
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {contactMethods.map((method, index) => {
               const Icon = method.icon
@@ -187,27 +188,28 @@ export function BookingFlow() {
                       <div className={`w-16 h-16 bg-gradient-to-br ${method.color} hexagon-shape flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
                         <Icon className="w-8 h-8 text-charcoal-700" />
                       </div>
-                      
+
                       <h3 className="text-xl font-semibold text-charcoal-800 mb-3">
                         {method.title}
                       </h3>
                       <p className="text-charcoal-600 mb-4 leading-relaxed">
                         {method.description}
                       </p>
-                      
+
                       <div className="mb-4">
                         <span className="text-sm text-charcoal-500 bg-honey-50 px-3 py-1 rounded-full">
                           {method.available}
                         </span>
                       </div>
-                      
-                      <Button 
-                        size="lg" 
-                        className={`w-full ${method.title === 'Online Booking' 
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white' 
+
+                      <Button
+                        size="lg"
+                        className={`w-full ${method.title === 'Online Booking'
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white'
                           : ''} font-semibold`}
+                        disabled={!PURCHASING_ENABLED}
                       >
-                        {method.action}
+                        {PURCHASING_ENABLED ? method.action : 'Coming Soon'}
                       </Button>
                     </CardContent>
                   </Card>
@@ -216,7 +218,7 @@ export function BookingFlow() {
             })}
           </div>
         </motion.div>
-        
+
         {/* Guarantees */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -237,7 +239,7 @@ export function BookingFlow() {
                   We're so confident you'll love your Busy Bees party experience, we guarantee it!
                 </p>
               </div>
-              
+
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {guarantees.map((guarantee, index) => (
                   <div key={index} className="flex items-center space-x-3">
@@ -250,20 +252,21 @@ export function BookingFlow() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="text-center mt-8">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   onClick={() => {
-                    document.getElementById('party-calendar-section')?.scrollIntoView({ 
+                    document.getElementById('party-calendar-section')?.scrollIntoView({
                       behavior: 'smooth',
                       block: 'start'
                     });
                   }}
+                  disabled={!PURCHASING_ENABLED}
                 >
                   <Calendar className="w-5 h-5 mr-2" />
-                  Start Booking Your Perfect Party
+                  {PURCHASING_ENABLED ? 'Start Booking Your Perfect Party' : 'Coming Soon'}
                 </Button>
               </div>
             </CardContent>
