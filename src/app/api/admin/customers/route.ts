@@ -89,6 +89,7 @@ function calculateAge(birthdate: string): number {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
   try {
+    logger.info({}, '📊 Admin customers API called');
     const supabase = createAdminClient();
 
     // Fetch all customers with role 'customer'
@@ -100,9 +101,12 @@ export async function GET(_request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (usersError) {
-      logger.error({ error: usersError }, 'Failed to fetch customers');
+      logger.error(
+        { error: usersError, code: usersError.code, details: usersError.details },
+        'Failed to fetch customers from database'
+      );
       return NextResponse.json(
-        { error: 'Failed to fetch customers' },
+        { error: 'Failed to fetch customers', details: usersError.message },
         { status: 500 }
       );
     }

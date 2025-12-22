@@ -244,6 +244,7 @@ export function AdminPanel({
   // Customer loading state
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersStats, setCustomersStats] = useState({ total: 0, withPurchases: 0, active: 0 });
+  const [customersError, setCustomersError] = useState<string | null>(null);
 
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
@@ -288,6 +289,7 @@ export function AdminPanel({
   // Fetch customers from database when customers view is selected
   const fetchCustomers = async () => {
     setCustomersLoading(true);
+    setCustomersError(null);
     try {
       const response = await fetch('/api/admin/customers');
       if (response.ok) {
@@ -298,9 +300,11 @@ export function AdminPanel({
         // Log error response for debugging
         const errorText = await response.text();
         console.error('Failed to fetch customers - API returned error:', response.status, errorText);
+        setCustomersError(`Failed to load customers (${response.status})`);
       }
     } catch (error) {
       console.error('Failed to fetch customers - network error:', error);
+      setCustomersError('Network error - could not load customers');
     } finally {
       setCustomersLoading(false);
     }
@@ -650,6 +654,16 @@ export function AdminPanel({
         {customersLoading ? (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">⏳ Loading customers...</p>
+          </div>
+        ) : customersError ? (
+          <div className="text-center py-8">
+            <p className="text-red-500 text-lg mb-2">⚠️ {customersError}</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Check the browser console for more details
+            </p>
+            <Button onClick={fetchCustomers} variant="outline" size="sm">
+              🔄 Retry
+            </Button>
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="text-center py-8">
