@@ -26,6 +26,7 @@ export interface Database {
           web_password_hash: string | null;
           has_web_password: boolean;
           last_login: string | null;
+          last_visit: string | null;
           pin_hash: string | null;
           gift_card_balance: number;
           created_at: string;
@@ -41,6 +42,7 @@ export interface Database {
           web_password_hash?: string | null;
           has_web_password?: boolean;
           last_login?: string | null;
+          last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
           created_at?: string;
@@ -56,11 +58,13 @@ export interface Database {
           web_password_hash?: string | null;
           has_web_password?: boolean;
           last_login?: string | null;
+          last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       children: {
         Row: {
@@ -90,6 +94,7 @@ export interface Database {
           waiver_signed_date?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       passes: {
         Row: {
@@ -137,6 +142,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       party_packages: {
         Row: {
@@ -187,6 +193,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       products: {
         Row: {
@@ -234,6 +241,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       purchases: {
         Row: {
@@ -317,6 +325,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       sessions: {
         Row: {
@@ -349,6 +358,7 @@ export interface Database {
           auto_checkout_time?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       promos: {
         Row: {
@@ -393,6 +403,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       volume_discounts: {
         Row: {
@@ -422,6 +433,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       saved_cards: {
         Row: {
@@ -460,6 +472,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       settings: {
         Row: {
@@ -489,6 +502,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       newsletter_subscribers: {
         Row: {
@@ -521,6 +535,7 @@ export interface Database {
           source?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       party_bookings: {
         Row: {
@@ -604,6 +619,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       contact_submissions: {
         Row: {
@@ -645,6 +661,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       gift_card_denominations: {
         Row: {
@@ -671,6 +688,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       gift_cards: {
         Row: {
@@ -733,6 +751,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       gift_card_redemptions: {
         Row: {
@@ -768,6 +787,7 @@ export interface Database {
           notes?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       pre_registrations: {
         Row: {
@@ -803,6 +823,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -821,6 +842,9 @@ export interface Database {
       banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
       gift_card_status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
       gift_card_delivery_method: 'email_recipient' | 'email_self';
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }
