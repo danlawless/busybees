@@ -9,26 +9,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { Database } from '@/lib/supabase/database.types';
 
-interface DbChild {
-  id: string;
-  customer_id: string;
-  name: string;
-  birthdate: string;
-  waiver_signed: boolean;
-  waiver_signed_date: string | null;
-  created_at: string;
-}
-
-interface DbUser {
-  id: string;
-  phone: string;
-  name: string;
-  email: string | null;
-  role: string;
-  created_at: string;
-  last_login: string | null;
-}
+// Use database types directly for consistency
+type DbUser = Database['public']['Tables']['users']['Row'];
+type DbChild = Database['public']['Tables']['children']['Row'];
 
 interface FormattedChild {
   id: string;
@@ -57,18 +42,10 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
 
-    // Fetch all customers with their children
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: users, error: usersError } = await (supabase.from('users') as any)
-      .select(`
-        id,
-        phone,
-        name,
-        email,
-        role,
-        created_at,
-        last_login
-      `)
+    // Fetch all customers with role 'customer'
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('*')
       .eq('role', 'customer')
       .order('created_at', { ascending: false });
 
@@ -80,26 +57,32 @@ export async function GET() {
       );
     }
 
-    const typedUsers = users as DbUser[];
+    // Type assertion with null handling
+    const users = (usersData || []) as DbUser[];
+
+    if (users.length === 0) {
+      logger.info({}, 'POS customers: No customers found');
+      return NextResponse.json({ customers: [] });
+    }
 
     // Fetch all children for these customers
-    const customerIds = typedUsers.map((u) => u.id);
+    const customerIds = users.map((u) => u.id);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: children, error: childrenError } = await (supabase.from('children') as any)
+    const { data: childrenData, error: childrenError } = await supabase
+      .from('children')
       .select('*')
       .in('customer_id', customerIds);
 
     if (childrenError) {
-      logger.error({ error: childrenError }, 'Failed to fetch children');
+      logger.warn({ error: childrenError }, 'Failed to fetch children');
       // Continue without children rather than failing
     }
 
-    const typedChildren = (children || []) as DbChild[];
+    const allChildren = (childrenData || []) as DbChild[];
 
     // Map children to their customers
     const childrenByCustomer = new Map<string, FormattedChild[]>();
-    for (const child of typedChildren) {
+    for (const child of allChildren) {
       const customerId = child.customer_id;
       if (!childrenByCustomer.has(customerId)) {
         childrenByCustomer.set(customerId, []);
@@ -115,7 +98,7 @@ export async function GET() {
     }
 
     // Format response to match the AdminPanel expected structure
-    const customers = typedUsers.map((user) => {
+    const customers = users.map((user) => {
       const userChildren = childrenByCustomer.get(user.id) || [];
       return {
         id: user.id,

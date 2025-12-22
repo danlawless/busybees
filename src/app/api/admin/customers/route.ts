@@ -8,6 +8,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { Database } from '@/lib/supabase/database.types';
+
+// Database row types
+type DbUser = Database['public']['Tables']['users']['Row'];
+type DbChild = Database['public']['Tables']['children']['Row'];
+type DbPurchase = Database['public']['Tables']['purchases']['Row'];
+type DbSession = Database['public']['Tables']['sessions']['Row'];
+type DbSavedCard = Database['public']['Tables']['saved_cards']['Row'];
 
 interface ChildData {
   id: string;
@@ -84,7 +92,8 @@ export async function GET(_request: NextRequest) {
     const supabase = createAdminClient();
 
     // Fetch all customers with role 'customer'
-    const { data: users, error: usersError } = await supabase
+    // Using explicit type cast to ensure proper type inference
+    const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('*')
       .eq('role', 'customer')
@@ -98,7 +107,10 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    if (!users || users.length === 0) {
+    // Type assertion and null check
+    const users = (usersData || []) as DbUser[];
+
+    if (users.length === 0) {
       logger.info({}, '📊 No customers found');
       return NextResponse.json({
         customers: [],
@@ -110,7 +122,7 @@ export async function GET(_request: NextRequest) {
     const customerIds = users.map(u => u.id);
 
     // Batch fetch children for all customers
-    const { data: allChildren, error: childrenError } = await supabase
+    const { data: childrenData, error: childrenError } = await supabase
       .from('children')
       .select('*')
       .in('customer_id', customerIds);
@@ -118,9 +130,10 @@ export async function GET(_request: NextRequest) {
     if (childrenError) {
       logger.warn({ error: childrenError }, 'Failed to fetch children');
     }
+    const allChildren = (childrenData || []) as DbChild[];
 
     // Batch fetch purchases for all customers
-    const { data: allPurchases, error: purchasesError } = await supabase
+    const { data: purchasesData, error: purchasesError } = await supabase
       .from('purchases')
       .select('*')
       .in('customer_id', customerIds)
@@ -129,9 +142,10 @@ export async function GET(_request: NextRequest) {
     if (purchasesError) {
       logger.warn({ error: purchasesError }, 'Failed to fetch purchases');
     }
+    const allPurchases = (purchasesData || []) as DbPurchase[];
 
     // Batch fetch active sessions (no end_time means still active)
-    const { data: allSessions, error: sessionsError } = await supabase
+    const { data: sessionsData, error: sessionsError } = await supabase
       .from('sessions')
       .select('*')
       .in('customer_id', customerIds)
@@ -140,9 +154,10 @@ export async function GET(_request: NextRequest) {
     if (sessionsError) {
       logger.warn({ error: sessionsError }, 'Failed to fetch sessions');
     }
+    const allSessions = (sessionsData || []) as DbSession[];
 
     // Batch fetch saved cards
-    const { data: allCards, error: cardsError } = await supabase
+    const { data: cardsData, error: cardsError } = await supabase
       .from('saved_cards')
       .select('*')
       .in('customer_id', customerIds);
@@ -150,35 +165,36 @@ export async function GET(_request: NextRequest) {
     if (cardsError) {
       logger.warn({ error: cardsError }, 'Failed to fetch saved cards');
     }
+    const allCards = (cardsData || []) as DbSavedCard[];
 
-    // Group data by customer ID
-    const childrenByCustomer = new Map<string, typeof allChildren>();
-    (allChildren || []).forEach(child => {
+    // Group data by customer ID with proper types
+    const childrenByCustomer = new Map<string, DbChild[]>();
+    for (const child of allChildren) {
       const existing = childrenByCustomer.get(child.customer_id) || [];
       existing.push(child);
       childrenByCustomer.set(child.customer_id, existing);
-    });
+    }
 
-    const purchasesByCustomer = new Map<string, typeof allPurchases>();
-    (allPurchases || []).forEach(purchase => {
+    const purchasesByCustomer = new Map<string, DbPurchase[]>();
+    for (const purchase of allPurchases) {
       const existing = purchasesByCustomer.get(purchase.customer_id) || [];
       existing.push(purchase);
       purchasesByCustomer.set(purchase.customer_id, existing);
-    });
+    }
 
-    const sessionsByCustomer = new Map<string, typeof allSessions>();
-    (allSessions || []).forEach(session => {
+    const sessionsByCustomer = new Map<string, DbSession[]>();
+    for (const session of allSessions) {
       const existing = sessionsByCustomer.get(session.customer_id) || [];
       existing.push(session);
       sessionsByCustomer.set(session.customer_id, existing);
-    });
+    }
 
-    const cardsByCustomer = new Map<string, typeof allCards>();
-    (allCards || []).forEach(card => {
+    const cardsByCustomer = new Map<string, DbSavedCard[]>();
+    for (const card of allCards) {
       const existing = cardsByCustomer.get(card.customer_id) || [];
       existing.push(card);
       cardsByCustomer.set(card.customer_id, existing);
-    });
+    }
 
     // Transform to frontend format
     const customers: CustomerData[] = users.map(user => {
