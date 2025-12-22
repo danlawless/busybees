@@ -237,7 +237,7 @@ function WebMyAccountContent() {
           id: party.id,
           name: party.name,
           price: party.basePrice,
-          description: `${party.description} (Up to ${party.capacity} kids, ${party.duration} hours)`,
+          description: `${party.description} (Can accommodate up to ${party.capacity} kids with an additional charge of $15/child over the included 15, ${party.duration} hours)`,
           sessions: 1,
           validity: '90 days to book',
           stripePurchaseLink: party.stripePurchaseLink,
