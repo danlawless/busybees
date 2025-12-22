@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid package configuration', details: error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid package configuration', details: error.issues }, { status: 400 });
     }
 
     logger.error({ error }, 'Unexpected error updating party packages');
