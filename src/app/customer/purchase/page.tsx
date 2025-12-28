@@ -123,52 +123,6 @@ export default function PurchasePage() {
     }
   }, [isProcessing, router]);
 
-  // Handle fallback checkout (redirect to Stripe)
-  const handleCheckout = useCallback(async (intent: PurchaseIntent) => {
-    if (isProcessing) return;
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const purchaseType = `${intent.category}_pass` as 'day_pass' | 'weekly_pass' | 'monthly_pass';
-
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: intent.passId,
-          productName: intent.passName,
-          productPrice: intent.price * 100, // Convert to cents
-          purchaseType,
-          metadata: {
-            stripe_price_id: intent.stripePriceId,
-            stripe_product_id: intent.stripeProductId,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-
-      const { url } = await response.json();
-
-      // Clear the purchase intent from storage
-      sessionStorage.removeItem('purchaseIntent');
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned');
-      }
-    } catch (err) {
-      console.error('Checkout error:', err);
-      setError(err instanceof Error ? err.message : 'Unable to start checkout. Please try again.');
-      setIsProcessing(false);
-    }
-  }, [isProcessing]);
 
   // Load purchase intent from sessionStorage on mount
   useEffect(() => {
@@ -213,16 +167,21 @@ export default function PurchasePage() {
       return;
     }
 
-    // No saved cards - auto-proceed with Stripe checkout (only once)
+    // No saved cards - show error message instead of redirecting to Stripe
     setCheckoutTriggered(true);
-    handleCheckout(purchaseIntent);
-  }, [mounted, authLoading, isAuthenticated, purchaseIntent, router, handleCheckout, checkoutTriggered, savedCards.length, loadingCards]);
+    setError('Please add a payment method to your account first. You can add a card in your Account settings.');
+  }, [mounted, authLoading, isAuthenticated, purchaseIntent, router, checkoutTriggered, savedCards.length, loadingCards]);
 
   const handleRetry = () => {
     if (purchaseIntent) {
-      setCheckoutTriggered(false);
-      setError(null);
-      handleCheckout(purchaseIntent);
+      // If user has saved cards now, clear error and let them try again with direct payment
+      if (savedCards.length > 0) {
+        setCheckoutTriggered(false);
+        setError(null);
+      } else {
+        // Still no cards - redirect to account to add one
+        router.push('/customer/account?tab=payments');
+      }
     }
   };
 

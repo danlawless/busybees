@@ -1206,40 +1206,79 @@ export function CheckIn({
                 purchaseType = "monthly_pass";
             }
 
-            // In kiosk mode, use Stripe Checkout for self-serve payments
+            // In kiosk mode, use direct payment with saved cards (no redirect)
             if (posMode === 'kiosk') {
-                const response = await fetch("/api/stripe/checkout", {
+                // Check if customer has a saved payment method
+                if (!customer.savedCards || customer.savedCards.length === 0) {
+                    throw new Error("Please add a payment method first. Tap 'Add Card' to save your payment method.");
+                }
+
+                // Get the default card or first card
+                const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
+                
+                // Use direct payment API with saved card
+                const response = await fetch("/api/stripe/direct-payment", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        customer_id: customer.id,
-                        customer_email: customer.email,
-                        customer_name: customer.name,
-                        product_id: productId,
-                        product_name: product.name,
-                        product_price: product.price,
-                        product_description: product.description || "",
-                        purchase_type: purchaseType,
-                        child_id: isPassPurchase ? selectedChildForPurchase : undefined,
-                        quantity: 1,
-                        success_url: `${window.location.origin}/pos/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-                        cancel_url: `${window.location.origin}/pos`,
+                        customerId: customer.id,
+                        productId: productId,
+                        productName: product.name,
+                        productPrice: product.price,
+                        purchaseType: purchaseType,
+                        childId: isPassPurchase ? selectedChildForPurchase : undefined,
+                        paymentMethodId: defaultCard.id,
                     }),
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Failed to create checkout session");
+                    // Handle specific error cases
+                    if (data.requires_action) {
+                        throw new Error("This card requires additional verification. Please use a different card or contact support.");
+                    }
+                    throw new Error(data.error || data.details || "Payment failed. Please try again.");
                 }
 
-                const { url } = await response.json();
-
-                // Redirect to Stripe Checkout
-                if (url) {
-                    window.location.href = url;
-                    return;
+                // Payment successful - refresh purchases and show success
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = await purchasesResponse.json();
+                    const purchases = (purchasesData || []).map((p: any) => ({
+                        id: p.id,
+                        type: p.type,
+                        name: p.name,
+                        price: p.price,
+                        purchaseDate: p.purchase_date || p.created_at,
+                        expiryDate: p.expiry_date,
+                        firstUseDate: p.first_use_date,
+                        actualExpiryDate: p.actual_expiry_date,
+                        usedSessions: p.used_sessions || 0,
+                        totalSessions: p.total_sessions || 1,
+                        status: p.status || "active",
+                        partyDate: p.party_date,
+                        partyStartTime: p.party_start_time,
+                        partyEndTime: p.party_end_time,
+                        partyGuests: p.party_guests,
+                        partyNotes: p.party_notes,
+                        childId: p.child_id,
+                    }));
+                    
+                    const updatedCustomer = {
+                        ...customer,
+                        purchases,
+                    };
+                    onUpdateCustomer(updatedCustomer);
                 }
-                throw new Error("No checkout URL returned");
+
+                // Show success message
+                setSuccessMessage(`✅ Payment successful!\n\n💳 Charged •••• ${defaultCard.last4}\n📦 ${product.name}\n💰 ${formatCurrency(product.price)}`);
+                setShowSuccessModal(true);
+                setPurchasingProduct(null);
+                return;
             }
 
             // In staff mode, use the existing POS endpoint (requires staff role)
