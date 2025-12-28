@@ -2,14 +2,22 @@
  * POS Purchase API Route
  * Handles in-person purchases with immediate payment processing
  * Creates Stripe PaymentIntent and saves to database
+ *
+ * Supports multiple payment methods:
+ * - 'terminal': Use Stripe Terminal (card reader) - requires terminal_payment_intent_id
+ * - 'saved_card': Use a saved payment method - requires payment_method_id
+ * - 'test': Auto-confirm with test card (development only)
+ * - 'cash': Record as cash transaction (no Stripe processing)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
+import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
+
+type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +50,10 @@ export async function POST(request: NextRequest) {
       child_id,
       quantity = 1,
       metadata = {},
+      // Payment method options
+      payment_method = 'test' as PaymentMethod,
+      payment_method_id, // For saved_card
+      terminal_payment_intent_id, // For terminal (already confirmed via Terminal SDK)
     } = body;
 
     // Validate required fields
@@ -66,7 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    logger.info({ customer_id, product_name, purchase_type }, 'Processing POS purchase');
+    logger.info({ customer_id, product_name, purchase_type, payment_method }, 'Processing POS purchase');
 
     // Get or create Stripe customer (mode-aware)
     const existingStripeCustomerId = customer[customerIdColumn];
@@ -77,42 +89,133 @@ export async function POST(request: NextRequest) {
       customer.phone
     );
 
-    // Create Stripe PaymentIntent
     const stripe = await getStripeClient();
+    const stripeMode = await getStripeMode();
     const amountInCents = Math.round(product_price * quantity * 100);
 
-    // For POS transactions, create a PaymentIntent and immediately confirm with test card
-    // In production, this would integrate with a physical card reader
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: 'usd',
-      customer: stripeCustomerId,
-      description: product_description || product_name,
-      metadata: {
-        customer_id,
-        product_id,
-        purchase_type,
-        child_id: child_id || '',
-        product_name,
-        quantity: quantity.toString(),
-        pos_transaction: 'true',
-        ...metadata,
-      },
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'never',
-      },
-    });
+    let paymentIntentId: string | null = null;
+    let paymentStatus: string = 'succeeded';
 
-    // For test mode, confirm with test payment method
-    // In production, this would be confirmed by card reader
-    if (paymentIntent.status === 'requires_payment_method') {
-      await stripe.paymentIntents.confirm(paymentIntent.id, {
-        payment_method: 'pm_card_visa', // Stripe test payment method
+    // Handle different payment methods
+    if (payment_method === 'terminal') {
+      // Terminal payment - PaymentIntent already created and confirmed via Terminal SDK
+      if (!terminal_payment_intent_id) {
+        return NextResponse.json(
+          { error: 'terminal_payment_intent_id required for Terminal payments' },
+          { status: 400 }
+        );
+      }
+
+      // Verify the PaymentIntent exists and is successful
+      const paymentIntent = await stripe.paymentIntents.retrieve(terminal_payment_intent_id);
+
+      if (paymentIntent.status !== 'succeeded') {
+        return NextResponse.json(
+          { error: `Terminal payment not completed. Status: ${paymentIntent.status}` },
+          { status: 400 }
+        );
+      }
+
+      paymentIntentId = terminal_payment_intent_id;
+      paymentStatus = paymentIntent.status;
+
+      logger.info(
+        { paymentIntentId, status: paymentStatus },
+        '💳 Terminal payment verified'
+      );
+
+    } else if (payment_method === 'saved_card') {
+      // Use a saved payment method
+      if (!payment_method_id) {
+        return NextResponse.json(
+          { error: 'payment_method_id required for saved card payments' },
+          { status: 400 }
+        );
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: stripeCustomerId,
+        payment_method: payment_method_id,
+        description: product_description || product_name,
+        metadata: {
+          customer_id,
+          product_id,
+          purchase_type,
+          child_id: child_id || '',
+          product_name,
+          quantity: quantity.toString(),
+          pos_transaction: 'true',
+          payment_method_type: 'saved_card',
+          ...metadata,
+        },
+        confirm: true,
+        off_session: true,
       });
-    }
 
-    logger.info({ paymentIntentId: paymentIntent.id, status: paymentIntent.status }, 'PaymentIntent created and confirmed');
+      paymentIntentId = paymentIntent.id;
+      paymentStatus = paymentIntent.status;
+
+      logger.info(
+        { paymentIntentId, status: paymentStatus },
+        '💳 Saved card payment processed'
+      );
+
+    } else if (payment_method === 'cash') {
+      // Cash payment - no Stripe processing
+      paymentIntentId = null;
+      paymentStatus = 'cash';
+
+      logger.info({ customer_id, amount: amountInCents }, '💵 Cash payment recorded');
+
+    } else {
+      // Test mode - create and auto-confirm with test card
+      // Only allowed in test mode
+      if (stripeMode === 'live') {
+        return NextResponse.json(
+          { error: 'Test payment method not allowed in live mode. Use terminal, saved_card, or cash.' },
+          { status: 400 }
+        );
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: stripeCustomerId,
+        description: product_description || product_name,
+        metadata: {
+          customer_id,
+          product_id,
+          purchase_type,
+          child_id: child_id || '',
+          product_name,
+          quantity: quantity.toString(),
+          pos_transaction: 'true',
+          payment_method_type: 'test',
+          ...metadata,
+        },
+        automatic_payment_methods: {
+          enabled: true,
+          allow_redirects: 'never',
+        },
+      });
+
+      // Auto-confirm with test card in test mode
+      if (paymentIntent.status === 'requires_payment_method') {
+        await stripe.paymentIntents.confirm(paymentIntent.id, {
+          payment_method: 'pm_card_visa',
+        });
+      }
+
+      paymentIntentId = paymentIntent.id;
+      paymentStatus = 'succeeded';
+
+      logger.info(
+        { paymentIntentId, status: paymentStatus },
+        '🧪 Test payment processed'
+      );
+    }
 
     // Calculate expiry dates based on purchase type
     const now = new Date();
@@ -151,7 +254,7 @@ export async function POST(request: NextRequest) {
         used_sessions: 0,
         total_sessions: totalSessions,
         status: purchase_type === 'food_beverage' ? 'used' : 'active',
-        stripe_payment_intent_id: paymentIntent.id,
+        stripe_payment_intent_id: paymentIntentId,
         party_date: metadata.party_date || null,
         party_start_time: metadata.party_time || null,
         party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
@@ -165,13 +268,17 @@ export async function POST(request: NextRequest) {
       throw dbError;
     }
 
-    logger.info({ purchaseId: purchase.id, customer_id }, 'Purchase saved successfully');
+    logger.info(
+      { purchaseId: purchase.id, customer_id, payment_method },
+      'Purchase saved successfully'
+    );
 
     return NextResponse.json({
       success: true,
       purchase,
-      payment_intent_id: paymentIntent.id,
-      payment_status: paymentIntent.status,
+      payment_intent_id: paymentIntentId,
+      payment_status: paymentStatus,
+      payment_method,
     }, { status: 201 });
 
   } catch (error) {

@@ -705,9 +705,10 @@ function WebMyAccountContent() {
     };
   }, [confirmTimeout, deleteTimeout]);
 
-  // Filter purchases by type
-  const passPurchases = purchases.filter(p => p.type !== 'party_package');
-  const partyPurchases = purchases.filter(p => p.type === 'party_package');
+  // Filter purchases by type (with defensive array check)
+  const purchasesArray = Array.isArray(purchases) ? purchases : [];
+  const passPurchases = purchasesArray.filter(p => p.type !== 'party_package');
+  const partyPurchases = purchasesArray.filter(p => p.type === 'party_package');
   const activePassPurchases = passPurchases.filter(p => p.status === 'active');
   const pastPassPurchases = passPurchases.filter(p => p.status !== 'active');
   const activePartyPurchases = partyPurchases.filter(p => p.status === 'active');

@@ -186,9 +186,10 @@ function PartiesContent() {
     setShowPartyScheduling(true);
   };
 
-  // Separate active and past purchases
-  const activePartyPurchases = partyPurchases.filter(p => p.status === 'active');
-  const pastPartyPurchases = partyPurchases.filter(p => p.status !== 'active');
+  // Separate active and past purchases (with defensive array check)
+  const purchasesArray = Array.isArray(partyPurchases) ? partyPurchases : [];
+  const activePartyPurchases = purchasesArray.filter(p => p.status === 'active');
+  const pastPartyPurchases = purchasesArray.filter(p => p.status !== 'active');
 
   // Calculate membership info
   const memberSince = profile?.created_at
