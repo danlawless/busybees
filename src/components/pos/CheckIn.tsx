@@ -1301,7 +1301,7 @@ export function CheckIn({
                 // Show success message
                 setSuccessDetails({
                     title: "Payment Successful! ✅",
-                    message: quantity > 1 
+                    message: quantity > 1
                         ? `Your purchase of ${quantity}x ${product.name} has been completed.`
                         : `Your purchase of ${product.name} has been completed.`,
                     details: successDetails,
@@ -1798,7 +1798,7 @@ export function CheckIn({
                                                     )}
                                                 </div>
 
-                                                {/* Active Passes for this child */}
+                                                {/* Active Passes for this child - grouped by pass type */}
                                                 {(() => {
                                                     const childPasses =
                                                         displayCustomer.purchases.filter(
@@ -1807,42 +1807,64 @@ export function CheckIn({
                                                                     child.id &&
                                                                 p.status === "active"
                                                         );
+                                                    
+                                                    // Group passes by type and sum remaining sessions
+                                                    const groupedPasses = childPasses.reduce((acc, pass) => {
+                                                        // Use pass type (day_pass, weekly_pass, etc.) as the grouping key
+                                                        const key = pass.type;
+                                                        if (!acc[key]) {
+                                                            acc[key] = {
+                                                                type: pass.type,
+                                                                name: pass.name.replace(/^\d+x\s*/, ''), // Remove any "3x " prefix
+                                                                totalRemaining: 0,
+                                                                isUnlimited: false,
+                                                                purchaseIds: [],
+                                                            };
+                                                        }
+                                                        const remaining = pass.totalSessions - pass.usedSessions;
+                                                        if (pass.totalSessions === 999) {
+                                                            acc[key].isUnlimited = true;
+                                                        }
+                                                        acc[key].totalRemaining += remaining;
+                                                        acc[key].purchaseIds.push(pass.id);
+                                                        return acc;
+                                                    }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean; purchaseIds: string[] }>);
+                                                    
+                                                    const groupedPassesList = Object.values(groupedPasses);
+                                                    
                                                     return (
-                                                        childPasses.length > 0 && (
+                                                        groupedPassesList.length > 0 && (
                                                             <div>
                                                                 <p className="font-medium text-sm text-gray-700 mb-2">
                                                                     Active Passes:
                                                                 </p>
-                                                                {childPasses.map(
-                                                                    (pass) => (
-                                                                        <div
-                                                                            key={
-                                                                                pass.id
-                                                                            }
-                                                                            className="bg-yellow-50 p-2 rounded text-sm"
-                                                                        >
-                                                                            <span className="font-medium">
-                                                                                {
-                                                                                    pass.name
-                                                                                }
-                                                                            </span>
-                                                                            {pass.totalSessions ===
-                                                                            999 ? (
-                                                                                <span className="text-gray-600 ml-2">
-                                                                                    -
-                                                                                    Unlimited
-                                                                                </span>
-                                                                            ) : (
-                                                                                <span className="text-gray-600 ml-2">
-                                                                                    -{" "}
-                                                                                    {pass.totalSessions -
-                                                                                        pass.usedSessions}{" "}
-                                                                                    visits
-                                                                                    left
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    )
+                                                                {groupedPassesList.map(
+                                                                    (passGroup) => (
+                                                                            <div
+                                                                                key={passGroup.type}
+                                                                                className="bg-yellow-50 p-2 rounded text-sm flex items-center justify-between mb-1"
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    {!passGroup.isUnlimited && passGroup.totalRemaining > 1 && (
+                                                                                        <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
+                                                                                            {passGroup.totalRemaining}x
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className="font-medium">
+                                                                                        {passGroup.name}
+                                                                                    </span>
+                                                                                </div>
+                                                                                {passGroup.isUnlimited ? (
+                                                                                    <span className="text-green-600 text-xs font-medium">
+                                                                                        ∞ Unlimited
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="text-gray-500 text-xs">
+                                                                                        {passGroup.totalRemaining} visit{passGroup.totalRemaining !== 1 ? 's' : ''} left
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        )
                                                                 )}
                                                             </div>
                                                         )
