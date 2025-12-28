@@ -26,6 +26,9 @@ importers:
       '@stripe/stripe-js':
         specifier: ^8.4.0
         version: 8.5.3
+      '@stripe/terminal-js':
+        specifier: ^0.26.0
+        version: 0.26.0
       '@supabase/auth-helpers-nextjs':
         specifier: ^0.10.0
         version: 0.10.0(@supabase/supabase-js@2.87.1)
@@ -1202,6 +1205,9 @@ packages:
     resolution: {integrity: sha512-UM0GHAxlTN7v0lCK2P6t0VOlvBIdApIQxhnM3yZ2kupQ4PpSrLsK/n/NyYKtw2NJGMaNRRD1IicWS7fSL2sFtA==}
     engines: {node: '>=12.16'}
 
+  '@stripe/terminal-js@0.26.0':
+    resolution: {integrity: sha512-EQzTnS1q534lxdxRPRZvLT7m2BJ9BN6vJxmISb6+PsN09rHXWvFMCPOLnY0dnw0DRUmBQ3x9rP/32I0gtgmZug==}
+
   '@supabase/auth-helpers-nextjs@0.10.0':
     resolution: {integrity: sha512-2dfOGsM4yZt0oS4TPiE7bD4vf7EVz7NRz/IJrV6vLg0GP7sMUx8wndv2euLGq4BjN9lUCpu6DG/uCC8j+ylwPg==}
     deprecated: This package is now deprecated - please use the @supabase/ssr package instead.
@@ -1722,6 +1728,9 @@ packages:
   async-function@1.0.0:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
     engines: {node: '>= 0.4'}
+
+  async-limiter@1.0.1:
+    resolution: {integrity: sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==}
 
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
@@ -3134,6 +3143,10 @@ packages:
       '@types/node':
         optional: true
 
+  stripe@8.222.0:
+    resolution: {integrity: sha512-hrA79fjmN2Eb6K3kxkDzU4ODeVGGjXQsuVaAPSUro6I9MM3X+BvIsVqdphm3BXWfimAGFvUqWtPtHy25mICY1w==}
+    engines: {node: ^8.1 || >=10.*}
+
   styled-jsx@5.1.6:
     resolution: {integrity: sha512-qSVyDTeMotdvQYoHWLNGwRFJHC+i+ZvdBRYosOFgC+Wg1vx4frN2/RG/NA7SYqqvKNLf39P2LSRA2pu6n0XYZA==}
     engines: {node: '>= 12.0.0'}
@@ -3355,6 +3368,17 @@ packages:
   wrap-ansi@8.1.0:
     resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
     engines: {node: '>=12'}
+
+  ws@6.2.3:
+    resolution: {integrity: sha512-jmTjYU0j60B+vHey6TfR3Z7RD61z/hmxBS3VMSGIrroOWXQEneK1zNuotOUrGyBHQj0yrpsLHPWtigEFd13ndA==}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: ^5.0.2
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   ws@8.18.3:
     resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
@@ -4468,6 +4492,14 @@ snapshots:
 
   '@stripe/stripe-js@8.5.3': {}
 
+  '@stripe/terminal-js@0.26.0':
+    dependencies:
+      stripe: 8.222.0
+      ws: 6.2.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@supabase/auth-helpers-nextjs@0.10.0(@supabase/supabase-js@2.87.1)':
     dependencies:
       '@supabase/auth-helpers-shared': 0.7.0(@supabase/supabase-js@2.87.1)
@@ -5043,6 +5075,8 @@ snapshots:
   ast-types-flow@0.0.8: {}
 
   async-function@1.0.0: {}
+
+  async-limiter@1.0.1: {}
 
   available-typed-arrays@1.0.7:
     dependencies:
@@ -6661,6 +6695,11 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.19.26
 
+  stripe@8.222.0:
+    dependencies:
+      '@types/node': 20.19.26
+      qs: 6.14.0
+
   styled-jsx@5.1.6(@babel/core@7.26.10)(react@19.1.0):
     dependencies:
       client-only: 0.0.1
@@ -6958,6 +6997,10 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 5.1.2
       strip-ansi: 7.1.2
+
+  ws@6.2.3:
+    dependencies:
+      async-limiter: 1.0.1
 
   ws@8.18.3: {}
 
