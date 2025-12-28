@@ -1466,22 +1466,71 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       )}
                     </div>
 
-                    {/* Active Passes for this child */}
+                    {/* Active Passes for this child - GROUPED */}
                     {(() => {
                       const childPasses = customer.purchases.filter(p =>
                         p.childId === child.id && p.status === 'active'
                       );
-                      return childPasses.length > 0 && (
+                      
+                      // Group passes by type
+                      const inferPassType = (name: string, type?: string): string => {
+                        if (type && type !== 'undefined') return type;
+                        const lowerName = name.toLowerCase();
+                        if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
+                        if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
+                        if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
+                        if (lowerName.includes('party')) return 'party_package';
+                        return 'day_pass';
+                      };
+                      
+                      const getPassTypeName = (type: string) => {
+                        switch (type) {
+                          case 'day_pass': return 'Day Pass';
+                          case 'weekly_pass': return 'Punch Card';
+                          case 'monthly_pass': return 'Monthly Pass';
+                          case 'party_package': return 'Party Package';
+                          default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        }
+                      };
+                      
+                      const groupedPasses = childPasses.reduce((acc, pass) => {
+                        const normalizedType = inferPassType(pass.name, pass.type);
+                        if (!acc[normalizedType]) {
+                          acc[normalizedType] = {
+                            type: normalizedType,
+                            name: getPassTypeName(normalizedType),
+                            totalRemaining: 0,
+                            isUnlimited: false,
+                          };
+                        }
+                        const remaining = (pass.totalSessions || 1) - (pass.usedSessions || 0);
+                        if (pass.totalSessions === 999) {
+                          acc[normalizedType].isUnlimited = true;
+                        }
+                        acc[normalizedType].totalRemaining += remaining;
+                        return acc;
+                      }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean }>);
+                      
+                      const groupedPassesList = Object.values(groupedPasses);
+                      
+                      return groupedPassesList.length > 0 && (
                         <div>
                           <p className="font-medium text-sm text-gray-700 mb-2">Active Passes:</p>
-                          {childPasses.map(pass => (
-                            <div key={pass.id} className="bg-yellow-50 p-2 rounded text-sm">
-                              <span className="font-medium">{pass.name}</span>
-                              {pass.totalSessions === 999 ? (
-                                <span className="text-gray-600 ml-2">- Unlimited</span>
+                          {groupedPassesList.map(group => (
+                            <div key={group.type} className="bg-yellow-50 p-2 rounded text-sm flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                {!group.isUnlimited && group.totalRemaining > 1 && (
+                                  <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
+                                    {group.totalRemaining}x
+                                  </span>
+                                )}
+                                <span className="font-medium">{group.name}</span>
+                              </div>
+                              {group.isUnlimited ? (
+                                <span className="text-green-600 text-xs font-medium">∞ Unlimited</span>
                               ) : (
-                                <span className="text-gray-600 ml-2">
-                                  - {pass.totalSessions - pass.usedSessions} visits left
+                                <span className="text-gray-500 text-xs">
+                                  {group.totalRemaining} visit{group.totalRemaining !== 1 ? 's' : ''} left
                                 </span>
                               )}
                             </div>
