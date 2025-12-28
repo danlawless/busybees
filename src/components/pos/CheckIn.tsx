@@ -1808,7 +1808,19 @@ export function CheckIn({
                                                                 p.status === "active"
                                                         );
 
-                                                    // Group passes by type and sum remaining sessions
+// Group passes by type and sum remaining sessions
+                                                    // Extract pass type from name if type field is missing
+                                                    const inferPassType = (name: string, type?: string): string => {
+                                                        if (type && type !== 'undefined') return type;
+                                                        // Try to infer from name
+                                                        const lowerName = name.toLowerCase();
+                                                        if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
+                                                        if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
+                                                        if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
+                                                        if (lowerName.includes('party')) return 'party_package';
+                                                        return 'day_pass'; // Default fallback
+                                                    };
+                                                    
                                                     // Map type to friendly display name
                                                     const getPassTypeName = (type: string) => {
                                                         switch (type) {
@@ -1821,12 +1833,13 @@ export function CheckIn({
                                                     };
                                                     
                                                     const groupedPasses = childPasses.reduce((acc, pass) => {
-                                                        // Use pass type (day_pass, weekly_pass, etc.) as the grouping key
-                                                        const key = pass.type;
+                                                        // Normalize type - infer from name if missing
+                                                        const normalizedType = inferPassType(pass.name, pass.type);
+                                                        const key = normalizedType;
                                                         if (!acc[key]) {
                                                             acc[key] = {
-                                                                type: pass.type,
-                                                                name: getPassTypeName(pass.type),
+                                                                type: normalizedType,
+                                                                name: getPassTypeName(normalizedType),
                                                                 totalRemaining: 0,
                                                                 isUnlimited: false,
                                                                 purchaseIds: [],
