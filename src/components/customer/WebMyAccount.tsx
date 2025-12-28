@@ -465,7 +465,7 @@ function WebMyAccountContent() {
     }
   };
 
-  // Purchase handling - uses Stripe Checkout for web
+  // Purchase handling - uses direct payment with saved cards for one-click purchases
   const handlePurchase = (productId: string) => {
     if (confirmTimeout) {
       clearTimeout(confirmTimeout);
@@ -483,6 +483,12 @@ function WebMyAccountContent() {
     if (selectedProductForPurchase) {
       handlePurchase(selectedProductForPurchase);
     }
+  };
+
+  // Get default payment method for one-click purchase
+  const getDefaultPaymentMethod = () => {
+    const defaultCard = savedCards.find(c => c.isDefault);
+    return defaultCard || savedCards[0] || null;
   };
 
   const handleConfirmPurchase = async (productId: string) => {
@@ -522,6 +528,18 @@ function WebMyAccountContent() {
       }
     }
 
+    // Require saved payment method for one-click purchase
+    const paymentMethod = getDefaultPaymentMethod();
+    if (!paymentMethod) {
+      setSuccessDetails({
+        title: 'Payment Method Required',
+        message: 'Please add a payment method in the Payments tab first.'
+      });
+      setShowSuccessModal(true);
+      setActiveTab('payments');
+      return;
+    }
+
     if (isProcessing || processingProduct) return;
 
     setIsProcessing(true);
@@ -540,8 +558,8 @@ function WebMyAccountContent() {
         purchaseType = 'monthly_pass';
       }
 
-      // Use Stripe checkout for web purchases
-      const response = await fetch('/api/stripe/checkout', {
+      // Use direct payment API with saved card for one-click purchase
+      const response = await fetch('/api/stripe/direct-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -551,6 +569,7 @@ function WebMyAccountContent() {
           productDescription: product.description,
           purchaseType: purchaseType,
           childId: isPassPurchase ? selectedChildForPurchase : undefined,
+          paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
       });
@@ -561,14 +580,34 @@ function WebMyAccountContent() {
         throw new Error(data.error || 'Purchase failed');
       }
 
-      // If fully covered by gift card
-      if (data.success && data.purchaseId) {
+      // Handle 3DS authentication if required
+      if (data.requiresAction && data.clientSecret) {
+        // For now, show message - could integrate Stripe.js for 3DS handling
+        setSuccessDetails({
+          title: 'Additional Authentication Required',
+          message: 'Your bank requires additional verification. Please try again or use a different card.'
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+
+      // Purchase successful!
+      if (data.success) {
         setPurchaseSuccess(product.name);
         setTimeout(() => setPurchaseSuccess(''), 5000);
+        
+        // Show success with payment details
+        const message = data.giftCardUsed > 0
+          ? `${product.name} purchased! $${data.amountCharged?.toFixed(2) || product.price.toFixed(2)} charged to card ending in ${paymentMethod.last4}. $${data.giftCardUsed.toFixed(2)} gift card credit applied.`
+          : `${product.name} purchased! $${product.price.toFixed(2)} charged to card ending in ${paymentMethod.last4}.`;
+        
+        setSuccessDetails({
+          title: '🎉 Purchase Complete!',
+          message: message
+        });
+        setShowSuccessModal(true);
+        
         await fetchData();
-      } else if (data.url) {
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
       }
 
       if (isPassPurchase) {
@@ -1245,7 +1284,11 @@ function WebMyAccountContent() {
                           </span>
                           <p className="text-sm text-gray-600">{product.description}</p>
                           <p className="text-lg font-bold text-gray-900 mt-1">{formatCurrency(product.price)}</p>
-                          <p className="text-xs text-blue-600 mt-1">💳 Stripe payment available</p>
+                          {savedCards.length > 0 && (
+                            <p className="text-xs text-green-600 mt-1">
+                              💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
+                            </p>
+                          )}
                         </div>
                         <Button
                           onClick={() => {
@@ -1281,12 +1324,12 @@ function WebMyAccountContent() {
                           {processingProduct === product.id
                             ? 'Processing...'
                             : confirmingProduct === product.id
-                            ? '✓ Confirm Purchase'
+                            ? `✓ Pay ${formatCurrency(product.price)} Now`
                             : children.length === 0
                             ? '👶 Add Child First'
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
-                            : 'Buy Now'
+                            : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
                         </Button>
                       </div>
@@ -1459,7 +1502,11 @@ function WebMyAccountContent() {
                           </span>
                           <p className="text-sm text-gray-600">{product.description}</p>
                           <p className="text-lg font-bold text-gray-900 mt-1">{formatCurrency(product.price)}</p>
-                          <p className="text-xs text-blue-600 mt-1">💳 Stripe payment available</p>
+                          {savedCards.length > 0 && (
+                            <p className="text-xs text-green-600 mt-1">
+                              💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
+                            </p>
+                          )}
                         </div>
                         <Button
                           onClick={() => {
@@ -1488,10 +1535,10 @@ function WebMyAccountContent() {
                           {processingProduct === product.id
                             ? 'Processing...'
                             : confirmingProduct === product.id
-                            ? '✓ Confirm Purchase'
+                            ? `✓ Pay ${formatCurrency(product.price)} Now`
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
-                            : 'Buy Now'
+                            : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
                         </Button>
                       </div>

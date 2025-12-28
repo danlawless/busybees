@@ -390,43 +390,56 @@ Simulated readers accept test cards automatically.
 
 ## React Native M2 Integration
 
-If you choose to build a React Native companion app for M2:
+A complete React Native companion app for M2 is available in the `mobile/` directory.
 
-### 1. Install Dependencies
+### Quick Start
 
 ```bash
-npm install @stripe/stripe-terminal-react-native
+cd mobile
+npm install
+npx expo start
 ```
 
-### 2. Configure Native Modules
+### App Structure
 
-Follow Stripe's setup guide for iOS/Android:
-- iOS: Add background modes, NSBluetoothAlwaysUsageDescription
-- Android: Add Bluetooth permissions
-
-### 3. Use Your Existing APIs
-
-```typescript
-// Reuse the same connection token endpoint
-const fetchConnectionToken = async () => {
-  const response = await fetch(`${API_URL}/api/stripe/terminal/connection-token`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const { secret } = await response.json();
-  return secret;
-};
-
-// Initialize Terminal
-await StripeTerminal.initialize({
-  fetchConnectionToken,
-});
-
-// Discover M2 readers
-const { readers } = await StripeTerminal.discoverReaders({
-  discoveryMethod: 'bluetoothScan',
-});
 ```
+mobile/
+├── app/                    # Expo Router pages
+│   ├── (tabs)/            # Tab screens
+│   │   ├── index.tsx      # POS screen
+│   │   ├── customers.tsx  # Customer lookup
+│   │   ├── reader.tsx     # Reader connection
+│   │   └── settings.tsx   # App settings
+│   └── _layout.tsx        # Root layout with providers
+├── components/
+│   └── terminal/          # Terminal components
+│       ├── ReaderDiscovery.tsx  # M2 discovery UI
+│       └── PaymentSheet.tsx     # Payment collection
+├── hooks/
+│   └── useTerminal.ts     # Terminal SDK hook
+└── lib/
+    └── api.ts             # API client
+```
+
+### Key Features
+
+- **ReaderDiscovery** - Bluetooth scan for M2 readers, connection management, battery status
+- **PaymentSheet** - Full payment flow with animated UI states
+- **useTerminal Hook** - Complete Terminal SDK abstraction
+
+### How It Works
+
+1. **Initialize Terminal** - On app launch, initializes Stripe Terminal SDK
+2. **Discover Readers** - Scans for M2 readers via Bluetooth
+3. **Connect Reader** - Pairs with selected M2 device
+4. **Collect Payment** - Creates PaymentIntent via backend, collects card on reader
+5. **Save Purchase** - Records purchase in database via POS API
+
+### Development Notes
+
+- Use `__DEV__` flag for simulated readers in development
+- Real M2 requires physical device (not simulator)
+- Backend must be accessible (use ngrok for local development)
 
 ## Security Considerations
 
