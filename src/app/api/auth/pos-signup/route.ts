@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sendWelcomeEmail } from '@/lib/email/resend';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      console.error('Error creating auth user:', authError);
+      logger.error({ error: authError }, 'Error creating auth user');
 
       // Check if it's a duplicate email error
       if (authError.message?.includes('already been registered') || authError.status === 422) {
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Error creating user profile:', insertError);
+      logger.error({ error: insertError }, 'Error creating user profile');
       // Clean up auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
@@ -117,6 +119,22 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Send welcome email (non-blocking - don't fail signup if email fails)
+    const formattedPhone = `(${cleanPhone.slice(0, 3)}) ${cleanPhone.slice(3, 6)}-${cleanPhone.slice(6)}`;
+    sendWelcomeEmail({
+      to: email.trim(),
+      name: name.trim(),
+      phone: formattedPhone,
+    }).then((result) => {
+      if (result.success) {
+        logger.info({ email: email.trim(), messageId: result.messageId }, '📧 Welcome email sent to new POS customer');
+      } else {
+        logger.error({ email: email.trim(), error: result.error }, '❌ Failed to send welcome email');
+      }
+    }).catch((err) => {
+      logger.error({ error: err, email: email.trim() }, '❌ Exception sending welcome email');
+    });
 
     // Sign them in immediately using their phone-based password
     const response = NextResponse.json({}, { status: 201 });
@@ -146,7 +164,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (signInError || !signInData.session) {
-      console.error('Sign in error after signup:', signInError);
+      logger.warn({ error: signInError }, 'Sign in error after signup - user can login manually');
       // Still return success - user can login manually
       return NextResponse.json({
         user: newUser,
@@ -164,7 +182,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POS signup error:', error);
+    logger.error({ error }, 'POS signup error');
     return NextResponse.json(
       { error: 'Signup failed' },
       { status: 500 }

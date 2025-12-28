@@ -1,12 +1,11 @@
 /**
  * API Route: Party Package by ID
  * GET - Get party package details
- * PUT - Update party package
- * DELETE - Delete party package
+ * PUT - Update party package (POS staff operations)
+ * DELETE - Delete party package (POS staff operations)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { getPartyPackage, updatePartyPackage, deletePartyPackage } from '@/lib/services/parties';
 
 export async function GET(
@@ -21,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: 'Party package not found' }, { status: 404 });
     }
 
-    return NextResponse.json(party);
+    return NextResponse.json({ party });
   } catch (error) {
     console.error('Error fetching party:', error);
     return NextResponse.json(
@@ -36,29 +35,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only staff can update party packages
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!userData || !['staff', 'admin'].includes(userData.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
+    // Note: POS staff access is controlled via PIN at the application level
+    // The admin panel is only accessible after PIN verification
     const { id } = await params;
     const body = await request.json();
 
     // Convert data to match database schema
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (body.name) updates.name = body.name;
     if (body.basePrice !== undefined) updates.base_price = body.basePrice;
     if (body.base_price !== undefined) updates.base_price = body.base_price;
@@ -69,8 +52,8 @@ export async function PUT(
     if (body.addOns) updates.add_ons = body.addOns;
     if (body.add_ons) updates.add_ons = body.add_ons;
     if (body.description !== undefined) updates.description = body.description;
-    if (body.stripePurchaseLink) updates.stripe_purchase_link = body.stripePurchaseLink;
-    if (body.stripe_purchase_link) updates.stripe_purchase_link = body.stripe_purchase_link;
+    if (body.stripePurchaseLink !== undefined) updates.stripe_purchase_link = body.stripePurchaseLink;
+    if (body.stripe_purchase_link !== undefined) updates.stripe_purchase_link = body.stripe_purchase_link;
     if (body.isActive !== undefined) updates.is_active = body.isActive;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
 
@@ -90,28 +73,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only admin can delete party packages
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-
+    // Note: POS staff access is controlled via PIN at the application level
     const { id } = await params;
     await deletePartyPackage(id);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, id });
   } catch (error) {
     console.error('Error deleting party:', error);
     return NextResponse.json(

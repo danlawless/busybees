@@ -74,14 +74,27 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser();
+  // Wrapped in try/catch to handle invalid/stale refresh tokens gracefully
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Invalid refresh token - clear auth cookies to reset state
+    // User will need to log in again
+    response.cookies.delete('sb-access-token');
+    response.cookies.delete('sb-refresh-token');
+  }
 
   // Protect admin/staff routes
   const url = request.nextUrl.clone();
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/staff')) {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        url.pathname = '/auth/staff';
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // Auth error - redirect to login
       url.pathname = '/auth/staff';
       return NextResponse.redirect(url);
     }
@@ -92,34 +105,40 @@ export async function middleware(request: NextRequest) {
       !url.pathname.startsWith('/customer/login') &&
       !url.pathname.startsWith('/customer/signup') &&
       !url.pathname.startsWith('/customer/verify-email')) {
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-      url.pathname = '/customer/login';
-      return NextResponse.redirect(url);
-    }
+      if (!user) {
+        url.pathname = '/customer/login';
+        return NextResponse.redirect(url);
+      }
 
-    // Check if email is verified (required for online portal access)
-    // POS users might not have verified emails, so redirect them to verify
-    if (!user.email_confirmed_at && user.email) {
-      url.pathname = '/customer/verify-email';
-      return NextResponse.redirect(url);
-    }
+      // Check if email is verified (required for online portal access)
+      // POS users might not have verified emails, so redirect them to verify
+      if (!user.email_confirmed_at && user.email) {
+        url.pathname = '/customer/verify-email';
+        return NextResponse.redirect(url);
+      }
 
-    // If no email at all, redirect to verify page to add one
-    if (!user.email) {
-      url.pathname = '/customer/verify-email';
-      return NextResponse.redirect(url);
-    }
+      // If no email at all, redirect to verify page to add one
+      if (!user.email) {
+        url.pathname = '/customer/verify-email';
+        return NextResponse.redirect(url);
+      }
 
-    // Verify user has customer or admin role
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // Verify user has customer or admin role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (userData && !['customer', 'admin'].includes(userData.role)) {
+      if (userData && !['customer', 'admin'].includes(userData.role)) {
+        url.pathname = '/customer/login';
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // Auth error - redirect to login
       url.pathname = '/customer/login';
       return NextResponse.redirect(url);
     }

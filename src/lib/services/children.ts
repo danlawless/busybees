@@ -3,7 +3,7 @@
  * CRUD operations for customer children
  */
 
-import { createClient } from '../supabase/server';
+import { createClient, createAdminClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 
 type Child = Database['public']['Tables']['children']['Row'];
@@ -54,7 +54,7 @@ export async function getCustomerChildren(customerId: string): Promise<Child[]> 
  * Create a new child
  */
 export async function createChild(child: ChildInsert): Promise<Child> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('children')
@@ -74,7 +74,7 @@ export async function createChild(child: ChildInsert): Promise<Child> {
  * Update a child
  */
 export async function updateChild(id: string, updates: ChildUpdate): Promise<Child> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('children')
@@ -95,7 +95,7 @@ export async function updateChild(id: string, updates: ChildUpdate): Promise<Chi
  * Delete a child
  */
 export async function deleteChild(id: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from('children')
@@ -112,7 +112,7 @@ export async function deleteChild(id: string): Promise<void> {
  * Sign waiver for a child
  */
 export async function signWaiver(id: string): Promise<Child> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('children')

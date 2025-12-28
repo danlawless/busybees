@@ -312,3 +312,132 @@ export async function sendTestGiftCardEmail(data: {
     },
   });
 }
+
+/**
+ * Send welcome email to new customer after POS signup
+ */
+export async function sendWelcomeEmail(data: {
+  to: string;
+  name: string;
+  phone: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  const subject = '🐝 Welcome to Busy Bees Indoor Play Center!';
+
+  const text = `
+═══════════════════════════════════════════════════════════
+🐝 Welcome to the Busy Bees Family! 🐝
+═══════════════════════════════════════════════════════════
+
+Hi ${data.name}!
+
+Thank you for creating an account with Busy Bees Indoor Play Center!
+We're so excited to have you join our hive of happy families.
+
+YOUR ACCOUNT DETAILS:
+─────────────────────────────────────────────────────────────
+Email: ${data.to}
+Phone: ${data.phone}
+─────────────────────────────────────────────────────────────
+
+WHAT'S NEXT?
+• Add your children to your account at the play center
+• Purchase day passes, punch cards, or memberships
+• Sign waivers for your little ones
+• Book a birthday party!
+
+ACCESS YOUR ACCOUNT ONLINE:
+─────────────────────────────────────────────────────────────
+Visit ${siteUrl}/customer/login to:
+• View your passes and purchase history
+• Manage your children's profiles
+• Book birthday parties
+• Purchase gift cards
+
+Set up your web password at:
+${siteUrl}/customer/set-password
+─────────────────────────────────────────────────────────────
+
+QUICK TIP: When you visit Busy Bees, just enter your phone
+number at our check-in kiosk to access your account!
+
+We can't wait to see you and your little ones buzz around
+our play center soon! 🐝✨
+
+───────────────────────────────────────────────────────────
+Busy Bees Indoor Play Center
+📍 Come play with us!
+🌐 ${siteUrl}
+📧 ${BUSINESS_EMAIL}
+───────────────────────────────────────────────────────────
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+  });
+}
+
+/**
+ * Send purchase confirmation email
+ */
+export async function sendPurchaseConfirmationEmail(data: {
+  to: string;
+  customerName: string;
+  purchaseName: string;
+  purchasePrice: number;
+  purchaseType: string;
+  expiryDate?: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  const subject = `🐝 Purchase Confirmed - ${data.purchaseName}`;
+
+  const expiryInfo = data.expiryDate
+    ? `Valid Until: ${new Date(data.expiryDate).toLocaleDateString()}`
+    : 'No Expiration';
+
+  const text = `
+═══════════════════════════════════════════════════════════
+🐝 Thank You for Your Purchase! 🐝
+═══════════════════════════════════════════════════════════
+
+Hi ${data.customerName}!
+
+Your purchase has been confirmed. Here are your details:
+
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║   ${data.purchaseName.padEnd(48, ' ')}║
+║   Amount: $${data.purchasePrice.toFixed(2).padEnd(42, ' ')}║
+║   ${expiryInfo.padEnd(48, ' ')}║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+
+HOW TO USE YOUR PASS:
+─────────────────────────────────────────────────────────────
+1. Visit Busy Bees Indoor Play Center
+2. Enter your phone number at the check-in kiosk
+3. Select your pass and check in your children
+4. Enjoy your play time!
+─────────────────────────────────────────────────────────────
+
+View your purchases anytime at:
+${siteUrl}/customer/purchases
+
+Thanks for being part of the Busy Bees family! 🐝
+
+───────────────────────────────────────────────────────────
+Busy Bees Indoor Play Center
+🌐 ${siteUrl}
+───────────────────────────────────────────────────────────
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+  });
+}

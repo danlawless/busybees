@@ -10,7 +10,7 @@ import {
   getOrCreateStripeCustomer,
   listPaymentMethods,
 } from '@/lib/stripe/payment-methods';
-import { getStripeClient } from '@/lib/stripe/client';
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,14 +68,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user with Stripe customer ID
+    // Get user with Stripe customer ID (mode-aware)
+    const customerIdColumn = await getStripeCustomerIdColumn();
     const { data: profile } = await supabase
       .from('users')
-      .select('stripe_customer_id')
+      .select(`${customerIdColumn}`)
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_customer_id) {
+    const stripeCustomerId = profile?.[customerIdColumn];
+
+    if (!stripeCustomerId) {
       return NextResponse.json({
         customer: null,
         paymentMethods: [],
@@ -84,9 +87,7 @@ export async function GET(request: NextRequest) {
 
     // Get Stripe customer details
     const stripe = await getStripeClient();
-    const customer = await stripe.customers.retrieve(
-      profile.stripe_customer_id
-    );
+    const customer = await stripe.customers.retrieve(stripeCustomerId);
 
     if (customer.deleted) {
       return NextResponse.json(
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get payment methods
-    const paymentMethods = await listPaymentMethods(profile.stripe_customer_id);
+    const paymentMethods = await listPaymentMethods(stripeCustomerId);
 
     return NextResponse.json({
       customer: {

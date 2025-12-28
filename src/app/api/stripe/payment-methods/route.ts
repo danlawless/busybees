@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import {
   getOrCreateStripeCustomer,
   createSetupIntent,
@@ -73,20 +74,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user with Stripe customer ID
+    // Get the mode-aware customer ID column
+    const customerIdColumn = await getStripeCustomerIdColumn();
+
+    // Get user with Stripe customer ID for current mode
     const { data: profile } = await supabase
       .from('users')
-      .select('stripe_customer_id')
+      .select(`${customerIdColumn}`)
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_customer_id) {
-      // No Stripe customer yet, return empty array
+    const stripeCustomerId = profile?.[customerIdColumn];
+
+    if (!stripeCustomerId) {
+      // No Stripe customer yet for this mode, return empty array
       return NextResponse.json({ paymentMethods: [] });
     }
 
     // Sync payment methods from Stripe to database
-    await syncPaymentMethodsToDatabase(user.id, profile.stripe_customer_id);
+    await syncPaymentMethodsToDatabase(user.id, stripeCustomerId);
 
     // Get payment methods from database
     const { data: savedCards, error } = await supabase

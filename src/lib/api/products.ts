@@ -7,7 +7,82 @@ import {
   PassProduct,
   PartyProduct,
   FoodProduct,
+  Allergen,
 } from '@/lib/utils/productHelpers';
+
+// ==================== TRANSFORMERS ====================
+
+/**
+ * Transform database pass (snake_case) to frontend format (camelCase)
+ */
+function transformPass(dbPass: Record<string, unknown>): PassProduct {
+  return {
+    id: dbPass.id as string,
+    name: dbPass.name as string,
+    category: dbPass.category as PassProduct['category'],
+    price: Number(dbPass.price),
+    duration: dbPass.duration as number,
+    sessionsIncluded: dbPass.sessions_included as number,
+    description: dbPass.description as string,
+    stripePurchaseLink: (dbPass.stripe_purchase_link as string) || '',
+    isActive: dbPass.is_active as boolean,
+    createdAt: dbPass.created_at as string,
+    updatedAt: dbPass.updated_at as string,
+  };
+}
+
+/**
+ * Transform database party (snake_case) to frontend format (camelCase)
+ */
+function transformParty(dbParty: Record<string, unknown>): PartyProduct {
+  return {
+    id: dbParty.id as string,
+    name: dbParty.name as string,
+    basePrice: Number(dbParty.base_price),
+    capacity: dbParty.capacity as number,
+    duration: dbParty.duration as number,
+    includedItems: (dbParty.included_items as string[]) || [],
+    addOns: (dbParty.add_ons as PartyProduct['addOns']) || [],
+    description: dbParty.description as string,
+    stripePurchaseLink: (dbParty.stripe_purchase_link as string) || '',
+    isActive: dbParty.is_active as boolean,
+    createdAt: dbParty.created_at as string,
+    updatedAt: dbParty.updated_at as string,
+  };
+}
+
+/**
+ * Transform database product (snake_case) to frontend format (camelCase)
+ */
+function transformProduct(dbProduct: Record<string, unknown>): FoodProduct {
+  // Parse allergens - could be JSON string or array
+  let allergens: Allergen[] = [];
+  if (dbProduct.allergens) {
+    if (typeof dbProduct.allergens === 'string') {
+      try {
+        allergens = JSON.parse(dbProduct.allergens);
+      } catch {
+        allergens = [];
+      }
+    } else if (Array.isArray(dbProduct.allergens)) {
+      allergens = dbProduct.allergens as Allergen[];
+    }
+  }
+
+  return {
+    id: dbProduct.id as string,
+    name: dbProduct.name as string,
+    category: dbProduct.category as FoodProduct['category'],
+    price: Number(dbProduct.price),
+    description: dbProduct.description as string,
+    allergens,
+    stripePurchaseLink: (dbProduct.stripe_purchase_link as string) || '',
+    isActive: dbProduct.is_active as boolean,
+    available: dbProduct.available as boolean,
+    createdAt: dbProduct.created_at as string,
+    updatedAt: dbProduct.updated_at as string,
+  };
+}
 
 // ==================== PASSES ====================
 
@@ -30,7 +105,8 @@ export async function fetchPasses(activeOnly: boolean = false): Promise<PassProd
     }
 
     const data = await response.json();
-    return data.passes || [];
+    const rawPasses = data.passes || [];
+    return rawPasses.map(transformPass);
   } catch (error) {
     console.error('Error fetching passes:', error);
     throw error;
@@ -56,7 +132,7 @@ export async function createPass(passData: Omit<PassProduct, 'id' | 'createdAt' 
     }
 
     const data = await response.json();
-    return data.pass;
+    return transformPass(data.pass);
   } catch (error) {
     console.error('Error creating pass:', error);
     throw error;
@@ -82,7 +158,7 @@ export async function updatePass(passId: string, passData: Partial<PassProduct>)
     }
 
     const data = await response.json();
-    return data.pass;
+    return transformPass(data.pass);
   } catch (error) {
     console.error('Error updating pass:', error);
     throw error;
@@ -132,7 +208,8 @@ export async function fetchParties(activeOnly: boolean = false): Promise<PartyPr
     }
 
     const data = await response.json();
-    return data.parties || [];
+    const rawParties = data.parties || [];
+    return rawParties.map(transformParty);
   } catch (error) {
     console.error('Error fetching parties:', error);
     throw error;
@@ -158,7 +235,7 @@ export async function createParty(partyData: Omit<PartyProduct, 'id' | 'createdA
     }
 
     const data = await response.json();
-    return data.party;
+    return transformParty(data.party);
   } catch (error) {
     console.error('Error creating party:', error);
     throw error;
@@ -184,7 +261,7 @@ export async function updateParty(partyId: string, partyData: Partial<PartyProdu
     }
 
     const data = await response.json();
-    return data.party;
+    return transformParty(data.party);
   } catch (error) {
     console.error('Error updating party:', error);
     throw error;
@@ -238,7 +315,8 @@ export async function fetchProducts(availableOnly: boolean = false, category?: s
     }
 
     const data = await response.json();
-    return data.products || [];
+    const rawProducts = data.products || [];
+    return rawProducts.map(transformProduct);
   } catch (error) {
     console.error('Error fetching products:', error);
     throw error;
@@ -264,7 +342,7 @@ export async function createProduct(productData: Omit<FoodProduct, 'id' | 'creat
     }
 
     const data = await response.json();
-    return data.product;
+    return transformProduct(data.product);
   } catch (error) {
     console.error('Error creating product:', error);
     throw error;
@@ -290,7 +368,7 @@ export async function updateProduct(productId: string, productData: Partial<Food
     }
 
     const data = await response.json();
-    return data.product;
+    return transformProduct(data.product);
   } catch (error) {
     console.error('Error updating product:', error);
     throw error;

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import {
   detachPaymentMethod,
   deletePaymentMethodFromDatabase,
@@ -101,14 +102,17 @@ export async function PATCH(
       );
     }
 
-    // Get user's Stripe customer ID
+    // Get user's Stripe customer ID (mode-aware)
+    const customerIdColumn = await getStripeCustomerIdColumn();
     const { data: profile } = await supabase
       .from('users')
-      .select('stripe_customer_id')
+      .select(`${customerIdColumn}`)
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_customer_id) {
+    const stripeCustomerId = profile?.[customerIdColumn];
+
+    if (!stripeCustomerId) {
       return NextResponse.json(
         { error: 'Stripe customer not found' },
         { status: 404 }
@@ -116,7 +120,7 @@ export async function PATCH(
     }
 
     // Set as default in Stripe
-    await setDefaultPaymentMethod(profile.stripe_customer_id, paymentMethodId);
+    await setDefaultPaymentMethod(stripeCustomerId, paymentMethodId);
 
     // Update database - unset all defaults first
     await supabase

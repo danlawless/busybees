@@ -81,6 +81,29 @@ export async function getPublishableKey(): Promise<string> {
   return publishableKey;
 }
 
+/**
+ * Detect if Stripe is in test or live mode based on the secret key
+ * Returns 'test' or 'live'
+ */
+export async function getStripeMode(): Promise<'test' | 'live'> {
+  const { secretKey } = await getStripeKeys();
+
+  if (!secretKey) {
+    // Default to test mode if no key configured
+    return 'test';
+  }
+
+  return secretKey.startsWith('sk_live_') ? 'live' : 'test';
+}
+
+/**
+ * Get the database column name for the current Stripe mode
+ */
+export async function getStripeCustomerIdColumn(): Promise<'stripe_customer_id_test' | 'stripe_customer_id_live'> {
+  const mode = await getStripeMode();
+  return mode === 'live' ? 'stripe_customer_id_live' : 'stripe_customer_id_test';
+}
+
 // For backward compatibility - export a function that gets the client
 export const stripe = {
   get: getStripeClient,
