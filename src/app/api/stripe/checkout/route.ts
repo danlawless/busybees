@@ -220,8 +220,7 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     }
 
-    // Get the mode-aware customer ID column
-    const customerIdColumn = await getStripeCustomerIdColumn();
+    // Use the mode-aware customer ID column (already fetched at top)
     const stripeCustomerId = profile[customerIdColumn];
 
     // Create checkout session for remaining amount
