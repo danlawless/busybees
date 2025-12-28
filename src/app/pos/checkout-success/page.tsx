@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-export default function CheckoutSuccessPage() {
+// Inner component that uses useSearchParams
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -49,84 +50,103 @@ export default function CheckoutSuccessPage() {
   }, [status, countdown, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-8 text-center">
-        {status === "loading" && (
-          <>
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-amber-500 border-t-transparent mx-auto mb-6" />
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Processing Payment...
-            </h1>
-            <p className="text-gray-600">Please wait while we confirm your payment.</p>
-          </>
-        )}
+    <Card className="max-w-md w-full p-8 text-center">
+      {status === "loading" && (
+        <>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-amber-500 border-t-transparent mx-auto mb-6" />
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Processing Payment...
+          </h1>
+          <p className="text-gray-600">Please wait while we confirm your payment.</p>
+        </>
+      )}
 
-        {status === "success" && (
-          <>
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-12 h-12 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              🎉 Payment Successful!
-            </h1>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <div className="bg-amber-50 rounded-lg p-4 mb-6">
-              <p className="text-amber-800 text-sm">
-                Redirecting to kiosk in <span className="font-bold">{countdown}</span> seconds...
-              </p>
-            </div>
-            <Button
-              onClick={() => router.push("/pos")}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+      {status === "success" && (
+        <>
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg
+              className="w-12 h-12 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Return to Kiosk Now
-            </Button>
-          </>
-        )}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            🎉 Payment Successful!
+          </h1>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <div className="bg-amber-50 rounded-lg p-4 mb-6">
+            <p className="text-amber-800 text-sm">
+              Redirecting to kiosk in <span className="font-bold">{countdown}</span> seconds...
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push("/pos")}
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            Return to Kiosk Now
+          </Button>
+        </>
+      )}
 
-        {status === "error" && (
-          <>
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-12 h-12 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Something Went Wrong
-            </h1>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <Button
-              onClick={() => router.push("/pos")}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+      {status === "error" && (
+        <>
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg
+              className="w-12 h-12 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Return to Kiosk
-            </Button>
-          </>
-        )}
-      </Card>
-    </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Something Went Wrong
+          </h1>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <Button
+            onClick={() => router.push("/pos")}
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            Return to Kiosk
+          </Button>
+        </>
+      )}
+    </Card>
   );
 }
 
+// Loading fallback for Suspense
+function LoadingFallback() {
+  return (
+    <Card className="max-w-md w-full p-8 text-center">
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-amber-500 border-t-transparent mx-auto mb-6" />
+      <h1 className="text-2xl font-bold text-gray-800 mb-2">Loading...</h1>
+      <p className="text-gray-600">Please wait...</p>
+    </Card>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function CheckoutSuccessPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 flex items-center justify-center p-4">
+      <Suspense fallback={<LoadingFallback />}>
+        <CheckoutSuccessContent />
+      </Suspense>
+    </div>
+  );
+}
