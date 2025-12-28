@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
     );
 
     const stripe = await getStripeClient();
-    const amountInCents = Math.round(productPrice * quantity * 100);
+    // productPrice already includes quantity × discount from frontend
+    const amountInCents = Math.round(productPrice * 100);
 
     // Create and confirm payment intent with saved card
     let paymentIntent;
@@ -203,13 +204,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate total sessions (multiply by quantity for stackable passes)
-    const totalSessions = purchaseType === 'monthly_pass' 
+    const totalSessions = purchaseType === 'monthly_pass'
       ? 999 // Unlimited doesn't multiply
       : sessionsPerUnit * quantity;
 
     // Build product name with quantity
-    const purchaseName = quantity > 1 
-      ? `${quantity}x ${productName}` 
+    const purchaseName = quantity > 1
+      ? `${quantity}x ${productName}`
       : productName;
 
     // Create purchase record (matching POS endpoint structure)
