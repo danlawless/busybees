@@ -147,7 +147,25 @@ export function AdminPanel({
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
+  const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
+  const [updatingPosMode, setUpdatingPosMode] = useState(false);
   const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
+
+  // Stripe sync states
+  const [stripeSyncStatus, setStripeSyncStatus] = useState<{
+    loading: boolean;
+    syncing: boolean;
+    passes: { total: number; synced: number; unsynced: number };
+    parties: { total: number; synced: number; unsynced: number };
+    products: { total: number; synced: number; unsynced: number };
+    lastSyncResult?: { synced: number; errors: number };
+  }>({
+    loading: true,
+    syncing: false,
+    passes: { total: 0, synced: 0, unsynced: 0 },
+    parties: { total: 0, synced: 0, unsynced: 0 },
+    products: { total: 0, synced: 0, unsynced: 0 },
+  });
   const [refundTimeout, setRefundTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Marketing/Promo states
@@ -316,6 +334,101 @@ export function AdminPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
+
+  // Fetch POS mode on mount
+  useEffect(() => {
+    const fetchPosMode = async () => {
+      try {
+        const response = await fetch('/api/settings/pos-mode');
+        if (response.ok) {
+          const data = await response.json();
+          setPosMode(data.mode || 'kiosk');
+        }
+      } catch (error) {
+        console.error('Error fetching POS mode:', error);
+      }
+    };
+    fetchPosMode();
+  }, []);
+
+  // Handle POS mode toggle
+  const handlePosModeToggle = async (newMode: 'kiosk' | 'staff') => {
+    setUpdatingPosMode(true);
+    try {
+      const response = await fetch('/api/settings/pos-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      if (response.ok) {
+        setPosMode(newMode);
+      } else {
+        console.error('Failed to update POS mode');
+      }
+    } catch (error) {
+      console.error('Error updating POS mode:', error);
+    } finally {
+      setUpdatingPosMode(false);
+    }
+  };
+
+  // Fetch Stripe sync status
+  const fetchStripeSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/stripe/sync');
+      if (response.ok) {
+        const data = await response.json();
+        setStripeSyncStatus(prev => ({
+          ...prev,
+          loading: false,
+          passes: data.status.passes,
+          parties: data.status.parties,
+          products: data.status.products,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching Stripe sync status:', error);
+      setStripeSyncStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Trigger Stripe sync
+  const handleStripeSync = async () => {
+    setStripeSyncStatus(prev => ({ ...prev, syncing: true }));
+    try {
+      const response = await fetch('/api/stripe/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-staff-pin': '1234', // Staff mode authorization
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const totalSynced = data.result.passes.synced + data.result.parties.synced + data.result.products.synced;
+        const totalErrors = data.result.passes.errors.length + data.result.parties.errors.length + data.result.products.errors.length;
+        setStripeSyncStatus(prev => ({
+          ...prev,
+          syncing: false,
+          lastSyncResult: { synced: totalSynced, errors: totalErrors },
+        }));
+        // Refresh status after sync
+        await fetchStripeSyncStatus();
+      } else {
+        const errorData = await response.json();
+        console.error('Stripe sync failed:', errorData);
+        setStripeSyncStatus(prev => ({ ...prev, syncing: false }));
+      }
+    } catch (error) {
+      console.error('Error syncing to Stripe:', error);
+      setStripeSyncStatus(prev => ({ ...prev, syncing: false }));
+    }
+  };
+
+  // Fetch Stripe sync status on mount
+  useEffect(() => {
+    fetchStripeSyncStatus();
+  }, []);
 
   // Fetch membership discount status on mount and when marketing view is opened
   useEffect(() => {
@@ -499,6 +612,136 @@ export function AdminPanel({
           </div>
         </Card>
       </div>
+
+      {/* POS Mode Settings */}
+      <Card className="p-6 border-2 border-amber-200 bg-amber-50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-amber-800 flex items-center gap-2">
+              <span>🖥️</span>
+              POS Mode
+            </h3>
+            <p className="text-sm text-amber-700 mt-1">
+              {posMode === 'kiosk'
+                ? '🛒 Self-serve: Customers pay via Stripe Checkout'
+                : '👨‍💼 Staff-assisted: Staff processes payments'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handlePosModeToggle('kiosk')}
+              disabled={updatingPosMode}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                posMode === 'kiosk'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:border-amber-400'
+              }`}
+            >
+              🛒 Kiosk
+            </button>
+            <button
+              onClick={() => handlePosModeToggle('staff')}
+              disabled={updatingPosMode}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                posMode === 'staff'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400'
+              }`}
+            >
+              👨‍💼 Staff
+            </button>
+          </div>
+        </div>
+        {updatingPosMode && (
+          <p className="text-xs text-amber-600 mt-2 animate-pulse">Updating...</p>
+        )}
+      </Card>
+
+      {/* Stripe Product Sync */}
+      <Card className="p-6 border-2 border-blue-200 bg-blue-50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+              <span>💳</span>
+              Stripe Product Sync
+            </h3>
+            <p className="text-sm text-blue-700 mt-1">
+              Sync your passes, parties, and products to Stripe
+            </p>
+          </div>
+          <button
+            onClick={handleStripeSync}
+            disabled={stripeSyncStatus.syncing || stripeSyncStatus.loading}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              stripeSyncStatus.syncing
+                ? 'bg-blue-300 text-white cursor-wait'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            {stripeSyncStatus.syncing ? '🔄 Syncing...' : '🚀 Sync All to Stripe'}
+          </button>
+        </div>
+
+        {stripeSyncStatus.loading ? (
+          <p className="text-sm text-blue-600 animate-pulse">Loading sync status...</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-3 border border-blue-100">
+              <div className="flex items-center gap-2 mb-1">
+                <span>🎫</span>
+                <span className="font-medium text-gray-800">Passes</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-green-600 font-medium">{stripeSyncStatus.passes.synced}</span>
+                <span className="text-gray-500"> synced / </span>
+                <span className={stripeSyncStatus.passes.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                  {stripeSyncStatus.passes.unsynced}
+                </span>
+                <span className="text-gray-500"> pending</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-blue-100">
+              <div className="flex items-center gap-2 mb-1">
+                <span>🎉</span>
+                <span className="font-medium text-gray-800">Parties</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-green-600 font-medium">{stripeSyncStatus.parties.synced}</span>
+                <span className="text-gray-500"> synced / </span>
+                <span className={stripeSyncStatus.parties.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                  {stripeSyncStatus.parties.unsynced}
+                </span>
+                <span className="text-gray-500"> pending</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-blue-100">
+              <div className="flex items-center gap-2 mb-1">
+                <span>🍿</span>
+                <span className="font-medium text-gray-800">Products</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-green-600 font-medium">{stripeSyncStatus.products.synced}</span>
+                <span className="text-gray-500"> synced / </span>
+                <span className={stripeSyncStatus.products.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                  {stripeSyncStatus.products.unsynced}
+                </span>
+                <span className="text-gray-500"> pending</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {stripeSyncStatus.lastSyncResult && (
+          <div className="mt-3 p-2 bg-white rounded border border-blue-100">
+            <p className="text-sm text-blue-800">
+              ✅ Last sync: <span className="font-medium">{stripeSyncStatus.lastSyncResult.synced}</span> products synced
+              {stripeSyncStatus.lastSyncResult.errors > 0 && (
+                <span className="text-orange-600"> ({stripeSyncStatus.lastSyncResult.errors} errors)</span>
+              )}
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* Active Sessions */}
       <Card className="p-6">
@@ -2015,22 +2258,29 @@ export function AdminPanel({
                   </button>
                 </div>
 
-                {/* Stripe Purchase Link */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stripe Purchase Link (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={partyFormData.stripePurchaseLink}
-                    onChange={(e) => setPartyFormData({ ...partyFormData, stripePurchaseLink: e.target.value })}
-                    placeholder="https://buy.stripe.com/..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                  {partyFormErrors.stripePurchaseLink && (
-                    <p className="text-red-600 text-sm mt-1">{partyFormErrors.stripePurchaseLink}</p>
-                  )}
-                </div>
+                {/* Stripe Purchase Link (Read-only - auto-generated by Stripe sync) */}
+                {editingParty && partyFormData.stripePurchaseLink && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      🔗 Stripe Purchase Link <span className="text-xs text-gray-500">(auto-generated)</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="url"
+                        value={partyFormData.stripePurchaseLink}
+                        readOnly
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(partyFormData.stripePurchaseLink)}
+                        className="px-3 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Active Toggle */}
                 <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
@@ -2108,8 +2358,8 @@ export function AdminPanel({
       category: product.category,
       price: product.price.toString(),
       description: product.description,
-      allergens: [...product.allergens],
-      stripePurchaseLink: product.stripePurchaseLink,
+      allergens: Array.isArray(product.allergens) ? [...product.allergens] : [],
+      stripePurchaseLink: product.stripePurchaseLink || '',
       isActive: product.isActive,
       available: product.available,
     });
@@ -2254,7 +2504,7 @@ export function AdminPanel({
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                      {product.allergens.length > 0 && (
+                      {Array.isArray(product.allergens) && product.allergens.length > 0 && (
                         <div className="flex items-center flex-wrap gap-2 text-xs text-orange-600 mb-2">
                           <span>⚠️ Allergens:</span>
                           {product.allergens.map(a => (
@@ -2431,22 +2681,29 @@ export function AdminPanel({
                   </div>
                 </div>
 
-                {/* Stripe Purchase Link */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stripe Purchase Link (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={productFormData.stripePurchaseLink}
-                    onChange={(e) => setProductFormData({ ...productFormData, stripePurchaseLink: e.target.value })}
-                    placeholder="https://buy.stripe.com/..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                  {productFormErrors.stripePurchaseLink && (
-                    <p className="text-red-600 text-sm mt-1">{productFormErrors.stripePurchaseLink}</p>
-                  )}
-                </div>
+                {/* Stripe Purchase Link (Read-only - auto-generated by Stripe sync) */}
+                {editingProduct && productFormData.stripePurchaseLink && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      🔗 Stripe Purchase Link <span className="text-xs text-gray-500">(auto-generated)</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="url"
+                        value={productFormData.stripePurchaseLink}
+                        readOnly
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(productFormData.stripePurchaseLink)}
+                        className="px-3 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Active and Available Toggles */}
                 <div className="space-y-3">
@@ -2957,22 +3214,29 @@ export function AdminPanel({
                   />
                 </div>
 
-                {/* Stripe Purchase Link */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stripe Purchase Link (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={passFormData.stripePurchaseLink}
-                    onChange={(e) => setPassFormData({ ...passFormData, stripePurchaseLink: e.target.value })}
-                    placeholder="https://buy.stripe.com/..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                  {passFormErrors.stripePurchaseLink && (
-                    <p className="text-red-600 text-sm mt-1">{passFormErrors.stripePurchaseLink}</p>
-                  )}
-                </div>
+                {/* Stripe Purchase Link (Read-only - auto-generated by Stripe sync) */}
+                {editingPass && passFormData.stripePurchaseLink && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      🔗 Stripe Purchase Link <span className="text-xs text-gray-500">(auto-generated)</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="url"
+                        value={passFormData.stripePurchaseLink}
+                        readOnly
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(passFormData.stripePurchaseLink)}
+                        className="px-3 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Active Toggle */}
                 <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">

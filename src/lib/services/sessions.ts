@@ -3,7 +3,7 @@
  * CRUD operations for play sessions
  */
 
-import { createClient } from '../supabase/server';
+import { createClient, createAdminClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 
 type Session = Database['public']['Tables']['sessions']['Row'];
@@ -79,7 +79,7 @@ export async function getAllActiveSessions(): Promise<Session[]> {
  * Create a new session (check-in)
  */
 export async function createSession(session: SessionInsert): Promise<Session> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('sessions')
@@ -99,7 +99,7 @@ export async function createSession(session: SessionInsert): Promise<Session> {
  * End a session (check-out)
  */
 export async function endSession(id: string): Promise<Session> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const now = new Date().toISOString();
 
@@ -135,7 +135,7 @@ export async function endSession(id: string): Promise<Session> {
  * End all sessions for a customer (force checkout)
  */
 export async function endAllCustomerSessions(customerId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const activeSessions = await getActiveSessions(customerId);
 

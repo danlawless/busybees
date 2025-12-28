@@ -3,7 +3,7 @@
  * CRUD operations for customers/users
  */
 
-import { createClient } from '../supabase/server';
+import { createClient, createAdminClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -74,7 +74,7 @@ export async function getAllCustomers(): Promise<User[]> {
  * Create a new customer
  */
 export async function createCustomer(customer: UserInsert): Promise<User> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -94,7 +94,7 @@ export async function createCustomer(customer: UserInsert): Promise<User> {
  * Update a customer
  */
 export async function updateCustomer(id: string, updates: UserUpdate): Promise<User> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -115,7 +115,7 @@ export async function updateCustomer(id: string, updates: UserUpdate): Promise<U
  * Delete a customer
  */
 export async function deleteCustomer(id: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from('users')

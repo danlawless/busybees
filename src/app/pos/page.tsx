@@ -18,15 +18,14 @@ import {
     PartyProduct,
     FoodProduct,
     VolumeDiscount,
-    getPassesFromStorage,
-    savePassesToStorage,
-    getPartiesFromStorage,
-    savePartiesToStorage,
-    getProductsFromStorage,
-    saveProductsToStorage,
     getVolumeDiscountsFromStorage,
     saveVolumeDiscountsToStorage,
 } from "@/lib/utils/productHelpers";
+import {
+    fetchPasses,
+    fetchParties,
+    fetchProducts,
+} from "@/lib/api/products";
 
 interface Child {
     id: string;
@@ -192,586 +191,61 @@ export default function POSPage() {
         }
     }, [promos]);
 
-    // Initialize passes from localStorage or seed initial data
+    // Fetch passes from database API
     useEffect(() => {
-        const storedPasses = getPassesFromStorage();
-        if (storedPasses.length > 0) {
-            setPasses(storedPasses);
-        } else {
-            // Seed initial passes with real pricing
-            const initialPasses: PassProduct[] = [
-                {
-                    id: "pass-1",
-                    name: "Day Pass - Toddler (2+)",
-                    category: "day",
-                    price: 17.0,
-                    duration: 8, // 8 hours
-                    sessionsIncluded: 1,
-                    description:
-                        "Full day of play for toddlers (ages 2+)! Valid for one entry, expires at closing time.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/9B6bJ023x3Nr1HDeUQffy0b",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-2",
-                    name: "Day Pass - Infant",
-                    category: "day",
-                    price: 7.0,
-                    duration: 8, // 8 hours
-                    sessionsIncluded: 1,
-                    description:
-                        "Full day of play for infants! Valid for one entry, expires at closing time.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/dRm00ibE75Vzfyt5kgffy0a",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-7",
-                    name: "Day Pass - Toddler + Infant Discount",
-                    category: "day",
-                    price: 17.0,
-                    duration: 8, // 8 hours
-                    sessionsIncluded: 2, // covers both toddler and infant
-                    description:
-                        "Day pass for toddler and infant together - infant plays free! Best value for siblings.",
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-3",
-                    name: "Monthly Membership - Toddler",
-                    category: "monthly",
-                    price: 100.0,
-                    duration: 30, // 30 days
-                    sessionsIncluded: 999, // unlimited
-                    description:
-                        "One month of unlimited play for toddlers! Best value for regular visitors.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/6oU3cu8rV6ZDae93c8ffy07",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-4",
-                    name: "Monthly Membership - Infant",
-                    category: "monthly",
-                    price: 70.0,
-                    duration: 30, // 30 days
-                    sessionsIncluded: 999, // unlimited
-                    description:
-                        "One month of unlimited play for infants! Best value for regular visitors.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/7sY5kC37B2Jn0Dz8wsffy06",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-5",
-                    name: "Punch Card (10 passes) - Toddler",
-                    category: "weekly",
-                    price: 150.0,
-                    duration: 90, // 90 days to use
-                    sessionsIncluded: 10,
-                    description:
-                        "10 visits for toddlers! Use within 90 days of first visit.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/14A00i0Ztes5bid3c8ffy09",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "pass-6",
-                    name: "Punch Card (10 passes) - Infant",
-                    category: "weekly",
-                    price: 50.0,
-                    duration: 90, // 90 days to use
-                    sessionsIncluded: 10,
-                    description:
-                        "10 visits for infants! Use within 90 days of first visit.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/9B6aEW8rVgAdcmh6okffy08",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-            ];
-            setPasses(initialPasses);
-            savePassesToStorage(initialPasses);
-        }
+        const loadPasses = async () => {
+            try {
+                const dbPasses = await fetchPasses();
+                if (dbPasses.length === 0) {
+                    logger.error({}, "No passes found in database - run seed-all-products.sql");
+                }
+                setPasses(dbPasses);
+            } catch (error) {
+                logger.error({ error }, "Failed to fetch passes from database");
+            }
+        };
+        loadPasses();
     }, []);
 
-    // Initialize parties from localStorage or seed initial data
+    // Fetch parties from database API
     useEffect(() => {
-        const storedParties = getPartiesFromStorage();
-        if (storedParties.length > 0) {
-            setParties(storedParties);
-        } else {
-            // Seed initial party packages with real pricing
-            const initialParties: PartyProduct[] = [
-                {
-                    id: "party-1",
-                    name: "Queen Bee (Private)",
-                    basePrice: 575.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Private party room",
-                        "Premium decorations",
-                        "Plates, cups, napkins",
-                        "Dedicated party host",
-                        "Setup & cleanup",
-                        "Party favors for all kids",
-                        "Digital photo package",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-1",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-2",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-3",
-                            name: "Pizza party pack",
-                            price: 75,
-                            description: "4 large pizzas",
-                        },
-                        {
-                            id: "addon-4",
-                            name: "Face painting",
-                            price: 100,
-                            description: "Professional face painter",
-                        },
-                    ],
-                    description:
-                        "Our premium private party package! Pricing includes 15 kids with pizza, drinks, cake and balloons.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/9B6fZgbE797L3PLfYUffy05",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "party-2",
-                    name: "Worker Bee (Private)",
-                    basePrice: 525.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Private party room",
-                        "Standard decorations",
-                        "Plates, cups, napkins",
-                        "Party host",
-                        "Setup & cleanup",
-                        "Party favors for all kids",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-5",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-6",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-7",
-                            name: "Pizza party pack",
-                            price: 65,
-                            description: "3 large pizzas",
-                        },
-                        {
-                            id: "addon-8",
-                            name: "Face painting",
-                            price: 100,
-                            description: "Professional face painter",
-                        },
-                    ],
-                    description:
-                        "Great private party option that includes 15 kids with pizza and drinks.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/3cI5kC7nRbfTbid284ffy04",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "party-3",
-                    name: "Basic Bee (Private)",
-                    basePrice: 475.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Private party room",
-                        "Basic decorations",
-                        "Plates, cups, napkins",
-                        "Party host",
-                        "Setup & cleanup",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-9",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-10",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-11",
-                            name: "Pizza party pack",
-                            price: 55,
-                            description: "2 large pizzas",
-                        },
-                        {
-                            id: "addon-12",
-                            name: "Party favors",
-                            price: 50,
-                            description: "Favors for all kids",
-                        },
-                    ],
-                    description:
-                        "Perfect private party starter package that includes 15 kids with standard party paper goods.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/4gMbJ023x83H5XT6okffy03",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "party-4",
-                    name: "Queen Bee (Semi-Private)",
-                    basePrice: 500.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Semi-private party area",
-                        "Premium decorations",
-                        "Plates, cups, napkins",
-                        "Party host",
-                        "Setup & cleanup",
-                        "Party favors for all kids",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-13",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-14",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-15",
-                            name: "Pizza party pack",
-                            price: 75,
-                            description: "4 large pizzas",
-                        },
-                        {
-                            id: "addon-16",
-                            name: "Face painting",
-                            price: 100,
-                            description: "Professional face painter",
-                        },
-                    ],
-                    description:
-                        "Premium semi-private party! Pricing includes 15 kids with pizza, drinks, cake and balloons.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/bJeeVc7nRbfTeup6okffy02",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "party-5",
-                    name: "Worker Bee (Semi-Private)",
-                    basePrice: 450.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Semi-private party area",
-                        "Standard decorations",
-                        "Plates, cups, napkins",
-                        "Party host",
-                        "Setup & cleanup",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-17",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-18",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-19",
-                            name: "Pizza party pack",
-                            price: 65,
-                            description: "3 large pizzas",
-                        },
-                        {
-                            id: "addon-20",
-                            name: "Party favors",
-                            price: 50,
-                            description: "Favors for all kids",
-                        },
-                    ],
-                    description: "Great semi-private party option that includes 15 kids with pizza and drinks.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/cNidR8gYr0Bf4TP4gcffy01",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "party-6",
-                    name: "Basic Bee (Semi-Private)",
-                    basePrice: 400.0,
-                    capacity: 20,
-                    duration: 2,
-                    includedItems: [
-                        "Semi-private party area",
-                        "Basic decorations",
-                        "Plates, cups, napkins",
-                        "Party host",
-                        "Setup & cleanup",
-                    ],
-                    addOns: [
-                        {
-                            id: "addon-21",
-                            name: "Extra 30 minutes",
-                            price: 50,
-                            description: "Extend party time",
-                        },
-                        {
-                            id: "addon-22",
-                            name: "Additional child (over 15)",
-                            price: 15,
-                            description: "Per extra child",
-                        },
-                        {
-                            id: "addon-23",
-                            name: "Pizza party pack",
-                            price: 55,
-                            description: "2 large pizzas",
-                        },
-                        {
-                            id: "addon-24",
-                            name: "Party favors",
-                            price: 50,
-                            description: "Favors for all kids",
-                        },
-                    ],
-                    description:
-                        "Perfect semi-private party starter that includes 15 kids with standard party paper goods.",
-                    stripePurchaseLink:
-                        "https://buy.stripe.com/14A3cu6jNgAddql5kgffy00",
-                    isActive: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-            ];
-            setParties(initialParties);
-            savePartiesToStorage(initialParties);
-        }
+        const loadParties = async () => {
+            try {
+                const dbParties = await fetchParties();
+                if (dbParties.length === 0) {
+                    logger.error({}, "No party packages found in database - run seed-all-products.sql");
+                }
+                setParties(dbParties);
+            } catch (error) {
+                logger.error({ error }, "Failed to fetch parties from database");
+            }
+        };
+        loadParties();
     }, []);
 
-    // Initialize products from localStorage or seed initial data
+    // Fetch products from database API
     useEffect(() => {
-        const storedProducts = getProductsFromStorage();
-        if (storedProducts.length > 0) {
-            setProducts(storedProducts);
-        } else {
-            // Seed initial food/beverage/retail products
-            const initialProducts: FoodProduct[] = [
-                {
-                    id: "product-1",
-                    name: "Apple Sauce Pouch",
-                    category: "food",
-                    price: 3.0,
-                    description: "Delicious apple sauce pouch snack",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-2",
-                    name: "Veggie Sticks",
-                    category: "food",
-                    price: 3.0,
-                    description: "Crunchy veggie stick snacks",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-3",
-                    name: "Goldfish",
-                    category: "food",
-                    price: 3.0,
-                    description: "Classic Goldfish crackers",
-                    allergens: ["gluten", "dairy"],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-4",
-                    name: "Bee Bracelets",
-                    category: "retail",
-                    price: 2.0,
-                    description: "Cute bee-themed bracelets",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-5",
-                    name: "Granola Bar",
-                    category: "food",
-                    price: 3.0,
-                    description: "Nutritious granola bar snack",
-                    allergens: ["gluten"],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-6",
-                    name: "Honey Sticks",
-                    category: "food",
-                    price: 1.0,
-                    description: "Sweet honey stick treats",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-7",
-                    name: "Youth Socks",
-                    category: "retail",
-                    price: 3.0,
-                    description: "Grip socks for kids - required for play",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-                {
-                    id: "product-8",
-                    name: "Adult Socks",
-                    category: "retail",
-                    price: 5.0,
-                    description: "Grip socks for adults - required for play areas",
-                    allergens: [],
-                    stripePurchaseLink: "",
-                    isActive: true,
-                    available: true,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-            ];
-            setProducts(initialProducts);
-            saveProductsToStorage(initialProducts);
-        }
+        const loadProducts = async () => {
+            try {
+                const dbProducts = await fetchProducts();
+                if (dbProducts.length === 0) {
+                    logger.error({}, "No products found in database - run seed-all-products.sql");
+                }
+                setProducts(dbProducts);
+            } catch (error) {
+                logger.error({ error }, "Failed to fetch products from database");
+            }
+        };
+        loadProducts();
     }, []);
 
-    // Initialize volume discounts from localStorage or seed initial data
+    // Load volume discounts from localStorage (no database table yet)
     useEffect(() => {
         const storedDiscounts = getVolumeDiscountsFromStorage();
-        if (storedDiscounts.length > 0) {
-            setVolumeDiscounts(storedDiscounts);
-        } else {
-            // Seed initial volume discounts
-            const initialDiscounts: VolumeDiscount[] = [
-                {
-                    id: "discount-1",
-                    productId: "pass-1", // Day pass
-                    productType: "pass",
-                    minQuantity: 10,
-                    discountPercent: 15,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                },
-            ];
-            setVolumeDiscounts(initialDiscounts);
-            saveVolumeDiscountsToStorage(initialDiscounts);
-        }
+        setVolumeDiscounts(storedDiscounts);
     }, []);
 
-    // Save passes to localStorage whenever they change
-    useEffect(() => {
-        if (passes.length > 0) {
-            savePassesToStorage(passes);
-        }
-    }, [passes]);
-
-    // Save parties to localStorage whenever they change
-    useEffect(() => {
-        if (parties.length > 0) {
-            savePartiesToStorage(parties);
-        }
-    }, [parties]);
-
-    // Save products to localStorage whenever they change
-    useEffect(() => {
-        if (products.length > 0) {
-            saveProductsToStorage(products);
-        }
-    }, [products]);
-
-    // Save volume discounts to localStorage whenever they change
+    // Save volume discounts to localStorage whenever they change (no database table yet)
     useEffect(() => {
         if (volumeDiscounts.length > 0) {
             saveVolumeDiscountsToStorage(volumeDiscounts);

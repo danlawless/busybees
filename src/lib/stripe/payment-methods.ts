@@ -5,13 +5,14 @@
 
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
-import { getStripeClient } from './client';
+import { getStripeClient, getStripeMode, getStripeCustomerIdColumn } from './client';
 import { createAdminClient } from '../supabase/server';
 import { logger } from '../logger';
 
 /**
  * Create or retrieve Stripe customer for a user
  * Handles both logged-in users (with database records) and temporary/guest users
+ * Automatically uses the correct customer ID column based on test/live mode
  */
 export async function getOrCreateStripeCustomer(
   userId: string,
@@ -20,13 +21,15 @@ export async function getOrCreateStripeCustomer(
   phone?: string
 ): Promise<string> {
   const stripe = await getStripeClient();
+  const stripeMode = await getStripeMode();
+  const customerIdColumn = await getStripeCustomerIdColumn();
 
   // For temporary/guest users (temp_*), skip database lookup and create Stripe customer directly
   const isTempUser = userId.startsWith('temp_');
 
   logger.info(
-    { userId, email, isTempUser },
-    isTempUser ? '🎫 Creating Stripe customer for guest user' : '🔍 Looking up Stripe customer for registered user'
+    { userId, email, isTempUser, stripeMode, customerIdColumn },
+    isTempUser ? '🎫 Creating Stripe customer for guest user' : `🔍 Looking up Stripe customer for registered user (${stripeMode} mode)`
   );
 
   if (!isTempUser) {
@@ -35,14 +38,14 @@ export async function getOrCreateStripeCustomer(
 
     const { data: userData, error: queryError } = await supabase
       .from('users')
-      .select('stripe_customer_id')
+      .select(`${customerIdColumn}`)
       .eq('id', userId)
       .single();
 
     if (queryError) {
       // User doesn't exist in public.users table - log but continue
       logger.warn(
-        { userId, error: queryError, email },
+        { userId, error: queryError, email, stripeMode },
         '⚠️ User not found in database, creating Stripe customer without database record'
       );
 
@@ -50,11 +53,14 @@ export async function getOrCreateStripeCustomer(
         category: 'stripe.customer',
         message: 'User not found in database during Stripe customer creation',
         level: 'warning',
-        data: { userId, email },
+        data: { userId, email, stripeMode },
       });
-    } else if (userData?.stripe_customer_id) {
-      logger.info({ userId, stripeCustomerId: userData.stripe_customer_id }, '✅ Found existing Stripe customer');
-      return userData.stripe_customer_id;
+    } else {
+      const existingCustomerId = userData?.[customerIdColumn];
+      if (existingCustomerId) {
+        logger.info({ userId, stripeCustomerId: existingCustomerId, stripeMode }, `✅ Found existing Stripe customer (${stripeMode} mode)`);
+        return existingCustomerId;
+      }
     }
   }
 
@@ -67,42 +73,43 @@ export async function getOrCreateStripeCustomer(
       metadata: {
         supabase_user_id: userId,
         is_temp_user: isTempUser.toString(),
+        stripe_mode: stripeMode,
       },
     });
 
-    logger.info({ userId, stripeCustomerId: customer.id, isTempUser }, '✨ Created new Stripe customer');
+    logger.info({ userId, stripeCustomerId: customer.id, isTempUser, stripeMode }, `✨ Created new Stripe customer (${stripeMode} mode)`);
 
     // Update user record with Stripe customer ID (only for registered users)
     if (!isTempUser) {
       const supabase = createAdminClient();
       const { error: updateError } = await supabase
         .from('users')
-        .update({ stripe_customer_id: customer.id })
+        .update({ [customerIdColumn]: customer.id })
         .eq('id', userId);
 
       if (updateError) {
         // Log the error but don't fail - the Stripe customer was created successfully
         logger.warn(
-          { userId, stripeCustomerId: customer.id, error: updateError },
-          '⚠️ Failed to update user record with Stripe customer ID, but Stripe customer created successfully'
+          { userId, stripeCustomerId: customer.id, error: updateError, stripeMode },
+          `⚠️ Failed to update user record with Stripe customer ID (${stripeMode}), but Stripe customer created successfully`
         );
 
         Sentry.captureException(updateError, {
           level: 'warning',
-          tags: { operation: 'stripe.customer.update' },
+          tags: { operation: 'stripe.customer.update', stripeMode },
           extra: { userId, stripeCustomerId: customer.id },
         });
       } else {
-        logger.info({ userId, stripeCustomerId: customer.id }, '💾 Updated user record with Stripe customer ID');
+        logger.info({ userId, stripeCustomerId: customer.id, stripeMode, customerIdColumn }, `💾 Updated user record with Stripe customer ID (${stripeMode} mode)`);
       }
     }
 
     return customer.id;
   } catch (error) {
-    logger.error({ error, userId, email }, '❌ Failed to create Stripe customer');
+    logger.error({ error, userId, email, stripeMode }, `❌ Failed to create Stripe customer (${stripeMode} mode)`);
 
     Sentry.captureException(error, {
-      tags: { operation: 'stripe.customer.create' },
+      tags: { operation: 'stripe.customer.create', stripeMode },
       extra: { userId, email, isTempUser },
     });
 

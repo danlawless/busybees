@@ -147,6 +147,9 @@ export function CheckIn({
     // Quantity state for purchases - defaulting to 0 to avoid NaN issues
     const [quantities, setQuantities] = useState<Record<string, number>>({});
 
+    // POS mode state - kiosk (self-serve) or staff (staff-assisted)
+    const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
+
     // Children-related state
     const [selectedChildForPurchase, setSelectedChildForPurchase] =
         useState<string>("");
@@ -173,6 +176,24 @@ export function CheckIn({
     const [partyFilter, setPartyFilter] = useState<"all" | "semi-private" | "private">(
         "all"
     );
+
+    // Fetch POS mode on mount
+    useEffect(() => {
+        const fetchPosMode = async () => {
+            try {
+                const response = await fetch('/api/settings/pos-mode');
+                if (response.ok) {
+                    const data = await response.json();
+                    setPosMode(data.mode || 'kiosk');
+                }
+            } catch (error) {
+                console.error('Error fetching POS mode:', error);
+                // Default to kiosk mode on error
+                setPosMode('kiosk');
+            }
+        };
+        fetchPosMode();
+    }, []);
 
     // Fetch passes, parties, and snacks from localStorage (client-side only)
     useEffect(() => {
@@ -1185,7 +1206,43 @@ export function CheckIn({
                 purchaseType = "monthly_pass";
             }
 
-            // Call real API to process purchase
+            // In kiosk mode, use Stripe Checkout for self-serve payments
+            if (posMode === 'kiosk') {
+                const response = await fetch("/api/stripe/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_id: customer.id,
+                        customer_email: customer.email,
+                        customer_name: customer.name,
+                        product_id: productId,
+                        product_name: product.name,
+                        product_price: product.price,
+                        product_description: product.description || "",
+                        purchase_type: purchaseType,
+                        child_id: isPassPurchase ? selectedChildForPurchase : undefined,
+                        quantity: 1,
+                        success_url: `${window.location.origin}/pos/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+                        cancel_url: `${window.location.origin}/pos`,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Failed to create checkout session");
+                }
+
+                const { url } = await response.json();
+
+                // Redirect to Stripe Checkout
+                if (url) {
+                    window.location.href = url;
+                    return;
+                }
+                throw new Error("No checkout URL returned");
+            }
+
+            // In staff mode, use the existing POS endpoint (requires staff role)
             const response = await fetch("/api/purchases/pos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

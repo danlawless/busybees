@@ -22,7 +22,8 @@ export interface Database {
           phone: string;
           name: string;
           email: string | null;
-          stripe_customer_id: string | null;
+          stripe_customer_id_test: string | null;
+          stripe_customer_id_live: string | null;
           web_password_hash: string | null;
           has_web_password: boolean;
           last_login: string | null;
@@ -38,7 +39,8 @@ export interface Database {
           phone: string;
           name: string;
           email?: string | null;
-          stripe_customer_id?: string | null;
+          stripe_customer_id_test?: string | null;
+          stripe_customer_id_live?: string | null;
           web_password_hash?: string | null;
           has_web_password?: boolean;
           last_login?: string | null;
@@ -54,7 +56,8 @@ export interface Database {
           phone?: string;
           name?: string;
           email?: string | null;
-          stripe_customer_id?: string | null;
+          stripe_customer_id_test?: string | null;
+          stripe_customer_id_live?: string | null;
           web_password_hash?: string | null;
           has_web_password?: boolean;
           last_login?: string | null;

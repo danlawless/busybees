@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { getStripeClient } from '@/lib/stripe/client';
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 
@@ -54,9 +54,11 @@ export async function POST(request: NextRequest) {
 
     // Get customer details for Stripe
     const adminSupabase = createAdminClient();
+    const customerIdColumn = await getStripeCustomerIdColumn();
+
     const { data: customer } = await adminSupabase
       .from('users')
-      .select('id, email, name, phone, stripe_customer_id')
+      .select(`id, email, name, phone, ${customerIdColumn}`)
       .eq('id', customer_id)
       .single();
 
@@ -66,8 +68,9 @@ export async function POST(request: NextRequest) {
 
     logger.info({ customer_id, product_name, purchase_type }, 'Processing POS purchase');
 
-    // Get or create Stripe customer
-    const stripeCustomerId = customer.stripe_customer_id || await getOrCreateStripeCustomer(
+    // Get or create Stripe customer (mode-aware)
+    const existingStripeCustomerId = customer[customerIdColumn];
+    const stripeCustomerId = existingStripeCustomerId || await getOrCreateStripeCustomer(
       customer.id,
       customer.email || '',
       customer.name || '',

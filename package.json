@@ -13,7 +13,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:promos": "tsx scripts/seed-promos.ts"
+    "seed:promos": "tsx scripts/seed-promos.ts",
+    "stripe:migrate": "tsx scripts/migrate-stripe-to-live.ts",
+    "stripe:migrate:dry": "tsx scripts/migrate-stripe-to-live.ts --dry-run"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
@@ -47,10 +49,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "^15.5.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

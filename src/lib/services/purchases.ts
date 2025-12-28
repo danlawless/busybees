@@ -3,7 +3,7 @@
  * CRUD operations for purchases
  */
 
-import { createClient } from "../supabase/server";
+import { createClient, createAdminClient } from "../supabase/server";
 import { Database } from "../supabase/database.types";
 
 type Purchase = Database["public"]["Tables"]["purchases"]["Row"];
@@ -94,7 +94,7 @@ export async function getAllPurchases(): Promise<Purchase[]> {
  * Create a new purchase
  */
 export async function createPurchase(purchase: PurchaseInsert): Promise<Purchase> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
         .from("purchases")
@@ -117,7 +117,7 @@ export async function updatePurchase(
     id: string,
     updates: PurchaseUpdate
 ): Promise<Purchase> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
         .from("purchases")
@@ -138,7 +138,7 @@ export async function updatePurchase(
  * Delete a purchase (for refunds)
  */
 export async function deletePurchase(id: string): Promise<void> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase.from("purchases").delete().eq("id", id);
 
