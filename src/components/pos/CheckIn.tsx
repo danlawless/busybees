@@ -1206,7 +1206,7 @@ export function CheckIn({
                 purchaseType = "monthly_pass";
             }
 
-            // In kiosk mode, use direct payment with saved cards (no redirect)
+            // In kiosk mode, use self-serve payment with saved cards (no redirect)
             if (posMode === 'kiosk') {
                 // Check if customer has a saved payment method
                 if (!customer.savedCards || customer.savedCards.length === 0) {
@@ -1215,9 +1215,9 @@ export function CheckIn({
 
                 // Get the default card or first card
                 const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
-                
-                // Use direct payment API with saved card
-                const response = await fetch("/api/stripe/direct-payment", {
+
+                // Use kiosk payment API with saved card (self-serve endpoint)
+                const response = await fetch("/api/stripe/kiosk-payment", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -1225,6 +1225,7 @@ export function CheckIn({
                         productId: productId,
                         productName: product.name,
                         productPrice: product.price,
+                        productDescription: product.description || "",
                         purchaseType: purchaseType,
                         childId: isPassPurchase ? selectedChildForPurchase : undefined,
                         paymentMethodId: defaultCard.id,
@@ -1266,7 +1267,7 @@ export function CheckIn({
                         partyNotes: p.party_notes,
                         childId: p.child_id,
                     }));
-                    
+
                     const updatedCustomer = {
                         ...customer,
                         purchases,

@@ -1,0 +1,272 @@
+/**
+ * Kiosk Payment API Route
+ * Processes self-serve payments at kiosks using customer's saved payment methods
+ * 
+ * Security Model:
+ * - Kiosk is a trusted device on a trusted network
+ * - Customer is identified via phone/email lookup at the kiosk
+ * - Payment method must belong to the identified customer
+ * - All transactions are logged for audit trail
+ * 
+ * Flow:
+ * 1. Customer identifies themselves at kiosk (phone lookup)
+ * 2. Kiosk loads their saved payment methods
+ * 3. Customer selects product and confirms purchase
+ * 4. This endpoint processes payment with their saved card
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
+import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
+import { logger } from '@/lib/logger';
+import * as Sentry from '@sentry/nextjs';
+
+export async function POST(request: NextRequest) {
+  const adminSupabase = createAdminClient();
+  
+  try {
+    const body = await request.json();
+    const {
+      customerId,
+      productId,
+      productName,
+      productPrice,
+      productDescription,
+      purchaseType,
+      childId,
+      quantity = 1,
+      paymentMethodId,
+      metadata = {},
+    } = body;
+
+    // Validate required fields
+    if (!customerId) {
+      return NextResponse.json(
+        { error: 'Customer ID required. Please identify yourself at the kiosk.' },
+        { status: 400 }
+      );
+    }
+
+    if (!productId || !productName || productPrice === undefined || !purchaseType) {
+      return NextResponse.json(
+        { error: 'Missing required fields: productId, productName, productPrice, purchaseType' },
+        { status: 400 }
+      );
+    }
+
+    if (!paymentMethodId) {
+      return NextResponse.json(
+        { error: 'Payment method required. Please add a payment method first.' },
+        { status: 400 }
+      );
+    }
+
+    const logContext = {
+      customerId,
+      productId,
+      purchaseType,
+      paymentMethodId: paymentMethodId.substring(0, 10) + '...',
+      source: 'kiosk',
+    };
+
+    logger.info(logContext, '🏪 Processing kiosk self-serve payment');
+
+    // Get customer profile
+    const customerIdColumn = await getStripeCustomerIdColumn();
+    const { data: customer, error: customerError } = await adminSupabase
+      .from('users')
+      .select(`id, email, name, phone, ${customerIdColumn}`)
+      .eq('id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      logger.error({ ...logContext, error: customerError }, 'Customer not found');
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+
+    // Verify the payment method belongs to this customer
+    const { data: savedCard, error: cardError } = await adminSupabase
+      .from('saved_cards')
+      .select('*')
+      .eq('customer_id', customerId)
+      .eq('stripe_payment_method_id', paymentMethodId)
+      .single();
+
+    if (cardError || !savedCard) {
+      logger.warn({ ...logContext }, 'Payment method not found for customer');
+      return NextResponse.json(
+        { error: 'Invalid payment method. Please select a valid saved card.' },
+        { status: 400 }
+      );
+    }
+
+    // Get or create Stripe customer
+    const existingStripeCustomerId = customer[customerIdColumn];
+    const stripeCustomerId = existingStripeCustomerId || await getOrCreateStripeCustomer(
+      customer.id,
+      customer.email || '',
+      customer.name || '',
+      customer.phone
+    );
+
+    const stripe = await getStripeClient();
+    const amountInCents = Math.round(productPrice * quantity * 100);
+
+    // Create and confirm payment intent with saved card
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: stripeCustomerId,
+        payment_method: paymentMethodId,
+        description: productDescription || productName,
+        metadata: {
+          customer_id: customerId,
+          product_id: productId,
+          purchase_type: purchaseType,
+          child_id: childId || '',
+          product_name: productName,
+          quantity: quantity.toString(),
+          kiosk_transaction: 'true',
+          ...metadata,
+        },
+        confirm: true,
+        off_session: true,
+      });
+    } catch (stripeError: any) {
+      logger.error({ ...logContext, stripeError: stripeError.message }, '❌ Stripe payment failed');
+      
+      // Handle specific Stripe errors
+      if (stripeError.code === 'authentication_required') {
+        return NextResponse.json(
+          { 
+            error: 'This card requires additional verification. Please use a different card.',
+            requires_action: true,
+          },
+          { status: 400 }
+        );
+      }
+      
+      if (stripeError.code === 'card_declined') {
+        return NextResponse.json(
+          { error: 'Card declined. Please try a different card.' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: stripeError.message || 'Payment processing failed. Please try again.' },
+        { status: 400 }
+      );
+    }
+
+    // Verify payment succeeded
+    if (paymentIntent.status !== 'succeeded') {
+      logger.warn({ ...logContext, status: paymentIntent.status }, 'Payment not completed');
+      return NextResponse.json(
+        { error: `Payment not completed. Status: ${paymentIntent.status}` },
+        { status: 400 }
+      );
+    }
+
+    logger.info({ ...logContext, paymentIntentId: paymentIntent.id }, '💳 Kiosk payment succeeded');
+
+    // Calculate expiry date based on purchase type
+    let expiryDate: string | null = null;
+    let totalSessions = 1;
+    
+    if (purchaseType === 'day_pass') {
+      // Day passes expire at end of day or 12 hours from first use
+      totalSessions = 1;
+    } else if (purchaseType === 'weekly_pass') {
+      totalSessions = 10; // Punch card
+    } else if (purchaseType === 'monthly_pass') {
+      totalSessions = 999; // Unlimited
+    } else if (purchaseType === 'party_package') {
+      // Party packages have 90-day booking window
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 90);
+      expiryDate = expiry.toISOString();
+      totalSessions = 1;
+    }
+
+    // Create purchase record
+    const { data: purchase, error: purchaseError } = await adminSupabase
+      .from('purchases')
+      .insert({
+        customer_id: customerId,
+        type: purchaseType,
+        name: productName,
+        price: productPrice * quantity,
+        status: 'active',
+        used_sessions: 0,
+        total_sessions: totalSessions,
+        expiry_date: expiryDate,
+        child_id: childId || null,
+        stripe_payment_intent_id: paymentIntent.id,
+        metadata: {
+          product_id: productId,
+          quantity,
+          kiosk_purchase: true,
+          card_last4: savedCard.last4,
+          card_brand: savedCard.brand,
+          ...metadata,
+        },
+      })
+      .select()
+      .single();
+
+    if (purchaseError) {
+      logger.error({ ...logContext, error: purchaseError }, '❌ Failed to create purchase record');
+      Sentry.captureException(purchaseError, {
+        tags: { component: 'kiosk-payment', action: 'create_purchase' },
+        extra: { customerId, paymentIntentId: paymentIntent.id },
+      });
+      
+      // Payment succeeded but record failed - this needs manual review
+      return NextResponse.json(
+        { 
+          error: 'Payment processed but failed to create record. Please contact staff.',
+          paymentIntentId: paymentIntent.id,
+        },
+        { status: 500 }
+      );
+    }
+
+    logger.info(
+      { ...logContext, purchaseId: purchase.id, paymentIntentId: paymentIntent.id },
+      '✅ Kiosk purchase completed successfully'
+    );
+
+    return NextResponse.json({
+      success: true,
+      purchase: {
+        id: purchase.id,
+        type: purchase.type,
+        name: purchase.name,
+        price: purchase.price,
+        status: purchase.status,
+      },
+      payment: {
+        id: paymentIntent.id,
+        amount: amountInCents,
+        cardLast4: savedCard.last4,
+        cardBrand: savedCard.brand,
+      },
+    });
+
+  } catch (error) {
+    logger.error({ error }, '❌ Kiosk payment error');
+    Sentry.captureException(error, {
+      tags: { component: 'kiosk-payment' },
+    });
+    
+    return NextResponse.json(
+      { error: 'An unexpected error occurred. Please try again or contact staff.' },
+      { status: 500 }
+    );
+  }
+}
+
