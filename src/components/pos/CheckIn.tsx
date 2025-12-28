@@ -209,6 +209,7 @@ export function CheckIn({
                         price: pass.price,
                         description: pass.description,
                         sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+                        category: pass.category, // day, weekly, monthly
                         validity:
                             pass.category === "day"
                                 ? `${pass.duration} hours`
@@ -1194,18 +1195,38 @@ export function CheckIn({
         setPurchasingProduct(productId);
 
         try {
-            // Map product type correctly
+            // Determine purchase type from product category or name
+            // Products have category field: day, weekly, monthly for passes
+            // Parties are in availableParties array
+            // Snacks are in availableSnacks array
             let purchaseType: Purchase["type"];
+            
             if (isSnackPurchase) {
                 purchaseType = "food_beverage";
-            } else if (productId.includes("party")) {
+            } else if (isPartyPurchase) {
                 purchaseType = "party_package";
-            } else if (productId.includes("day")) {
+            } else if (product.category === "day") {
                 purchaseType = "day_pass";
-            } else if (productId.includes("weekly")) {
+            } else if (product.category === "weekly") {
                 purchaseType = "weekly_pass";
-            } else {
+            } else if (product.category === "monthly") {
                 purchaseType = "monthly_pass";
+            } else {
+                // Fallback: infer from name if category not set
+                const lowerName = product.name.toLowerCase();
+                if (lowerName.includes("day")) {
+                    purchaseType = "day_pass";
+                } else if (lowerName.includes("punch") || lowerName.includes("weekly") || lowerName.includes("10")) {
+                    purchaseType = "weekly_pass";
+                } else if (lowerName.includes("monthly") || lowerName.includes("membership")) {
+                    purchaseType = "monthly_pass";
+                } else if (lowerName.includes("party")) {
+                    purchaseType = "party_package";
+                } else {
+                    // Default to day pass if we can't determine
+                    purchaseType = "day_pass";
+                    console.warn(`Could not determine purchase type for product: ${product.name}, defaulting to day_pass`);
+                }
             }
 
             // In kiosk mode, use self-serve payment with saved cards (no redirect)
