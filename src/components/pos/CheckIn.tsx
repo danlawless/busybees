@@ -1807,15 +1807,26 @@ export function CheckIn({
                                                                     child.id &&
                                                                 p.status === "active"
                                                         );
-                                                    
+
                                                     // Group passes by type and sum remaining sessions
+                                                    // Map type to friendly display name
+                                                    const getPassTypeName = (type: string) => {
+                                                        switch (type) {
+                                                            case 'day_pass': return 'Day Pass';
+                                                            case 'weekly_pass': return 'Punch Card';
+                                                            case 'monthly_pass': return 'Monthly Pass';
+                                                            case 'party_package': return 'Party Package';
+                                                            default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                        }
+                                                    };
+                                                    
                                                     const groupedPasses = childPasses.reduce((acc, pass) => {
                                                         // Use pass type (day_pass, weekly_pass, etc.) as the grouping key
                                                         const key = pass.type;
                                                         if (!acc[key]) {
                                                             acc[key] = {
                                                                 type: pass.type,
-                                                                name: pass.name.replace(/^\d+x\s*/, ''), // Remove any "3x " prefix
+                                                                name: getPassTypeName(pass.type),
                                                                 totalRemaining: 0,
                                                                 isUnlimited: false,
                                                                 purchaseIds: [],
@@ -1829,9 +1840,9 @@ export function CheckIn({
                                                         acc[key].purchaseIds.push(pass.id);
                                                         return acc;
                                                     }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean; purchaseIds: string[] }>);
-                                                    
+
                                                     const groupedPassesList = Object.values(groupedPasses);
-                                                    
+
                                                     return (
                                                         groupedPassesList.length > 0 && (
                                                             <div>
