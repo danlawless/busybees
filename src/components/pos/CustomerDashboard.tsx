@@ -836,8 +836,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       // Fetch updated purchases from database
       const purchasesResponse = await fetch(`/api/purchases?customer_id=${customer.id}`);
       if (purchasesResponse.ok) {
-        const purchasesData = await purchasesResponse.json();
-        const purchases = purchasesData.map((p: any) => ({
+        const { purchases: purchasesData } = await purchasesResponse.json();
+        const purchases = (purchasesData || []).map((p: any) => ({
           id: p.id,
           type: p.type,
           name: p.name,

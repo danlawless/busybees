@@ -161,9 +161,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         try {
           const purchasesResponse = await fetch(`/api/purchases?customer_id=${data.user.id}`);
           if (purchasesResponse.ok) {
-            const purchasesData = await purchasesResponse.json();
+            const { purchases: purchasesData } = await purchasesResponse.json();
             // Convert API format to component format
-            purchases = purchasesData.map((purchase: any) => ({
+            purchases = (purchasesData || []).map((purchase: any) => ({
               id: purchase.id,
               type: purchase.type,
               name: purchase.name,

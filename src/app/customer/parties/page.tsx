@@ -83,7 +83,7 @@ function PartiesContent() {
         }
 
         if (purchasesRes.ok) {
-          const purchases = await purchasesRes.json();
+          const { purchases } = await purchasesRes.json();
           setPartyPurchases(purchases || []);
         }
       } catch (error) {
@@ -482,7 +482,7 @@ function PartiesContent() {
               // Refresh party purchases
               const purchasesRes = await fetch('/api/purchases?type=party_package');
               if (purchasesRes.ok) {
-                const purchases = await purchasesRes.json();
+                const { purchases } = await purchasesRes.json();
                 setPartyPurchases(purchases || []);
               }
 

@@ -163,8 +163,8 @@ function WebMyAccountContent() {
       // Fetch purchases
       const purchasesRes = await fetch('/api/purchases');
       if (purchasesRes.ok) {
-        const purchasesData = await purchasesRes.json();
-        const formattedPurchases = purchasesData.map((p: any) => ({
+        const { purchases: purchasesData } = await purchasesRes.json();
+        const formattedPurchases = (purchasesData || []).map((p: any) => ({
           id: p.id,
           type: p.type,
           name: p.name,
