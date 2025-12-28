@@ -1218,6 +1218,11 @@ export function CheckIn({
                 // Get the default card or first card
                 const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
 
+                // Get quantity and calculate discounted total
+                const quantity = quantities[productId] || 1;
+                const pricing = getPricingBreakdown(product.price, quantity);
+                const totalPrice = pricing.total;
+
                 // Use kiosk payment API with saved card (self-serve endpoint)
                 const response = await fetch("/api/stripe/kiosk-payment", {
                     method: "POST",
@@ -1226,11 +1231,12 @@ export function CheckIn({
                         customerId: customer.id,
                         productId: productId,
                         productName: product.name,
-                        productPrice: product.price,
+                        productPrice: totalPrice, // Send discounted total
                         productDescription: product.description || "",
                         purchaseType: purchaseType,
                         childId: isPassPurchase ? selectedChildForPurchase : undefined,
                         paymentMethodId: defaultCard.id,
+                        quantity: quantity,
                     }),
                 });
 
@@ -1277,11 +1283,28 @@ export function CheckIn({
                     onUpdateCustomer(updatedCustomer);
                 }
 
+                // Reset quantities after successful purchase
+                setQuantities((prev) => ({
+                    ...prev,
+                    [productId]: 0,
+                }));
+
+                // Build success message with quantity and savings
+                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(totalPrice)}`;
+                if (quantity > 1) {
+                    successDetails += `\n📦 Quantity: ${quantity}`;
+                    if (pricing.savings > 0) {
+                        successDetails += `\n🎉 You saved ${formatCurrency(pricing.savings)}!`;
+                    }
+                }
+
                 // Show success message
                 setSuccessDetails({
                     title: "Payment Successful! ✅",
-                    message: `Your purchase of ${product.name} has been completed.`,
-                    details: `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(product.price)}`,
+                    message: quantity > 1 
+                        ? `Your purchase of ${quantity}x ${product.name} has been completed.`
+                        : `Your purchase of ${product.name} has been completed.`,
+                    details: successDetails,
                 });
                 setShowSuccessModal(true);
                 setPurchasingProduct(null);

@@ -116,12 +116,17 @@ export async function POST(request: NextRequest) {
     // Create and confirm payment intent with saved card
     let paymentIntent;
     try {
+      // Build description with quantity
+      const paymentDescription = quantity > 1
+        ? `${quantity}x ${productName}`
+        : (productDescription || productName);
+
       paymentIntent = await stripe.paymentIntents.create({
         amount: amountInCents,
         currency: 'usd',
         customer: stripeCustomerId,
         payment_method: paymentMethodId,
-        description: productDescription || productName,
+        description: paymentDescription,
         metadata: {
           customer_id: customerId,
           product_id: productId,
@@ -176,26 +181,39 @@ export async function POST(request: NextRequest) {
 // Calculate expiry date and sessions based on purchase type
     const now = new Date();
     let expiryDate: Date | null = null;
-    let totalSessions = 1;
-    
+    let sessionsPerUnit = 1;
+
     if (purchaseType === 'day_pass') {
-      // Day passes expire at end of day or 12 hours from first use
-      totalSessions = 1;
+      // Day passes: 1 session per pass, multiply by quantity
+      sessionsPerUnit = 1;
     } else if (purchaseType === 'weekly_pass') {
-      totalSessions = 10; // Punch card
+      // Punch cards: 10 sessions per card
+      sessionsPerUnit = 10;
     } else if (purchaseType === 'monthly_pass') {
-      totalSessions = 999; // Unlimited
+      // Monthly: unlimited sessions
+      sessionsPerUnit = 999;
     } else if (purchaseType === 'party_package') {
       // Party packages have 90-day booking window
       expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 90);
-      totalSessions = 1;
+      sessionsPerUnit = 1;
     } else if (purchaseType === 'food_beverage') {
       // Food/beverage items are immediately "used"
-      totalSessions = 1;
+      sessionsPerUnit = 1;
     }
 
+    // Calculate total sessions (multiply by quantity for stackable passes)
+    const totalSessions = purchaseType === 'monthly_pass' 
+      ? 999 // Unlimited doesn't multiply
+      : sessionsPerUnit * quantity;
+
+    // Build product name with quantity
+    const purchaseName = quantity > 1 
+      ? `${quantity}x ${productName}` 
+      : productName;
+
     // Create purchase record (matching POS endpoint structure)
+    // Note: productPrice already includes quantity * discount from frontend
     const { data: purchase, error: purchaseError } = await adminSupabase
       .from('purchases')
       .insert({
@@ -203,8 +221,8 @@ export async function POST(request: NextRequest) {
         child_id: childId || null,
         type: purchaseType,
         product_id: productId,
-        name: productName,
-        price: productPrice * quantity,
+        name: purchaseName,
+        price: productPrice, // Already includes quantity + discount
         purchase_date: now.toISOString(),
         expiry_date: expiryDate?.toISOString() || null,
         used_sessions: 0,
