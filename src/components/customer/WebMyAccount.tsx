@@ -17,13 +17,7 @@ import { SuccessModal } from '@/components/ui/SuccessModal';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useUser } from '@/hooks/useUser';
-import {
-  formatCurrency,
-  getPassesFromStorage,
-  getPartiesFromStorage,
-  getActivePasses,
-  getActiveParties,
-} from '@/lib/utils/productHelpers';
+import { formatCurrency } from '@/lib/utils/productHelpers';
 
 // Types matching the POS CustomerDashboard
 interface Child {
@@ -216,39 +210,48 @@ function WebMyAccountContent() {
     }
   }, [user]);
 
-  // Load products from localStorage
+  // Load products from database API (configured in admin panel)
   useEffect(() => {
-    const loadProducts = () => {
+    const loadProducts = async () => {
       try {
-        const passes = getActivePasses(getPassesFromStorage());
-        const parties = getActiveParties(getPartiesFromStorage());
+        // Fetch passes from API (returns active passes only by default)
+        const passesResponse = await fetch('/api/passes');
+        if (passesResponse.ok) {
+          const { passes } = await passesResponse.json();
+          const formattedPasses = (passes || []).map((pass: any) => ({
+            id: pass.id,
+            name: pass.name,
+            price: pass.price,
+            description: pass.description,
+            sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+            validity: pass.category === 'day' ? `${pass.duration} hours` : `${pass.duration} days`,
+            stripePurchaseLink: pass.stripe_purchase_link || pass.stripePurchaseLink || '',
+            category: pass.category,
+          }));
+          setAvailablePasses(formattedPasses);
+        }
 
-        const formattedPasses = passes.map(pass => ({
-          id: pass.id,
-          name: pass.name,
-          price: pass.price,
-          description: pass.description,
-          sessions: pass.sessionsIncluded,
-          validity: pass.category === 'day' ? `${pass.duration} hours` : `${pass.duration} days`,
-          stripePurchaseLink: pass.stripePurchaseLink,
-        }));
-
-        const formattedParties = parties.map(party => ({
-          id: party.id,
-          name: party.name,
-          price: party.basePrice,
-          description: `${party.description} (Can accommodate up to ${party.capacity} kids with an additional charge of $15/child over the included 15, ${party.duration} hours)`,
-          sessions: 1,
-          validity: '90 days to book',
-          stripePurchaseLink: party.stripePurchaseLink,
-          capacity: party.capacity,
-          duration: party.duration,
-        }));
-
-        setAvailablePasses(formattedPasses);
-        setAvailableParties(formattedParties);
+        // Fetch parties from API (returns active parties only by default)
+        const partiesResponse = await fetch('/api/parties');
+        if (partiesResponse.ok) {
+          const { parties } = await partiesResponse.json();
+          const formattedParties = (parties || []).map((party: any) => ({
+            id: party.id,
+            name: party.name,
+            price: party.base_price || party.basePrice,
+            description: party.description
+              ? `${party.description} (${party.capacity} kids, ${party.duration} hours)`
+              : `Party package for up to ${party.capacity} kids, ${party.duration} hours`,
+            sessions: 1,
+            validity: '90 days to book',
+            stripePurchaseLink: party.stripe_purchase_link || party.stripePurchaseLink || '',
+            capacity: party.capacity,
+            duration: party.duration,
+          }));
+          setAvailableParties(formattedParties);
+        }
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error('Error loading products from API:', error);
       }
     };
 
@@ -595,18 +598,18 @@ function WebMyAccountContent() {
       if (data.success) {
         setPurchaseSuccess(product.name);
         setTimeout(() => setPurchaseSuccess(''), 5000);
-        
+
         // Show success with payment details
         const message = data.giftCardUsed > 0
           ? `${product.name} purchased! $${data.amountCharged?.toFixed(2) || product.price.toFixed(2)} charged to card ending in ${paymentMethod.last4}. $${data.giftCardUsed.toFixed(2)} gift card credit applied.`
           : `${product.name} purchased! $${product.price.toFixed(2)} charged to card ending in ${paymentMethod.last4}.`;
-        
+
         setSuccessDetails({
           title: '🎉 Purchase Complete!',
           message: message
         });
         setShowSuccessModal(true);
-        
+
         await fetchData();
       }
 

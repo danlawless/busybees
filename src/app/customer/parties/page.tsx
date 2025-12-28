@@ -54,10 +54,19 @@ function formatDate(dateString: string): string {
   });
 }
 
+interface SavedCard {
+  id: string;
+  stripe_payment_method_id: string;
+  last4: string;
+  brand: string;
+  is_default: boolean;
+}
+
 function PartiesContent() {
   const { user, profile } = useUser();
   const [packages, setPackages] = useState<PartyPackage[]>([]);
   const [partyPurchases, setPartyPurchases] = useState<PartyPurchase[]>([]);
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -72,9 +81,10 @@ function PartiesContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [packagesRes, purchasesRes] = await Promise.all([
+        const [packagesRes, purchasesRes, cardsRes] = await Promise.all([
           fetch('/api/parties'),
-          fetch('/api/purchases?type=party_package')
+          fetch('/api/purchases?type=party_package'),
+          fetch('/api/stripe/payment-methods')
         ]);
 
         if (packagesRes.ok) {
@@ -86,6 +96,11 @@ function PartiesContent() {
           const { purchases } = await purchasesRes.json();
           setPartyPurchases(purchases || []);
         }
+
+        if (cardsRes.ok) {
+          const { paymentMethods } = await cardsRes.json();
+          setSavedCards(paymentMethods || []);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -95,6 +110,12 @@ function PartiesContent() {
 
     fetchData();
   }, []);
+
+  // Get default payment method for one-click purchase
+  const getDefaultPaymentMethod = () => {
+    const defaultCard = savedCards.find(c => c.is_default);
+    return defaultCard || savedCards[0] || null;
+  };
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -136,21 +157,33 @@ function PartiesContent() {
       return;
     }
 
+    // Require saved payment method for one-click purchase
+    const paymentMethod = getDefaultPaymentMethod();
+    if (!paymentMethod) {
+      setMessage({
+        type: 'error',
+        text: 'Please add a payment method first in the Payments tab.'
+      });
+      setTimeout(() => setMessage(null), 5000);
+      return;
+    }
+
     if (processingProduct) return;
 
     setProcessingProduct(productId);
 
     try {
-      // Use Stripe checkout flow for web purchases
-      const response = await fetch('/api/stripe/checkout', {
+      // Use direct payment API with saved card for one-click purchase
+      const response = await fetch('/api/stripe/direct-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: productId,
           productName: product.name,
-          productPrice: product.base_price * 100, // Convert to cents
+          productPrice: product.base_price,
           productDescription: product.description,
           purchaseType: 'party_package',
+          paymentMethodId: paymentMethod.stripe_payment_method_id,
           metadata: {
             capacity: product.capacity,
             duration: product.duration,
@@ -158,24 +191,44 @@ function PartiesContent() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout');
+        throw new Error(data.error || 'Purchase failed');
       }
 
-      const { url } = await response.json();
-      if (url) {
-        // Redirect to Stripe checkout
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned');
+      // Handle 3DS authentication if required
+      if (data.requiresAction && data.clientSecret) {
+        setMessage({
+          type: 'error',
+          text: 'Your bank requires additional verification. Please try a different card.'
+        });
+        setTimeout(() => setMessage(null), 5000);
+        setProcessingProduct(null);
+        return;
+      }
+
+      // Purchase successful!
+      if (data.success) {
+        setMessage({
+          type: 'success',
+          text: `🎉 ${product.name} purchased! $${product.base_price.toFixed(2)} charged to card ending in ${paymentMethod.last4}.`
+        });
+
+        // Refresh purchases
+        const purchasesRes = await fetch('/api/purchases?type=party_package');
+        if (purchasesRes.ok) {
+          const { purchases } = await purchasesRes.json();
+          setPartyPurchases(purchases || []);
+        }
       }
     } catch (error) {
       console.error('Purchase error:', error);
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to start checkout'
+        text: error instanceof Error ? error.message : 'Failed to process payment'
       });
+    } finally {
       setTimeout(() => setMessage(null), 5000);
       setProcessingProduct(null);
     }

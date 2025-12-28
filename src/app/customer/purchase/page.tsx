@@ -109,7 +109,7 @@ export default function PurchasePage() {
       if (data.success) {
         // Clear the purchase intent from storage
         sessionStorage.removeItem('purchaseIntent');
-        
+
         // Show success and redirect
         setPurchaseSuccess(data.message || 'Purchase complete!');
         setTimeout(() => {
@@ -446,7 +446,7 @@ export default function PurchasePage() {
               </>
             )}
           </Button>
-          
+
           <Button
             onClick={handleGoBack}
             variant="outline"
