@@ -1471,7 +1471,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       const childPasses = customer.purchases.filter(p =>
                         p.childId === child.id && p.status === 'active'
                       );
-                      
+
                       // Group passes by type
                       const inferPassType = (name: string, type?: string): string => {
                         if (type && type !== 'undefined') return type;
@@ -1482,7 +1482,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         if (lowerName.includes('party')) return 'party_package';
                         return 'day_pass';
                       };
-                      
+
                       const getPassTypeName = (type: string) => {
                         switch (type) {
                           case 'day_pass': return 'Day Pass';
@@ -1492,7 +1492,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         }
                       };
-                      
+
                       const groupedPasses = childPasses.reduce((acc, pass) => {
                         const normalizedType = inferPassType(pass.name, pass.type);
                         if (!acc[normalizedType]) {
@@ -1510,9 +1510,9 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                         acc[normalizedType].totalRemaining += remaining;
                         return acc;
                       }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean }>);
-                      
+
                       const groupedPassesList = Object.values(groupedPasses);
-                      
+
                       return groupedPassesList.length > 0 && (
                         <div>
                           <p className="font-medium text-sm text-gray-700 mb-2">Active Passes:</p>

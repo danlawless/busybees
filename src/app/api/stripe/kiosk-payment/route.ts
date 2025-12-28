@@ -82,7 +82,9 @@ export async function POST(request: NextRequest) {
         const customerIdColumn = await getStripeCustomerIdColumn();
         const { data: customer, error: customerError } = await adminSupabase
             .from("users")
-            .select("id, email, name, phone, stripe_customer_id_test, stripe_customer_id_live")
+            .select(
+                "id, email, name, phone, stripe_customer_id_test, stripe_customer_id_live"
+            )
             .eq("id", customerId)
             .single();
 
@@ -108,9 +110,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Get or create Stripe customer
-        const existingStripeCustomerId = customerIdColumn === "stripe_customer_id_test" 
-            ? customer.stripe_customer_id_test 
-            : customer.stripe_customer_id_live;
+        const existingStripeCustomerId =
+            customerIdColumn === "stripe_customer_id_test"
+                ? customer.stripe_customer_id_test
+                : customer.stripe_customer_id_live;
         const stripeCustomerId =
             existingStripeCustomerId ||
             (await getOrCreateStripeCustomer(
@@ -180,8 +183,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     error:
-                        error.message ||
-                        "Payment processing failed. Please try again.",
+                        error.message || "Payment processing failed. Please try again.",
                 },
                 { status: 400 }
             );

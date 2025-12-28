@@ -25,7 +25,7 @@ export function useSessions(customerId?: string) {
   );
 
   return {
-    sessions: data || [],
+    sessions: data?.sessions || [],
     isLoading,
     isError: error,
     mutate,

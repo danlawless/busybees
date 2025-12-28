@@ -335,31 +335,31 @@ export function Pricing() {
 
         if (isAuthenticated) {
             const paymentMethod = getDefaultPaymentMethod();
-            const purchaseType = `${plan.category}_pass` as "day_pass" | "weekly_pass" | "monthly_pass";
+                const purchaseType = `${plan.category}_pass` as "day_pass" | "weekly_pass" | "monthly_pass";
 
             // If user has saved card, use direct payment (one-click purchase)
             if (paymentMethod) {
                 try {
                     const response = await fetch("/api/stripe/direct-payment", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            productId: plan.id,
-                            productName: plan.name,
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        productId: plan.id,
+                        productName: plan.name,
                             productPrice: plan.price,
-                            productDescription: plan.description,
-                            purchaseType,
+                        productDescription: plan.description,
+                        purchaseType,
                             paymentMethodId: paymentMethod.stripe_payment_method_id,
-                            metadata: {
-                                stripe_price_id: plan.stripePriceId,
-                                stripe_product_id: plan.stripeProductId,
-                            },
-                        }),
-                    });
+                        metadata: {
+                            stripe_price_id: plan.stripePriceId,
+                            stripe_product_id: plan.stripeProductId,
+                        },
+                    }),
+                });
 
                     const data = await response.json();
 
-                    if (!response.ok) {
+                if (!response.ok) {
                         throw new Error(data.error || "Payment failed");
                     }
 
@@ -376,11 +376,11 @@ export function Pricing() {
                         setTimeout(() => {
                             router.push("/customer/dashboard?tab=passes");
                         }, 2000);
-                    }
-                } catch (error) {
+                }
+            } catch (error) {
                     console.error("Direct payment error:", error);
                     alert(error instanceof Error ? error.message : "Payment failed. Please try again.");
-                } finally {
+            } finally {
                     setPurchasingPassId(null);
                 }
             } else {

@@ -196,9 +196,9 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         try {
           const sessionsResponse = await fetch(`/api/sessions?customer_id=${data.user.id}&status=active`);
           if (sessionsResponse.ok) {
-            const sessionsData = await sessionsResponse.json();
+            const { sessions: sessionsData } = await sessionsResponse.json();
             // Convert API format to component format
-            activeSessions = sessionsData.map((session: any) => ({
+            activeSessions = (sessionsData || []).map((session: any) => ({
               id: session.id,
               customerId: session.customer_id,
               purchaseId: session.purchase_id,

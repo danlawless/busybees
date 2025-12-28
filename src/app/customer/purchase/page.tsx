@@ -107,8 +107,8 @@ export default function PurchasePage() {
       }
 
       if (data.success) {
-        // Clear the purchase intent from storage
-        sessionStorage.removeItem('purchaseIntent');
+      // Clear the purchase intent from storage
+      sessionStorage.removeItem('purchaseIntent');
 
         // Show success and redirect
         setPurchaseSuccess(data.message || 'Purchase complete!');
@@ -176,8 +176,8 @@ export default function PurchasePage() {
     if (purchaseIntent) {
       // If user has saved cards now, clear error and let them try again with direct payment
       if (savedCards.length > 0) {
-        setCheckoutTriggered(false);
-        setError(null);
+      setCheckoutTriggered(false);
+      setError(null);
       } else {
         // Still no cards - redirect to account to add one
         router.push('/customer/account?tab=payments');

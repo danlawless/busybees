@@ -221,7 +221,7 @@ function WebMyAccountContent() {
           fetch('/api/passes'),
           fetch('/api/parties')
         ]);
-        
+
         // Process passes
         if (passesResponse.ok) {
           const { passes } = await passesResponse.json();
