@@ -249,6 +249,13 @@ const parseFeatures = (description: string): string[] => {
     return features.filter((f) => f.length > 0);
 };
 
+interface SavedCard {
+    stripe_payment_method_id: string;
+    last4: string;
+    brand: string;
+    is_default: boolean;
+}
+
 export function Pricing() {
     const router = useRouter();
     const { isAuthenticated, loading: authLoading } = useAuth();
@@ -257,6 +264,8 @@ export function Pricing() {
     const [passes, setPasses] = useState<Pass[]>([]);
     const [loadingPasses, setLoadingPasses] = useState(true);
     const [purchasingPassId, setPurchasingPassId] = useState<string | null>(null);
+    const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+    const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
 
     // Fetch passes from API
     useEffect(() => {
@@ -265,7 +274,7 @@ export function Pricing() {
                 const response = await fetch("/api/passes");
                 if (!response.ok) throw new Error("Failed to fetch passes");
                 const data = await response.json();
-                setPasses(data);
+                setPasses(data.passes || []);
             } catch (error) {
                 console.error("Error fetching passes:", error);
             } finally {
@@ -274,6 +283,32 @@ export function Pricing() {
         };
         fetchPasses();
     }, []);
+
+    // Fetch saved cards when authenticated
+    useEffect(() => {
+        const fetchSavedCards = async () => {
+            if (!isAuthenticated) {
+                setSavedCards([]);
+                return;
+            }
+            try {
+                const response = await fetch("/api/stripe/payment-methods");
+                if (response.ok) {
+                    const { paymentMethods } = await response.json();
+                    setSavedCards(paymentMethods || []);
+                }
+            } catch (error) {
+                console.error("Error fetching saved cards:", error);
+            }
+        };
+        fetchSavedCards();
+    }, [isAuthenticated]);
+
+    // Get default payment method
+    const getDefaultPaymentMethod = () => {
+        const defaultCard = savedCards.find(c => c.is_default);
+        return defaultCard || savedCards[0] || null;
+    };
 
     useEffect(() => {
         const promos = getPromosFromStorage();
@@ -299,39 +334,59 @@ export function Pricing() {
         setPurchasingPassId(plan.id);
 
         if (isAuthenticated) {
-            // User is authenticated - create checkout session
-            try {
-                const purchaseType = `${plan.category}_pass` as "day_pass" | "weekly_pass" | "monthly_pass";
+            const paymentMethod = getDefaultPaymentMethod();
+            const purchaseType = `${plan.category}_pass` as "day_pass" | "weekly_pass" | "monthly_pass";
 
-                const response = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        productId: plan.id,
-                        productName: plan.name,
-                        productPrice: plan.price * 100, // Convert to cents
-                        productDescription: plan.description,
-                        purchaseType,
-                        metadata: {
-                            stripe_price_id: plan.stripePriceId,
-                            stripe_product_id: plan.stripeProductId,
-                        },
-                    }),
-                });
+            // If user has saved card, use direct payment (one-click purchase)
+            if (paymentMethod) {
+                try {
+                    const response = await fetch("/api/stripe/direct-payment", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            productId: plan.id,
+                            productName: plan.name,
+                            productPrice: plan.price,
+                            productDescription: plan.description,
+                            purchaseType,
+                            paymentMethodId: paymentMethod.stripe_payment_method_id,
+                            metadata: {
+                                stripe_price_id: plan.stripePriceId,
+                                stripe_product_id: plan.stripeProductId,
+                            },
+                        }),
+                    });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || "Failed to create checkout");
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || "Payment failed");
+                    }
+
+                    // Handle 3DS if required
+                    if (data.requiresAction) {
+                        alert("Your bank requires additional verification. Please try a different card or use the account page.");
+                        setPurchasingPassId(null);
+                        return;
+                    }
+
+                    if (data.success) {
+                        // Show success and redirect to account
+                        setPurchaseSuccess(`🎉 ${plan.name} purchased! Charged to card ending in ${paymentMethod.last4}.`);
+                        setTimeout(() => {
+                            router.push("/customer/dashboard?tab=passes");
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error("Direct payment error:", error);
+                    alert(error instanceof Error ? error.message : "Payment failed. Please try again.");
+                } finally {
+                    setPurchasingPassId(null);
                 }
-
-                const { url } = await response.json();
-                if (url) {
-                    window.location.href = url;
-                }
-            } catch (error) {
-                console.error("Checkout error:", error);
-                alert("Unable to start checkout. Please try again.");
-            } finally {
+            } else {
+                // No saved card - redirect to account to add one, or use checkout as fallback
+                // For better UX, redirect to account page to add payment method first
+                router.push("/customer/dashboard?tab=payments");
                 setPurchasingPassId(null);
             }
         } else {
@@ -395,6 +450,21 @@ export function Pricing() {
     return (
         <section className="relative py-20 bg-neutral-50 overflow-visible">
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
+                {/* Purchase Success Message */}
+                <AnimatePresence>
+                    {purchaseSuccess && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-center"
+                        >
+                            <p className="text-green-800 font-semibold">{purchaseSuccess}</p>
+                            <p className="text-green-600 text-sm mt-1">Redirecting to your account...</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Header */}
                 <motion.div
                     className="text-center mb-16"
