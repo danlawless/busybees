@@ -75,9 +75,10 @@ function WebMyAccountContent() {
   const [giftCardBalance, setGiftCardBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Products state
+  // Products state - loads independently from user data
   const [availablePasses, setAvailablePasses] = useState<any[]>([]);
   const [availableParties, setAvailableParties] = useState<any[]>([]);
+  const [productsLoaded, setProductsLoaded] = useState(false);
 
   // Tab state - default to children, update from URL after mount
   const [activeTab, setActiveTab] = useState<TabType>('children');
@@ -211,11 +212,17 @@ function WebMyAccountContent() {
   }, [user]);
 
   // Load products from database API (configured in admin panel)
+  // This runs independently from user data - products should ALWAYS load first
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        // Fetch passes from API (returns active passes only by default)
-        const passesResponse = await fetch('/api/passes');
+        // Fetch passes and parties in parallel
+        const [passesResponse, partiesResponse] = await Promise.all([
+          fetch('/api/passes'),
+          fetch('/api/parties')
+        ]);
+        
+        // Process passes
         if (passesResponse.ok) {
           const { passes } = await passesResponse.json();
           const formattedPasses = (passes || []).map((pass: any) => ({
@@ -231,8 +238,7 @@ function WebMyAccountContent() {
           setAvailablePasses(formattedPasses);
         }
 
-        // Fetch parties from API (returns active parties only by default)
-        const partiesResponse = await fetch('/api/parties');
+        // Process parties
         if (partiesResponse.ok) {
           const { parties } = await partiesResponse.json();
           const formattedParties = (parties || []).map((party: any) => ({
@@ -252,6 +258,8 @@ function WebMyAccountContent() {
         }
       } catch (error) {
         console.error('Error loading products from API:', error);
+      } finally {
+        setProductsLoaded(true);
       }
     };
 
@@ -756,8 +764,8 @@ function WebMyAccountContent() {
   const activePartyPurchases = partyPurchases.filter(p => p.status === 'active');
   const pastPartyPurchases = partyPurchases.filter(p => p.status !== 'active');
 
-  // Loading state
-  if (userLoading || isLoading) {
+  // Loading state - only block on initial auth check, not user data loading
+  if (userLoading) {
     return (
       <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
@@ -928,7 +936,12 @@ function WebMyAccountContent() {
               </Button>
             </div>
 
-            {children.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading your children...</p>
+              </div>
+            ) : children.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">👶</div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">No Children Added</h3>
@@ -1273,7 +1286,12 @@ function WebMyAccountContent() {
 
               <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
                 <div className="grid gap-4 text-left">
-                  {availablePasses.length === 0 ? (
+                  {!productsLoaded ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto mb-3"></div>
+                      <p className="text-sm">Loading passes...</p>
+                    </div>
+                  ) : availablePasses.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p className="text-lg mb-2">🎫 No passes available</p>
                       <p className="text-sm">Please check back later or contact staff.</p>
@@ -1491,7 +1509,12 @@ function WebMyAccountContent() {
 
               <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
                 <div className="grid gap-4 text-left">
-                  {availableParties.length === 0 ? (
+                  {!productsLoaded ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-3"></div>
+                      <p className="text-sm">Loading party packages...</p>
+                    </div>
+                  ) : availableParties.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p className="text-lg mb-2">🎉 No party packages available</p>
                       <p className="text-sm">Please check back later or contact staff.</p>
@@ -1600,7 +1623,12 @@ function WebMyAccountContent() {
                 </Button>
               </div>
 
-              {savedCards.length > 0 ? (
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading payment methods...</p>
+                </div>
+              ) : savedCards.length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {savedCards.map((card) => (
                     <Card key={card.id} className="p-4">
