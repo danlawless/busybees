@@ -1152,11 +1152,10 @@ export function CheckIn({
         ].find((p) => p.id === productId);
         if (!product) return;
 
-        // Check if this is a snack purchase (doesn't require child selection)
-        const isSnackPurchase = AVAILABLE_SNACKS.some((s) => s.id === productId);
-
-        // Check if this is a pass purchase and requires child selection
-        const isPassPurchase = !productId.includes("party") && !isSnackPurchase;
+        // Determine product type using the arrays loaded from database API
+        const isSnackPurchase = availableSnacks.some((s) => s.id === productId);
+        const isPartyPurchase = availableParties.some((p) => p.id === productId);
+        const isPassPurchase = availablePasses.some((p) => p.id === productId);
 
         if (isPassPurchase) {
             // For pass purchases, require child selection
@@ -1200,7 +1199,7 @@ export function CheckIn({
             // Parties are in availableParties array
             // Snacks are in availableSnacks array
             let purchaseType: Purchase["type"];
-            
+
             if (isSnackPurchase) {
                 purchaseType = "food_beverage";
             } else if (isPartyPurchase) {
@@ -2275,7 +2274,7 @@ export function CheckIn({
                                     if (lowerName.includes('party')) return 'party_package';
                                     return 'day_pass';
                                 };
-                                
+
                                 const getPassTypeName = (type: string) => {
                                     switch (type) {
                                         case 'day_pass': return 'Day Pass';
@@ -2285,7 +2284,7 @@ export function CheckIn({
                                         default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                                     }
                                 };
-                                
+
                                 const groupedPasses = availablePasses.reduce((acc, purchase) => {
                                     const normalizedType = inferPassType(purchase.name, purchase.type);
                                     // Group by type + childId
@@ -2310,7 +2309,7 @@ export function CheckIn({
                                     acc[key].purchases.push(purchase);
                                     return acc;
                                 }, {} as Record<string, { type: string; typeName: string; childId: string | null; childName: string | null; totalVisits: number; isUnlimited: boolean; purchases: typeof availablePasses; firstPurchase: typeof availablePasses[0] }>);
-                                
+
                                 const groupedPassesList = Object.values(groupedPasses);
 
                                 return (
