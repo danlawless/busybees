@@ -1820,7 +1820,7 @@ export function CheckIn({
                                                         if (lowerName.includes('party')) return 'party_package';
                                                         return 'day_pass'; // Default fallback
                                                     };
-                                                    
+
                                                     // Map type to friendly display name
                                                     const getPassTypeName = (type: string) => {
                                                         switch (type) {
@@ -1831,7 +1831,7 @@ export function CheckIn({
                                                             default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                                                         }
                                                     };
-                                                    
+
                                                     const groupedPasses = childPasses.reduce((acc, pass) => {
                                                         // Normalize type - infer from name if missing
                                                         const normalizedType = inferPassType(pass.name, pass.type);
@@ -2230,7 +2230,7 @@ export function CheckIn({
                                 return null;
                             })()}
 
-                            {/* Available Passes (Not Checked In) */}
+                            {/* Available Passes (Not Checked In) - GROUPED */}
                             {(() => {
                                 const availablePasses =
                                     displayCustomer.purchases.filter(
@@ -2244,30 +2244,82 @@ export function CheckIn({
                                             )
                                     );
 
+                                // Group passes by type + childId
+                                const inferPassType = (name: string, type?: string): string => {
+                                    if (type && type !== 'undefined') return type;
+                                    const lowerName = name.toLowerCase();
+                                    if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
+                                    if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
+                                    if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
+                                    if (lowerName.includes('party')) return 'party_package';
+                                    return 'day_pass';
+                                };
+                                
+                                const getPassTypeName = (type: string) => {
+                                    switch (type) {
+                                        case 'day_pass': return 'Day Pass';
+                                        case 'weekly_pass': return 'Punch Card';
+                                        case 'monthly_pass': return 'Monthly Pass';
+                                        case 'party_package': return 'Party Package';
+                                        default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    }
+                                };
+                                
+                                const groupedPasses = availablePasses.reduce((acc, purchase) => {
+                                    const normalizedType = inferPassType(purchase.name, purchase.type);
+                                    // Group by type + childId
+                                    const key = `${normalizedType}-${purchase.childId || 'no-child'}`;
+                                    if (!acc[key]) {
+                                        acc[key] = {
+                                            type: normalizedType,
+                                            typeName: getPassTypeName(normalizedType),
+                                            childId: purchase.childId,
+                                            childName: purchase.childId ? getChildName(purchase.childId, displayCustomer) : null,
+                                            totalVisits: 0,
+                                            isUnlimited: false,
+                                            purchases: [] as typeof availablePasses,
+                                            firstPurchase: purchase, // Keep reference for check-in
+                                        };
+                                    }
+                                    const remaining = (purchase.totalSessions || 1) - (purchase.usedSessions || 0);
+                                    if (purchase.totalSessions === 999) {
+                                        acc[key].isUnlimited = true;
+                                    }
+                                    acc[key].totalVisits += remaining;
+                                    acc[key].purchases.push(purchase);
+                                    return acc;
+                                }, {} as Record<string, { type: string; typeName: string; childId: string | null; childName: string | null; totalVisits: number; isUnlimited: boolean; purchases: typeof availablePasses; firstPurchase: typeof availablePasses[0] }>);
+                                
+                                const groupedPassesList = Object.values(groupedPasses);
+
                                 return (
                                     <div>
                                         <h3 className="text-2xl font-bold mb-6">
                                             🎫 Available Passes
                                         </h3>
-                                        {availablePasses.length > 0 ? (
+                                        {groupedPassesList.length > 0 ? (
                                             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-                                                {availablePasses.map((purchase) => (
+                                                {groupedPassesList.map((group) => {
+                                                    // Use first purchase for check-in logic
+                                                    const purchase = group.firstPurchase;
+                                                    return (
                                                     <Card
-                                                        key={purchase.id}
+                                                        key={`${group.type}-${group.childId}`}
                                                         className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer min-w-[300px]"
                                                     >
                                                         <div className="flex flex-col items-center text-center space-y-4">
                                                             <div className="flex-1">
                                                                 <h4 className="text-2xl font-bold text-gray-900 mb-3">
-                                                                    {purchase.name}
+                                                                    {!group.isUnlimited && group.totalVisits > 1 && (
+                                                                        <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-lg mr-2">
+                                                                            {group.totalVisits}x
+                                                                        </span>
+                                                                    )}
+                                                                    {group.typeName}
                                                                 </h4>
-                                                                {purchase.childId && (
+                                                                {group.childName && (
                                                                     <p className="text-green-600 font-medium text-lg mb-3">
-                                                                        👶{" "}
-                                                                        {getChildName(
-                                                                            purchase.childId,
-                                                                            displayCustomer
-                                                                        )}
+                                                                        👶 {group.childName}
                                                                     </p>
                                                                 )}
                                                                 {purchase.type ===
@@ -2610,7 +2662,8 @@ export function CheckIn({
                                                             })()}
                                                         </div>
                                                     </Card>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
                                             <div className="text-center py-8">
