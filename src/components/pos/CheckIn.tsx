@@ -1278,7 +1278,11 @@ export function CheckIn({
                 }
 
                 // Show success message
-                setSuccessMessage(`✅ Payment successful!\n\n💳 Charged •••• ${defaultCard.last4}\n📦 ${product.name}\n💰 ${formatCurrency(product.price)}`);
+                setSuccessDetails({
+                    title: "Payment Successful! ✅",
+                    message: `Your purchase of ${product.name} has been completed.`,
+                    details: `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(product.price)}`,
+                });
                 setShowSuccessModal(true);
                 setPurchasingProduct(null);
                 return;
