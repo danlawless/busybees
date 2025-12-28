@@ -1,13 +1,13 @@
 /**
  * Kiosk Payment API Route
  * Processes self-serve payments at kiosks using customer's saved payment methods
- * 
+ *
  * Security Model:
  * - Kiosk is a trusted device on a trusted network
  * - Customer is identified via phone/email lookup at the kiosk
  * - Payment method must belong to the identified customer
  * - All transactions are logged for audit trail
- * 
+ *
  * Flow:
  * 1. Customer identifies themselves at kiosk (phone lookup)
  * 2. Kiosk loads their saved payment methods
@@ -24,7 +24,7 @@ import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
   const adminSupabase = createAdminClient();
-  
+
   try {
     const body = await request.json();
     const {
@@ -137,18 +137,18 @@ export async function POST(request: NextRequest) {
       });
     } catch (stripeError: any) {
       logger.error({ ...logContext, stripeError: stripeError.message }, '❌ Stripe payment failed');
-      
+
       // Handle specific Stripe errors
       if (stripeError.code === 'authentication_required') {
         return NextResponse.json(
-          { 
+          {
             error: 'This card requires additional verification. Please use a different card.',
             requires_action: true,
           },
           { status: 400 }
         );
       }
-      
+
       if (stripeError.code === 'card_declined') {
         return NextResponse.json(
           { error: 'Card declined. Please try a different card.' },
@@ -173,8 +173,9 @@ export async function POST(request: NextRequest) {
 
     logger.info({ ...logContext, paymentIntentId: paymentIntent.id }, '💳 Kiosk payment succeeded');
 
-    // Calculate expiry date based on purchase type
-    let expiryDate: string | null = null;
+// Calculate expiry date and sessions based on purchase type
+    const now = new Date();
+    let expiryDate: Date | null = null;
     let totalSessions = 1;
     
     if (purchaseType === 'day_pass') {
@@ -186,34 +187,30 @@ export async function POST(request: NextRequest) {
       totalSessions = 999; // Unlimited
     } else if (purchaseType === 'party_package') {
       // Party packages have 90-day booking window
-      const expiry = new Date();
-      expiry.setDate(expiry.getDate() + 90);
-      expiryDate = expiry.toISOString();
+      expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 90);
+      totalSessions = 1;
+    } else if (purchaseType === 'food_beverage') {
+      // Food/beverage items are immediately "used"
       totalSessions = 1;
     }
 
-    // Create purchase record
+    // Create purchase record (matching POS endpoint structure)
     const { data: purchase, error: purchaseError } = await adminSupabase
       .from('purchases')
       .insert({
         customer_id: customerId,
+        child_id: childId || null,
         type: purchaseType,
+        product_id: productId,
         name: productName,
         price: productPrice * quantity,
-        status: 'active',
+        purchase_date: now.toISOString(),
+        expiry_date: expiryDate?.toISOString() || null,
         used_sessions: 0,
         total_sessions: totalSessions,
-        expiry_date: expiryDate,
-        child_id: childId || null,
+        status: purchaseType === 'food_beverage' ? 'used' : 'active',
         stripe_payment_intent_id: paymentIntent.id,
-        metadata: {
-          product_id: productId,
-          quantity,
-          kiosk_purchase: true,
-          card_last4: savedCard.last4,
-          card_brand: savedCard.brand,
-          ...metadata,
-        },
       })
       .select()
       .single();
@@ -224,10 +221,10 @@ export async function POST(request: NextRequest) {
         tags: { component: 'kiosk-payment', action: 'create_purchase' },
         extra: { customerId, paymentIntentId: paymentIntent.id },
       });
-      
+
       // Payment succeeded but record failed - this needs manual review
       return NextResponse.json(
-        { 
+        {
           error: 'Payment processed but failed to create record. Please contact staff.',
           paymentIntentId: paymentIntent.id,
         },
@@ -262,7 +259,7 @@ export async function POST(request: NextRequest) {
     Sentry.captureException(error, {
       tags: { component: 'kiosk-payment' },
     });
-    
+
     return NextResponse.json(
       { error: 'An unexpected error occurred. Please try again or contact staff.' },
       { status: 500 }

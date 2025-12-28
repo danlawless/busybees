@@ -6,15 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
-import {
-    formatCurrency,
-    getPassesFromStorage,
-    getActivePasses,
-    getPartiesFromStorage,
-    getActiveParties,
-    getProductsFromStorage,
-    getAvailableProducts,
-} from "@/lib/utils/productHelpers";
+import { formatCurrency } from "@/lib/utils/productHelpers";
 
 interface Child {
     id: string;
@@ -195,63 +187,72 @@ export function CheckIn({
         fetchPosMode();
     }, []);
 
-    // Fetch passes, parties, and snacks from localStorage (client-side only)
+    // Fetch passes, parties, and snacks from database API
     useEffect(() => {
-        const loadProducts = () => {
+        const loadProducts = async () => {
             setIsLoadingProducts(true);
             try {
-                // Get active passes from localStorage
-                const allPasses = getPassesFromStorage();
-                const passes = getActivePasses(allPasses);
+                // Fetch passes and parties from API in parallel
+                const [passesResponse, partiesResponse, productsResponse] = await Promise.all([
+                    fetch('/api/passes'),
+                    fetch('/api/parties'),
+                    fetch('/api/products'),
+                ]);
 
-                // Get active parties from localStorage
-                const allParties = getPartiesFromStorage();
-                const parties = getActiveParties(allParties);
+                // Process passes from API
+                let formattedPasses: any[] = [];
+                if (passesResponse.ok) {
+                    const { passes } = await passesResponse.json();
+                    formattedPasses = (passes || []).map((pass: any) => ({
+                        id: pass.id,
+                        name: pass.name,
+                        price: pass.price,
+                        description: pass.description,
+                        sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+                        validity:
+                            pass.category === "day"
+                                ? `${pass.duration} hours`
+                                : `${pass.duration} days`,
+                    }));
+                }
 
-                // Get available products (snacks) from localStorage
-                const allProducts = getProductsFromStorage();
-                const products = getAvailableProducts(allProducts);
+                // Process parties from API
+                let formattedParties: any[] = [];
+                if (partiesResponse.ok) {
+                    const { parties } = await partiesResponse.json();
+                    formattedParties = (parties || []).map((party: any) => ({
+                        id: party.id,
+                        name: party.name,
+                        price: party.base_price || party.basePrice,
+                        description: party.description
+                            ? `${party.description} (${party.capacity} kids, ${party.duration} hours)`
+                            : `Party package for up to ${party.capacity} kids, ${party.duration} hours`,
+                        sessions: 1,
+                        validity: "90 days to book",
+                        capacity: party.capacity,
+                        duration: party.duration,
+                        includedItems: party.included_items || party.includedItems,
+                        addOns: party.add_ons || party.addOns,
+                    }));
+                }
 
-                // Convert passes to format expected by CheckIn component
-                const formattedPasses = passes.map((pass) => ({
-                    id: pass.id,
-                    name: pass.name,
-                    price: pass.price,
-                    description: pass.description,
-                    sessions: pass.sessionsIncluded,
-                    validity:
-                        pass.category === "day"
-                            ? `${pass.duration} hours`
-                            : `${pass.duration} days`,
-                }));
-
-                // Convert parties to format expected by CheckIn component
-                const formattedParties = parties.map((party) => ({
-                    id: party.id,
-                    name: party.name,
-                    price: party.basePrice,
-                    description: `${party.description} (Can accommodate up to ${party.capacity} kids with an additional charge of $15/child over the included 15, ${party.duration} hours)`,
-                    sessions: 1,
-                    validity: "90 days to book",
-                    capacity: party.capacity,
-                    duration: party.duration,
-                    includedItems: party.includedItems,
-                    addOns: party.addOns,
-                }));
-
-                // Convert products (snacks) to format expected by CheckIn component
-                const formattedSnacks = products.map((product) => ({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    description: product.description,
-                    emoji:
-                        product.category === "food"
-                            ? "🍎"
-                            : product.category === "beverage"
-                            ? "🥤"
-                            : "🛍️",
-                }));
+                // Process products (snacks) from API
+                let formattedSnacks: any[] = [];
+                if (productsResponse.ok) {
+                    const { products } = await productsResponse.json();
+                    formattedSnacks = (products || []).map((product: any) => ({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        description: product.description,
+                        emoji:
+                            product.category === "food"
+                                ? "🍎"
+                                : product.category === "beverage"
+                                ? "🥤"
+                                : "🛍️",
+                    }));
+                }
 
                 setAvailablePasses(formattedPasses);
                 setAvailableParties(formattedParties);
@@ -266,7 +267,7 @@ export function CheckIn({
                 );
                 setQuantities(initialQuantities);
             } catch (error) {
-                console.error("Error loading products:", error);
+                console.error("Error loading products from API:", error);
                 // Set empty arrays on error so UI doesn't break
                 setAvailablePasses([]);
                 setAvailableParties([]);
@@ -278,8 +279,9 @@ export function CheckIn({
 
         loadProducts();
 
-        // Reload when localStorage changes (e.g., admin updates products)
+        // No need for storage change listener - products come from API now
         const handleStorageChange = (e: StorageEvent) => {
+            // Only reload for admin panel updates (if localStorage is used for sync)
             if (
                 e.key?.includes("busybees_passes") ||
                 e.key?.includes("busybees_parties") ||
