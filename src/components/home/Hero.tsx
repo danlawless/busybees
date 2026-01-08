@@ -18,7 +18,7 @@ const features = [
   },
   {
     icon: Heart,
-    text: 'Ages 0-6 Welcome'
+    text: 'All Ages Welcome'
   },
   {
     icon: Star,

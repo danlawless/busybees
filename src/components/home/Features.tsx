@@ -28,7 +28,7 @@ const features = [
     icon: Baby,
     title: 'Perfect for Every Age & Stage',
     description: 'From crawling babies to energetic 6-year-olds, every child finds their perfect play space. No more "too young" or "too old" worries!',
-    highlight: '👶 Ages 0-6 Welcome',
+    highlight: '👶 All Ages Welcome',
     color: 'from-purple-200 to-purple-300',
     bgColor: 'from-purple-50 to-purple-100'
   },
