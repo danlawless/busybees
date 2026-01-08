@@ -36,7 +36,7 @@ export function InfoHero() {
               <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-honey-100 to-yellow-100 backdrop-blur-sm px-6 py-3 rounded-full border-2 border-honey-300 shadow-lg">
                 <div className="w-3 h-3 rounded-full bg-honey-500 animate-pulse"></div>
                 <span className="font-bold text-charcoal-800">
-                  Opening in January 2025! 🎉
+                  Opening in January 2026! 🎉
                 </span>
               </div>
             </div>
