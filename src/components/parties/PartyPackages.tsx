@@ -58,7 +58,7 @@ const partyPackages = [
   },
   {
     name: 'Queen Bee+',
-    description: 'Premium package with pizza, soda, cake and balloons',
+    description: 'Premium package with pizza, soda, cake and decorations',
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
@@ -74,7 +74,7 @@ const partyPackages = [
       'Pizza for all guests',
       'Soda for all guests',
       'Birthday cake included',
-      'Balloon decorations',
+      'Decorations',
       'Dedicated party host assistance'
     ],
     popular: false
