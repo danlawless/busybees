@@ -16,6 +16,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
+import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash';
 
@@ -76,6 +77,29 @@ export async function POST(request: NextRequest) {
 
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+
+    // Age gate validation for passes with age restrictions
+    if (child_id && hasAgeRestriction(product_name)) {
+      const { data: child } = await adminSupabase
+        .from('children')
+        .select('birthdate, name')
+        .eq('id', child_id)
+        .single();
+
+      if (child?.birthdate) {
+        const validation = validateBirthdateForProduct(child.birthdate, product_name);
+        if (!validation.valid) {
+          logger.warn(
+            { customer_id, child_id, childName: child.name, childAge: validation.childAge, product_name },
+            '❌ Age gate validation failed'
+          );
+          return NextResponse.json(
+            { error: validation.error },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     logger.info({ customer_id, product_name, purchase_type, payment_method }, 'Processing POS purchase');

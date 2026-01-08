@@ -18,6 +18,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
+import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,6 +97,29 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid payment method. Please select a valid saved card.' },
         { status: 400 }
       );
+    }
+
+    // Age gate validation for passes with age restrictions
+    if (childId && hasAgeRestriction(productName)) {
+      const { data: child } = await adminSupabase
+        .from('children')
+        .select('birthdate, name')
+        .eq('id', childId)
+        .single();
+
+      if (child?.birthdate) {
+        const validation = validateBirthdateForProduct(child.birthdate, productName);
+        if (!validation.valid) {
+          logger.warn(
+            { ...logContext, childId, childName: child.name, childAge: validation.childAge },
+            '❌ Age gate validation failed'
+          );
+          return NextResponse.json(
+            { error: validation.error },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Calculate amounts
