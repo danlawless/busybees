@@ -84,7 +84,7 @@ export function Hero() {
             variants={fadeInUp}
             className="mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-600 mb-8"
           >
-            A modern, safe and engaging indoor play space for children ages 0-6 with distinct areas for infants, toddlers and young children. Our mission is to create a go-to destination for families to play, socialize and celebrate.
+            A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children. Our mission is to create a go-to destination for families to play, socialize, celebrate and grow.
           </motion.p>
 
           {/* Feature Pills */}
