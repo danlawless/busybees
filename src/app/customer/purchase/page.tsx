@@ -11,8 +11,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ShoppingCart, AlertCircle, ArrowLeft, CreditCard, CheckCircle } from 'lucide-react';
 
@@ -190,14 +188,10 @@ export default function PurchasePage() {
     router.push('/');
   };
 
-  // Helper to wrap content with layout
+  // Helper to wrap content with consistent styling
   const withLayout = (content: React.ReactNode) => (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
-        {content}
-      </div>
-      <Footer />
+    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4">
+      {content}
     </div>
   );
 
