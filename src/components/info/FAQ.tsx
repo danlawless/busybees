@@ -54,7 +54,7 @@ const faqs = [
       },
       {
         question: 'What\'s included in party packages?',
-        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs, and paper goods. Worker Bee and Queen Bee packages also include pizza and soda. The Queen Bee package adds sheet cake and balloons!'
+        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs, and paper goods. Worker Bee and Queen Bee packages also include pizza and soda. The Queen Bee package adds sheet cake and decorations!'
       },
       {
         question: 'Can I bring my own decorations and cake?',

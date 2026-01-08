@@ -69,7 +69,7 @@ export function PartyPackageBackdrop() {
                   <p className="text-base font-medium text-gray-700">🎉 Exclusive party room</p>
                   <p className="text-base font-medium text-gray-700">🍽️ Paper goods included</p>
                   <p className="text-base font-medium text-gray-700">🍕 Pizza and soda included</p>
-                  <p className="text-base font-medium text-gray-700">🎂 Sheet cake & balloons</p>
+                  <p className="text-base font-medium text-gray-700">🎂 Sheet cake & decorations</p>
                 </div>
               </div>
             </div>
