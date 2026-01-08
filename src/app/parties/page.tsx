@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
-import { PartyFAQ } from '@/components/parties/PartyFAQ'
 import { motion } from 'framer-motion'
 import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -143,9 +142,6 @@ function PartiesContent() {
       <div id="party-packages">
         <PartyPackageBackdrop />
       </div>
-
-      {/* FAQ */}
-      <PartyFAQ />
 
       {/* Bottom CTA */}
       <section className="py-16 bg-charcoal-800">
