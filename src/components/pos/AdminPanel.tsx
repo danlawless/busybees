@@ -167,6 +167,7 @@ export function AdminPanel({
     products: { total: 0, synced: 0, unsynced: 0 },
   });
   const [refundTimeout, setRefundTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [processingRefund, setProcessingRefund] = useState<string | null>(null);
 
   // Marketing/Promo states
   const [showPromoForm, setShowPromoForm] = useState(false);
@@ -539,7 +540,7 @@ export function AdminPanel({
     setRefundTimeout(timeout);
   };
 
-  const handleConfirmRefund = (customerId: string, purchaseId: string) => {
+  const handleConfirmRefund = async (customerId: string, purchaseId: string) => {
     // Clear confirmation state and timeout
     setConfirmingRefund(null);
     if (refundTimeout) {
@@ -547,17 +548,42 @@ export function AdminPanel({
       setRefundTimeout(null);
     }
 
-    // Process the refund
-    const updatedCustomers = customers.map(customer => {
-      if (customer.id === customerId) {
-        return {
-          ...customer,
-          purchases: customer.purchases.filter(p => p.id !== purchaseId)
-        };
+    // Set processing state
+    setProcessingRefund(purchaseId);
+
+    try {
+      // Call the refund API endpoint
+      const response = await fetch(`/api/purchases/${purchaseId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process refund');
       }
-      return customer;
-    });
-    onUpdateCustomers(updatedCustomers);
+
+      // Success - update local state to remove the purchase
+      const updatedCustomers = customers.map(customer => {
+        if (customer.id === customerId) {
+          return {
+            ...customer,
+            purchases: customer.purchases.filter(p => p.id !== purchaseId)
+          };
+        }
+        return customer;
+      });
+      onUpdateCustomers(updatedCustomers);
+
+      // Show success message
+      alert(data.message || 'Refund processed successfully!');
+    } catch (error) {
+      console.error('Refund failed:', error);
+      alert(error instanceof Error ? error.message : 'Failed to process refund. Please try again.');
+    } finally {
+      setProcessingRefund(null);
+    }
   };
 
   const renderDashboard = () => (
@@ -797,6 +823,7 @@ export function AdminPanel({
                     <p className="font-semibold">{formatCurrency(purchase.price)}</p>
                     <Button
                       onClick={() => {
+                        if (processingRefund === purchase.id) return; // Prevent double-click
                         if (confirmingRefund === purchase.id && customer) {
                           handleConfirmRefund(customer.id, purchase.id);
                         } else {
@@ -805,13 +832,20 @@ export function AdminPanel({
                       }}
                       size="sm"
                       variant="outline"
+                      disabled={processingRefund === purchase.id}
                       className={`mt-1 transition-colors ${
-                        confirmingRefund === purchase.id
+                        processingRefund === purchase.id
+                          ? 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
+                          : confirmingRefund === purchase.id
                           ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200 animate-pulse'
                           : 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
                       }`}
                     >
-                      {confirmingRefund === purchase.id ? '✓ Confirm Refund' : 'Refund'}
+                      {processingRefund === purchase.id
+                        ? 'Processing...'
+                        : confirmingRefund === purchase.id
+                        ? '✓ Confirm Refund'
+                        : 'Refund'}
                     </Button>
                   </div>
                 </div>
