@@ -26,7 +26,7 @@ export async function getPass(id: string): Promise<Pass | null> {
     .single();
 
   if (error) {
-    console.error('Error fetching pass:', error);
+    logger.error({ error, passId: id }, 'Failed to fetch pass');
     throw error;
   }
 
@@ -47,7 +47,7 @@ export async function getActivePasses(): Promise<Pass[]> {
     .order('price', { ascending: true });
 
   if (error) {
-    console.error('Error fetching active passes:', error);
+    logger.error({ error }, 'Failed to fetch active passes');
     throw error;
   }
 
@@ -66,7 +66,7 @@ export async function getAllPasses(): Promise<Pass[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching all passes:', error);
+    logger.error({ error }, 'Failed to fetch all passes');
     throw error;
   }
 
@@ -87,7 +87,7 @@ export async function createPass(pass: PassInsert): Promise<Pass> {
     .single();
 
   if (error) {
-    console.error('Error creating pass:', error);
+    logger.error({ error }, 'Failed to create pass');
     throw error;
   }
 
@@ -158,7 +158,7 @@ export async function updatePass(id: string, updates: PassUpdate): Promise<Pass>
     .single();
 
   if (error) {
-    console.error('Error updating pass:', error);
+    logger.error({ error, passId: id }, 'Failed to update pass');
     throw error;
   }
 
@@ -229,7 +229,7 @@ export async function deletePass(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) {
-    console.error('Error deleting pass:', error);
+    logger.error({ error, passId: id }, 'Failed to delete pass');
     throw error;
   }
 
