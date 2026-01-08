@@ -58,6 +58,19 @@ export function getAgeGroupLabel(ageGroup: 'infant' | 'toddler' | 'child'): stri
   return labels[ageGroup]
 }
 
+// Date formatting helpers
+/**
+ * Formats a Date to YYYY-MM-DD string using LOCAL timezone.
+ * This avoids the off-by-one bug caused by toISOString() which converts to UTC.
+ * For example, in Pacific time (UTC-8), Jan 1st local becomes Dec 31st UTC.
+ */
+export function formatDateToYYYYMMDD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Business hours helpers
 export function isOpen(): boolean {
   const now = new Date()

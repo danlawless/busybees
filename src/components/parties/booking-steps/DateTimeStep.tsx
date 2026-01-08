@@ -10,6 +10,7 @@ import {
   isValidBookingDate,
   hasAvailableSlots,
 } from '@/lib/validations/party-booking';
+import { formatDateToYYYYMMDD } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface DateTimeStepProps {
@@ -37,8 +38,8 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
       try {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
-        const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        const startDate = formatDateToYYYYMMDD(new Date(year, month, 1));
+        const endDate = formatDateToYYYYMMDD(new Date(year, month + 1, 0));
 
         const response = await fetch(
           `/api/party-booking/availability?startDate=${startDate}&endDate=${endDate}`
@@ -97,7 +98,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
   };
 
   const handleDateSelect = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToYYYYMMDD(date);
     onUpdate({
       partyDate: dateString,
       startTime: '',
@@ -171,7 +172,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                 return <div key={index} className="p-2" />;
               }
 
-              const dateString = date.toISOString().split('T')[0];
+              const dateString = formatDateToYYYYMMDD(date);
               const isToday = date.getTime() === today.getTime();
               const isSelected = dateString === formData.partyDate;
               const isPast = date < today;
