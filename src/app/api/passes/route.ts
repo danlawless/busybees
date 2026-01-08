@@ -11,6 +11,35 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getActivePasses, getAllPasses, createPass, updatePass, deletePass } from '@/lib/services/passes';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+// Schema for creating a pass
+const createPassSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  description: z.string().min(1, 'Description is required'),
+  category: z.enum(['day', 'weekly', 'monthly']),
+  price: z.number().positive('Price must be positive'),
+  duration: z.number().int().positive('Duration must be a positive integer'),
+  sessionsIncluded: z.number().int().positive('Sessions must be a positive integer').optional(),
+  sessions_included: z.number().int().positive('Sessions must be a positive integer').optional(),
+  isActive: z.boolean().optional(),
+  is_active: z.boolean().optional(),
+});
+
+// Schema for updating a pass
+const updatePassSchema = z.object({
+  id: z.string().uuid('Invalid pass ID'),
+  name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  description: z.string().min(1, 'Description is required').optional(),
+  category: z.enum(['day', 'weekly', 'monthly']).optional(),
+  price: z.number().positive('Price must be positive').optional(),
+  duration: z.number().int().positive('Duration must be a positive integer').optional(),
+  sessionsIncluded: z.number().int().positive('Sessions must be a positive integer').optional(),
+  sessions_included: z.number().int().positive('Sessions must be a positive integer').optional(),
+  isActive: z.boolean().optional(),
+  is_active: z.boolean().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,9 +50,9 @@ export async function GET(request: NextRequest) {
     const passes = includeAll ? await getAllPasses() : await getActivePasses();
     return NextResponse.json({ passes });
   } catch (error) {
-    console.error('Error fetching passes:', error);
+    logger.error({ error }, 'Failed to fetch passes');
     return NextResponse.json(
-      { error: 'Failed to fetch passes', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to fetch passes' },
       { status: 500 }
     );
   }
@@ -35,25 +64,36 @@ export async function POST(request: NextRequest) {
     // The admin panel is only accessible after PIN verification
     const body = await request.json();
 
+    // Validate input
+    const validation = createPassSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
     // Transform camelCase from frontend to snake_case for database
-    const dbData: Record<string, unknown> = {
-      name: body.name,
-      description: body.description,
-      category: body.category,
-      price: body.price,
-      duration: body.duration,
-      sessions_included: body.sessionsIncluded ?? body.sessions_included ?? 1,
-      is_active: body.isActive ?? body.is_active ?? true,
-      available: body.available ?? true,
+    const dbData = {
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      price: data.price,
+      duration: data.duration,
+      sessions_included: data.sessionsIncluded ?? data.sessions_included ?? 1,
+      is_active: data.isActive ?? data.is_active ?? true,
     };
 
     const pass = await createPass(dbData);
 
+    logger.info({ passId: pass.id, name: pass.name }, '✅ Pass created via API');
     return NextResponse.json({ pass }, { status: 201 });
   } catch (error) {
-    console.error('Error creating pass:', error);
+    logger.error({ error }, 'Failed to create pass');
     return NextResponse.json(
-      { error: 'Failed to create pass', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to create pass' },
       { status: 500 }
     );
   }
@@ -63,11 +103,17 @@ export async function PUT(request: NextRequest) {
   try {
     // Note: POS staff access is controlled via PIN at the application level
     const body = await request.json();
-    const { id, ...updates } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: 'Pass ID is required' }, { status: 400 });
+    // Validate input
+    const validation = updatePassSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
     }
+
+    const { id, ...updates } = validation.data;
 
     // Transform camelCase from frontend to snake_case for database
     const dbUpdates: Record<string, unknown> = {};
@@ -78,17 +124,18 @@ export async function PUT(request: NextRequest) {
     if (updates.duration !== undefined) dbUpdates.duration = updates.duration;
     if (updates.sessionsIncluded !== undefined) dbUpdates.sessions_included = updates.sessionsIncluded;
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
-    if (updates.available !== undefined) dbUpdates.available = updates.available;
     // Also accept snake_case directly (from internal calls)
     if (updates.sessions_included !== undefined) dbUpdates.sessions_included = updates.sessions_included;
     if (updates.is_active !== undefined) dbUpdates.is_active = updates.is_active;
 
     const pass = await updatePass(id, dbUpdates);
+
+    logger.info({ passId: id }, '✅ Pass updated via API');
     return NextResponse.json({ pass }, { status: 200 });
   } catch (error) {
-    console.error('Error updating pass:', error);
+    logger.error({ error }, 'Failed to update pass');
     return NextResponse.json(
-      { error: 'Failed to update pass', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to update pass' },
       { status: 500 }
     );
   }
@@ -105,11 +152,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     await deletePass(id);
+
+    logger.info({ passId: id }, '✅ Pass deleted via API');
     return NextResponse.json({ success: true, id }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting pass:', error);
+    logger.error({ error }, 'Failed to delete pass');
     return NextResponse.json(
-      { error: 'Failed to delete pass', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to delete pass' },
       { status: 500 }
     );
   }
