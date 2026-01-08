@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin } from 'lucide-react';
+import { formatDateToYYYYMMDD } from '@/lib/utils';
 
 export interface PartyBooking {
   id: string;
@@ -54,7 +55,7 @@ const PARTY_TIME_SLOTS = {
 const SAMPLE_BOOKINGS: PartyBooking[] = [
   {
     id: 'booking_1',
-    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days from now
+    date: formatDateToYYYYMMDD(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)), // 2 days from now
     startTime: '13:00',
     endTime: '15:00',
     duration: 2,
@@ -70,7 +71,7 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
   },
   {
     id: 'booking_2',
-    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 5 days from now
+    date: formatDateToYYYYMMDD(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)), // 5 days from now
     startTime: '16:00',
     endTime: '18:00',
     duration: 2,
@@ -86,7 +87,7 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
   },
   {
     id: 'booking_3',
-    date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 9 days from now
+    date: formatDateToYYYYMMDD(new Date(Date.now() + 9 * 24 * 60 * 60 * 1000)), // 9 days from now
     startTime: '12:00',
     endTime: '14:00',
     duration: 2,
@@ -102,7 +103,7 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
   },
   {
     id: 'booking_4',
-    date: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 12 days from now
+    date: formatDateToYYYYMMDD(new Date(Date.now() + 12 * 24 * 60 * 60 * 1000)), // 12 days from now
     startTime: '15:00',
     endTime: '17:00',
     duration: 2,
@@ -151,7 +152,7 @@ export function PartyCalendar({
   };
 
   const getAvailableTimeSlots = (date: Date): TimeSlot[] => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToYYYYMMDD(date);
     const dayBookings = bookings.filter(b => b.date === dateString && b.status !== 'cancelled');
     
     const slots = isWeekend(date) ? PARTY_TIME_SLOTS.weekend : PARTY_TIME_SLOTS.weekday;
@@ -215,7 +216,7 @@ export function PartyCalendar({
   };
 
   const handleDateClick = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToYYYYMMDD(date);
     setSelectedDate(dateString);
   };
 
@@ -230,12 +231,12 @@ export function PartyCalendar({
   };
 
   const getBookingCountForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToYYYYMMDD(date);
     return bookings.filter(b => b.date === dateString && b.status !== 'cancelled').length;
   };
 
   const days = getDaysInMonth(currentDate);
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDateToYYYYMMDD(new Date());
   const upcomingBookings = bookings
     .filter(b => b.date >= today && b.status !== 'cancelled')
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
@@ -306,8 +307,8 @@ export function PartyCalendar({
                   if (!date) {
                     return <div key={index} className="p-3" />;
                   }
-                  
-                  const dateString = date.toISOString().split('T')[0];
+
+                  const dateString = formatDateToYYYYMMDD(date);
                   const isToday = dateString === today;
                   const isSelected = dateString === selectedDate;
                   const isPast = dateString < today;
