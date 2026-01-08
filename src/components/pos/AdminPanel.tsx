@@ -36,6 +36,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '@/lib/api/products';
+import { CustomerDetailModal } from './CustomerDetailModal';
 
 interface Child {
   id: string;
@@ -264,6 +265,10 @@ export function AdminPanel({
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersStats, setCustomersStats] = useState({ total: 0, withPurchases: 0, active: 0 });
   const [customersError, setCustomersError] = useState<string | null>(null);
+
+  // Customer detail modal state
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showCustomerDetail, setShowCustomerDetail] = useState(false);
 
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
@@ -584,6 +589,26 @@ export function AdminPanel({
     } finally {
       setProcessingRefund(null);
     }
+  };
+
+  // Customer detail modal handlers
+  const handleOpenCustomerDetail = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowCustomerDetail(true);
+  };
+
+  const handleCloseCustomerDetail = () => {
+    setSelectedCustomer(null);
+    setShowCustomerDetail(false);
+  };
+
+  const handleCustomerUpdated = (updatedCustomer: Customer) => {
+    // Update the customer in the list
+    const updatedCustomers = customers.map(c =>
+      c.id === updatedCustomer.id ? updatedCustomer : c
+    );
+    onUpdateCustomers(updatedCustomers);
+    setSelectedCustomer(updatedCustomer);
   };
 
   const renderDashboard = () => (
@@ -954,7 +979,11 @@ export function AdminPanel({
         ) : (
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {filteredCustomers.map((customer) => (
-            <div key={customer.id} className="p-4 border border-gray-200 rounded-lg">
+            <div
+              key={customer.id}
+              className="p-4 border border-gray-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 cursor-pointer transition-colors"
+              onClick={() => handleOpenCustomerDetail(customer)}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
@@ -984,7 +1013,7 @@ export function AdminPanel({
                           .filter(p => p.status === 'active')
                           .map(purchase => (
                             <span key={purchase.id} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                              {purchase.name}
+                              {purchase.name} ({purchase.usedSessions}/{purchase.totalSessions})
                             </span>
                           ))
                         }
@@ -993,7 +1022,15 @@ export function AdminPanel({
                   )}
                 </div>
 
-                <div className="flex space-x-2">
+                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    onClick={() => handleOpenCustomerDetail(customer)}
+                    size="sm"
+                    variant="outline"
+                    className="hover:bg-yellow-100 hover:border-yellow-400"
+                  >
+                    👁️ View
+                  </Button>
                   {(customer.activeSessions || []).length > 0 && (
                     <Button
                       onClick={() => handleForceCheckout(customer.id)}
@@ -3395,6 +3432,14 @@ export function AdminPanel({
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
+
+      {/* Customer Detail Modal */}
+      <CustomerDetailModal
+        customer={selectedCustomer}
+        isOpen={showCustomerDetail}
+        onClose={handleCloseCustomerDetail}
+        onCustomerUpdated={handleCustomerUpdated}
+      />
     </div>
   );
 }
