@@ -7,6 +7,7 @@ import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { formatCurrency } from "@/lib/utils/productHelpers";
+import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 
 interface Child {
     id: string;
@@ -1181,6 +1182,23 @@ export function CheckIn({
                 });
                 setShowSuccessModal(true);
                 return;
+            }
+
+            // Age gate validation - check if child's age matches the pass type
+            if (selectedChild && hasAgeRestriction(product.name)) {
+                const ageValidation = validateAgeForProduct(selectedChild.age, product.name);
+                if (!ageValidation.valid) {
+                    const productAgeGroup = getProductAgeGroup(product.name);
+                    const childAgeGroup = getAgeGroup(selectedChild.age);
+                    const suggestedPassType = childAgeGroup === 'infant' ? 'infant' : 'toddler';
+
+                    setSuccessDetails({
+                        title: "Age Restriction",
+                        message: ageValidation.error || `This pass is not appropriate for ${selectedChild.name}'s age. Please select a ${suggestedPassType} pass instead.`,
+                    });
+                    setShowSuccessModal(true);
+                    return;
+                }
             }
         }
 
