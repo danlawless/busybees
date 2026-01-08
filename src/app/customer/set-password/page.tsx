@@ -10,8 +10,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -283,16 +281,12 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <Suspense fallback={
-        <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-        </div>
-      }>
-        <SetPasswordForm />
-      </Suspense>
-      <Footer />
-    </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <SetPasswordForm />
+    </Suspense>
   );
 }

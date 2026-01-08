@@ -12,8 +12,6 @@ import Link from 'next/link';
 import { Clock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 
 function LoginForm() {
@@ -238,16 +236,12 @@ function LoginForm() {
 
 export default function CustomerLoginPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <Suspense fallback={
-        <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-        </div>
-      }>
-        <LoginForm />
-      </Suspense>
-      <Footer />
-    </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

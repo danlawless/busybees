@@ -11,8 +11,6 @@ import { useUser } from '@/hooks/useUser';
 import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import Link from 'next/link';
 
 function ProfileContent() {
@@ -63,20 +61,14 @@ function ProfileContent() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-        </div>
-        <Footer />
+      <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
+    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -218,8 +210,6 @@ function ProfileContent() {
           </div>
         </Card>
       </div>
-      </div>
-      <Footer />
     </div>
   );
 }

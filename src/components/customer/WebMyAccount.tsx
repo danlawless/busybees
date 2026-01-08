@@ -14,8 +14,6 @@ import { AddPaymentMethodModal } from '@/components/pos/AddPaymentMethodModal';
 import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
 
@@ -1819,35 +1817,16 @@ function WebMyAccountContent() {
   );
 }
 
-// Loading fallback for Suspense
-function DashboardLoading() {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
 // Main export with Suspense boundary for useSearchParams
 export function WebMyAccount() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-          </div>
-        }>
-          <WebMyAccountContent />
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    }>
+      <WebMyAccountContent />
+    </Suspense>
   );
 }
 
