@@ -8,6 +8,14 @@ import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 
+interface SiblingDiscount {
+    id: string;
+    child_position: number;
+    discount_percent: number;
+    is_active: boolean;
+    applies_to_monthly_only: boolean;
+}
+
 interface Child {
     id: string;
     name: string;
@@ -163,6 +171,9 @@ export function CheckIn({
     const [availableSnacks, setAvailableSnacks] = useState<any[]>([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
+    // Sibling discount configuration
+    const [siblingDiscounts, setSiblingDiscounts] = useState<SiblingDiscount[]>([]);
+
     // Filter states
     const [passFilter, setPassFilter] = useState<"all" | "infant" | "toddler">("all");
     const [partyFilter, setPartyFilter] = useState<"all" | "semi-private" | "private">(
@@ -192,12 +203,19 @@ export function CheckIn({
         const loadProducts = async () => {
             setIsLoadingProducts(true);
             try {
-                // Fetch passes and parties from API in parallel
-                const [passesResponse, partiesResponse, productsResponse] = await Promise.all([
+                // Fetch passes, parties, products, and sibling discounts from API in parallel
+                const [passesResponse, partiesResponse, productsResponse, discountsResponse] = await Promise.all([
                     fetch('/api/passes'),
                     fetch('/api/parties'),
                     fetch('/api/products'),
+                    fetch('/api/sibling-discounts'),
                 ]);
+
+                // Process sibling discounts
+                if (discountsResponse.ok) {
+                    const discounts = await discountsResponse.json();
+                    setSiblingDiscounts(discounts || []);
+                }
 
                 // Process passes from API
                 let formattedPasses: any[] = [];
@@ -563,43 +581,101 @@ export function CheckIn({
         }));
     };
 
-    // Calculate discounted total price (50% off for 2nd+ items)
-    const calculateDiscountedTotal = (basePrice: number, quantity: number) => {
-        if (quantity === 1) {
-            return basePrice;
+    // Calculate discounted total price using sibling discounts
+    // Only applies to monthly memberships when configured
+    const calculateDiscountedTotal = (
+        basePrice: number,
+        quantity: number,
+        isMonthlyMembership: boolean = false
+    ) => {
+        if (quantity <= 0) return 0;
+        if (quantity === 1) return basePrice;
+
+        // Build discount map for quick lookup
+        const discountMap = new Map<number, number>();
+        for (const d of siblingDiscounts) {
+            // Only apply if active and either it's a monthly membership or it's not restricted to monthly only
+            if (d.is_active && (isMonthlyMembership || !d.applies_to_monthly_only)) {
+                discountMap.set(d.child_position, d.discount_percent);
+            }
         }
 
-        const fullPriceItems = 1;
-        const discountedItems = quantity - 1;
-        const discountedPrice = basePrice * 0.5;
+        let total = 0;
+        for (let position = 1; position <= quantity; position++) {
+            const discountPercent = discountMap.get(position) || 0;
+            const price = basePrice * (1 - discountPercent / 100);
+            total += price;
+        }
 
-        return fullPriceItems * basePrice + discountedItems * discountedPrice;
+        return total;
     };
 
     // Get pricing breakdown for display
-    const getPricingBreakdown = (basePrice: number, quantity: number) => {
+    // Only shows sibling discounts for monthly memberships
+    const getPricingBreakdown = (
+        basePrice: number,
+        quantity: number,
+        isMonthlyMembership: boolean = false
+    ) => {
         // Handle 0 or undefined quantities
         const validQuantity = quantity || 0;
 
-        if (validQuantity <= 1) {
+        if (validQuantity <= 0) {
             return {
-                total: basePrice * validQuantity,
-                breakdown: `$${(basePrice * validQuantity).toFixed(2)}`,
+                total: 0,
+                breakdown: '$0.00',
                 savings: 0,
+                discountDetails: [],
+                hasDiscount: false,
             };
         }
 
+        if (validQuantity === 1) {
+            return {
+                total: basePrice,
+                breakdown: `$${basePrice.toFixed(2)}`,
+                savings: 0,
+                discountDetails: [{ position: 1, discount: 0, price: basePrice }],
+                hasDiscount: false,
+            };
+        }
+
+        // Build discount map for quick lookup
+        const discountMap = new Map<number, number>();
+        for (const d of siblingDiscounts) {
+            // Only apply if active and either it's a monthly membership or it's not restricted to monthly only
+            if (d.is_active && (isMonthlyMembership || !d.applies_to_monthly_only)) {
+                discountMap.set(d.child_position, d.discount_percent);
+            }
+        }
+
+        let total = 0;
+        const details: Array<{ position: number; discount: number; price: number }> = [];
+
+        for (let position = 1; position <= validQuantity; position++) {
+            const discountPercent = discountMap.get(position) || 0;
+            const price = basePrice * (1 - discountPercent / 100);
+            total += price;
+            details.push({ position, discount: discountPercent, price });
+        }
+
         const regularTotal = basePrice * validQuantity;
-        const discountedTotal = calculateDiscountedTotal(basePrice, validQuantity);
-        const savings = regularTotal - discountedTotal;
-        const discountedPrice = basePrice * 0.5;
+        const savings = regularTotal - total;
+
+        // Build breakdown string
+        const breakdownParts = details.map((d) => {
+            if (d.discount > 0) {
+                return `$${d.price.toFixed(2)} (${d.discount}% off)`;
+            }
+            return `$${d.price.toFixed(2)}`;
+        });
 
         return {
-            total: discountedTotal,
-            breakdown: `$${basePrice.toFixed(2)} + ${
-                quantity - 1
-            } × $${discountedPrice.toFixed(2)}`,
-            savings: savings,
+            total,
+            breakdown: breakdownParts.join(' + '),
+            savings,
+            discountDetails: details,
+            hasDiscount: savings > 0,
         };
     };
 
@@ -1239,8 +1315,10 @@ export function CheckIn({
                 const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
 
                 // Get quantity and calculate discounted total
+                // Sibling discounts only apply to monthly memberships
                 const quantity = quantities[productId] || 1;
-                const pricing = getPricingBreakdown(product.price, quantity);
+                const isMonthlyMembership = purchaseType === 'monthly_pass';
+                const pricing = getPricingBreakdown(product.price, quantity, isMonthlyMembership);
                 const totalPrice = pricing.total;
 
                 // Use kiosk payment API with saved card (self-serve endpoint)
@@ -2805,12 +2883,14 @@ export function CheckIn({
                                                         {(quantities[product.id] || 0) >
                                                             1 &&
                                                             (() => {
+                                                                const isMonthlyMembership = product.category === 'monthly';
                                                                 const pricing =
                                                                     getPricingBreakdown(
                                                                         product.price,
                                                                         quantities[
                                                                             product.id
-                                                                        ] || 0
+                                                                        ] || 0,
+                                                                        isMonthlyMembership
                                                                     );
                                                                 return (
                                                                     <div className="mt-1">
@@ -2836,12 +2916,9 @@ export function CheckIn({
                                                                                 pricing.breakdown
                                                                             }
                                                                         </div>
-                                                                        {pricing.savings >
-                                                                            0 && (
+                                                                        {pricing.hasDiscount && isMonthlyMembership && (
                                                                             <div className="text-xs text-orange-500 font-medium">
-                                                                                🎉 50%
-                                                                                off 2nd+
-                                                                                items!
+                                                                                🎉 Sibling discount applied!
                                                                             </div>
                                                                         )}
                                                                     </div>

@@ -828,6 +828,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      sibling_discounts: {
+        Row: {
+          id: string;
+          child_position: number;
+          discount_percent: number;
+          is_active: boolean;
+          applies_to_monthly_only: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          child_position: number;
+          discount_percent: number;
+          is_active?: boolean;
+          applies_to_monthly_only?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          child_position?: number;
+          discount_percent?: number;
+          is_active?: boolean;
+          applies_to_monthly_only?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
