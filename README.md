@@ -23,7 +23,7 @@ A modern, beautiful website for Busy Bees Indoor Play Center - where little drea
 
 ## 🏗️ Technical Stack
 
-- **Next.js 14** with App Router and TypeScript
+- **Next.js 15** with App Router and TypeScript
 - **Tailwind CSS** for utility-first styling
 - **Framer Motion** for smooth animations
 - **Lucide React** for beautiful icons
