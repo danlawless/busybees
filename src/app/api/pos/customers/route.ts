@@ -1,6 +1,6 @@
 /**
  * API Route: POS Customers
- * GET - List all customers with children for POS admin panel
+ * GET - List all customers with children and active sessions for POS admin panel
  *
  * Uses admin client (service role) to bypass RLS since POS staff
  * authentication is PIN-based rather than Supabase session-based.
@@ -14,6 +14,7 @@ import { Database } from '@/lib/supabase/database.types';
 // Use database types directly for consistency
 type DbUser = Database['public']['Tables']['users']['Row'];
 type DbChild = Database['public']['Tables']['children']['Row'];
+type DbSession = Database['public']['Tables']['sessions']['Row'];
 
 interface FormattedChild {
   id: string;
@@ -22,6 +23,16 @@ interface FormattedChild {
   waiver_signed: boolean;
   waiver_signed_date: string | null;
   created_at: string;
+}
+
+interface FormattedSession {
+  id: string;
+  customerId: string;
+  purchaseId: string;
+  startTime: string;
+  endTime: string | null;
+  duration: number | null;
+  autoCheckoutTime: string;
 }
 
 /**
@@ -101,9 +112,42 @@ export async function GET() {
       });
     }
 
+    // Fetch active sessions for all customers (where end_time is null)
+    const { data: sessionsData, error: sessionsError } = await supabase
+      .from('sessions')
+      .select('*')
+      .in('customer_id', customerIds)
+      .is('end_time', null);
+
+    if (sessionsError) {
+      logger.warn({ error: sessionsError }, 'Failed to fetch sessions');
+      // Continue without sessions rather than failing
+    }
+
+    const allSessions = (sessionsData || []) as DbSession[];
+
+    // Map sessions to their customers
+    const sessionsByCustomer = new Map<string, FormattedSession[]>();
+    for (const session of allSessions) {
+      const customerId = session.customer_id;
+      if (!sessionsByCustomer.has(customerId)) {
+        sessionsByCustomer.set(customerId, []);
+      }
+      sessionsByCustomer.get(customerId)!.push({
+        id: session.id,
+        customerId: session.customer_id,
+        purchaseId: session.purchase_id,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        duration: session.duration,
+        autoCheckoutTime: session.auto_checkout_time,
+      });
+    }
+
     // Format response to match the AdminPanel expected structure
     const customers = users.map((user) => {
       const userChildren = childrenByCustomer.get(user.id) || [];
+      const userSessions = sessionsByCustomer.get(user.id) || [];
       return {
         id: user.id,
         phone: user.phone,
@@ -119,7 +163,7 @@ export async function GET() {
           createdAt: child.created_at,
         })),
         purchases: [], // Purchases would need a separate fetch if needed
-        activeSessions: [], // Sessions would need a separate fetch if needed
+        activeSessions: userSessions,
         savedCards: [], // Payment methods would need a separate fetch if needed
         createdAt: user.created_at,
         lastVisit: user.last_login,

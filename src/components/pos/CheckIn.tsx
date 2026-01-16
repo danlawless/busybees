@@ -814,7 +814,7 @@ export function CheckIn({
         }
     };
 
-    const handleCheckIn = (customer: Customer, purchaseId: string) => {
+    const handleCheckIn = async (customer: Customer, purchaseId: string) => {
         console.log("Checking in with pass ID:", purchaseId);
         const now = new Date();
         const nowIso = now.toISOString();
@@ -824,108 +824,139 @@ export function CheckIn({
             now.getTime() + 12 * 60 * 60 * 1000
         ).toISOString();
 
-        const newSession: Session = {
-            id: `s${Date.now()}`,
-            customerId: customer.id,
-            purchaseId,
-            startTime: nowIso,
-            autoCheckoutTime,
-        };
+        // Persist session to Supabase
+        try {
+            const response = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    purchase_id: purchaseId,
+                    start_time: nowIso,
+                    auto_checkout_time: autoCheckoutTime,
+                }),
+            });
 
-        const updatedPurchases = customer.purchases.map((p) => {
-            if (p.id === purchaseId) {
-                const newUsedSessions = p.usedSessions + 1;
-                const isFirstUse = !p.firstUseDate;
-
-                console.log(
-                    `Check-in with ${p.name}: ${p.usedSessions} -> ${newUsedSessions}`
-                );
-
-                // Calculate actual expiry on first use
-                let actualExpiryDate = p.actualExpiryDate;
-                let firstUseDate = p.firstUseDate;
-                let nextRenewalDate = p.nextRenewalDate;
-
-                if (isFirstUse) {
-                    firstUseDate = nowIso;
-                    actualExpiryDate = calculateActualExpiry(p.type, nowIso);
-                    console.log(`First use! Expiry set to: ${actualExpiryDate}`);
-
-                    // If auto-renew is enabled and no renewal date is set, calculate it now
-                    if (
-                        p.autoRenew &&
-                        (!p.nextRenewalDate || p.nextRenewalDate.trim() === "")
-                    ) {
-                        const expiryDate = new Date(actualExpiryDate);
-                        nextRenewalDate = new Date(
-                            expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000
-                        ).toISOString();
-                        console.log(
-                            `Auto-renew enabled: Next renewal set to ${nextRenewalDate}`
-                        );
-                    }
-                }
-
-                const newStatus =
-                    p.totalSessions === 999
-                        ? p.status
-                        : p.totalSessions === 1
-                        ? p.status
-                        : newUsedSessions >= p.totalSessions
-                        ? ("used" as const)
-                        : p.status;
-
-                return {
-                    ...p,
-                    usedSessions: newUsedSessions,
-                    firstUseDate,
-                    actualExpiryDate,
-                    nextRenewalDate,
-                    status: newStatus,
-                };
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Failed to create session:', errorData);
+                return;
             }
-            return p;
-        });
 
-        const updatedCustomer = {
-            ...customer,
-            purchases: updatedPurchases,
-            activeSessions: [...(customer.activeSessions || []), newSession],
-        };
+            const { session: dbSession } = await response.json();
+            console.log('Session persisted to database:', dbSession);
 
-        console.log("Updated customer with new session:", updatedCustomer);
-        onUpdateCustomer(updatedCustomer);
-    };
+            // Convert database session to frontend format
+            const newSession: Session = {
+                id: dbSession.id,
+                customerId: dbSession.customer_id,
+                purchaseId: dbSession.purchase_id,
+                startTime: dbSession.start_time,
+                autoCheckoutTime: dbSession.auto_checkout_time,
+            };
 
-    const handleCheckOut = (customer: Customer, sessionId: string) => {
-        console.log("Checking out session:", sessionId);
-        const now = new Date().toISOString();
+            const updatedPurchases = customer.purchases.map((p) => {
+                if (p.id === purchaseId) {
+                    const newUsedSessions = p.usedSessions + 1;
+                    const isFirstUse = !p.firstUseDate;
 
-        const activeSessions = customer.activeSessions || [];
-        const updatedSessions = activeSessions
-            .map((session) => {
-                if (session.id === sessionId) {
+                    console.log(
+                        `Check-in with ${p.name}: ${p.usedSessions} -> ${newUsedSessions}`
+                    );
+
+                    // Calculate actual expiry on first use
+                    let actualExpiryDate = p.actualExpiryDate;
+                    let firstUseDate = p.firstUseDate;
+                    let nextRenewalDate = p.nextRenewalDate;
+
+                    if (isFirstUse) {
+                        firstUseDate = nowIso;
+                        actualExpiryDate = calculateActualExpiry(p.type, nowIso);
+                        console.log(`First use! Expiry set to: ${actualExpiryDate}`);
+
+                        // If auto-renew is enabled and no renewal date is set, calculate it now
+                        if (
+                            p.autoRenew &&
+                            (!p.nextRenewalDate || p.nextRenewalDate.trim() === "")
+                        ) {
+                            const expiryDate = new Date(actualExpiryDate);
+                            nextRenewalDate = new Date(
+                                expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000
+                            ).toISOString();
+                            console.log(
+                                `Auto-renew enabled: Next renewal set to ${nextRenewalDate}`
+                            );
+                        }
+                    }
+
+                    const newStatus =
+                        p.totalSessions === 999
+                            ? p.status
+                            : p.totalSessions === 1
+                            ? p.status
+                            : newUsedSessions >= p.totalSessions
+                            ? ("used" as const)
+                            : p.status;
+
                     return {
-                        ...session,
-                        endTime: now,
-                        duration: Math.floor(
-                            (new Date(now).getTime() -
-                                new Date(session.startTime).getTime()) /
-                                (1000 * 60)
-                        ), // minutes
+                        ...p,
+                        usedSessions: newUsedSessions,
+                        firstUseDate,
+                        actualExpiryDate,
+                        nextRenewalDate,
+                        status: newStatus,
                     };
                 }
-                return session;
-            })
-            .filter((session) => session.id !== sessionId); // Remove the checked-out session
+                return p;
+            });
 
-        const updatedCustomer = {
-            ...customer,
-            activeSessions: updatedSessions,
-        };
+            const updatedCustomer = {
+                ...customer,
+                purchases: updatedPurchases,
+                activeSessions: [...(customer.activeSessions || []), newSession],
+            };
 
-        console.log("Checked out session:", sessionId);
-        onUpdateCustomer(updatedCustomer);
+            console.log("Updated customer with new session:", updatedCustomer);
+            onUpdateCustomer(updatedCustomer);
+        } catch (error) {
+            console.error('Error creating session:', error);
+        }
+    };
+
+    const handleCheckOut = async (customer: Customer, sessionId: string) => {
+        console.log("Checking out session:", sessionId);
+
+        // End session in Supabase
+        try {
+            const response = await fetch(`/api/sessions/${sessionId}`, {
+                method: 'PUT',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Failed to end session:', errorData);
+                return;
+            }
+
+            const { session: dbSession } = await response.json();
+            console.log('Session ended in database:', dbSession);
+
+            // Remove the checked-out session from local state
+            const activeSessions = customer.activeSessions || [];
+            const updatedSessions = activeSessions.filter(
+                (session) => session.id !== sessionId
+            );
+
+            const updatedCustomer = {
+                ...customer,
+                activeSessions: updatedSessions,
+            };
+
+            console.log("Checked out session:", sessionId);
+            onUpdateCustomer(updatedCustomer);
+        } catch (error) {
+            console.error('Error ending session:', error);
+        }
     };
 
     const handleUsePassClick = (customer: Customer, purchaseId: string) => {
@@ -968,14 +999,14 @@ export function CheckIn({
             setShowConfirmDialog(true);
         } else {
             // Directly check in for multi-use passes or already used passes
-            handleCheckIn(customer, purchaseId);
+            void handleCheckIn(customer, purchaseId);
         }
     };
 
     const handleConfirmUse = () => {
         if (confirmingPurchase && (selectedCustomer || currentCustomer)) {
             const customer = selectedCustomer || currentCustomer!;
-            handleCheckIn(customer, confirmingPurchase.id);
+            void handleCheckIn(customer, confirmingPurchase.id);
         }
         setShowConfirmDialog(false);
         setConfirmingPurchase(null);
@@ -1100,7 +1131,7 @@ export function CheckIn({
         // Proceed with the actual check-in
         const customer = selectedCustomer || currentCustomer;
         if (customer) {
-            handleCheckIn(customer, purchaseId);
+            void handleCheckIn(customer, purchaseId);
         }
     };
 
@@ -1696,7 +1727,7 @@ export function CheckIn({
                                 </div>
                                 <Button
                                     onClick={() =>
-                                        handleCheckOut(
+                                        void handleCheckOut(
                                             customer,
                                             customer.activeSessions![0].id
                                         )
@@ -2321,7 +2352,7 @@ export function CheckIn({
                                                                 </div>
                                                                 <Button
                                                                     onClick={() =>
-                                                                        handleCheckOut(
+                                                                        void handleCheckOut(
                                                                             displayCustomer,
                                                                             activeSessions[
                                                                                 activeSessions.length -
