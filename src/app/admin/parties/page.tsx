@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { parseDateString } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 
@@ -158,7 +159,7 @@ export default function AdminPartiesPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
+    const date = parseDateString(dateStr);
     return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   };
 

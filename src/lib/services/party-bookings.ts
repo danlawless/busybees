@@ -12,7 +12,7 @@ import {
   getAvailableTimeSlots,
   isValidBookingDate,
 } from '../validations/party-booking';
-import { formatDateToYYYYMMDD } from '../utils';
+import { formatDateToYYYYMMDD, parseDateString } from '../utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyBookingInsert = Database['public']['Tables']['party_bookings']['Insert'];
@@ -143,7 +143,8 @@ export async function getDateAvailability(
   date: string,
   partyType: 'private' | 'semi_private'
 ): Promise<TimeSlotAvailability[]> {
-  const dateObj = new Date(date + 'T00:00:00');
+  // Use parseDateString to avoid UTC vs local timezone bug
+  const dateObj = parseDateString(date);
 
   // Get possible time slots for this date and party type
   const possibleSlots = getAvailableTimeSlots(dateObj, partyType);
@@ -267,7 +268,8 @@ export async function createPartyBooking(
   }
 
   // Validate booking date (at least 1 week in advance)
-  const partyDate = new Date(bookingData.partyDate + 'T00:00:00');
+  // Use parseDateString to avoid UTC vs local timezone bug
+  const partyDate = parseDateString(bookingData.partyDate);
   if (!isValidBookingDate(partyDate)) {
     throw new Error('Parties must be booked at least 1 week in advance');
   }

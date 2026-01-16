@@ -10,7 +10,7 @@ import {
   isValidBookingDate,
   hasAvailableSlots,
 } from '@/lib/validations/party-booking';
-import { formatDateToYYYYMMDD } from '@/lib/utils';
+import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface DateTimeStepProps {
@@ -118,8 +118,9 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
   minBookingDate.setDate(minBookingDate.getDate() + 7);
 
   // Get available time slots for selected date
+  // Use parseDateString to avoid UTC vs local timezone bug
   const selectedDateObj = formData.partyDate
-    ? new Date(formData.partyDate + 'T00:00:00')
+    ? parseDateString(formData.partyDate)
     : null;
   const availableSlots =
     selectedDateObj && formData.partyType
@@ -223,7 +224,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
           <h4 className="text-lg font-semibold mb-4 flex items-center">
             <Clock className="w-5 h-5 mr-2 text-honey-600" />
             {formData.partyDate
-              ? new Date(formData.partyDate + 'T00:00:00').toLocaleDateString('en-US', {
+              ? parseDateString(formData.partyDate).toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'long',
                   day: 'numeric',

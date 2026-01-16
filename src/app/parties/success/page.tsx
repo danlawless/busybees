@@ -8,6 +8,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
+import { parseDateString } from '@/lib/utils';
 
 interface BookingDetails {
   id: string;
@@ -71,7 +72,7 @@ function SuccessContent() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

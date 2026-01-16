@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin } from 'lucide-react';
-import { formatDateToYYYYMMDD } from '@/lib/utils';
+import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
 
 export interface PartyBooking {
   id: string;
@@ -372,7 +372,7 @@ export function PartyCalendar({
               
               {selectedDate ? (
                 <div className="space-y-3">
-                  {getAvailableTimeSlots(new Date(selectedDate + 'T00:00:00')).map((slot, index) => (
+                  {getAvailableTimeSlots(parseDateString(selectedDate)).map((slot, index) => (
                     <button
                       key={index}
                       onClick={() => handleTimeSlotClick(selectedDate, slot)}

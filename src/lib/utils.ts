@@ -71,6 +71,18 @@ export function formatDateToYYYYMMDD(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Parses a YYYY-MM-DD date string to a Date object in LOCAL timezone.
+ * This avoids the timezone bug where new Date("2025-01-18") parses as UTC midnight,
+ * which for users west of UTC shifts the date back by one day.
+ *
+ * ALWAYS use this function instead of new Date(dateString) for date-only strings.
+ */
+export function parseDateString(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 // Business hours helpers
 export function isOpen(): boolean {
   const now = new Date()

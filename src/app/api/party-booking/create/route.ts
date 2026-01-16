@@ -10,6 +10,7 @@ import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING } from '@
 import { createCheckoutSession } from '@/lib/stripe/checkout';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { parseDateString } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   let bookingId: string | undefined;
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
       return `${displayHour}:${minutes} ${ampm}`;
     };
 
-    const partyDate = new Date(bookingData.partyDate + 'T00:00:00');
+    const partyDate = parseDateString(bookingData.partyDate);
     const formattedDate = partyDate.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',

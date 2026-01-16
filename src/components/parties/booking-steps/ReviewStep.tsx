@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { parseDateString } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface ReviewStepProps {
@@ -44,7 +45,7 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
