@@ -505,6 +505,32 @@ export function AdminPanel({
     sum + customer.purchases.reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
   );
 
+  const filteredPurchases = customers.flatMap(c => c.purchases).filter(p => {
+    const purchaseDate = new Date(p.purchaseDate);
+    const now = new Date();
+
+    switch (selectedDateRange) {
+      case 'today':
+        return purchaseDate.toDateString() === now.toDateString();
+      case 'week': {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return purchaseDate >= startOfWeek;
+      }
+      case 'month': {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return purchaseDate >= startOfMonth;
+      }
+      case 'all':
+      default:
+        return true;
+    }
+  });
+
+  const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + purchase.price, 0);
+
+  // Today's purchases for Dashboard and Sessions views
   const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
     const purchaseDate = new Date(p.purchaseDate);
     const today = new Date();
@@ -1136,8 +1162,6 @@ export function AdminPanel({
                     </div>
                   )}
                 </div>
-                  )}
-                </div>
               </div>
             </div>
           ))}
@@ -1171,15 +1195,15 @@ export function AdminPanel({
         <Card className="p-6">
           <h4 className="font-semibold text-gray-900">Total Sales</h4>
           <p className="text-2xl font-bold text-green-600 mt-2">
-            {formatCurrency(todaysRevenue)}
+            {formatCurrency(filteredRevenue)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">{todaysPurchases.length} transactions</p>
+          <p className="text-sm text-gray-500 mt-1">{filteredPurchases.length} transactions</p>
         </Card>
 
         <Card className="p-6">
           <h4 className="font-semibold text-gray-900">Average Transaction</h4>
           <p className="text-2xl font-bold text-blue-600 mt-2">
-            {formatCurrency(todaysPurchases.length > 0 ? todaysRevenue / todaysPurchases.length : 0)}
+            {formatCurrency(filteredPurchases.length > 0 ? filteredRevenue / filteredPurchases.length : 0)}
           </p>
           <p className="text-sm text-gray-500 mt-1">Per purchase</p>
         </Card>
@@ -1196,7 +1220,7 @@ export function AdminPanel({
         <h3 className="text-lg font-semibold mb-4">Sales by Product Type</h3>
         <div className="space-y-3">
           {['day_pass', 'monthly_pass', 'party_package', 'food_beverage'].map(type => {
-            const purchases = todaysPurchases.filter(p => p.type === type);
+            const purchases = filteredPurchases.filter(p => p.type === type);
             const revenue = purchases.reduce((sum, p) => sum + p.price, 0);
             return (
               <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
