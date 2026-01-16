@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { parseDateString } from '@/lib/utils';
 
 // Phone number regex for (XXX) XXX-XXXX format
 const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
@@ -54,7 +55,10 @@ export const DateTimeSelectionSchema = z.object({
   partyDate: z
     .string()
     .refine((date) => {
-      const selectedDate = new Date(date);
+      // Use parseDateString to avoid UTC vs local timezone bug
+      // new Date("2025-01-18") parses as UTC midnight, which shifts
+      // the date back one day for users west of UTC
+      const selectedDate = parseDateString(date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const minBookingDate = new Date(today);
