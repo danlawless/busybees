@@ -1136,8 +1136,6 @@ export function AdminPanel({
                     </div>
                   )}
                 </div>
-                  )}
-                </div>
               </div>
             </div>
           ))}
