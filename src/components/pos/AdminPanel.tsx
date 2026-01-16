@@ -170,6 +170,11 @@ export function AdminPanel({
   const [refundTimeout, setRefundTimeout] = useState<NodeJS.Timeout | null>(null);
   const [processingRefund, setProcessingRefund] = useState<string | null>(null);
 
+  // Customer deletion states
+  const [confirmingCustomerDelete, setConfirmingCustomerDelete] = useState<string | null>(null);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
+  const [customerDeleteError, setCustomerDeleteError] = useState<string | null>(null);
+
   // Marketing/Promo states
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [editingPromo, setEditingPromo] = useState<PromoSpecial | null>(null);
@@ -611,6 +616,51 @@ export function AdminPanel({
     setSelectedCustomer(updatedCustomer);
   };
 
+  // Handle customer deletion
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (confirmingCustomerDelete !== customerId) {
+      // First click - show confirmation
+      setConfirmingCustomerDelete(customerId);
+      setCustomerDeleteError(null);
+      // Auto-reset confirmation after 5 seconds
+      setTimeout(() => {
+        setConfirmingCustomerDelete(prev => prev === customerId ? null : prev);
+      }, 5000);
+      return;
+    }
+
+    // Second click - perform deletion
+    setDeletingCustomerId(customerId);
+    setCustomerDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/customers/${customerId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete customer');
+      }
+
+      // Remove customer from local state
+      const updatedCustomers = customers.filter(c => c.id !== customerId);
+      onUpdateCustomers(updatedCustomers);
+
+      // Reset states
+      setConfirmingCustomerDelete(null);
+    } catch (error) {
+      setCustomerDeleteError(error instanceof Error ? error.message : 'Failed to delete customer');
+    } finally {
+      setDeletingCustomerId(null);
+    }
+  };
+
+  const handleCancelCustomerDelete = () => {
+    setConfirmingCustomerDelete(null);
+    setCustomerDeleteError(null);
+  };
+
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -1022,23 +1072,70 @@ export function AdminPanel({
                   )}
                 </div>
 
-                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    onClick={() => handleOpenCustomerDetail(customer)}
-                    size="sm"
-                    variant="outline"
-                    className="hover:bg-yellow-100 hover:border-yellow-400"
-                  >
-                    👁️ View
-                  </Button>
-                  {(customer.activeSessions || []).length > 0 && (
+<div className="flex flex-col space-y-2">
+                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                     <Button
-                      onClick={() => handleForceCheckout(customer.id)}
+                      onClick={() => handleOpenCustomerDetail(customer)}
                       size="sm"
                       variant="outline"
+                      className="hover:bg-yellow-100 hover:border-yellow-400"
                     >
-                      Force Checkout All
+                      View
                     </Button>
+                    {(customer.activeSessions || []).length > 0 && (
+                      <Button
+                        onClick={() => handleForceCheckout(customer.id)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Force Checkout All
+                      </Button>
+                    )}
+                    {/* Delete Account Button */}
+                    {confirmingCustomerDelete === customer.id ? (
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => handleDeleteCustomer(customer.id)}
+                          size="sm"
+                          variant="outline"
+                          className="bg-red-500 text-white hover:bg-red-600 border-red-500"
+                          disabled={deletingCustomerId === customer.id}
+                        >
+                          {deletingCustomerId === customer.id ? 'Deleting...' : 'Yes, Delete'}
+                        </Button>
+                        <Button
+                          onClick={handleCancelCustomerDelete}
+                          size="sm"
+                          variant="outline"
+                          disabled={deletingCustomerId === customer.id}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={() => handleDeleteCustomer(customer.id)}
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                      >
+                        Delete Account
+                      </Button>
+                    )}
+                  </div>
+                  {/* Confirmation Message */}
+                  {confirmingCustomerDelete === customer.id && (
+                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      Are you sure you would like to delete this account? This will remove all data including children, purchases, sessions, and payment methods.
+                    </div>
+                  )}
+                  {/* Error Message */}
+                  {customerDeleteError && deletingCustomerId === null && confirmingCustomerDelete === customer.id && (
+                    <div className="text-sm text-red-600 bg-red-100 p-2 rounded">
+                      {customerDeleteError}
+                    </div>
+                  )}
+                </div>
                   )}
                 </div>
               </div>
