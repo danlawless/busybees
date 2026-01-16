@@ -524,9 +524,6 @@ export function Pricing() {
                                                     ${plan.price}
                                                 </div>
                                             </div>
-                                            <p className="text-neutral-600 mt-2 text-sm">
-                                                {plan.description}
-                                            </p>
                                         </CardHeader>
                                         <CardContent className="pt-0 flex-1 flex flex-col">
                                             <ul className="space-y-2 mb-6 flex-1">
@@ -682,9 +679,6 @@ export function Pricing() {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <p className="text-neutral-600 mt-2 text-sm">
-                                                    {plan.description}
-                                                </p>
                                             </CardHeader>
                                             <CardContent className="pt-0 flex-1 flex flex-col">
                                                 <ul className="space-y-2 mb-6 flex-1">
@@ -793,9 +787,6 @@ export function Pricing() {
                                                         ${plan.price}
                                                     </div>
                                                 </div>
-                                                <p className="text-neutral-600 mt-2 text-sm">
-                                                    {plan.description}
-                                                </p>
                                             </CardHeader>
                                             <CardContent className="pt-0 flex-1 flex flex-col">
                                                 <ul className="space-y-2 mb-6 flex-1">
