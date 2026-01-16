@@ -740,49 +740,51 @@ export function AdminPanel({
         </Card>
       </div>
 
-      {/* POS Mode Settings */}
-      <Card className="p-6 border-2 border-amber-200 bg-amber-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-amber-800 flex items-center gap-2">
-              <span>🖥️</span>
-              POS Mode
-            </h3>
-            <p className="text-sm text-amber-700 mt-1">
-              {posMode === 'kiosk'
-                ? '🛒 Self-serve: Customers pay via Stripe Checkout'
-                : '👨‍💼 Staff-assisted: Staff processes payments'}
-            </p>
+      {/* POS Mode Settings - Hidden for now, will be enabled later */}
+      {false && (
+        <Card className="p-6 border-2 border-amber-200 bg-amber-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-amber-800 flex items-center gap-2">
+                <span>🖥️</span>
+                POS Mode
+              </h3>
+              <p className="text-sm text-amber-700 mt-1">
+                {posMode === 'kiosk'
+                  ? '🛒 Self-serve: Customers pay via Stripe Checkout'
+                  : '👨‍💼 Staff-assisted: Staff processes payments'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handlePosModeToggle('kiosk')}
+                disabled={updatingPosMode}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  posMode === 'kiosk'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-white text-gray-600 border border-gray-300 hover:border-amber-400'
+                }`}
+              >
+                🛒 Kiosk
+              </button>
+              <button
+                onClick={() => handlePosModeToggle('staff')}
+                disabled={updatingPosMode}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  posMode === 'staff'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400'
+                }`}
+              >
+                👨‍💼 Staff
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handlePosModeToggle('kiosk')}
-              disabled={updatingPosMode}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                posMode === 'kiosk'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:border-amber-400'
-              }`}
-            >
-              🛒 Kiosk
-            </button>
-            <button
-              onClick={() => handlePosModeToggle('staff')}
-              disabled={updatingPosMode}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                posMode === 'staff'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400'
-              }`}
-            >
-              👨‍💼 Staff
-            </button>
-          </div>
-        </div>
-        {updatingPosMode && (
-          <p className="text-xs text-amber-600 mt-2 animate-pulse">Updating...</p>
-        )}
-      </Card>
+          {updatingPosMode && (
+            <p className="text-xs text-amber-600 mt-2 animate-pulse">Updating...</p>
+          )}
+        </Card>
+      )}
 
       {/* Stripe Product Sync */}
       <Card className="p-6 border-2 border-blue-200 bg-blue-50">
