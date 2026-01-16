@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { useActiveSessions } from '@/hooks/useSessions';
 import { PromoSpecial, getPromoStatus, getActivePromo, formatPromoDate, formatPromoDateRange, validatePromoCode, validatePromoDates } from '@/lib/utils/promoHelpers';
 import { PromoBanner } from '@/components/home/PromoBanner';
 import {
@@ -292,6 +293,9 @@ export function AdminPanel({
     };
   }, [refundTimeout]);
 
+  // Fetch active sessions from Supabase
+  const { sessions: apiActiveSessions, isLoading: sessionsLoading, mutate: refreshSessions } = useActiveSessions();
+
   // Fetch newsletter subscribers when newsletter view is selected
   const fetchNewsletterSubscribers = async () => {
     setNewsletterLoading(true);
@@ -498,8 +502,24 @@ export function AdminPanel({
     }).format(amount);
   };
 
-  // Analytics calculations
-  const activeSessions = customers.filter(c => (c.activeSessions || []).length > 0);
+  // Analytics calculations - use API data for active sessions
+  // Group API sessions by customer for display
+  const sessionsByCustomer = (apiActiveSessions || []).reduce((acc: Record<string, any[]>, session: any) => {
+    const customerId = session.customer_id;
+    if (!acc[customerId]) {
+      acc[customerId] = [];
+    }
+    acc[customerId].push(session);
+    return acc;
+  }, {});
+
+  // Create active sessions data from API with customer info
+  const activeSessions = (apiActiveSessions || []).map((session: any) => ({
+    ...session,
+    customer: session.customer,
+    purchase: session.purchase,
+  }));
+
   const totalCustomers = customers.length;
   const totalRevenue = customers.reduce((sum, customer) =>
     sum + customer.purchases.reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
@@ -520,17 +540,47 @@ export function AdminPanel({
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleForceCheckout = (customerId: string) => {
-    const updatedCustomers = customers.map(customer => {
-      if (customer.id === customerId) {
-        return {
-          ...customer,
-          activeSessions: []
-        };
+  const handleForceCheckout = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to force checkout:', errorData);
+        alert(`Force checkout failed: ${errorData.error || 'Unknown error'}`);
+        return;
       }
-      return customer;
-    });
-    onUpdateCustomers(updatedCustomers);
+
+      // Refresh sessions from API
+      refreshSessions();
+    } catch (error) {
+      console.error('Error during force checkout:', error);
+      alert('Force checkout failed. Please try again.');
+    }
+  };
+
+  const handleForceCheckoutAll = async (customerId: string) => {
+    try {
+      // Get all sessions for this customer
+      const customerSessions = sessionsByCustomer[customerId] || [];
+
+      // End all sessions for this customer
+      for (const session of customerSessions) {
+        await fetch(`/api/sessions/${session.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Refresh sessions from API
+      refreshSessions();
+    } catch (error) {
+      console.error('Error during force checkout all:', error);
+      alert('Force checkout failed. Please try again.');
+    }
   };
 
   const handleRefundClick = (purchaseId: string) => {
@@ -847,32 +897,57 @@ export function AdminPanel({
       {/* Active Sessions */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Active Sessions ({activeSessions.length})</h3>
-        {activeSessions.length > 0 ? (
+        {sessionsLoading ? (
+          <p className="text-gray-500 text-center py-8">Loading sessions...</p>
+        ) : activeSessions.length > 0 ? (
           <div className="space-y-3">
-            {activeSessions.map((customer) => (
-              <div key={customer.id} className="space-y-2">
-                <div className="font-medium">{customer.name} ({formatPhoneNumber(customer.phone)})</div>
-                {(customer.activeSessions || []).map(session => (
-                  <div key={session.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg ml-4">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Session started: {formatDate(session.startTime)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Auto-checkout: {formatDate(session.autoCheckoutTime)}
-                      </p>
+            {/* Group sessions by customer for display */}
+            {Object.entries(sessionsByCustomer).map(([customerId, customerSessions]) => {
+              const firstSession = (customerSessions as any[])[0];
+              const customerInfo = firstSession?.customer;
+              return (
+                <div key={customerId} className="space-y-2">
+                  <div className="font-medium">
+                    {customerInfo?.name || 'Unknown Customer'}{' '}
+                    {customerInfo?.phone && `(${formatPhoneNumber(customerInfo.phone)})`}
+                  </div>
+                  {(customerSessions as any[]).map((session: any) => (
+                    <div key={session.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg ml-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          {session.purchase?.name || 'Unknown Pass'}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Session started: {formatDate(session.start_time)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Auto-checkout: {formatDate(session.auto_checkout_time)}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => handleForceCheckout(session.id)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Check Out
+                        </Button>
+                      </div>
                     </div>
+                  ))}
+                  {(customerSessions as any[]).length > 1 && (
                     <Button
-                      onClick={() => handleForceCheckout(customer.id)}
+                      onClick={() => handleForceCheckoutAll(customerId)}
                       size="sm"
                       variant="outline"
+                      className="ml-4"
                     >
-                      Force Checkout All
+                      Force Checkout All ({(customerSessions as any[]).length})
                     </Button>
-                  </div>
-                ))}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">No active sessions</p>
