@@ -12,6 +12,7 @@ import {
   getAvailableTimeSlots,
   isValidBookingDate,
 } from '../validations/party-booking';
+import { formatLocalDate } from '../utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyBookingInsert = Database['public']['Tables']['party_bookings']['Insert'];
@@ -185,8 +186,8 @@ export async function getMonthAvailability(
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 0);
 
-  const startDateStr = startDate.toISOString().split('T')[0];
-  const endDateStr = endDate.toISOString().split('T')[0];
+  const startDateStr = formatLocalDate(startDate);
+  const endDateStr = formatLocalDate(endDate);
 
   // Get all bookings for the month
   const bookings = await getBookingsForDateRange(startDateStr, endDateStr);
@@ -196,7 +197,7 @@ export async function getMonthAvailability(
   // Iterate through each day in the month
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(currentDate);
     const dayBookings = bookings.filter((b) => b.party_date === dateStr);
 
     // Get slots for both party types
@@ -392,7 +393,7 @@ export async function getCustomerBookings(
  */
 export async function getUpcomingBookings(limit = 10): Promise<PartyBooking[]> {
   const supabase = await createClient();
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
 
   const { data, error } = await supabase
     .from('party_bookings')

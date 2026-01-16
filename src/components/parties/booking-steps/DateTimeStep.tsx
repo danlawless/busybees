@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { formatLocalDate } from '@/lib/utils';
 import {
   getAvailableTimeSlots,
   isValidBookingDate,
@@ -37,8 +38,8 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
       try {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
-        const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        const startDate = formatLocalDate(new Date(year, month, 1));
+        const endDate = formatLocalDate(new Date(year, month + 1, 0));
 
         const response = await fetch(
           `/api/party-booking/availability?startDate=${startDate}&endDate=${endDate}`
@@ -97,7 +98,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
   };
 
   const handleDateSelect = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatLocalDate(date);
     onUpdate({
       partyDate: dateString,
       startTime: '',
@@ -171,7 +172,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                 return <div key={index} className="p-2" />;
               }
 
-              const dateString = date.toISOString().split('T')[0];
+              const dateString = formatLocalDate(date);
               const isToday = date.getTime() === today.getTime();
               const isSelected = dateString === formData.partyDate;
               const isPast = date < today;

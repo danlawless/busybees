@@ -76,16 +76,32 @@ export function isOpen(): boolean {
 
 export function getBusinessHours(day?: number): string {
   const currentDay = day ?? new Date().getDay()
-  
+
   // Mon-Fri
   if (currentDay >= 1 && currentDay <= 5) {
     return '10:00 AM - 4:00 PM'
   }
-  
+
   // Sat-Sun
   if (currentDay === 0 || currentDay === 6) {
     return '1:00 PM - 6:00 PM (Private Bookings Only)'
   }
-  
+
   return 'Closed'
+}
+
+/**
+ * Format a Date object to YYYY-MM-DD string in local timezone.
+ * This avoids the timezone shift issue with toISOString() which converts to UTC first.
+ *
+ * @example
+ * // User in EST timezone at 11pm on Jan 15
+ * formatLocalDate(new Date()) // Returns "2024-01-15" (correct)
+ * new Date().toISOString().split('T')[0] // Returns "2024-01-16" (wrong - shifted to UTC)
+ */
+export function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
