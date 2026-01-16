@@ -1125,8 +1125,7 @@ export function AdminPanel({
                         <Button
                           onClick={() => handleDeleteCustomer(customer.id)}
                           size="sm"
-                          variant="outline"
-                          className="bg-red-500 text-white hover:bg-red-600 border-red-500"
+                          className="bg-red-500 text-white hover:bg-red-600 border-2 border-red-500 rounded-2xl"
                           disabled={deletingCustomerId === customer.id}
                         >
                           {deletingCustomerId === customer.id ? 'Deleting...' : 'Yes, Delete'}
