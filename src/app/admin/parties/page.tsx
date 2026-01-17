@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
-import { parseDateString } from '@/lib/utils';
+import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 
@@ -113,7 +113,7 @@ export default function AdminPartiesPage() {
     }
 
     // Date filter
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatDateToYYYYMMDD(new Date());
     if (dateFilter === 'upcoming') {
       filtered = filtered.filter((b) => b.party_date >= today);
     } else if (dateFilter === 'past') {
@@ -180,7 +180,7 @@ export default function AdminPartiesPage() {
     total: bookings.length,
     pending: bookings.filter((b) => b.status === 'pending').length,
     confirmed: bookings.filter((b) => b.status === 'confirmed').length,
-    upcoming: bookings.filter((b) => b.party_date >= new Date().toISOString().split('T')[0]).length,
+    upcoming: bookings.filter((b) => b.party_date >= formatDateToYYYYMMDD(new Date())).length,
     totalRevenue: bookings
       .filter((b) => b.status !== 'cancelled')
       .reduce((sum, b) => sum + b.total_price, 0),

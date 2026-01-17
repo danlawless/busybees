@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { X, Calendar, Clock, Users, DollarSign } from 'lucide-react';
+import { parseDateString } from '@/lib/utils';
 import type { PartyBooking } from './PartyCalendar';
 
 interface TimeSlot {
@@ -41,7 +42,7 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
