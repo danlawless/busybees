@@ -5,6 +5,7 @@
 
 import { createClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
+import { formatDateToYYYYMMDD } from '../utils';
 
 type Promo = Database['public']['Tables']['promos']['Row'];
 type PromoInsert = Database['public']['Tables']['promos']['Insert'];
@@ -35,7 +36,7 @@ export async function getPromo(id: string): Promise<Promo | null> {
  */
 export async function getActivePromos(): Promise<Promo[]> {
   const supabase = await createClient();
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDateToYYYYMMDD(new Date());
 
   const { data, error } = await supabase
     .from('promos')

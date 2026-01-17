@@ -5,6 +5,7 @@
 
 import { createClient, createAdminClient } from "../supabase/server";
 import { Database } from "../supabase/database.types";
+import { formatDateToYYYYMMDD } from "../utils";
 
 type Purchase = Database["public"]["Tables"]["purchases"]["Row"];
 type PurchaseInsert = Database["public"]["Tables"]["purchases"]["Insert"];
@@ -153,7 +154,7 @@ export async function deletePurchase(id: string): Promise<void> {
  */
 export async function getTodayPurchases(): Promise<Purchase[]> {
     const supabase = await createClient();
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatDateToYYYYMMDD(new Date());
 
     const { data, error } = await supabase
         .from("purchases")
