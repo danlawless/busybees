@@ -6,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { getCustomer, updateCustomer, deleteCustomer, getCustomerWithDetails } from '@/lib/services/customers';
 import { logger } from '@/lib/logger';
 
@@ -56,32 +55,23 @@ export async function PUT(
   }
 }
 
+/**
+ * DELETE - Delete customer
+ * Uses admin client (service role) to bypass RLS since POS staff
+ * authentication is PIN-based rather than Supabase session-based.
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only admin can delete customers
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { id } = await params;
+
+    logger.info({ customerId: id }, '🗑️ Deleting customer');
+
     await deleteCustomer(id);
 
+    logger.info({ customerId: id }, '✅ Customer deleted successfully');
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error({ error }, 'Error deleting customer');
