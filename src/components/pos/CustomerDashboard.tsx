@@ -17,6 +17,7 @@ import {
   getActiveParties,
   getAvailableProducts,
 } from '@/lib/utils/productHelpers';
+import { getNextClosingTime } from '@/lib/utils/timeUtils';
 
 interface Child {
   id: string;
@@ -96,6 +97,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productLoadError, setProductLoadError] = useState<string | null>(null);
 
+  // Auto-checkout settings state
+  const [autoCheckoutSettings, setAutoCheckoutSettings] = useState({
+    timezone: 'America/New_York',
+    closingTime: '22:00',
+  });
+
   // Load products from localStorage (client-side)
   useEffect(() => {
     const loadProducts = () => {
@@ -156,6 +163,25 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Fetch auto-checkout settings on mount
+  useEffect(() => {
+    const fetchAutoCheckoutSettings = async () => {
+      try {
+        const response = await fetch('/api/settings/auto-checkout');
+        if (response.ok) {
+          const data = await response.json();
+          setAutoCheckoutSettings({
+            timezone: data.timezone || 'America/New_York',
+            closingTime: data.closingTime || '22:00',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching auto-checkout settings:', error);
+      }
+    };
+    fetchAutoCheckoutSettings();
   }, []);
 
   const AVAILABLE_PRODUCTS = [...availablePasses, ...availableParties];
@@ -1015,8 +1041,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     const now = new Date();
     const nowIso = now.toISOString();
 
-    // Create new session with 12-hour auto-checkout
-    const autoCheckoutTime = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString();
+    // Calculate auto-checkout time based on configured closing time
+    const autoCheckoutTime = getNextClosingTime(
+      autoCheckoutSettings.timezone,
+      autoCheckoutSettings.closingTime
+    );
 
     const newSession: Session = {
       id: `s${Date.now()}`,

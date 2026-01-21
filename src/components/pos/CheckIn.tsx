@@ -8,6 +8,7 @@ import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
+import { getNextClosingTime } from "@/lib/utils/timeUtils";
 
 interface SiblingDiscount {
     id: string;
@@ -151,6 +152,12 @@ export function CheckIn({
     // POS mode state - kiosk (self-serve) or staff (staff-assisted)
     const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
 
+    // Auto-checkout settings state
+    const [autoCheckoutSettings, setAutoCheckoutSettings] = useState({
+        timezone: 'America/New_York',
+        closingTime: '22:00',
+    });
+
     // Children-related state
     const [selectedChildForPurchase, setSelectedChildForPurchase] =
         useState<string>("");
@@ -197,6 +204,25 @@ export function CheckIn({
             }
         };
         fetchPosMode();
+    }, []);
+
+    // Fetch auto-checkout settings on mount
+    useEffect(() => {
+        const fetchAutoCheckoutSettings = async () => {
+            try {
+                const response = await fetch('/api/settings/auto-checkout');
+                if (response.ok) {
+                    const data = await response.json();
+                    setAutoCheckoutSettings({
+                        timezone: data.timezone || 'America/New_York',
+                        closingTime: data.closingTime || '22:00',
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching auto-checkout settings:', error);
+            }
+        };
+        fetchAutoCheckoutSettings();
     }, []);
 
     // Fetch passes, parties, and snacks from database API
@@ -819,10 +845,11 @@ export function CheckIn({
         const now = new Date();
         const nowIso = now.toISOString();
 
-        // Create new session with 12-hour auto-checkout
-        const autoCheckoutTime = new Date(
-            now.getTime() + 12 * 60 * 60 * 1000
-        ).toISOString();
+        // Calculate auto-checkout time based on configured closing time
+        const autoCheckoutTime = getNextClosingTime(
+            autoCheckoutSettings.timezone,
+            autoCheckoutSettings.closingTime
+        );
 
         // Persist session to Supabase
         try {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PromoSpecial, getPromoStatus, getActivePromo, formatPromoDate, formatPromoDateRange, validatePromoCode, validatePromoDates } from '@/lib/utils/promoHelpers';
+import { US_TIMEZONES, formatTimeDisplay, to24HourFormat } from '@/lib/utils/timeUtils';
 import { PromoBanner } from '@/components/home/PromoBanner';
 import {
   PassProduct,
@@ -151,6 +152,15 @@ export function AdminPanel({
   const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
   const [updatingPosMode, setUpdatingPosMode] = useState(false);
   const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
+
+  // Auto-checkout settings state
+  const [autoCheckoutSettings, setAutoCheckoutSettings] = useState({
+    timezone: 'America/New_York',
+    closingTime: '22:00',
+    loading: true,
+    saving: false,
+    error: null as string | null,
+  });
 
   // Stripe sync states
   const [stripeSyncStatus, setStripeSyncStatus] = useState<{
@@ -440,6 +450,72 @@ export function AdminPanel({
   useEffect(() => {
     fetchStripeSyncStatus();
   }, []);
+
+  // Fetch auto-checkout settings on mount
+  useEffect(() => {
+    const fetchAutoCheckoutSettings = async () => {
+      try {
+        const response = await fetch('/api/settings/auto-checkout');
+        if (response.ok) {
+          const data = await response.json();
+          setAutoCheckoutSettings(prev => ({
+            ...prev,
+            timezone: data.timezone || 'America/New_York',
+            closingTime: data.closingTime || '22:00',
+            loading: false,
+          }));
+        } else {
+          setAutoCheckoutSettings(prev => ({ ...prev, loading: false }));
+        }
+      } catch (error) {
+        console.error('Error fetching auto-checkout settings:', error);
+        setAutoCheckoutSettings(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchAutoCheckoutSettings();
+  }, []);
+
+  // Handle auto-checkout settings save
+  const handleSaveAutoCheckoutSettings = async () => {
+    setAutoCheckoutSettings(prev => ({ ...prev, saving: true, error: null }));
+    try {
+      const response = await fetch('/api/settings/auto-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timezone: autoCheckoutSettings.timezone,
+          closingTime: autoCheckoutSettings.closingTime,
+        }),
+      });
+      if (response.ok) {
+        setAutoCheckoutSettings(prev => ({ ...prev, saving: false }));
+      } else {
+        const errorData = await response.json();
+        setAutoCheckoutSettings(prev => ({
+          ...prev,
+          saving: false,
+          error: errorData.error || 'Failed to save settings',
+        }));
+      }
+    } catch (error) {
+      console.error('Error saving auto-checkout settings:', error);
+      setAutoCheckoutSettings(prev => ({
+        ...prev,
+        saving: false,
+        error: 'Network error - could not save settings',
+      }));
+    }
+  };
+
+  // Handle timezone auto-detect
+  const handleDetectTimezone = () => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setAutoCheckoutSettings(prev => ({ ...prev, timezone: detected }));
+    } catch (error) {
+      console.error('Error detecting timezone:', error);
+    }
+  };
 
   // Fetch membership discount status on mount and when marketing view is opened
   useEffect(() => {
@@ -868,6 +944,85 @@ export function AdminPanel({
                 <span className="text-orange-600"> ({stripeSyncStatus.lastSyncResult.errors} errors)</span>
               )}
             </p>
+          </div>
+        )}
+      </Card>
+
+      {/* Auto-Checkout Settings */}
+      <Card className="p-6 border-2 border-purple-200 bg-purple-50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-purple-800 flex items-center gap-2">
+              <span>🕐</span>
+              Auto-Checkout Settings
+            </h3>
+            <p className="text-sm text-purple-700 mt-1">
+              Sessions will automatically checkout at closing time each day
+            </p>
+          </div>
+        </div>
+
+        {autoCheckoutSettings.loading ? (
+          <p className="text-sm text-purple-600 animate-pulse">Loading settings...</p>
+        ) : (
+          <div className="space-y-4">
+            {/* Timezone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+              <div className="flex gap-2">
+                <select
+                  value={autoCheckoutSettings.timezone}
+                  onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {US_TIMEZONES.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                  {/* Show current timezone if not in US list */}
+                  {!US_TIMEZONES.find(tz => tz.value === autoCheckoutSettings.timezone) && (
+                    <option value={autoCheckoutSettings.timezone}>{autoCheckoutSettings.timezone}</option>
+                  )}
+                </select>
+                <button
+                  onClick={handleDetectTimezone}
+                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700"
+                >
+                  Detect
+                </button>
+              </div>
+            </div>
+
+            {/* Closing Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Daily Closing Time</label>
+              <input
+                type="time"
+                value={autoCheckoutSettings.closingTime}
+                onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, closingTime: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Currently set to {formatTimeDisplay(autoCheckoutSettings.closingTime)}
+              </p>
+            </div>
+
+            {/* Error message */}
+            {autoCheckoutSettings.error && (
+              <p className="text-sm text-red-600">{autoCheckoutSettings.error}</p>
+            )}
+
+            {/* Save button */}
+            <button
+              onClick={handleSaveAutoCheckoutSettings}
+              disabled={autoCheckoutSettings.saving}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                autoCheckoutSettings.saving
+                  ? 'bg-purple-300 text-white cursor-wait'
+                  : 'bg-purple-500 text-white hover:bg-purple-600'
+              }`}
+            >
+              {autoCheckoutSettings.saving ? 'Saving...' : 'Save Settings'}
+            </button>
           </div>
         )}
       </Card>
