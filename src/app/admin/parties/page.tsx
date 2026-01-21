@@ -40,7 +40,14 @@ const PACKAGE_LABELS = {
   basic_bee: 'Basic Bee',
 };
 
+const ADMIN_PIN = '1234';
+
 export default function AdminPartiesPage() {
+  // PIN lock state
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
   const [bookings, setBookings] = useState<PartyBooking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<PartyBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -435,6 +442,23 @@ export default function AdminPartiesPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
+  // PIN verification
+  const handlePinSubmit = () => {
+    if (pinInput === ADMIN_PIN) {
+      setIsUnlocked(true);
+      setPinError('');
+    } else {
+      setPinError('Incorrect PIN. Please try again.');
+      setPinInput('');
+    }
+  };
+
+  const handlePinKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handlePinSubmit();
+    }
+  };
+
   // Stats
   const stats = {
     total: bookings.length,
@@ -445,6 +469,48 @@ export default function AdminPartiesPage() {
       .filter((b) => b.status !== 'cancelled')
       .reduce((sum, b) => sum + b.total_price, 0),
   };
+
+  // PIN Lock Screen
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white flex items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">🔒 Admin Access Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-center text-neutral-600">
+                Enter the admin PIN to access Party Management
+              </p>
+              <div>
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  onKeyDown={handlePinKeyDown}
+                  placeholder="Enter PIN"
+                  maxLength={4}
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500"
+                  autoFocus
+                />
+              </div>
+              {pinError && (
+                <p className="text-red-600 text-sm text-center">{pinError}</p>
+              )}
+              <Button
+                onClick={handlePinSubmit}
+                className="w-full"
+                disabled={pinInput.length < 4}
+              >
+                Unlock
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
