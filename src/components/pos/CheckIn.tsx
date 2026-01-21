@@ -4292,13 +4292,13 @@ export function CheckIn({
                     customerName={
                         (selectedCustomer || currentCustomer)?.name || "Customer"
                     }
-                    existingPartyData={{
+                    existingPartyData={isRescheduling ? {
                         partyDate: selectedParty.partyDate,
                         partyStartTime: selectedParty.partyStartTime,
                         partyEndTime: selectedParty.partyEndTime,
                         partyGuests: selectedParty.partyGuests,
                         partyNotes: selectedParty.partyNotes,
-                    }}
+                    } : undefined}
                     forceCalendarStep={isRescheduling}
                 />
             )}
