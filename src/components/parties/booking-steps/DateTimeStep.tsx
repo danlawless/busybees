@@ -99,6 +99,12 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
 
   const handleDateSelect = (date: Date) => {
     const dateString = formatDateToYYYYMMDD(date);
+    console.log('[DateTimeStep] handleDateSelect:', {
+      inputDate: date.toString(),
+      dayOfWeek: date.getDay(),
+      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()],
+      formattedString: dateString,
+    });
     onUpdate({
       partyDate: dateString,
       startTime: '',
@@ -122,6 +128,18 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
   const selectedDateObj = formData.partyDate
     ? parseDateString(formData.partyDate)
     : null;
+
+  // Debug logging
+  if (formData.partyDate && selectedDateObj) {
+    console.log('[DateTimeStep] Time slot calculation:', {
+      partyDateString: formData.partyDate,
+      parsedDate: selectedDateObj.toString(),
+      dayOfWeek: selectedDateObj.getDay(),
+      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][selectedDateObj.getDay()],
+      partyType: formData.partyType,
+    });
+  }
+
   const availableSlots =
     selectedDateObj && formData.partyType
       ? getAvailableTimeSlots(selectedDateObj, formData.partyType)

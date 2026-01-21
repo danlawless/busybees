@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { X, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
 import { PartyCalendar, type PartyBooking } from '@/components/parties/PartyCalendar';
+import { parseDateString } from '@/lib/utils';
 
 interface PartySchedulingModalProps {
   isOpen: boolean;
@@ -133,7 +134,8 @@ export function PartySchedulingModal({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Use parseDateString to avoid UTC timezone bug
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

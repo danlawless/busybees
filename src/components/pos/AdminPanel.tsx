@@ -113,7 +113,7 @@ interface AdminPanelProps {
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -944,85 +944,6 @@ export function AdminPanel({
                 <span className="text-orange-600"> ({stripeSyncStatus.lastSyncResult.errors} errors)</span>
               )}
             </p>
-          </div>
-        )}
-      </Card>
-
-      {/* Auto-Checkout Settings */}
-      <Card className="p-6 border-2 border-purple-200 bg-purple-50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-purple-800 flex items-center gap-2">
-              <span>🕐</span>
-              Auto-Checkout Settings
-            </h3>
-            <p className="text-sm text-purple-700 mt-1">
-              Sessions will automatically checkout at closing time each day
-            </p>
-          </div>
-        </div>
-
-        {autoCheckoutSettings.loading ? (
-          <p className="text-sm text-purple-600 animate-pulse">Loading settings...</p>
-        ) : (
-          <div className="space-y-4">
-            {/* Timezone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-              <div className="flex gap-2">
-                <select
-                  value={autoCheckoutSettings.timezone}
-                  onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, timezone: e.target.value }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {US_TIMEZONES.map(tz => (
-                    <option key={tz.value} value={tz.value}>{tz.label}</option>
-                  ))}
-                  {/* Show current timezone if not in US list */}
-                  {!US_TIMEZONES.find(tz => tz.value === autoCheckoutSettings.timezone) && (
-                    <option value={autoCheckoutSettings.timezone}>{autoCheckoutSettings.timezone}</option>
-                  )}
-                </select>
-                <button
-                  onClick={handleDetectTimezone}
-                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700"
-                >
-                  Detect
-                </button>
-              </div>
-            </div>
-
-            {/* Closing Time */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Daily Closing Time</label>
-              <input
-                type="time"
-                value={autoCheckoutSettings.closingTime}
-                onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, closingTime: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Currently set to {formatTimeDisplay(autoCheckoutSettings.closingTime)}
-              </p>
-            </div>
-
-            {/* Error message */}
-            {autoCheckoutSettings.error && (
-              <p className="text-sm text-red-600">{autoCheckoutSettings.error}</p>
-            )}
-
-            {/* Save button */}
-            <button
-              onClick={handleSaveAutoCheckoutSettings}
-              disabled={autoCheckoutSettings.saving}
-              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                autoCheckoutSettings.saving
-                  ? 'bg-purple-300 text-white cursor-wait'
-                  : 'bg-purple-500 text-white hover:bg-purple-600'
-              }`}
-            >
-              {autoCheckoutSettings.saving ? 'Saving...' : 'Save Settings'}
-            </button>
           </div>
         )}
       </Card>
@@ -3628,6 +3549,91 @@ export function AdminPanel({
     );
   };
 
+  const renderSettings = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+
+      {/* Auto-Checkout Settings */}
+      <Card className="p-6 border-2 border-purple-200 bg-purple-50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-purple-800 flex items-center gap-2">
+              <span>🕐</span>
+              Auto-Checkout Settings
+            </h3>
+            <p className="text-sm text-purple-700 mt-1">
+              Sessions will automatically checkout at closing time each day
+            </p>
+          </div>
+        </div>
+
+        {autoCheckoutSettings.loading ? (
+          <p className="text-sm text-purple-600 animate-pulse">Loading settings...</p>
+        ) : (
+          <div className="space-y-4">
+            {/* Timezone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+              <div className="flex gap-2">
+                <select
+                  value={autoCheckoutSettings.timezone}
+                  onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {US_TIMEZONES.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                  {/* Show current timezone if not in US list */}
+                  {!US_TIMEZONES.find(tz => tz.value === autoCheckoutSettings.timezone) && (
+                    <option value={autoCheckoutSettings.timezone}>{autoCheckoutSettings.timezone}</option>
+                  )}
+                </select>
+                <button
+                  onClick={handleDetectTimezone}
+                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700"
+                >
+                  Detect
+                </button>
+              </div>
+            </div>
+
+            {/* Closing Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Daily Closing Time</label>
+              <input
+                type="time"
+                value={autoCheckoutSettings.closingTime}
+                onChange={(e) => setAutoCheckoutSettings(prev => ({ ...prev, closingTime: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Currently set to {formatTimeDisplay(autoCheckoutSettings.closingTime)}
+              </p>
+            </div>
+
+            {/* Error message */}
+            {autoCheckoutSettings.error && (
+              <p className="text-sm text-red-600">{autoCheckoutSettings.error}</p>
+            )}
+
+            {/* Save button */}
+            <button
+              onClick={handleSaveAutoCheckoutSettings}
+              disabled={autoCheckoutSettings.saving}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                autoCheckoutSettings.saving
+                  ? 'bg-purple-300 text-white cursor-wait'
+                  : 'bg-purple-500 text-white hover:bg-purple-600'
+              }`}
+            >
+              {autoCheckoutSettings.saving ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Admin Navigation */}
@@ -3696,6 +3702,13 @@ export function AdminPanel({
           >
             🍕 Products
           </Button>
+          <Button
+            onClick={() => setCurrentView('settings')}
+            variant={currentView === 'settings' ? 'default' : 'outline'}
+            size="sm"
+          >
+            ⚙️ Settings
+          </Button>
         </nav>
       </Card>
 
@@ -3709,6 +3722,7 @@ export function AdminPanel({
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
+      {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}
       <CustomerDetailModal
