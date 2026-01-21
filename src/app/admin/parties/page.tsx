@@ -99,11 +99,14 @@ export default function AdminPartiesPage() {
     sortOrder: 0,
   });
 
+  // Only fetch data after PIN is entered
   useEffect(() => {
-    fetchBookings();
-    fetchPartyPackages();
-    fetchTimeSlots();
-  }, []);
+    if (isUnlocked) {
+      fetchBookings();
+      fetchPartyPackages();
+      fetchTimeSlots();
+    }
+  }, [isUnlocked]);
 
   const fetchPartyPackages = async () => {
     try {
