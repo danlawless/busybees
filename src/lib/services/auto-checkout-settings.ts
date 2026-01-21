@@ -56,6 +56,10 @@ export async function setClosingTime(time: string): Promise<void> {
     throw new Error('Invalid time format. Use HH:MM in 24-hour format.');
   }
 
+  console.log('setClosingTime called with:', time);
+  console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'NOT SET');
+  console.log('SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set (length: ' + process.env.SUPABASE_SERVICE_ROLE_KEY.length + ')' : 'NOT SET');
+
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -68,9 +72,10 @@ export async function setClosingTime(time: string): Promise<void> {
     }, { onConflict: 'key' });
 
   if (error) {
-    console.error('Failed to update closing time:', error);
-    throw new Error(`Failed to update closing time: ${error.message}`);
+    console.error('Failed to update closing time:', JSON.stringify(error, null, 2));
+    throw new Error(`Failed to update closing time: ${error.message} (code: ${error.code}, details: ${error.details})`);
   }
+  console.log('Closing time upsert successful');
 }
 
 /**
@@ -94,7 +99,8 @@ export async function setTimezone(timezone: string): Promise<void> {
     }, { onConflict: 'key' });
 
   if (error) {
-    console.error('Failed to update timezone:', error);
-    throw new Error(`Failed to update timezone: ${error.message}`);
+    console.error('Failed to update timezone:', JSON.stringify(error, null, 2));
+    throw new Error(`Failed to update timezone: ${error.message} (code: ${error.code}, details: ${error.details})`);
   }
+  console.log('Timezone upsert successful');
 }
