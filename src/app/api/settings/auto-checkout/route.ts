@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, ...settings });
   } catch (error) {
     console.error('Error updating auto-checkout settings:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to update auto-checkout settings' },
+      { error: `Failed to update auto-checkout settings: ${errorMessage}` },
       { status: 500 }
     );
   }

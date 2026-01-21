@@ -65,9 +65,10 @@ export async function setClosingTime(time: string): Promise<void> {
       value: time,
       description: 'Default closing time for auto-checkout (HH:MM)',
       is_encrypted: false
-    });
+    }, { onConflict: 'key' });
 
   if (error) {
+    console.error('Failed to update closing time:', error);
     throw new Error(`Failed to update closing time: ${error.message}`);
   }
 }
@@ -90,9 +91,10 @@ export async function setTimezone(timezone: string): Promise<void> {
       value: timezone,
       description: 'Timezone for auto-checkout closing time (IANA format)',
       is_encrypted: false
-    });
+    }, { onConflict: 'key' });
 
   if (error) {
+    console.error('Failed to update timezone:', error);
     throw new Error(`Failed to update timezone: ${error.message}`);
   }
 }
