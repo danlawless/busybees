@@ -624,6 +624,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      party_time_slots: {
+        Row: {
+          id: string;
+          party_type: 'private' | 'semi_private';
+          day_type: 'weekday' | 'weekend';
+          start_time: string;
+          end_time: string;
+          label: string;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          party_type: 'private' | 'semi_private';
+          day_type: 'weekday' | 'weekend';
+          start_time: string;
+          end_time: string;
+          label: string;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          party_type?: 'private' | 'semi_private';
+          day_type?: 'weekday' | 'weekend';
+          start_time?: string;
+          end_time?: string;
+          label?: string;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       contact_submissions: {
         Row: {
           id: string;

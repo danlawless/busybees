@@ -5,11 +5,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import {
-  getAvailableTimeSlots,
-  isValidBookingDate,
-  hasAvailableSlots,
-} from '@/lib/validations/party-booking';
+import { hasAvailableSlots } from '@/lib/validations/party-booking';
 import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
@@ -19,9 +15,17 @@ interface DateTimeStepProps {
   onValidChange: (isValid: boolean) => void;
 }
 
+interface TimeSlot {
+  startTime: string;
+  endTime: string;
+  label: string;
+}
+
 export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStepProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState<Map<string, string[]>>(new Map());
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [loadingSlotsForDate, setLoadingSlotsForDate] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Validate step
@@ -61,6 +65,37 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
 
     fetchBookedSlots();
   }, [currentMonth]);
+
+  // Fetch available time slots when date or party type changes
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      if (!formData.partyDate || !formData.partyType) {
+        setAvailableSlots([]);
+        return;
+      }
+
+      setLoadingSlotsForDate(true);
+      try {
+        const response = await fetch(
+          `/api/party-booking/time-slots?date=${formData.partyDate}&partyType=${formData.partyType}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableSlots(data.slots || []);
+        } else {
+          console.error('Failed to fetch time slots');
+          setAvailableSlots([]);
+        }
+      } catch (error) {
+        console.error('Error fetching time slots:', error);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlotsForDate(false);
+      }
+    };
+
+    fetchTimeSlots();
+  }, [formData.partyDate, formData.partyType]);
 
   const getDaysInMonth = () => {
     const year = currentMonth.getFullYear();
@@ -123,27 +158,11 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
   const minBookingDate = new Date(today);
   minBookingDate.setDate(minBookingDate.getDate() + 7);
 
-  // Get available time slots for selected date
+  // Get selected date object for display
   // Use parseDateString to avoid UTC vs local timezone bug
   const selectedDateObj = formData.partyDate
     ? parseDateString(formData.partyDate)
     : null;
-
-  // Debug logging
-  if (formData.partyDate && selectedDateObj) {
-    console.log('[DateTimeStep] Time slot calculation:', {
-      partyDateString: formData.partyDate,
-      parsedDate: selectedDateObj.toString(),
-      dayOfWeek: selectedDateObj.getDay(),
-      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][selectedDateObj.getDay()],
-      partyType: formData.partyType,
-    });
-  }
-
-  const availableSlots =
-    selectedDateObj && formData.partyType
-      ? getAvailableTimeSlots(selectedDateObj, formData.partyType)
-      : [];
 
   // Check which slots are already booked
   const getSlotStatus = (startTime: string) => {
@@ -251,7 +270,12 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
           </h4>
 
           {formData.partyDate ? (
-            availableSlots.length > 0 ? (
+            loadingSlotsForDate ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-honey-500 mx-auto mb-4"></div>
+                <p>Loading time slots...</p>
+              </div>
+            ) : availableSlots.length > 0 ? (
               <div className="space-y-3">
                 {availableSlots.map((slot, index) => {
                   const status = getSlotStatus(slot.startTime);

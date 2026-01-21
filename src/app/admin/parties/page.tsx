@@ -15,9 +15,12 @@ import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyPackage = Database['public']['Tables']['party_packages']['Row'];
+type PartyTimeSlot = Database['public']['Tables']['party_time_slots']['Row'];
 
 type BookingStatus = 'all' | 'pending' | 'confirmed' | 'cancelled' | 'completed';
 type PartyType = 'all' | 'private' | 'semi_private';
+type SlotPartyType = 'private' | 'semi_private';
+type DayType = 'weekday' | 'weekend';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -53,7 +56,7 @@ export default function AdminPartiesPage() {
   const [endDate, setEndDate] = useState('');
 
   // Active view
-  const [activeView, setActiveView] = useState<'bookings' | 'calendar' | 'packages'>('bookings');
+  const [activeView, setActiveView] = useState<'bookings' | 'calendar' | 'packages' | 'time-slots'>('bookings');
 
   // Package config (legacy hardcoded)
   const [packageConfig, setPackageConfig] = useState(PACKAGE_PRICING);
@@ -74,9 +77,25 @@ export default function AdminPartiesPage() {
   });
   const [newFeature, setNewFeature] = useState('');
 
+  // Time slots state
+  const [timeSlots, setTimeSlots] = useState<PartyTimeSlot[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [showSlotForm, setShowSlotForm] = useState(false);
+  const [isCreatingSlot, setIsCreatingSlot] = useState(false);
+  const [newSlot, setNewSlot] = useState({
+    partyType: 'semi_private' as SlotPartyType,
+    dayType: 'weekend' as DayType,
+    startTime: '13:00',
+    endTime: '15:00',
+    label: '',
+    isActive: true,
+    sortOrder: 0,
+  });
+
   useEffect(() => {
     fetchBookings();
     fetchPartyPackages();
+    fetchTimeSlots();
   }, []);
 
   const fetchPartyPackages = async () => {
@@ -180,6 +199,126 @@ export default function AdminPartiesPage() {
       ...prev,
       included_items: prev.included_items.filter((_, i) => i !== index),
     }));
+  };
+
+  // Time slots functions
+  const fetchTimeSlots = async () => {
+    try {
+      setIsLoadingSlots(true);
+      const response = await fetch('/api/admin/party-time-slots');
+      if (!response.ok) {
+        throw new Error('Failed to fetch time slots');
+      }
+      const data = await response.json();
+      setTimeSlots(data || []);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to fetch time slots');
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  const createTimeSlot = async () => {
+    try {
+      setIsCreatingSlot(true);
+      setError('');
+
+      // Auto-generate label if not provided
+      const label = newSlot.label || formatTimeRange(newSlot.startTime, newSlot.endTime);
+
+      const response = await fetch('/api/admin/party-time-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newSlot,
+          label,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create time slot');
+      }
+
+      const data = await response.json();
+      setTimeSlots((prev) => [...prev, data]);
+      setSuccessMessage('Time slot created successfully!');
+      setShowSlotForm(false);
+      setNewSlot({
+        partyType: 'semi_private',
+        dayType: 'weekend',
+        startTime: '13:00',
+        endTime: '15:00',
+        label: '',
+        isActive: true,
+        sortOrder: 0,
+      });
+
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to create time slot');
+      setError(err instanceof Error ? err.message : 'Failed to create time slot');
+    } finally {
+      setIsCreatingSlot(false);
+    }
+  };
+
+  const toggleSlotStatus = async (slot: PartyTimeSlot) => {
+    try {
+      setError('');
+      const response = await fetch(`/api/admin/party-time-slots/${slot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !slot.is_active }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update time slot');
+      }
+
+      const data = await response.json();
+      setTimeSlots((prev) => prev.map((s) => (s.id === slot.id ? data : s)));
+      setSuccessMessage(`Time slot ${slot.is_active ? 'disabled' : 'enabled'} successfully`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to toggle slot status');
+      setError(err instanceof Error ? err.message : 'Failed to update time slot');
+    }
+  };
+
+  const deleteTimeSlot = async (slot: PartyTimeSlot) => {
+    if (!confirm(`Are you sure you want to delete this time slot? (${slot.label})`)) {
+      return;
+    }
+
+    try {
+      setError('');
+      const response = await fetch(`/api/admin/party-time-slots/${slot.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete time slot');
+      }
+
+      setTimeSlots((prev) => prev.filter((s) => s.id !== slot.id));
+      setSuccessMessage('Time slot deleted successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to delete time slot');
+      setError(err instanceof Error ? err.message : 'Failed to delete time slot');
+    }
+  };
+
+  const formatTimeRange = (start: string, end: string) => {
+    const formatSingleTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+    return `${formatSingleTime(start)} - ${formatSingleTime(end)}`;
   };
 
   useEffect(() => {
@@ -408,6 +547,16 @@ export default function AdminPartiesPage() {
             }`}
           >
             📦 Packages
+          </button>
+          <button
+            onClick={() => setActiveView('time-slots')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeView === 'time-slots'
+                ? 'text-honey-600 border-b-2 border-honey-500'
+                : 'text-neutral-600 hover:text-neutral-800'
+            }`}
+          >
+            🕐 Time Slots
           </button>
         </div>
 
@@ -892,6 +1041,215 @@ export default function AdminPartiesPage() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Time Slots View */}
+        {activeView === 'time-slots' && (
+          <div className="space-y-6">
+            {/* Create New Time Slot Button */}
+            <div className="flex justify-end">
+              <Button onClick={() => setShowSlotForm(!showSlotForm)}>
+                {showSlotForm ? '✕ Cancel' : '+ Add Time Slot'}
+              </Button>
+            </div>
+
+            {/* Create Time Slot Form */}
+            {showSlotForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add New Time Slot</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Party Type *</label>
+                        <select
+                          value={newSlot.partyType}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, partyType: e.target.value as SlotPartyType }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        >
+                          <option value="semi_private">Semi-Private</option>
+                          <option value="private">Private</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Day Type *</label>
+                        <select
+                          value={newSlot.dayType}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, dayType: e.target.value as DayType }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        >
+                          <option value="weekend">Weekend (Sat-Sun)</option>
+                          <option value="weekday">Weekday (Mon-Fri)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Start Time *</label>
+                        <input
+                          type="time"
+                          value={newSlot.startTime}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, startTime: e.target.value }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">End Time *</label>
+                        <input
+                          type="time"
+                          value={newSlot.endTime}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, endTime: e.target.value }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Display Label (optional)</label>
+                        <input
+                          type="text"
+                          value={newSlot.label}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, label: e.target.value }))}
+                          placeholder="Auto-generated if empty"
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Sort Order</label>
+                        <input
+                          type="number"
+                          value={newSlot.sortOrder}
+                          onChange={(e) => setNewSlot((prev) => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="slot_is_active"
+                        checked={newSlot.isActive}
+                        onChange={(e) => setNewSlot((prev) => ({ ...prev, isActive: e.target.checked }))}
+                        className="w-4 h-4 rounded border-neutral-300"
+                      />
+                      <label htmlFor="slot_is_active" className="text-sm text-neutral-700">
+                        Active (available for booking)
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-neutral-200">
+                      <Button variant="outline" onClick={() => setShowSlotForm(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={createTimeSlot}
+                        disabled={isCreatingSlot || !newSlot.startTime || !newSlot.endTime}
+                      >
+                        {isCreatingSlot ? 'Creating...' : 'Create Time Slot'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Time Slots Matrix */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Party Booking Time Slots</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    Configure when parties can be booked. Time slots are organized by party type (Private/Semi-Private) and day type (Weekday/Weekend).
+                  </p>
+                </div>
+
+                {isLoadingSlots ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-honey-500"></div>
+                  </div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-600">
+                    <p>No time slots configured.</p>
+                    <p className="text-sm mt-2">Click "Add Time Slot" above to create one.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Group by party type and day type */}
+                    {(['private', 'semi_private'] as const).map((partyType) => (
+                      <div key={partyType} className="space-y-4">
+                        <h3 className="text-lg font-bold text-charcoal-800 border-b pb-2">
+                          {partyType === 'private' ? '🎉 Private Parties' : '👥 Semi-Private Parties'}
+                        </h3>
+
+                        {(['weekend', 'weekday'] as const).map((dayType) => {
+                          const slots = timeSlots.filter(
+                            (s) => s.party_type === partyType && s.day_type === dayType
+                          );
+
+                          if (slots.length === 0) return null;
+
+                          return (
+                            <div key={dayType} className="ml-4">
+                              <h4 className="text-sm font-medium text-neutral-700 mb-2">
+                                {dayType === 'weekend' ? '📅 Weekend (Sat-Sun)' : '📅 Weekday (Mon-Fri)'}
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {slots.map((slot) => (
+                                  <div
+                                    key={slot.id}
+                                    className={`p-3 rounded-lg border ${
+                                      slot.is_active
+                                        ? 'bg-green-50 border-green-200'
+                                        : 'bg-neutral-100 border-neutral-200 opacity-60'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <div className="font-medium text-charcoal-800">{slot.label}</div>
+                                        <div className="text-xs text-neutral-600">
+                                          {slot.start_time} - {slot.end_time}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={() => toggleSlotStatus(slot)}
+                                          className={`px-2 py-1 rounded text-xs font-medium ${
+                                            slot.is_active
+                                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                              : 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300'
+                                          }`}
+                                        >
+                                          {slot.is_active ? 'ON' : 'OFF'}
+                                        </button>
+                                        <button
+                                          onClick={() => deleteTimeSlot(slot)}
+                                          className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 hover:bg-red-200"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Show message if no slots for this party type */}
+                        {timeSlots.filter((s) => s.party_type === partyType).length === 0 && (
+                          <p className="ml-4 text-sm text-neutral-500 italic">
+                            No time slots configured for {partyType === 'private' ? 'private' : 'semi-private'} parties.
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
