@@ -98,6 +98,19 @@ interface SavedCard {
   isDefault: boolean;
 }
 
+interface PartyTimeSlot {
+  id: string;
+  party_type: 'private' | 'semi_private';
+  day_type: 'weekday' | 'weekend';
+  start_time: string;
+  end_time: string;
+  label: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AdminPanelProps {
   customers: Customer[];
   onUpdateCustomers: (customers: Customer[]) => void;
@@ -250,6 +263,21 @@ export function AdminPanel({
     isActive: true,
   });
   const [partyFormErrors, setPartyFormErrors] = useState<Record<string, string>>({});
+
+  // Time slots states
+  const [timeSlots, setTimeSlots] = useState<PartyTimeSlot[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [showSlotForm, setShowSlotForm] = useState(false);
+  const [isCreatingSlot, setIsCreatingSlot] = useState(false);
+  const [newSlot, setNewSlot] = useState({
+    partyType: 'semi_private' as 'private' | 'semi_private',
+    dayType: 'weekend' as 'weekday' | 'weekend',
+    startTime: '13:00',
+    endTime: '15:00',
+    label: '',
+    isActive: true,
+    sortOrder: 0,
+  });
 
   // Products states
   const [showProductForm, setShowProductForm] = useState(false);
@@ -547,6 +575,14 @@ export function AdminPanel({
     if (currentView === 'marketing') {
       fetchMembershipDiscount();
     }
+  }, [currentView]);
+
+  // Fetch time slots when parties view is selected
+  useEffect(() => {
+    if (currentView === 'parties') {
+      fetchTimeSlots();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
 
   const formatPhoneNumber = (phone: string) => {
@@ -2100,6 +2136,98 @@ export function AdminPanel({
     }
   };
 
+  // Time slots handlers
+  const fetchTimeSlots = async () => {
+    try {
+      setIsLoadingSlots(true);
+      const response = await fetch('/api/admin/party-time-slots');
+      if (response.ok) {
+        const data = await response.json();
+        setTimeSlots(data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch time slots:', err);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  const formatSlotTimeRange = (start: string, end: string) => {
+    const formatSingleTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+    return `${formatSingleTime(start)} - ${formatSingleTime(end)}`;
+  };
+
+  const createTimeSlot = async () => {
+    try {
+      setIsCreatingSlot(true);
+      const label = newSlot.label || formatSlotTimeRange(newSlot.startTime, newSlot.endTime);
+
+      const response = await fetch('/api/admin/party-time-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newSlot, label }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTimeSlots((prev) => [...prev, data]);
+        setShowSlotForm(false);
+        setNewSlot({
+          partyType: 'semi_private',
+          dayType: 'weekend',
+          startTime: '13:00',
+          endTime: '15:00',
+          label: '',
+          isActive: true,
+          sortOrder: 0,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create time slot:', err);
+    } finally {
+      setIsCreatingSlot(false);
+    }
+  };
+
+  const toggleSlotStatus = async (slot: PartyTimeSlot) => {
+    try {
+      const response = await fetch(`/api/admin/party-time-slots/${slot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !slot.is_active }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTimeSlots((prev) => prev.map((s) => (s.id === slot.id ? data : s)));
+      }
+    } catch (err) {
+      console.error('Failed to toggle slot status:', err);
+    }
+  };
+
+  const deleteTimeSlot = async (slot: PartyTimeSlot) => {
+    if (!confirm(`Delete time slot "${slot.label}"?`)) return;
+
+    try {
+      const response = await fetch(`/api/admin/party-time-slots/${slot.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setTimeSlots((prev) => prev.filter((s) => s.id !== slot.id));
+      }
+    } catch (err) {
+      console.error('Failed to delete time slot:', err);
+    }
+  };
+
   // Parties handlers
   const handleCreateParty = () => {
     setEditingParty(null);
@@ -2350,6 +2478,135 @@ export function AdminPanel({
               <p className="text-gray-500 text-center py-8">No party packages created yet</p>
             )}
           </div>
+        </Card>
+
+        {/* Time Slots Management */}
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">🕐 Party Time Slots</h3>
+            <Button onClick={() => setShowSlotForm(!showSlotForm)} size="sm">
+              {showSlotForm ? '✕ Cancel' : '➕ Add Time Slot'}
+            </Button>
+          </div>
+
+          {/* Add Time Slot Form */}
+          {showSlotForm && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Party Type</label>
+                  <select
+                    value={newSlot.partyType}
+                    onChange={(e) => setNewSlot((prev) => ({ ...prev, partyType: e.target.value as 'private' | 'semi_private' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="semi_private">Semi-Private</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Day Type</label>
+                  <select
+                    value={newSlot.dayType}
+                    onChange={(e) => setNewSlot((prev) => ({ ...prev, dayType: e.target.value as 'weekday' | 'weekend' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="weekend">Weekend</option>
+                    <option value="weekday">Weekday</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    value={newSlot.startTime}
+                    onChange={(e) => setNewSlot((prev) => ({ ...prev, startTime: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    type="time"
+                    value={newSlot.endTime}
+                    onChange={(e) => setNewSlot((prev) => ({ ...prev, endTime: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={createTimeSlot} size="sm" disabled={isCreatingSlot}>
+                  {isCreatingSlot ? 'Creating...' : '✓ Create Slot'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Time Slots Display */}
+          {isLoadingSlots ? (
+            <div className="text-center py-4 text-gray-500">Loading time slots...</div>
+          ) : timeSlots.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">No time slots configured yet</div>
+          ) : (
+            <div className="space-y-4">
+              {(['private', 'semi_private'] as const).map((partyType) => {
+                const slotsForType = timeSlots.filter((s) => s.party_type === partyType);
+                if (slotsForType.length === 0) return null;
+
+                return (
+                  <div key={partyType}>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      {partyType === 'private' ? '🎉 Private' : '👥 Semi-Private'}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {(['weekend', 'weekday'] as const).map((dayType) => {
+                        const slots = slotsForType.filter((s) => s.day_type === dayType);
+                        if (slots.length === 0) return null;
+
+                        return (
+                          <div key={dayType} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="text-xs font-medium text-gray-600 mb-2">
+                              {dayType === 'weekend' ? '📅 Weekend' : '📅 Weekday'}
+                            </div>
+                            <div className="space-y-1">
+                              {slots.map((slot) => (
+                                <div
+                                  key={slot.id}
+                                  className={`flex items-center justify-between px-2 py-1 rounded text-sm ${
+                                    slot.is_active ? 'bg-green-100' : 'bg-gray-200 opacity-60'
+                                  }`}
+                                >
+                                  <span>{slot.label}</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => toggleSlotStatus(slot)}
+                                      className={`px-2 py-0.5 rounded text-xs ${
+                                        slot.is_active
+                                          ? 'bg-green-200 text-green-800'
+                                          : 'bg-gray-300 text-gray-600'
+                                      }`}
+                                    >
+                                      {slot.is_active ? 'ON' : 'OFF'}
+                                    </button>
+                                    <button
+                                      onClick={() => deleteTimeSlot(slot)}
+                                      className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 hover:bg-red-200"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         {/* Party Form Modal */}
