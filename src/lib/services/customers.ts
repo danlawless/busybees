@@ -128,9 +128,10 @@ export async function deleteCustomer(id: string): Promise<void> {
   logger.info({ customerId: id }, 'Starting customer deletion');
 
   // First, get the customer to check for Stripe customer ID
+  // Note: stripe_customer_id was split into _test and _live columns in migration 013
   const { data: customer, error: fetchError } = await supabase
     .from('users')
-    .select('stripe_customer_id, name, email')
+    .select('stripe_customer_id_test, stripe_customer_id_live, name, email')
     .eq('id', id)
     .single();
 
@@ -201,16 +202,30 @@ export async function deleteCustomer(id: string): Promise<void> {
   }
   logger.info({ customerId: id }, 'Unlinked customer party bookings');
 
-  // 6. Delete Stripe customer if exists
-  if (customer?.stripe_customer_id) {
+  // 6. Delete Stripe customer if exists (check both test and live IDs)
+  const stripeCustomerIds = [
+    customer?.stripe_customer_id_test,
+    customer?.stripe_customer_id_live,
+  ].filter(Boolean);
+
+  if (stripeCustomerIds.length > 0) {
     try {
-      const { getStripeClient } = await import('@/lib/stripe/client');
+      const { getStripeClient, getStripeMode } = await import('@/lib/stripe/client');
       const stripe = await getStripeClient();
-      await stripe.customers.del(customer.stripe_customer_id);
-      logger.info({ customerId: id, stripeCustomerId: customer.stripe_customer_id }, 'Deleted Stripe customer');
+      const currentMode = await getStripeMode();
+
+      // Only delete the Stripe customer for the current mode
+      const stripeCustomerId = currentMode === 'live'
+        ? customer?.stripe_customer_id_live
+        : customer?.stripe_customer_id_test;
+
+      if (stripeCustomerId) {
+        await stripe.customers.del(stripeCustomerId);
+        logger.info({ customerId: id, stripeCustomerId, stripeMode: currentMode }, 'Deleted Stripe customer');
+      }
     } catch (stripeError) {
       // Log but don't fail the deletion if Stripe cleanup fails
-      logger.warn({ error: stripeError, customerId: id, stripeCustomerId: customer.stripe_customer_id }, 'Failed to delete Stripe customer - continuing with database deletion');
+      logger.warn({ error: stripeError, customerId: id, stripeCustomerIds }, 'Failed to delete Stripe customer - continuing with database deletion');
     }
   }
 
