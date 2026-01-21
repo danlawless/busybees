@@ -14,6 +14,7 @@ import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
+type PartyPackage = Database['public']['Tables']['party_packages']['Row'];
 
 type BookingStatus = 'all' | 'pending' | 'confirmed' | 'cancelled' | 'completed';
 type PartyType = 'all' | 'private' | 'semi_private';
@@ -54,12 +55,132 @@ export default function AdminPartiesPage() {
   // Active view
   const [activeView, setActiveView] = useState<'bookings' | 'calendar' | 'packages'>('bookings');
 
-  // Package config
+  // Package config (legacy hardcoded)
   const [packageConfig, setPackageConfig] = useState(PACKAGE_PRICING);
+
+  // Party packages from database
+  const [partyPackages, setPartyPackages] = useState<PartyPackage[]>([]);
+  const [isLoadingPackages, setIsLoadingPackages] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newPackage, setNewPackage] = useState({
+    name: '',
+    base_price: 350,
+    capacity: 15,
+    duration: 2,
+    description: '',
+    included_items: [] as string[],
+    is_active: true,
+  });
+  const [newFeature, setNewFeature] = useState('');
 
   useEffect(() => {
     fetchBookings();
+    fetchPartyPackages();
   }, []);
+
+  const fetchPartyPackages = async () => {
+    try {
+      setIsLoadingPackages(true);
+      const response = await fetch('/api/parties?all=true');
+      if (!response.ok) {
+        throw new Error('Failed to fetch party packages');
+      }
+      const data = await response.json();
+      setPartyPackages(data.parties || []);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to fetch party packages');
+    } finally {
+      setIsLoadingPackages(false);
+    }
+  };
+
+  const createPartyPackage = async () => {
+    try {
+      setIsCreating(true);
+      setError('');
+
+      const response = await fetch('/api/parties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newPackage.name,
+          basePrice: newPackage.base_price,
+          capacity: newPackage.capacity,
+          duration: newPackage.duration,
+          description: newPackage.description,
+          includedItems: newPackage.included_items,
+          isActive: newPackage.is_active,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create party package');
+      }
+
+      const data = await response.json();
+      setPartyPackages((prev) => [data.party, ...prev]);
+      setSuccessMessage(`Party package "${newPackage.name}" created successfully!`);
+      setShowCreateForm(false);
+      setNewPackage({
+        name: '',
+        base_price: 350,
+        capacity: 15,
+        duration: 2,
+        description: '',
+        included_items: [],
+        is_active: true,
+      });
+
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to create party package');
+      setError(err instanceof Error ? err.message : 'Failed to create party package');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const togglePackageStatus = async (pkg: PartyPackage) => {
+    try {
+      setError('');
+      const response = await fetch(`/api/parties/${pkg.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !pkg.is_active }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update package');
+      }
+
+      const data = await response.json();
+      setPartyPackages((prev) => prev.map((p) => (p.id === pkg.id ? data.party : p)));
+      setSuccessMessage(`Package ${pkg.is_active ? 'deactivated' : 'activated'} successfully`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to toggle package status');
+      setError(err instanceof Error ? err.message : 'Failed to update package');
+    }
+  };
+
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setNewPackage((prev) => ({
+        ...prev,
+        included_items: [...prev.included_items, newFeature.trim()],
+      }));
+      setNewFeature('');
+    }
+  };
+
+  const removeFeature = (index: number) => {
+    setNewPackage((prev) => ({
+      ...prev,
+      included_items: prev.included_items.filter((_, i) => i !== index),
+    }));
+  };
 
   useEffect(() => {
     applyFilters();
@@ -520,57 +641,256 @@ export default function AdminPartiesPage() {
         {/* Packages View */}
         {activeView === 'packages' && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Party Package Configuration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {Object.entries(packageConfig).map(([key, pkg]) => (
-                    <div key={key} className="border border-neutral-200 rounded-lg p-4">
-                      <h3 className="text-lg font-bold text-charcoal-800 mb-3">{pkg.name}</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="text-sm text-neutral-600">Semi-Private Price</div>
-                          <div className="text-xl font-bold text-honey-600">
-                            {formatCurrency(pkg.semiPrivatePrice)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-neutral-600">Private Price</div>
-                          <div className="text-xl font-bold text-honey-600">
-                            {formatCurrency(pkg.privatePrice)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-neutral-600">Max Guests</div>
-                          <div className="text-lg font-medium text-charcoal-800">{pkg.maxGuests}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-neutral-600">Duration</div>
-                          <div className="text-lg font-medium text-charcoal-800">{pkg.duration} hours</div>
-                        </div>
+            {/* Create New Package Button */}
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+                {showCreateForm ? '✕ Cancel' : '+ Create Party Package'}
+              </Button>
+            </div>
+
+            {/* Create Package Form */}
+            {showCreateForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create New Party Package</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Package Name *</label>
+                        <input
+                          type="text"
+                          value={newPackage.name}
+                          onChange={(e) => setNewPackage((prev) => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g., Basic Bee (Semi-Private)"
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
                       </div>
-                      <div className="mb-4">
-                        <div className="text-sm font-medium text-neutral-700 mb-2">Features:</div>
-                        <ul className="space-y-1">
-                          {pkg.features.map((feature, idx) => (
-                            <li key={idx} className="text-sm text-neutral-600 flex items-start">
-                              <span className="mr-2">•</span>
-                              <span>{feature}</span>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Base Price ($) *</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newPackage.base_price}
+                          onChange={(e) => setNewPackage((prev) => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Capacity (guests)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newPackage.capacity}
+                          onChange={(e) => setNewPackage((prev) => ({ ...prev, capacity: parseInt(e.target.value) || 15 }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Duration (hours)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newPackage.duration}
+                          onChange={(e) => setNewPackage((prev) => ({ ...prev, duration: parseInt(e.target.value) || 2 }))}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">Description</label>
+                      <textarea
+                        value={newPackage.description}
+                        onChange={(e) => setNewPackage((prev) => ({ ...prev, description: e.target.value }))}
+                        placeholder="Describe what's included in this party package..."
+                        rows={3}
+                        className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">Included Features</label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={newFeature}
+                          onChange={(e) => setNewFeature(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+                          placeholder="Add a feature..."
+                          className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                        <Button type="button" variant="outline" onClick={addFeature}>
+                          Add
+                        </Button>
+                      </div>
+                      {newPackage.included_items.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {newPackage.included_items.map((item, idx) => (
+                            <li key={idx} className="flex items-center justify-between bg-neutral-50 px-3 py-1 rounded">
+                              <span className="text-sm">{item}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeFeature(idx)}
+                                className="text-red-500 hover:text-red-700 text-sm"
+                              >
+                                ✕
+                              </button>
                             </li>
                           ))}
                         </ul>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="is_active"
+                        checked={newPackage.is_active}
+                        onChange={(e) => setNewPackage((prev) => ({ ...prev, is_active: e.target.checked }))}
+                        className="w-4 h-4 rounded border-neutral-300"
+                      />
+                      <label htmlFor="is_active" className="text-sm text-neutral-700">
+                        Active (visible to customers)
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-neutral-200">
+                      <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={createPartyPackage}
+                        disabled={isCreating || !newPackage.name || newPackage.base_price <= 0}
+                      >
+                        {isCreating ? 'Creating...' : 'Create Package'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Party Packages from Database */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Party Packages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPackages ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-honey-500"></div>
+                  </div>
+                ) : partyPackages.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-600">
+                    <p>No party packages found in the database.</p>
+                    <p className="text-sm mt-2">Click "Create Party Package" above to add one.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {partyPackages.map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className={`border rounded-lg p-4 ${pkg.is_active ? 'border-green-200 bg-green-50' : 'border-neutral-200 bg-neutral-50'}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-charcoal-800">{pkg.name}</h3>
+                            <p className="text-sm text-neutral-600 mt-1">{pkg.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-neutral-200 text-neutral-600'
+                              }`}
+                            >
+                              {pkg.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            <Button size="sm" variant="outline" onClick={() => togglePackageStatus(pkg)}>
+                              {pkg.is_active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                          <div>
+                            <div className="text-sm text-neutral-600">Base Price</div>
+                            <div className="text-xl font-bold text-honey-600">{formatCurrency(pkg.base_price)}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-neutral-600">Capacity</div>
+                            <div className="text-lg font-medium text-charcoal-800">{pkg.capacity} guests</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-neutral-600">Duration</div>
+                            <div className="text-lg font-medium text-charcoal-800">{pkg.duration} hours</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-neutral-600">Stripe</div>
+                            <div className="text-sm">
+                              {pkg.stripe_product_id ? (
+                                <span className="text-green-600">✓ Synced</span>
+                              ) : (
+                                <span className="text-yellow-600">Not synced</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {pkg.included_items && Array.isArray(pkg.included_items) && pkg.included_items.length > 0 && (
+                          <div className="mt-4">
+                            <div className="text-sm font-medium text-neutral-700 mb-1">Included:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {(pkg.included_items as string[]).map((item, idx) => (
+                                <span key={idx} className="bg-white px-2 py-1 rounded text-xs text-neutral-700 border border-neutral-200">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Legacy Config Reference */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Legacy Package Configuration (Reference)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                  <p className="text-sm text-yellow-900">
+                    <strong>Note:</strong> The configuration below is hardcoded for reference. New packages should be created using the form above.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  {Object.entries(packageConfig).map(([key, pkg]) => (
+                    <div key={key} className="border border-neutral-200 rounded-lg p-4">
+                      <h3 className="text-lg font-bold text-charcoal-800 mb-2">{pkg.name}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-neutral-600">Semi-Private:</span>{' '}
+                          <span className="font-medium">{formatCurrency(pkg.semiPrivatePrice)}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600">Private:</span>{' '}
+                          <span className="font-medium">{formatCurrency(pkg.privatePrice)}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600">Max Guests:</span>{' '}
+                          <span className="font-medium">{pkg.maxGuests}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600">Duration:</span>{' '}
+                          <span className="font-medium">{pkg.duration}h</span>
+                        </div>
                       </div>
                     </div>
                   ))}
-                </div>
-
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-900">
-                    <strong>💡 Note:</strong> Package pricing is currently managed in code. To update prices, edit the
-                    configuration file and redeploy. Database-driven pricing management coming soon!
-                  </p>
                 </div>
               </CardContent>
             </Card>
