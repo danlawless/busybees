@@ -20,7 +20,7 @@ const navigation = [
   { name: 'Parties', href: '/parties' },
   { name: 'Gift Cards', href: '/gift-cards' },
   { name: 'Jobs', href: '/jobs' },
-  { name: 'Contact', href: '/contact' },
+  // { name: 'Contact', href: '/contact' },  // Hidden until contact form email is fixed
 ]
 
 interface HeaderProps {
