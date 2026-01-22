@@ -57,7 +57,7 @@ export async function POST(
       // Just update the status in the database
       const { error: updateError } = await supabase
         .from('purchases')
-        .update({ status: 'expired' })
+        .update({ status: 'refunded' })
         .eq('id', purchaseId);
 
       if (updateError) {
@@ -103,7 +103,7 @@ export async function POST(
     // 4. Update purchase status in database
     const { error: updateError } = await supabase
       .from('purchases')
-      .update({ status: 'expired' })
+      .update({ status: 'refunded' })
       .eq('id', purchaseId);
 
     if (updateError) {

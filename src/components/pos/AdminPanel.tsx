@@ -73,7 +73,7 @@ interface Purchase {
   actualExpiryDate?: string; // Calculated expiry from first use
   usedSessions: number;
   totalSessions: number;
-  status: 'active' | 'expired' | 'used';
+  status: 'active' | 'expired' | 'used' | 'refunded';
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
@@ -614,10 +614,15 @@ export function AdminPanel({
   const activeSessions = customers.filter(c => (c.activeSessions || []).length > 0);
   const totalCustomers = customers.length;
   const totalRevenue = customers.reduce((sum, customer) =>
-    sum + customer.purchases.reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
+    sum + customer.purchases
+      .filter(purchase => purchase.status !== 'refunded')
+      .reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
   );
 
   const filteredPurchases = customers.flatMap(c => c.purchases).filter(p => {
+    // Exclude refunded purchases from revenue calculations
+    if (p.status === 'refunded') return false;
+
     const purchaseDate = new Date(p.purchaseDate);
     const now = new Date();
 
@@ -642,14 +647,17 @@ export function AdminPanel({
 
   const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + purchase.price, 0);
 
-  // Today's purchases for Dashboard and Sessions views
+  // Today's purchases for Dashboard and Sessions views (includes refunded for display)
   const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
     const purchaseDate = new Date(p.purchaseDate);
     const today = new Date();
     return purchaseDate.toDateString() === today.toDateString();
   });
 
-  const todaysRevenue = todaysPurchases.reduce((sum, purchase) => sum + purchase.price, 0);
+  // Revenue excludes refunded purchases
+  const todaysRevenue = todaysPurchases
+    .filter(p => p.status !== 'refunded')
+    .reduce((sum, purchase) => sum + purchase.price, 0);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
@@ -1035,33 +1043,41 @@ export function AdminPanel({
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">{formatCurrency(purchase.price)}</p>
-                    <Button
-                      onClick={() => {
-                        if (processingRefund === purchase.id) return; // Prevent double-click
-                        if (confirmingRefund === purchase.id && customer) {
-                          handleConfirmRefund(customer.id, purchase.id);
-                        } else {
-                          handleRefundClick(purchase.id);
-                        }
-                      }}
-                      size="sm"
-                      variant="outline"
-                      disabled={processingRefund === purchase.id}
-                      className={`mt-1 transition-colors ${
-                        processingRefund === purchase.id
-                          ? 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
+                    <p className={`font-semibold ${purchase.status === 'refunded' ? 'line-through text-gray-400' : ''}`}>
+                      {formatCurrency(purchase.price)}
+                    </p>
+                    {purchase.status === 'refunded' ? (
+                      <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                        Refunded
+                      </span>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          if (processingRefund === purchase.id) return; // Prevent double-click
+                          if (confirmingRefund === purchase.id && customer) {
+                            handleConfirmRefund(customer.id, purchase.id);
+                          } else {
+                            handleRefundClick(purchase.id);
+                          }
+                        }}
+                        size="sm"
+                        variant="outline"
+                        disabled={processingRefund === purchase.id}
+                        className={`mt-1 transition-colors ${
+                          processingRefund === purchase.id
+                            ? 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
+                            : confirmingRefund === purchase.id
+                            ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200 animate-pulse'
+                            : 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                        }`}
+                      >
+                        {processingRefund === purchase.id
+                          ? 'Processing...'
                           : confirmingRefund === purchase.id
-                          ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200 animate-pulse'
-                          : 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
-                      }`}
-                    >
-                      {processingRefund === purchase.id
-                        ? 'Processing...'
-                        : confirmingRefund === purchase.id
-                        ? '✓ Confirm Refund'
-                        : 'Refund'}
-                    </Button>
+                          ? '✓ Confirm Refund'
+                          : 'Refund'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               );

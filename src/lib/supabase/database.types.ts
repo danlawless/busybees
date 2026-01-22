@@ -261,7 +261,7 @@ export interface Database {
           actual_expiry_date: string | null;
           used_sessions: number;
           total_sessions: number;
-          status: 'active' | 'expired' | 'used';
+          status: 'active' | 'expired' | 'used' | 'refunded';
           auto_renew: boolean;
           next_renewal_date: string | null;
           stripe_payment_intent_id: string | null;
@@ -909,7 +909,7 @@ export interface Database {
       pass_category: 'day' | 'weekly' | 'monthly';
       product_category: 'food' | 'beverage' | 'retail';
       purchase_type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
-      purchase_status: 'active' | 'expired' | 'used';
+      purchase_status: 'active' | 'expired' | 'used' | 'refunded';
       product_type: 'pass' | 'party' | 'product';
       banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
       gift_card_status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';

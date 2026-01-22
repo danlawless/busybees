@@ -576,11 +576,11 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
   const supabase = createAdminClient();
 
-  // Find and update/delete the purchase
+  // Find and update the purchase to refunded status
   const { error } = await supabase
     .from('purchases')
     .update({
-      status: 'expired',
+      status: 'refunded',
     })
     .eq('stripe_payment_intent_id', charge.payment_intent as string);
 
