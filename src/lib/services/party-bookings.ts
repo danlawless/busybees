@@ -413,3 +413,140 @@ export async function getUpcomingBookings(limit = 10): Promise<PartyBooking[]> {
 
   return data || [];
 }
+
+/**
+ * Data needed to create/update a party booking from a purchase
+ */
+export interface PurchasePartyData {
+  purchaseId: string;
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  packageName: string;
+  price: number;
+  partyDate: string;
+  startTime: string;
+  endTime: string;
+  guestCount: number;
+  notes?: string;
+}
+
+/**
+ * Create or update a party booking from a customer dashboard purchase
+ * This syncs party scheduling data from the purchases table to party_bookings
+ * so that it appears in the admin POS module.
+ */
+export async function createOrUpdateBookingFromPurchase(
+  data: PurchasePartyData
+): Promise<PartyBooking> {
+  const supabase = createAdminClient();
+
+  // Check if a booking already exists for this purchase
+  const { data: existingBooking, error: findError } = await supabase
+    .from('party_bookings')
+    .select('*')
+    .eq('purchase_id', data.purchaseId)
+    .single();
+
+  if (findError && findError.code !== 'PGRST116') {
+    // PGRST116 is "no rows returned" - that's expected for new bookings
+    console.error('Error finding existing booking:', findError);
+    throw new Error('Failed to check for existing booking');
+  }
+
+  // Map package name to party_bookings package format
+  // The purchases store friendly names like "Queen Bee Party Package"
+  // party_bookings expects: queen_bee, worker_bee, or basic_bee
+  const packageNameLower = data.packageName.toLowerCase();
+  let mappedPackageName: 'queen_bee' | 'worker_bee' | 'basic_bee' = 'basic_bee';
+  if (packageNameLower.includes('queen')) {
+    mappedPackageName = 'queen_bee';
+  } else if (packageNameLower.includes('worker')) {
+    mappedPackageName = 'worker_bee';
+  }
+
+  // Calculate end time from duration if not provided
+  // For now, we trust the passed times
+
+  const bookingData: PartyBookingInsert | PartyBookingUpdate = {
+    customer_name: data.customerName,
+    customer_email: data.customerEmail,
+    customer_phone: data.customerPhone,
+    party_type: 'private' as const, // Default to private for dashboard bookings
+    package_name: mappedPackageName,
+    party_date: data.partyDate,
+    start_time: data.startTime,
+    end_time: data.endTime,
+    child_name: 'TBD', // Customer will provide on party day
+    guest_count: data.guestCount,
+    base_price: data.price,
+    total_price: data.price,
+    status: 'confirmed' as const, // Already paid via purchase
+    payment_status: 'paid',
+    notes: data.notes || null,
+    customer_id: data.customerId,
+    purchase_id: data.purchaseId,
+  };
+
+  if (existingBooking) {
+    // Update existing booking
+    const { data: updated, error: updateError } = await supabase
+      .from('party_bookings')
+      .update(bookingData)
+      .eq('id', existingBooking.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating party booking from purchase:', updateError);
+      throw new Error('Failed to update party booking');
+    }
+
+    return updated;
+  } else {
+    // Create new booking - need all required fields
+    const insertData: PartyBookingInsert = {
+      ...(bookingData as PartyBookingInsert),
+      additional_kids: 0,
+      additional_kids_price: 0,
+    };
+
+    const { data: created, error: createError } = await supabase
+      .from('party_bookings')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating party booking from purchase:', createError);
+      throw new Error('Failed to create party booking');
+    }
+
+    return created;
+  }
+}
+
+/**
+ * Get a party booking by purchase ID
+ */
+export async function getBookingByPurchaseId(purchaseId: string): Promise<PartyBooking | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('party_bookings')
+    .select('*')
+    .eq('purchase_id', purchaseId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No booking found for this purchase
+      return null;
+    }
+    console.error('Error fetching booking by purchase ID:', error);
+    return null;
+  }
+
+  return data;
+}

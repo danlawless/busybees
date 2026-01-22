@@ -565,6 +565,7 @@ export interface Database {
           stripe_checkout_session_id: string | null;
           payment_status: string | null;
           customer_id: string | null;
+          purchase_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -592,6 +593,7 @@ export interface Database {
           stripe_checkout_session_id?: string | null;
           payment_status?: string | null;
           customer_id?: string | null;
+          purchase_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -619,6 +621,7 @@ export interface Database {
           stripe_checkout_session_id?: string | null;
           payment_status?: string | null;
           customer_id?: string | null;
+          purchase_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
