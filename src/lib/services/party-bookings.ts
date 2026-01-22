@@ -553,12 +553,39 @@ export async function createOrUpdateBookingFromPurchase(
   // The purchases store friendly names like "Queen Bee Party Package"
   // party_bookings expects: queen_bee, worker_bee, or basic_bee
   const packageNameLower = data.packageName.toLowerCase();
+  console.log('🎉 [PARTY-BOOKING-SYNC] Mapping package name:', data.packageName, '→', packageNameLower);
+
   let mappedPackageName: 'queen_bee' | 'worker_bee' | 'basic_bee' = 'basic_bee';
-  if (packageNameLower.includes('queen')) {
+
+  // Check for queen bee variations
+  if (packageNameLower.includes('queen') ||
+      packageNameLower.includes('premium') ||
+      packageNameLower.includes('deluxe')) {
     mappedPackageName = 'queen_bee';
-  } else if (packageNameLower.includes('worker')) {
+  }
+  // Check for worker bee variations
+  else if (packageNameLower.includes('worker') ||
+           packageNameLower.includes('standard') ||
+           packageNameLower.includes('classic')) {
     mappedPackageName = 'worker_bee';
   }
+  // Check for basic bee variations
+  else if (packageNameLower.includes('basic') ||
+           packageNameLower.includes('simple') ||
+           packageNameLower.includes('starter')) {
+    mappedPackageName = 'basic_bee';
+  }
+  // Check for private/semi-private (map to appropriate tier)
+  else if (packageNameLower.includes('private')) {
+    // Private parties are typically premium
+    mappedPackageName = 'queen_bee';
+  }
+  else if (packageNameLower.includes('semi')) {
+    // Semi-private are mid-tier
+    mappedPackageName = 'worker_bee';
+  }
+
+  console.log('🎉 [PARTY-BOOKING-SYNC] Mapped package:', data.packageName, '→', mappedPackageName);
 
   // Calculate additional kids count for planning purposes (staffing, supplies)
   // but use the actual purchase price - don't override what was paid
