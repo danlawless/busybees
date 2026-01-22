@@ -97,6 +97,7 @@ export default function POSPage() {
     const [showPinModal, setShowPinModal] = useState(false);
     const [pin, setPin] = useState("");
     const [pinError, setPinError] = useState("");
+    const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
     const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
     const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -301,17 +302,36 @@ export default function POSPage() {
         }
     };
 
-    const handlePinSubmit = (e: React.FormEvent) => {
+    const handlePinSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin === "1234") {
-            setIsStaffMode(true);
-            setCurrentView("admin");
-            setShowPinModal(false);
+        if (pin.length !== 4) return;
+
+        setIsAuthenticatingPin(true);
+        setPinError("");
+
+        try {
+            const response = await fetch('/api/auth/staff-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin }),
+            });
+
+            if (response.ok) {
+                setIsStaffMode(true);
+                setCurrentView("admin");
+                setShowPinModal(false);
+                setPin("");
+                setPinError("");
+            } else {
+                const data = await response.json();
+                setPinError(data.error || "Invalid PIN. Please try again.");
+                setPin("");
+            }
+        } catch {
+            setPinError("Authentication failed. Please try again.");
             setPin("");
-            setPinError("");
-        } else {
-            setPinError("Incorrect PIN. Please try again.");
-            setPin("");
+        } finally {
+            setIsAuthenticatingPin(false);
         }
     };
 
@@ -917,9 +937,10 @@ export default function POSPage() {
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value)}
                                     placeholder="Enter 4-digit PIN"
-                                    className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 tracking-widest"
+                                    className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 tracking-widest disabled:opacity-50"
                                     maxLength={4}
                                     autoFocus
+                                    disabled={isAuthenticatingPin}
                                 />
                             </div>
 
@@ -933,16 +954,17 @@ export default function POSPage() {
                                 <button
                                     type="button"
                                     onClick={handlePinCancel}
-                                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
+                                    disabled={isAuthenticatingPin}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={pin.length !== 4}
+                                    disabled={pin.length !== 4 || isAuthenticatingPin}
                                     className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                                 >
-                                    Enter
+                                    {isAuthenticatingPin ? 'Authenticating...' : 'Enter'}
                                 </button>
                             </div>
                         </form>

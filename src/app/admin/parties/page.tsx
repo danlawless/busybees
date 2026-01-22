@@ -40,13 +40,12 @@ const PACKAGE_LABELS = {
   basic_bee: 'Basic Bee',
 };
 
-const ADMIN_PIN = '1234';
-
 export default function AdminPartiesPage() {
   // PIN lock state
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const [bookings, setBookings] = useState<PartyBooking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<PartyBooking[]>([]);
@@ -445,14 +444,34 @@ export default function AdminPartiesPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  // PIN verification
-  const handlePinSubmit = () => {
-    if (pinInput === ADMIN_PIN) {
-      setIsUnlocked(true);
-      setPinError('');
-    } else {
-      setPinError('Incorrect PIN. Please try again.');
+  // PIN verification - authenticates via staff login API
+  const handlePinSubmit = async () => {
+    if (pinInput.length !== 4) return;
+
+    setIsAuthenticating(true);
+    setPinError('');
+
+    try {
+      const response = await fetch('/api/auth/staff-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+
+      if (response.ok) {
+        setIsUnlocked(true);
+        setPinError('');
+      } else {
+        const data = await response.json();
+        setPinError(data.error || 'Invalid PIN. Please try again.');
+        setPinInput('');
+      }
+    } catch (err) {
+      logger.error({ error: err }, 'Staff login failed');
+      setPinError('Authentication failed. Please try again.');
       setPinInput('');
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
@@ -494,8 +513,9 @@ export default function AdminPartiesPage() {
                   onKeyDown={handlePinKeyDown}
                   placeholder="Enter PIN"
                   maxLength={4}
-                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500"
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 disabled:opacity-50"
                   autoFocus
+                  disabled={isAuthenticating}
                 />
               </div>
               {pinError && (
@@ -504,9 +524,9 @@ export default function AdminPartiesPage() {
               <Button
                 onClick={handlePinSubmit}
                 className="w-full"
-                disabled={pinInput.length < 4}
+                disabled={pinInput.length < 4 || isAuthenticating}
               >
-                Unlock
+                {isAuthenticating ? 'Authenticating...' : 'Unlock'}
               </Button>
             </div>
           </CardContent>
