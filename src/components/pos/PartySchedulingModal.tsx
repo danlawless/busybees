@@ -19,6 +19,8 @@ interface PartySchedulingModalProps {
   }) => void;
   partyPackageName: string;
   customerName: string;
+  /** The actual price paid for the party package */
+  purchasePrice?: number;
   existingPartyData?: {
     partyDate?: string;
     partyStartTime?: string;
@@ -36,12 +38,13 @@ interface TimeSlot {
   available: boolean;
 }
 
-export function PartySchedulingModal({ 
-  isOpen, 
-  onClose, 
-  onSchedule, 
+export function PartySchedulingModal({
+  isOpen,
+  onClose,
+  onSchedule,
   partyPackageName,
   customerName,
+  purchasePrice,
   existingPartyData,
   forceCalendarStep = false
 }: PartySchedulingModalProps) {
@@ -279,7 +282,7 @@ export function PartySchedulingModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    15 guests included, $12 for each additional guest
+                    15 guests included, $15 for each additional guest
                   </p>
                 </div>
 
@@ -304,18 +307,27 @@ export function PartySchedulingModal({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>{partyPackageName} (2 hours)</span>
-                    <span>${partyPackageName.includes('Private') ? '425' : '350'}</span>
+                    <span>${purchasePrice ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>15 guests included</span>
+                    <span>✓</span>
                   </div>
                   {partyGuests > 15 && (
-                    <div className="flex justify-between">
-                      <span>Extra guests ({partyGuests - 15} × $12)</span>
-                      <span>${(partyGuests - 15) * 12}</span>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Extra guests ({partyGuests - 15} × $15)</span>
+                      <span>+${(partyGuests - 15) * 15}</span>
                     </div>
                   )}
                   <div className="border-t border-green-300 pt-2 flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>${(partyPackageName.includes('Private') ? 425 : 350) + Math.max(0, partyGuests - 15) * 12}</span>
+                    <span>Total Paid</span>
+                    <span>${purchasePrice ?? 0}</span>
                   </div>
+                  {partyGuests > 15 && (
+                    <p className="text-xs text-green-700 mt-1">
+                      Note: Additional guest fees of ${(partyGuests - 15) * 15} may apply at check-in
+                    </p>
+                  )}
                 </div>
               </Card>
 

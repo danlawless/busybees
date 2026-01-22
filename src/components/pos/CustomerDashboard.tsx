@@ -2518,6 +2518,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 onSchedule={handlePartySchedule}
                 partyPackageName={schedulingParty.name}
                 customerName={customer.name}
+                purchasePrice={schedulingParty.price}
                 existingPartyData={{
                   partyDate: schedulingParty.partyDate,
                   partyStartTime: schedulingParty.partyStartTime,

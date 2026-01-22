@@ -1794,6 +1794,7 @@ function WebMyAccountContent() {
             onSchedule={handlePartySchedule}
             partyPackageName={schedulingParty.name}
             customerName={profile.name || 'Customer'}
+            purchasePrice={schedulingParty.price}
             existingPartyData={{
               partyDate: schedulingParty.partyDate,
               partyStartTime: schedulingParty.partyStartTime,

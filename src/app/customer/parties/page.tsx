@@ -507,6 +507,7 @@ function PartiesContent() {
           }}
           partyPackageName={schedulingParty.name}
           customerName={profile?.name || 'Customer'}
+          purchasePrice={schedulingParty.price}
           existingPartyData={{
             partyDate: schedulingParty.party_date,
             partyStartTime: schedulingParty.party_start_time,

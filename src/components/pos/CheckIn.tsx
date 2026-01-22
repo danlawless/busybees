@@ -4292,6 +4292,7 @@ export function CheckIn({
                     customerName={
                         (selectedCustomer || currentCustomer)?.name || "Customer"
                     }
+                    purchasePrice={selectedParty.price}
                     existingPartyData={isRescheduling ? {
                         partyDate: selectedParty.partyDate,
                         partyStartTime: selectedParty.partyStartTime,
