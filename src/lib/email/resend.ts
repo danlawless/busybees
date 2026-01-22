@@ -448,7 +448,7 @@ export async function sendTestGiftCardEmail(data: {
 }
 
 /**
- * Send welcome email to new customer after POS signup
+ * Send welcome email to new customer after signup
  */
 export async function sendWelcomeEmail(data: {
   to: string;
@@ -459,10 +459,14 @@ export async function sendWelcomeEmail(data: {
 
   const subject = '🐝 Welcome to Busy Bees Indoor Play Center!';
 
+  // Format phone for display
+  const formattedPhone = data.phone.length === 10
+    ? `(${data.phone.slice(0, 3)}) ${data.phone.slice(3, 6)}-${data.phone.slice(6)}`
+    : data.phone;
+
+  // Plain text fallback
   const text = `
-═══════════════════════════════════════════════════════════
-🐝 Welcome to the Busy Bees Family! 🐝
-═══════════════════════════════════════════════════════════
+Welcome to the Busy Bees Family!
 
 Hi ${data.name}!
 
@@ -470,47 +474,188 @@ Thank you for creating an account with Busy Bees Indoor Play Center!
 We're so excited to have you join our hive of happy families.
 
 YOUR ACCOUNT DETAILS:
-─────────────────────────────────────────────────────────────
 Email: ${data.to}
-Phone: ${data.phone}
-─────────────────────────────────────────────────────────────
+Phone: ${formattedPhone}
 
 WHAT'S NEXT?
-• Add your children to your account at the play center
+• Add your children to your account
 • Purchase day passes, punch cards, or memberships
 • Sign waivers for your little ones
 • Book a birthday party!
 
-ACCESS YOUR ACCOUNT ONLINE:
-─────────────────────────────────────────────────────────────
-Visit ${siteUrl}/customer/login to:
-• View your passes and purchase history
-• Manage your children's profiles
-• Book birthday parties
-• Purchase gift cards
-
-Set up your web password at:
-${siteUrl}/customer/set-password
-─────────────────────────────────────────────────────────────
-
 QUICK TIP: When you visit Busy Bees, just enter your phone
 number at our check-in kiosk to access your account!
 
-We can't wait to see you and your little ones buzz around
-our play center soon! 🐝✨
+Visit your dashboard: ${siteUrl}/customer/dashboard
 
-───────────────────────────────────────────────────────────
+We can't wait to see you soon! 🐝
+
 Busy Bees Indoor Play Center
-📍 Come play with us!
-🌐 ${siteUrl}
-📧 ${BUSINESS_EMAIL}
-───────────────────────────────────────────────────────────
+${siteUrl}
+`;
+
+  // Beautiful HTML email
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Busy Bees!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header with gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 30px 20px; text-align: center;">
+              <!-- Bee Logo -->
+              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
+                <span style="font-size: 36px;">🐝</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                Welcome to Busy Bees!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 30px 25px;">
+
+              <!-- Greeting -->
+              <p style="text-align: center; margin: 0 0 5px; font-size: 20px; font-weight: 600; color: #1f2937;">
+                Hi ${data.name}! 👋
+              </p>
+              <p style="text-align: center; margin: 0 0 25px; font-size: 15px; color: #6b7280; line-height: 1.5;">
+                Thank you for joining the Busy Bees family!<br>
+                We're so excited to have you in our hive.
+              </p>
+
+              <!-- Account Details Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Your Account</p>
+                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🐝 BUSY BEES</p>
+                        </td>
+                        <td align="right">
+                          <span style="font-size: 24px;">✨</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <div style="margin: 20px 0 10px;">
+                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Email</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600; color: #ffffff;">${data.to}</p>
+                    </div>
+
+                    <div>
+                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Phone</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600; color: #ffffff;">${formattedPhone}</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What's Next Section -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1f2937;">
+                      🎉 What's Next?
+                    </p>
+                    <table cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #4b5563;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #fef3c7; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 12px;">👶</span>
+                          Add your children to your account
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #4b5563;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #fef3c7; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 12px;">🎟️</span>
+                          Purchase day passes or memberships
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #4b5563;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #fef3c7; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 12px;">📝</span>
+                          Sign waivers for your little ones
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #4b5563;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #fef3c7; border-radius: 50%; text-align: center; line-height: 24px; margin-right: 10px; font-size: 12px;">🎂</span>
+                          Book a birthday party!
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Quick Tip -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #854d0e;">
+                      <strong>💡 Quick Tip:</strong> When you visit Busy Bees, just enter your phone number at our check-in kiosk to access your account!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 25px;">
+                    <a href="${siteUrl}/customer/dashboard" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                      Visit Your Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">
+                      📍 Visit us at Busy Bees Indoor Play Center
+                    </p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
+                      🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      We can't wait to see you and your little ones soon! 🐝✨
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 `;
 
   return sendEmail({
     to: data.to,
     subject,
     text,
+    html,
   });
 }
 
