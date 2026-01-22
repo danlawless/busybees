@@ -11,14 +11,14 @@ Comprehensive admin interface for managing party bookings and packages.
 ### 1. Party Bookings Management
 - **View all bookings** with comprehensive details
 - **Filter by**:
-  - Status (pending, confirmed, cancelled, completed)
+  - Status (pending, confirmed, cancelled, done)
   - Party type (private, semi-private)
   - Date range (upcoming, past, custom)
   - Search (customer name, email, phone, child name)
 - **Quick actions**:
   - Confirm pending bookings
   - Cancel bookings
-  - Mark as completed
+  - Mark as done (party has occurred)
 - **Display information**:
   - Date and time
   - Customer contact info
@@ -64,7 +64,7 @@ Update a party booking's status or details.
 **Body:**
 ```json
 {
-  "status": "confirmed" | "pending" | "cancelled" | "completed",
+  "status": "confirmed" | "pending" | "cancelled" | "done",
   "notes": "Optional notes",
   "party_date": "YYYY-MM-DD",
   "start_time": "HH:MM",
