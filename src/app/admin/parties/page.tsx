@@ -495,7 +495,7 @@ export default function AdminPartiesPage() {
   // PIN Lock Screen
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white flex items-center justify-center p-8">
+      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white flex items-center justify-center p-8 pos-page-static">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center">🔒 Admin Access Required</CardTitle>
@@ -537,7 +537,7 @@ export default function AdminPartiesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8">
+      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8 pos-page-static">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-honey-500"></div>
@@ -548,7 +548,7 @@ export default function AdminPartiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8">
+    <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8 pos-page-static">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
