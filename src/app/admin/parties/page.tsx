@@ -98,6 +98,10 @@ export default function AdminPartiesPage() {
     sortOrder: 0,
   });
 
+  // Calendar state
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+
   // Only fetch data after PIN is entered
   useEffect(() => {
     if (isUnlocked) {
@@ -328,6 +332,89 @@ export default function AdminPartiesPage() {
       return `${displayHour}:${minutes} ${ampm}`;
     };
     return `${formatSingleTime(start)} - ${formatSingleTime(end)}`;
+  };
+
+  // Calendar helper functions
+  const getCalendarDays = () => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Day of week the month starts on (0 = Sunday)
+    const startDayOfWeek = firstDay.getDay();
+    // Total days in the month
+    const totalDays = lastDay.getDate();
+
+    const days: { date: Date; isCurrentMonth: boolean }[] = [];
+
+    // Add days from previous month to fill the first week
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+        isCurrentMonth: false,
+      });
+    }
+
+    // Add days of current month
+    for (let i = 1; i <= totalDays; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Add days from next month to complete the grid (6 rows x 7 days = 42)
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  };
+
+  const getBookingsForDate = (date: Date) => {
+    const dateStr = formatDateToYYYYMMDD(date);
+    return bookings.filter((b) => b.party_date === dateStr);
+  };
+
+  const navigateCalendar = (direction: 'prev' | 'next') => {
+    setCalendarDate((prev) => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const goToToday = () => {
+    setCalendarDate(new Date());
+    setSelectedCalendarDate(formatDateToYYYYMMDD(new Date()));
+  };
+
+  const getStatusDot = (status: PartyBooking['status']) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-500';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'cancelled':
+        return 'bg-red-500';
+      case 'completed':
+        return 'bg-blue-500';
+      default:
+        return 'bg-neutral-400';
+    }
   };
 
   useEffect(() => {
@@ -861,19 +948,241 @@ export default function AdminPartiesPage() {
 
         {/* Calendar View */}
         {activeView === 'calendar' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar View</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <p className="text-neutral-600 mb-4">📅 Calendar visualization coming soon!</p>
-                <p className="text-sm text-neutral-500">
-                  Will display booked slots by date with color-coding for party types and status.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Calendar */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => navigateCalendar('prev')}>
+                        ←
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={goToToday}>
+                        Today
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => navigateCalendar('next')}>
+                        →
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Day headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-neutral-600 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar grid */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {getCalendarDays().map((dayInfo, idx) => {
+                      const dateStr = formatDateToYYYYMMDD(dayInfo.date);
+                      const dayBookings = getBookingsForDate(dayInfo.date);
+                      const isToday = dateStr === formatDateToYYYYMMDD(new Date());
+                      const isSelected = dateStr === selectedCalendarDate;
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedCalendarDate(dateStr)}
+                          className={`
+                            min-h-[80px] p-1 border rounded-lg text-left transition-all
+                            ${dayInfo.isCurrentMonth ? 'bg-white' : 'bg-neutral-50'}
+                            ${isSelected ? 'border-honey-500 ring-2 ring-honey-200' : 'border-neutral-200'}
+                            ${isToday ? 'bg-honey-50' : ''}
+                            hover:border-honey-400
+                          `}
+                        >
+                          <div className={`
+                            text-xs font-medium mb-1
+                            ${dayInfo.isCurrentMonth ? 'text-charcoal-800' : 'text-neutral-400'}
+                            ${isToday ? 'text-honey-600' : ''}
+                          `}>
+                            {dayInfo.date.getDate()}
+                          </div>
+
+                          {/* Booking indicators */}
+                          <div className="space-y-1">
+                            {dayBookings.slice(0, 3).map((booking) => (
+                              <div
+                                key={booking.id}
+                                className={`
+                                  text-xs px-1 py-0.5 rounded truncate flex items-center gap-1
+                                  ${booking.party_type === 'private' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}
+                                `}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDot(booking.status)}`} />
+                                <span className="truncate">{formatTime(booking.start_time)}</span>
+                              </div>
+                            ))}
+                            {dayBookings.length > 3 && (
+                              <div className="text-xs text-neutral-500 pl-1">
+                                +{dayBookings.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-4 pt-4 border-t border-neutral-200">
+                    <div className="flex flex-wrap gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                        <span>Confirmed</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span>Pending</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span>Completed</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                        <span>Cancelled</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-4">
+                        <span className="w-3 h-3 rounded bg-purple-100 border border-purple-200" />
+                        <span>Private</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded bg-blue-100 border border-blue-200" />
+                        <span>Semi-Private</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Selected Date Details */}
+            <div className="lg:col-span-1">
+              <Card className="sticky top-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    {selectedCalendarDate
+                      ? formatDate(selectedCalendarDate)
+                      : 'Select a Date'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!selectedCalendarDate ? (
+                    <p className="text-neutral-600 text-sm">
+                      Click on a date in the calendar to view its bookings.
+                    </p>
+                  ) : (
+                    (() => {
+                      const selectedBookings = bookings.filter(
+                        (b) => b.party_date === selectedCalendarDate
+                      );
+
+                      if (selectedBookings.length === 0) {
+                        return (
+                          <div className="text-center py-6">
+                            <p className="text-neutral-600 text-sm">No parties booked for this date.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {selectedBookings.map((booking) => (
+                            <div
+                              key={booking.id}
+                              className={`p-3 rounded-lg border ${
+                                booking.status === 'cancelled'
+                                  ? 'bg-red-50 border-red-200 opacity-60'
+                                  : booking.party_type === 'private'
+                                  ? 'bg-purple-50 border-purple-200'
+                                  : 'bg-blue-50 border-blue-200'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${getStatusDot(booking.status)}`} />
+                                  <span className="font-medium text-sm text-charcoal-800">
+                                    {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[booking.status]}`}
+                                >
+                                  {booking.status}
+                                </span>
+                              </div>
+
+                              <div className="text-sm space-y-1">
+                                <div>
+                                  <span className="text-neutral-600">Child: </span>
+                                  <span className="font-medium">{booking.child_name}</span>
+                                  {booking.child_age && <span className="text-neutral-500"> ({booking.child_age} yrs)</span>}
+                                </div>
+                                <div>
+                                  <span className="text-neutral-600">Contact: </span>
+                                  <span>{booking.customer_name}</span>
+                                </div>
+                                <div>
+                                  <span className="text-neutral-600">Phone: </span>
+                                  <span>{booking.customer_phone}</span>
+                                </div>
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-200">
+                                  <span className="text-xs text-neutral-600">
+                                    {PARTY_TYPE_LABELS[booking.party_type]} • {booking.guest_count} guests
+                                  </span>
+                                  <span className="font-bold text-honey-600">
+                                    {formatCurrency(booking.total_price)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Quick actions */}
+                              {booking.status === 'pending' && (
+                                <div className="flex gap-1 mt-2 pt-2 border-t border-neutral-200">
+                                  <button
+                                    onClick={() => updateBookingStatus(booking.id, 'confirmed')}
+                                    className="flex-1 text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                                    className="flex-1 text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              )}
+                              {booking.status === 'confirmed' && (
+                                <div className="mt-2 pt-2 border-t border-neutral-200">
+                                  <button
+                                    onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                    className="w-full text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                  >
+                                    Mark Complete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
         {/* Packages View */}
