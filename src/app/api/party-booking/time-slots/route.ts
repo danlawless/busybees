@@ -58,10 +58,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Normalize time to HH:MM format for consistent comparison
+    const normalizeTime = (time: string): string => {
+      const parts = time.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+      return time;
+    };
+
     // Database only - no fallbacks
     const slots = (dbSlots || []).map((slot) => ({
-      startTime: slot.start_time,
-      endTime: slot.end_time,
+      startTime: normalizeTime(slot.start_time),
+      endTime: normalizeTime(slot.end_time),
       label: slot.label,
     }));
 

@@ -6,6 +6,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookingsForDateRange } from '@/lib/services/party-bookings';
 
+/**
+ * Normalize time to HH:MM format for consistent comparison
+ * PostgreSQL TIME can return HH:MM:SS, we normalize to HH:MM
+ */
+function normalizeTime(time: string): string {
+  // Handle HH:MM:SS format - extract just HH:MM
+  const parts = time.split(':');
+  if (parts.length >= 2) {
+    return `${parts[0]}:${parts[1]}`;
+  }
+  return time;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -28,16 +41,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all bookings for the date range
+    // Get all bookings for the date range (uses admin client to see all bookings)
     const bookings = await getBookingsForDateRange(startDate, endDate);
 
-    // Group bookings by date and extract booked times
+    // Group bookings by date and extract booked times (normalized to HH:MM)
     const bookedSlotsByDate = new Map<string, string[]>();
 
     bookings.forEach((booking) => {
       const date = booking.party_date;
       const times = bookedSlotsByDate.get(date) || [];
-      times.push(booking.start_time);
+      // Normalize time format for consistent comparison with time slots
+      times.push(normalizeTime(booking.start_time));
       bookedSlotsByDate.set(date, times);
     });
 
