@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sendWelcomeEmail } from '@/lib/email/resend';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
@@ -235,6 +236,15 @@ export async function POST(request: NextRequest) {
         message: 'Account created successfully! Please log in.'
       }, { status: 201 });
     }
+
+    // Send welcome email (fire and forget)
+    sendWelcomeEmail({
+      to: email.trim(),
+      name: name.trim(),
+      phone: cleanPhone,
+    }).catch((err) => {
+      console.error('Failed to send welcome email:', err);
+    });
 
     // Return user data (excluding sensitive fields)
     const { web_password_hash, ...userWithoutHash } = newUser;

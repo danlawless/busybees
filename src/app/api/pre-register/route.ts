@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
+import { sendWelcomeEmail } from '@/lib/email/resend';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
@@ -169,6 +170,24 @@ export async function POST(request: NextRequest) {
       { userId: authData.user.id, email, childrenCount: children.length },
       'Pre-registration successful - user account created'
     );
+
+    // Send welcome email
+    try {
+      const emailResult = await sendWelcomeEmail({
+        to: email.trim().toLowerCase(),
+        name: parentName.trim(),
+        phone: cleanPhone,
+      });
+
+      if (emailResult.success) {
+        logger.info({ email }, '📧 Welcome email sent for pre-registration');
+      } else {
+        logger.warn({ email, error: emailResult.error }, 'Failed to send welcome email');
+      }
+    } catch (emailError) {
+      logger.error({ error: emailError, email }, 'Error sending welcome email');
+      // Don't fail registration if email fails
+    }
 
     // Subscribe to newsletter if marketing opt-in is enabled (defaults to true)
     if (marketingOptIn !== false) {

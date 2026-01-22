@@ -10,6 +10,7 @@ import {
   redeemGiftCard,
   getGiftCardByCode,
 } from '@/lib/services/gift-cards';
+import { sendGiftCardRedeemedEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -110,6 +111,25 @@ export async function POST(request: NextRequest) {
       { userId: user.id, amount: result.amount_credited },
       '🎉 Gift card redeemed via API'
     );
+
+    // Send notification to the purchaser that their gift card was redeemed
+    try {
+      const giftCard = await getGiftCardByCode(code);
+      if (giftCard && giftCard.purchaser_email) {
+        sendGiftCardRedeemedEmail({
+          to: giftCard.purchaser_email,
+          purchaserName: giftCard.purchaser_name,
+          recipientName: giftCard.recipient_name,
+          amount: giftCard.amount,
+          redeemedAt: new Date().toISOString(),
+        }).catch((err) => {
+          logger.warn({ error: err }, 'Failed to send gift card redeemed notification');
+        });
+      }
+    } catch (notifyError) {
+      // Don't fail the redemption if notification fails
+      logger.warn({ error: notifyError }, 'Error sending gift card redeemed notification');
+    }
 
     return NextResponse.json({
       success: true,

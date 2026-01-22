@@ -8,7 +8,12 @@ import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { createGiftCard, markGiftCardAsSent } from '@/lib/services/gift-cards';
-import { sendGiftCardEmail } from '@/lib/email/resend';
+import {
+  sendGiftCardEmail,
+  sendPurchaseConfirmationEmail,
+  sendPartyBookingConfirmationEmail,
+  sendRefundConfirmationEmail,
+} from '@/lib/email/resend';
 import Stripe from 'stripe';
 
 // This is important for Next.js to treat this as raw body
@@ -214,17 +219,30 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     } else {
       console.log('Party booking confirmed successfully:', booking_id);
 
-      // Log email details (TODO: implement actual email sending)
-      if (booking) {
-        console.log('📧 Sending confirmation email to:', booking.customer_email);
-        console.log('📧 Party details:', {
-          childName: booking.child_name,
-          date: booking.party_date,
-          time: `${booking.start_time} - ${booking.end_time}`,
-          package: booking.package_name,
-          guests: booking.guest_count,
-          total: booking.total_price,
-        });
+      // Send party booking confirmation email
+      if (booking && booking.customer_email) {
+        try {
+          const emailResult = await sendPartyBookingConfirmationEmail({
+            to: booking.customer_email,
+            customerName: booking.customer_name || 'Valued Customer',
+            childName: booking.child_name,
+            partyDate: booking.party_date,
+            startTime: booking.start_time,
+            endTime: booking.end_time,
+            packageName: booking.package_name,
+            guestCount: booking.guest_count,
+            totalPrice: Number(booking.total_price),
+            bookingId: booking.id,
+          });
+
+          if (emailResult.success) {
+            console.log('🎂 Party confirmation email sent to:', booking.customer_email);
+          } else {
+            console.error('Failed to send party confirmation email:', emailResult.error);
+          }
+        } catch (emailError) {
+          console.error('Error sending party confirmation email:', emailError);
+        }
       }
     }
 
@@ -276,6 +294,36 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error('Error creating purchase:', error);
   } else {
     console.log('Purchase created successfully for customer:', customer_id);
+
+    // Send purchase confirmation email
+    try {
+      // Get customer email
+      const { data: customer } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('id', customer_id)
+        .single();
+
+      if (customer?.email) {
+        const purchaseName = session.line_items?.data[0]?.description || 'Pass';
+        const emailResult = await sendPurchaseConfirmationEmail({
+          to: customer.email,
+          customerName: customer.name || 'Valued Customer',
+          purchaseName,
+          purchasePrice: session.amount_total ? session.amount_total / 100 : 0,
+          purchaseType: purchase_type,
+          expiryDate: expiryDate?.toISOString(),
+        });
+
+        if (emailResult.success) {
+          console.log('🎟️ Purchase confirmation email sent to:', customer.email);
+        } else {
+          console.error('Failed to send purchase confirmation email:', emailResult.error);
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending purchase confirmation email:', emailError);
+    }
   }
 
   // Auto-subscribe to newsletter for party bookings
@@ -577,7 +625,14 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
   const supabase = createAdminClient();
 
-  // Find and update the purchase to refunded status
+  // Find the purchase to get details for the email
+  const { data: purchase } = await supabase
+    .from('purchases')
+    .select('*, customer:customer_id(email, name)')
+    .eq('stripe_payment_intent_id', charge.payment_intent as string)
+    .single();
+
+  // Update the purchase to refunded status
   const { error } = await supabase
     .from('purchases')
     .update({
@@ -591,4 +646,29 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   }
 
   console.log('Purchase marked as refunded');
+
+  // Send refund confirmation email
+  if (purchase?.customer?.email) {
+    try {
+      const refundAmount = charge.amount_refunded / 100;
+      const originalAmount = charge.amount / 100;
+
+      const emailResult = await sendRefundConfirmationEmail({
+        to: purchase.customer.email,
+        customerName: purchase.customer.name || 'Valued Customer',
+        purchaseName: purchase.name || 'Purchase',
+        refundAmount,
+        originalAmount,
+        refundDate: new Date().toISOString(),
+      });
+
+      if (emailResult.success) {
+        console.log('💳 Refund confirmation email sent to:', purchase.customer.email);
+      } else {
+        console.error('Failed to send refund confirmation email:', emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('Error sending refund confirmation email:', emailError);
+    }
+  }
 }
