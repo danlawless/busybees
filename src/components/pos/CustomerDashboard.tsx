@@ -1226,9 +1226,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   }) => {
     if (!schedulingParty) return;
 
-    console.log('🎉 [POS] handlePartySchedule called with:', partyData);
-    console.log('🎉 [POS] Scheduling party purchase ID:', schedulingParty.id);
-
     // Call the API to persist to database (syncs to party_bookings table)
     try {
       const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
@@ -1243,16 +1240,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         }),
       });
 
-      console.log('🎉 [POS] API response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('🎉 [POS] API error:', errorData);
         throw new Error(errorData.error || 'Failed to schedule party');
       }
-
-      const result = await response.json();
-      console.log('🎉 [POS] API success:', result);
 
       // Update local state after successful API call
       const updatedPurchases = customer.purchases.map(p =>
@@ -1260,7 +1251,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           ? {
               ...p,
               ...partyData,
-              // Update price if more guests
               price: partyData.partyGuests > 15
                 ? p.price + ((partyData.partyGuests - 15) * 12)
                 : p.price
@@ -1288,7 +1278,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
       setSuccessDetails({
         title: '🎉 Party Scheduled!',
-        message: 'Your party has been successfully scheduled and saved to the database!',
+        message: 'Your party has been successfully scheduled!',
         details: {
           date: partyData.partyDate,
           time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
@@ -1301,8 +1291,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       });
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('🎉 [POS] Failed to schedule party:', error);
-      // Show error to user
       alert(error instanceof Error ? error.message : 'Failed to schedule party. Please try again.');
     }
   };

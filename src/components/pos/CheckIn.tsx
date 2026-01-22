@@ -1056,9 +1056,6 @@ export function CheckIn({
         const customer = selectedCustomer || currentCustomer;
         if (!customer) return;
 
-        console.log('🎉 [CheckIn] handlePartySchedule called with:', partyData);
-        console.log('🎉 [CheckIn] Scheduling party purchase ID:', selectedParty.id);
-
         // Call the API to persist to database (syncs to party_bookings table)
         try {
             const response = await fetch(`/api/purchases/${selectedParty.id}`, {
@@ -1073,16 +1070,10 @@ export function CheckIn({
                 }),
             });
 
-            console.log('🎉 [CheckIn] API response status:', response.status);
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('🎉 [CheckIn] API error:', errorData);
                 throw new Error(errorData.error || 'Failed to schedule party');
             }
-
-            const result = await response.json();
-            console.log('🎉 [CheckIn] API success:', result);
 
             // Calculate new price if guests exceed 15
             let newPrice = selectedParty.price;
@@ -1128,7 +1119,7 @@ export function CheckIn({
 
             setSuccessDetails({
                 title: "🎉 Party Scheduled Successfully!",
-                message: `Your ${selectedParty.name} has been scheduled and saved to the database!`,
+                message: `Your ${selectedParty.name} has been scheduled!`,
                 details: {
                     date: partyData.partyDate,
                     time: `${formatTime(partyData.partyStartTime)} - ${formatTime(
@@ -1141,7 +1132,6 @@ export function CheckIn({
             });
             setShowSuccessModal(true);
         } catch (error) {
-            console.error('🎉 [CheckIn] Failed to schedule party:', error);
             alert(error instanceof Error ? error.message : 'Failed to schedule party. Please try again.');
         }
     };

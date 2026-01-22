@@ -496,39 +496,24 @@ export interface PurchasePartyData {
 export async function createOrUpdateBookingFromPurchase(
   data: PurchasePartyData
 ): Promise<PartyBooking> {
-  console.log('🎉 [PARTY-BOOKING-SYNC] Starting createOrUpdateBookingFromPurchase...');
-  console.log('🎉 [PARTY-BOOKING-SYNC] Input data:', JSON.stringify(data, null, 2));
-
-  // Pre-validation to catch issues early with clear error messages
+  // Pre-validation
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const partyDate = parseDateString(data.partyDate);
 
   if (partyDate < today) {
-    console.error('🎉 [PARTY-BOOKING-SYNC] Error: Party date is in the past');
     throw new Error(`Party date ${data.partyDate} must be today or in the future`);
   }
 
   if (data.guestCount < 1 || data.guestCount > 50) {
-    console.error('🎉 [PARTY-BOOKING-SYNC] Error: Invalid guest count');
     throw new Error(`Guest count ${data.guestCount} must be between 1 and 50`);
   }
 
   if (!data.purchaseId) {
-    console.error('🎉 [PARTY-BOOKING-SYNC] Error: No purchase ID');
     throw new Error('Purchase ID is required to sync party booking');
   }
 
-  console.log('🎉 [PARTY-BOOKING-SYNC] Validation passed, syncing party booking:', {
-    purchaseId: data.purchaseId,
-    customerId: data.customerId,
-    partyDate: data.partyDate,
-    guestCount: data.guestCount,
-  });
-
-  console.log('🎉 [PARTY-BOOKING-SYNC] Creating admin client...');
   const supabase = createAdminClient();
-  console.log('🎉 [PARTY-BOOKING-SYNC] Admin client created, checking for existing booking...');
 
   // Check if a booking already exists for this purchase
   const { data: existingBooking, error: findError } = await supabase
@@ -537,15 +522,8 @@ export async function createOrUpdateBookingFromPurchase(
     .eq('purchase_id', data.purchaseId)
     .single();
 
-  console.log('🎉 [PARTY-BOOKING-SYNC] Existing booking lookup result:', {
-    found: !!existingBooking,
-    errorCode: findError?.code,
-    errorMessage: findError?.message,
-  });
-
   if (findError && findError.code !== 'PGRST116') {
     // PGRST116 is "no rows returned" - that's expected for new bookings
-    console.error('🎉 [PARTY-BOOKING-SYNC] Error finding existing booking:', findError);
     throw new Error('Failed to check for existing booking');
   }
 
@@ -553,7 +531,6 @@ export async function createOrUpdateBookingFromPurchase(
   // The purchases store friendly names like "Queen Bee Party Package"
   // party_bookings expects: queen_bee, worker_bee, or basic_bee
   const packageNameLower = data.packageName.toLowerCase();
-  console.log('🎉 [PARTY-BOOKING-SYNC] Mapping package name:', data.packageName, '→', packageNameLower);
 
   let mappedPackageName: 'queen_bee' | 'worker_bee' | 'basic_bee' = 'basic_bee';
 
@@ -585,8 +562,6 @@ export async function createOrUpdateBookingFromPurchase(
     mappedPackageName = 'worker_bee';
   }
 
-  console.log('🎉 [PARTY-BOOKING-SYNC] Mapped package:', data.packageName, '→', mappedPackageName);
-
   // Calculate additional kids count for planning purposes (staffing, supplies)
   // but use the actual purchase price - don't override what was paid
   const additionalKidsCount = Math.max(0, data.guestCount - 15);
@@ -615,7 +590,6 @@ export async function createOrUpdateBookingFromPurchase(
   };
 
   if (existingBooking) {
-    console.log('🎉 [PARTY-BOOKING-SYNC] Updating existing booking:', existingBooking.id);
     // Update existing booking
     const { data: updated, error: updateError } = await supabase
       .from('party_bookings')
@@ -625,25 +599,13 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (updateError) {
-      console.error('🎉 [PARTY-BOOKING-SYNC] Error updating party booking:', {
-        error: updateError,
-        purchaseId: data.purchaseId,
-        bookingId: existingBooking.id,
-      });
       throw new Error(`Failed to update party booking: ${updateError.message}`);
     }
 
-    console.log('🎉 [PARTY-BOOKING-SYNC] Successfully updated party booking:', {
-      bookingId: updated.id,
-      purchaseId: data.purchaseId,
-    });
-
     return updated;
   } else {
-    console.log('🎉 [PARTY-BOOKING-SYNC] Creating new booking...');
-    // Create new booking - bookingData already has all required fields including pricing
+    // Create new booking
     const insertData: PartyBookingInsert = bookingData as PartyBookingInsert;
-    console.log('🎉 [PARTY-BOOKING-SYNC] Insert data:', JSON.stringify(insertData, null, 2));
 
     const { data: created, error: createError } = await supabase
       .from('party_bookings')
@@ -652,21 +614,8 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (createError) {
-      console.error('🎉 [PARTY-BOOKING-SYNC] Error creating party booking:', {
-        error: createError,
-        code: createError.code,
-        details: createError.details,
-        hint: createError.hint,
-        purchaseId: data.purchaseId,
-        partyDate: data.partyDate,
-      });
       throw new Error(`Failed to create party booking: ${createError.message}`);
     }
-
-    console.log('🎉 [PARTY-BOOKING-SYNC] Successfully created party booking:', {
-      bookingId: created.id,
-      purchaseId: data.purchaseId,
-    });
 
     return created;
   }
