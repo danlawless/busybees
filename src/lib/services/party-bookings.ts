@@ -466,8 +466,9 @@ export async function createOrUpdateBookingFromPurchase(
     mappedPackageName = 'worker_bee';
   }
 
-  // Calculate end time from duration if not provided
-  // For now, we trust the passed times
+  // Calculate additional kids count for planning purposes (staffing, supplies)
+  // but use the actual purchase price - don't override what was paid
+  const additionalKidsCount = Math.max(0, data.guestCount - 15);
 
   const bookingData: PartyBookingInsert | PartyBookingUpdate = {
     customer_name: data.customerName,
@@ -479,9 +480,12 @@ export async function createOrUpdateBookingFromPurchase(
     start_time: data.startTime,
     end_time: data.endTime,
     child_name: 'TBD', // Customer will provide on party day
+    child_age: null, // Will be updated when customer provides details
     guest_count: data.guestCount,
-    base_price: data.price,
-    total_price: data.price,
+    additional_kids: additionalKidsCount,
+    base_price: data.price, // Actual purchase price
+    additional_kids_price: 0, // Already included in purchase price
+    total_price: data.price, // Actual purchase price
     status: 'confirmed' as const, // Already paid via purchase
     payment_status: 'paid',
     notes: data.notes || null,
@@ -505,12 +509,8 @@ export async function createOrUpdateBookingFromPurchase(
 
     return updated;
   } else {
-    // Create new booking - need all required fields
-    const insertData: PartyBookingInsert = {
-      ...(bookingData as PartyBookingInsert),
-      additional_kids: 0,
-      additional_kids_price: 0,
-    };
+    // Create new booking - bookingData already has all required fields including pricing
+    const insertData: PartyBookingInsert = bookingData as PartyBookingInsert;
 
     const { data: created, error: createError } = await supabase
       .from('party_bookings')

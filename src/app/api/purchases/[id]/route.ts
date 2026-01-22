@@ -172,8 +172,8 @@ async function handleUpdate(
         purchaseId: id,
         customerId: user.id,
         customerName: profile?.name || 'Customer',
-        customerEmail: profile?.email || user.email || '',
-        customerPhone: profile?.phone || '',
+        customerEmail: profile?.email || user.email || 'N/A',
+        customerPhone: profile?.phone || 'N/A',
         packageName: purchase.name,
         price: purchase.price,
         partyDate: partyData.party_date,
@@ -183,8 +183,12 @@ async function handleUpdate(
         notes: partyData.party_notes || undefined,
       });
     } catch (syncError) {
-      // Log but don't fail the request - purchase update already succeeded
+      // Return error so customer knows to retry or contact support
       console.error('Error syncing to party_bookings:', syncError);
+      return NextResponse.json(
+        { error: 'Party scheduled but failed to sync to booking system. Please contact support.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
