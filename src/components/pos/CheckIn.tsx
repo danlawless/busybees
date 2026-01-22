@@ -1044,7 +1044,7 @@ export function CheckIn({
         setConfirmingPurchase(null);
     };
 
-    const handlePartySchedule = (partyData: {
+    const handlePartySchedule = async (partyData: {
         partyDate: string;
         partyStartTime: string;
         partyEndTime: string;
@@ -1056,61 +1056,94 @@ export function CheckIn({
         const customer = selectedCustomer || currentCustomer;
         if (!customer) return;
 
-        // Calculate new price if guests exceed 15
-        let newPrice = selectedParty.price;
-        if (partyData.partyGuests > 15) {
-            const basePrice = selectedParty.name.includes("Private") ? 425 : 350;
-            newPrice = basePrice + (partyData.partyGuests - 15) * 12;
-        }
+        console.log('🎉 [CheckIn] handlePartySchedule called with:', partyData);
+        console.log('🎉 [CheckIn] Scheduling party purchase ID:', selectedParty.id);
 
-        const updatedPurchases = customer.purchases.map((p) => {
-            if (p.id === selectedParty.id) {
-                return {
-                    ...p,
-                    partyDate: partyData.partyDate,
-                    partyStartTime: partyData.partyStartTime,
-                    partyEndTime: partyData.partyEndTime,
-                    partyGuests: partyData.partyGuests,
-                    partyNotes: partyData.partyNotes,
-                    price: newPrice,
-                };
+        // Call the API to persist to database (syncs to party_bookings table)
+        try {
+            const response = await fetch(`/api/purchases/${selectedParty.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    party_date: partyData.partyDate,
+                    party_start_time: partyData.partyStartTime,
+                    party_end_time: partyData.partyEndTime,
+                    party_guests: partyData.partyGuests,
+                    party_notes: partyData.partyNotes,
+                }),
+            });
+
+            console.log('🎉 [CheckIn] API response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('🎉 [CheckIn] API error:', errorData);
+                throw new Error(errorData.error || 'Failed to schedule party');
             }
-            return p;
-        });
 
-        const updatedCustomer = {
-            ...customer,
-            purchases: updatedPurchases,
-        };
+            const result = await response.json();
+            console.log('🎉 [CheckIn] API success:', result);
 
-        onUpdateCustomer(updatedCustomer);
+            // Calculate new price if guests exceed 15
+            let newPrice = selectedParty.price;
+            if (partyData.partyGuests > 15) {
+                const basePrice = selectedParty.name.includes("Private") ? 425 : 350;
+                newPrice = basePrice + (partyData.partyGuests - 15) * 12;
+            }
 
-        // Close scheduling modal and show success
-        setShowPartyScheduling(false);
-        setSelectedParty(null);
+            // Update local state after successful API call
+            const updatedPurchases = customer.purchases.map((p) => {
+                if (p.id === selectedParty.id) {
+                    return {
+                        ...p,
+                        partyDate: partyData.partyDate,
+                        partyStartTime: partyData.partyStartTime,
+                        partyEndTime: partyData.partyEndTime,
+                        partyGuests: partyData.partyGuests,
+                        partyNotes: partyData.partyNotes,
+                        price: newPrice,
+                    };
+                }
+                return p;
+            });
 
-        const formatTime = (time: string) => {
-            const [hours, minutes] = time.split(":");
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? "PM" : "AM";
-            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-            return `${displayHour}:${minutes} ${ampm}`;
-        };
+            const updatedCustomer = {
+                ...customer,
+                purchases: updatedPurchases,
+            };
 
-        setSuccessDetails({
-            title: "🎉 Party Scheduled Successfully!",
-            message: `Your ${selectedParty.name} has been scheduled and is ready for check-in when the time arrives.`,
-            details: {
-                date: partyData.partyDate,
-                time: `${formatTime(partyData.partyStartTime)} - ${formatTime(
-                    partyData.partyEndTime
-                )}`,
-                guests: partyData.partyGuests,
-                price: newPrice,
-                type: selectedParty.name,
-            },
-        });
-        setShowSuccessModal(true);
+            onUpdateCustomer(updatedCustomer);
+
+            // Close scheduling modal and show success
+            setShowPartyScheduling(false);
+            setSelectedParty(null);
+
+            const formatTime = (time: string) => {
+                const [hours, minutes] = time.split(":");
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? "PM" : "AM";
+                const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                return `${displayHour}:${minutes} ${ampm}`;
+            };
+
+            setSuccessDetails({
+                title: "🎉 Party Scheduled Successfully!",
+                message: `Your ${selectedParty.name} has been scheduled and saved to the database!`,
+                details: {
+                    date: partyData.partyDate,
+                    time: `${formatTime(partyData.partyStartTime)} - ${formatTime(
+                        partyData.partyEndTime
+                    )}`,
+                    guests: partyData.partyGuests,
+                    price: newPrice,
+                    type: selectedParty.name,
+                },
+            });
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error('🎉 [CheckIn] Failed to schedule party:', error);
+            alert(error instanceof Error ? error.message : 'Failed to schedule party. Please try again.');
+        }
     };
 
     const handleQuickPurchase = (productId: string) => {

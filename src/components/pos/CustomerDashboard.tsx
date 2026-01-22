@@ -1217,7 +1217,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setConfirmingPurchase(null);
   };
 
-  const handlePartySchedule = (partyData: {
+  const handlePartySchedule = async (partyData: {
     partyDate: string;
     partyStartTime: string;
     partyEndTime: string;
@@ -1226,52 +1226,85 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   }) => {
     if (!schedulingParty) return;
 
-    // Update the party package with scheduling information
-    const updatedPurchases = customer.purchases.map(p =>
-      p.id === schedulingParty.id
-        ? {
-            ...p,
-            ...partyData,
-            // Update price if more guests
-            price: partyData.partyGuests > 15
-              ? p.price + ((partyData.partyGuests - 15) * 12)
-              : p.price
-          }
-        : p
-    );
+    console.log('🎉 [POS] handlePartySchedule called with:', partyData);
+    console.log('🎉 [POS] Scheduling party purchase ID:', schedulingParty.id);
 
-    const updatedCustomer = {
-      ...customer,
-      purchases: updatedPurchases
-    };
+    // Call the API to persist to database (syncs to party_bookings table)
+    try {
+      const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          party_date: partyData.partyDate,
+          party_start_time: partyData.partyStartTime,
+          party_end_time: partyData.partyEndTime,
+          party_guests: partyData.partyGuests,
+          party_notes: partyData.partyNotes,
+        }),
+      });
 
-    onUpdateCustomer(updatedCustomer);
-    setShowPartyScheduling(false);
-    setSchedulingParty(null);
+      console.log('🎉 [POS] API response status:', response.status);
 
-    // Show success modal
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':');
-      const hour = parseInt(hours);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-      return `${displayHour}:${minutes} ${ampm}`;
-    };
-
-    setSuccessDetails({
-      title: '🎉 Party Scheduled!',
-      message: 'Your party has been successfully scheduled! All the details have been saved and you\'re all set for the big day.',
-      details: {
-        date: partyData.partyDate,
-        time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
-        guests: partyData.partyGuests,
-        price: partyData.partyGuests > 15
-          ? schedulingParty.price + ((partyData.partyGuests - 15) * 12)
-          : schedulingParty.price,
-        type: schedulingParty.name
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('🎉 [POS] API error:', errorData);
+        throw new Error(errorData.error || 'Failed to schedule party');
       }
-    });
-    setShowSuccessModal(true);
+
+      const result = await response.json();
+      console.log('🎉 [POS] API success:', result);
+
+      // Update local state after successful API call
+      const updatedPurchases = customer.purchases.map(p =>
+        p.id === schedulingParty.id
+          ? {
+              ...p,
+              ...partyData,
+              // Update price if more guests
+              price: partyData.partyGuests > 15
+                ? p.price + ((partyData.partyGuests - 15) * 12)
+                : p.price
+            }
+          : p
+      );
+
+      const updatedCustomer = {
+        ...customer,
+        purchases: updatedPurchases
+      };
+
+      onUpdateCustomer(updatedCustomer);
+      setShowPartyScheduling(false);
+      setSchedulingParty(null);
+
+      // Show success modal
+      const formatTime = (time: string) => {
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        return `${displayHour}:${minutes} ${ampm}`;
+      };
+
+      setSuccessDetails({
+        title: '🎉 Party Scheduled!',
+        message: 'Your party has been successfully scheduled and saved to the database!',
+        details: {
+          date: partyData.partyDate,
+          time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
+          guests: partyData.partyGuests,
+          price: partyData.partyGuests > 15
+            ? schedulingParty.price + ((partyData.partyGuests - 15) * 12)
+            : schedulingParty.price,
+          type: schedulingParty.name
+        }
+      });
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('🎉 [POS] Failed to schedule party:', error);
+      // Show error to user
+      alert(error instanceof Error ? error.message : 'Failed to schedule party. Please try again.');
+    }
   };
 
   // Filter purchases by type
