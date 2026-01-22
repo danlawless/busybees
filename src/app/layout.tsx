@@ -10,6 +10,7 @@ const gloriaHallelujah = Gloria_Hallelujah({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://busybeesipc.com'),
   title: 'Busy Bees Indoor Play Center',
   description: 'Modern, safe and engaging indoor play space for children ages 0-6. Creating a go-to destination for families to play, socialize and celebrate.',
   keywords: 'indoor playground, kids play center, birthday parties, toddler activities, family fun, safe play space',
