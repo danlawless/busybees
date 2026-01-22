@@ -28,6 +28,7 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   text: string;
+  html?: string;
   replyTo?: string;
 }
 
@@ -41,7 +42,7 @@ interface EmailResult {
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  const { to, subject, text, replyTo } = options;
+  const { to, subject, text, html, replyTo } = options;
 
   // Get lazy-initialized client (returns null if API key is missing)
   const resend = getResendClient();
@@ -66,6 +67,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
       to,
       subject,
       text,
+      html,
       replyTo,
     });
 
@@ -233,61 +235,193 @@ export async function sendGiftCardEmail(data: {
 
   const subject = `🎁 You've received a $${giftCard.amount.toFixed(2)} Busy Bees Gift Card!`;
 
-  // Create a beautiful text email with the gift card details
+  // Plain text fallback
   const text = `
-═══════════════════════════════════════════════════════════
-🎁 You've Received a Gift Card from Busy Bees! 🐝
-═══════════════════════════════════════════════════════════
+You've Received a Gift!
 
 Hi ${giftCard.recipientName}!
 
-${giftCard.purchaserName} sent you a Busy Bees Indoor Play Center gift card!
+${giftCard.purchaserName} sent you a Busy Bees gift card!
 
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║   GIFT CARD VALUE: $${giftCard.amount.toFixed(2).padStart(6, ' ')}                              ║
-║                                                          ║
-║   REDEMPTION CODE: ${giftCard.code}                     ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
+GIFT CARD VALUE: $${giftCard.amount.toFixed(2)}
+REDEMPTION CODE: ${giftCard.code}
 
-${giftCard.personalMessage ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Personal Message from ${giftCard.purchaserName}:
-
-"${giftCard.personalMessage}"
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-` : ''}
+${giftCard.personalMessage ? `Personal Message:\n"${giftCard.personalMessage}"\n- ${giftCard.purchaserName}\n` : ''}
 
 HOW TO REDEEM:
-─────────────────────────────────────────────────────────────
 1. Visit ${siteUrl}/gift-cards
 2. Click "Redeem Gift Card"
-3. Log in or create an account
-4. Enter your code: ${giftCard.code}
-5. Your credit will be added instantly!
-─────────────────────────────────────────────────────────────
+3. Enter your code: ${giftCard.code}
+4. Credit will be added to your account instantly!
 
-WHAT CAN I USE IT FOR?
-• Day passes for open play
-• Weekly or monthly memberships
-• Birthday party bookings
-• Snacks and merchandise
+This gift card never expires. Valid for all purchases at Busy Bees.
 
-This gift card never expires. Valid for all purchases at
-Busy Bees Indoor Play Center.
+Visit us at Busy Bees Indoor Play Center
+${siteUrl}
+`;
 
-───────────────────────────────────────────────────────────
-Busy Bees Indoor Play Center
-📍 Visit us for a day of fun and play!
-🌐 ${siteUrl}
-───────────────────────────────────────────────────────────
+  // Beautiful HTML email matching the design
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've Received a Gift Card!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header with gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 30px 20px; text-align: center;">
+              <!-- Bee Logo -->
+              <div style="width: 60px; height: 60px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 30px;">🐝</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                You've Received a Gift!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 30px 25px;">
+
+              <!-- Greeting -->
+              <p style="text-align: center; margin: 0 0 5px; font-size: 18px; font-weight: 600; color: #1f2937;">
+                Hi ${giftCard.recipientName}!
+              </p>
+              <p style="text-align: center; margin: 0 0 25px; font-size: 15px; color: #6b7280;">
+                ${giftCard.purchaserName} sent you a Busy Bees gift card!
+              </p>
+
+              <!-- Gift Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <!-- Card Header -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Gift Card</p>
+                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🎁 BUSY BEES</p>
+                        </td>
+                        <td align="right">
+                          <span style="font-size: 24px;">🐝</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Value -->
+                    <div style="margin: 20px 0;">
+                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Value</p>
+                      <p style="margin: 0; font-size: 42px; font-weight: 700; color: #ffffff;">$${giftCard.amount.toFixed(2)}</p>
+                    </div>
+
+                    <!-- Code -->
+                    <div>
+                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Redemption Code</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 600; color: #ffffff; font-family: monospace; letter-spacing: 1px;">${giftCard.code}</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              ${giftCard.personalMessage ? `
+              <!-- Personal Message -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0 0 8px; font-size: 13px; color: #ca8a04; font-weight: 600;">Personal Message:</p>
+                    <p style="margin: 0 0 10px; font-size: 15px; color: #1f2937; font-style: italic;">"${giftCard.personalMessage}"</p>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; text-align: right;">- ${giftCard.purchaserName}</p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- How to Redeem -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1f2937;">
+                      🎁 How to Redeem
+                    </p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #4b5563;">
+                          <span style="color: #f59e0b; font-weight: 600;">1.</span> Visit <a href="${siteUrl}/gift-cards" style="color: #f59e0b; text-decoration: underline;">busybeesipc.com/gift-cards</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #4b5563;">
+                          <span style="color: #f59e0b; font-weight: 600;">2.</span> Click "Redeem Gift Card"
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #4b5563;">
+                          <span style="color: #f59e0b; font-weight: 600;">3.</span> Enter your code: <strong>${giftCard.code}</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #4b5563;">
+                          <span style="color: #f59e0b; font-weight: 600;">4.</span> Credit will be added to your account instantly!
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 25px;">
+                    <a href="${siteUrl}/gift-cards/redeem" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                      Redeem Your Gift Card
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">
+                      📍 Visit us at Busy Bees Indoor Play Center
+                    </p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
+                      🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      This gift card never expires. Valid for all purchases at Busy Bees.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 `;
 
   return sendEmail({
     to: data.to,
     subject,
     text,
+    html,
   });
 }
 

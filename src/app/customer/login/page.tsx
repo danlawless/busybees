@@ -24,8 +24,9 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
 
-  // Check for success message from set-password page
+  // Check for success messages
   const passwordSet = searchParams.get('passwordSet') === 'true';
+  const message = searchParams.get('message');
 
   // Show Coming Soon message when account access is disabled
   if (!ACCOUNT_ACCESS_ENABLED) {
@@ -145,6 +146,12 @@ function LoginForm() {
           {passwordSet && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
               Password set successfully! You can now log in.
+            </div>
+          )}
+
+          {message && !passwordSet && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm mb-6">
+              {message}
             </div>
           )}
 
