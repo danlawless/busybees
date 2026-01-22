@@ -517,40 +517,37 @@ function PartiesContent() {
           }}
           onSchedule={async (partyData) => {
             // Update the party scheduling via API
-            try {
-              const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  party_date: partyData.partyDate,
-                  party_start_time: partyData.partyStartTime,
-                  party_end_time: partyData.partyEndTime,
-                  party_guests: partyData.partyGuests,
-                  party_notes: partyData.partyNotes,
-                }),
-              });
+            const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                party_date: partyData.partyDate,
+                party_start_time: partyData.partyStartTime,
+                party_end_time: partyData.partyEndTime,
+                party_guests: partyData.partyGuests,
+                party_notes: partyData.partyNotes,
+              }),
+            });
 
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to schedule party');
-              }
-
-              // Refresh party purchases
-              const purchasesRes = await fetch('/api/purchases?type=party_package');
-              if (purchasesRes.ok) {
-                const { purchases } = await purchasesRes.json();
-                setPartyPurchases(purchases || []);
-              }
-
-              setShowPartyScheduling(false);
-              setSchedulingParty(null);
-              setMessage({ type: 'success', text: 'Party scheduled successfully!' });
-              setTimeout(() => setMessage(null), 3000);
-            } catch (error) {
-              console.error('Error scheduling party:', error);
-              setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to schedule party. Please try again.' });
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              const errorMessage = errorData.error || 'Failed to schedule party';
+              setMessage({ type: 'error', text: errorMessage });
               setTimeout(() => setMessage(null), 5000);
+              throw new Error(errorMessage);
             }
+
+            // Refresh party purchases
+            const purchasesRes = await fetch('/api/purchases?type=party_package');
+            if (purchasesRes.ok) {
+              const { purchases } = await purchasesRes.json();
+              setPartyPurchases(purchases || []);
+            }
+
+            setShowPartyScheduling(false);
+            setSchedulingParty(null);
+            setMessage({ type: 'success', text: 'Party scheduled successfully!' });
+            setTimeout(() => setMessage(null), 3000);
           }}
         />
       )}

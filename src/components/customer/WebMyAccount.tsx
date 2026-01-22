@@ -645,56 +645,53 @@ function WebMyAccountContent() {
   }) => {
     if (!schedulingParty) return;
 
-    try {
-      const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          party_date: partyData.partyDate,
-          party_start_time: partyData.partyStartTime,
-          party_end_time: partyData.partyEndTime,
-          party_guests: partyData.partyGuests,
-          party_notes: partyData.partyNotes,
-        }),
-      });
+    const response = await fetch(`/api/purchases/${schedulingParty.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        party_date: partyData.partyDate,
+        party_start_time: partyData.partyStartTime,
+        party_end_time: partyData.partyEndTime,
+        party_guests: partyData.partyGuests,
+        party_notes: partyData.partyNotes,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to schedule party');
-      }
-
-      setShowPartyScheduling(false);
-      setSchedulingParty(null);
-
-      const formatTime = (time: string) => {
-        const [hours, minutes] = time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-        return `${displayHour}:${minutes} ${ampm}`;
-      };
-
-      setSuccessDetails({
-        title: '🎉 Party Scheduled!',
-        message: 'Your party has been successfully scheduled!',
-        details: {
-          date: partyData.partyDate,
-          time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
-          guests: partyData.partyGuests,
-          type: schedulingParty.name
-        }
-      });
-      setShowSuccessModal(true);
-
-      await fetchData();
-    } catch (error) {
-      console.error('Error scheduling party:', error);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error || 'Failed to schedule party';
       setSuccessDetails({
         title: 'Error Scheduling Party',
-        message: error instanceof Error ? error.message : 'Failed to schedule party. Please try again.'
+        message: errorMessage
       });
       setShowSuccessModal(true);
+      throw new Error(errorMessage);
     }
+
+    setShowPartyScheduling(false);
+    setSchedulingParty(null);
+
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      return `${displayHour}:${minutes} ${ampm}`;
+    };
+
+    setSuccessDetails({
+      title: '🎉 Party Scheduled!',
+      message: 'Your party has been successfully scheduled!',
+      details: {
+        date: partyData.partyDate,
+        time: `${formatTime(partyData.partyStartTime)} - ${formatTime(partyData.partyEndTime)}`,
+        guests: partyData.partyGuests,
+        type: schedulingParty.name
+      }
+    });
+    setShowSuccessModal(true);
+
+    await fetchData();
   };
 
   // Payment method handling

@@ -16,7 +16,7 @@ interface PartySchedulingModalProps {
     partyEndTime: string;
     partyGuests: number;
     partyNotes: string;
-  }) => void;
+  }) => void | Promise<void>;
   partyPackageName: string;
   customerName: string;
   /** The actual price paid for the party package */
@@ -108,28 +108,28 @@ export function PartySchedulingModal({
 
   const handleScheduleParty = async () => {
     if (!selectedTimeSlot) return;
-    
+
     setIsScheduling(true);
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      onSchedule({
+      // Call the parent's onSchedule handler and await it
+      // This ensures we wait for the API call to complete
+      await onSchedule({
         partyDate: selectedDate,
         partyStartTime: selectedTimeSlot.startTime,
         partyEndTime: selectedTimeSlot.endTime,
         partyGuests,
         partyNotes
       });
-      
-      // Reset form
+
+      // Only reset form after successful API call
       setStep('calendar');
       setSelectedDate('');
       setSelectedTimeSlot(null);
       setPartyGuests(15);
       setPartyNotes('');
     } catch (error) {
+      // Error is handled by parent component which shows the message
       console.error('Party scheduling failed:', error);
     } finally {
       setIsScheduling(false);
