@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const UpdateBookingSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
+  status: z.enum(['pending', 'confirmed', 'cancelled', 'done']).optional(),
   notes: z.string().optional(),
   party_date: z.string().optional(),
   start_time: z.string().optional(),

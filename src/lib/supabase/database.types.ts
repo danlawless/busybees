@@ -559,7 +559,7 @@ export interface Database {
           base_price: number;
           additional_kids_price: number;
           total_price: number;
-          status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          status: 'pending' | 'confirmed' | 'cancelled' | 'done';
           notes: string | null;
           stripe_payment_intent_id: string | null;
           stripe_checkout_session_id: string | null;
@@ -587,7 +587,7 @@ export interface Database {
           base_price: number;
           additional_kids_price?: number;
           total_price: number;
-          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'done';
           notes?: string | null;
           stripe_payment_intent_id?: string | null;
           stripe_checkout_session_id?: string | null;
@@ -615,7 +615,7 @@ export interface Database {
           base_price?: number;
           additional_kids_price?: number;
           total_price?: number;
-          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'done';
           notes?: string | null;
           stripe_payment_intent_id?: string | null;
           stripe_checkout_session_id?: string | null;

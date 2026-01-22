@@ -17,7 +17,7 @@ type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyPackage = Database['public']['Tables']['party_packages']['Row'];
 type PartyTimeSlot = Database['public']['Tables']['party_time_slots']['Row'];
 
-type BookingStatus = 'all' | 'pending' | 'confirmed' | 'cancelled' | 'completed';
+type BookingStatus = 'all' | 'pending' | 'confirmed' | 'cancelled' | 'done';
 type PartyType = 'all' | 'private' | 'semi_private';
 type SlotPartyType = 'private' | 'semi_private';
 type DayType = 'weekday' | 'weekend';
@@ -26,7 +26,7 @@ const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   confirmed: 'bg-green-100 text-green-800 border-green-300',
   cancelled: 'bg-red-100 text-red-800 border-red-300',
-  completed: 'bg-blue-100 text-blue-800 border-blue-300',
+  done: 'bg-blue-100 text-blue-800 border-blue-300',
 };
 
 const PARTY_TYPE_LABELS = {
@@ -410,7 +410,7 @@ export default function AdminPartiesPage() {
         return 'bg-yellow-500';
       case 'cancelled':
         return 'bg-red-500';
-      case 'completed':
+      case 'done':
         return 'bg-blue-500';
       default:
         return 'bg-neutral-400';
@@ -754,7 +754,7 @@ export default function AdminPartiesPage() {
                       <option value="pending">Pending</option>
                       <option value="confirmed">Confirmed</option>
                       <option value="cancelled">Cancelled</option>
-                      <option value="completed">Completed</option>
+                      <option value="done">Done</option>
                     </select>
                   </div>
 
@@ -922,10 +922,10 @@ export default function AdminPartiesPage() {
                           )}
                           {booking.status === 'confirmed' && (
                             <button
-                              onClick={() => updateBookingStatus(booking.id, 'completed')}
+                              onClick={() => updateBookingStatus(booking.id, 'done')}
                               className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                             >
-                              Complete
+                              Mark Done
                             </button>
                           )}
                         </div>
@@ -1046,7 +1046,7 @@ export default function AdminPartiesPage() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span>Completed</span>
+                        <span>Done</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -1166,10 +1166,10 @@ export default function AdminPartiesPage() {
                               {booking.status === 'confirmed' && (
                                 <div className="mt-2 pt-2 border-t border-neutral-200">
                                   <button
-                                    onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                    onClick={() => updateBookingStatus(booking.id, 'done')}
                                     className="w-full text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                                   >
-                                    Mark Complete
+                                    Mark Done
                                   </button>
                                 </div>
                               )}
