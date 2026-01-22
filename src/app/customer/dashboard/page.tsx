@@ -12,7 +12,7 @@ import { WebMyAccount } from '@/components/customer/WebMyAccount';
 
 export default function CustomerDashboardPage() {
   return (
-    <AuthGuard requireRole="customer">
+    <AuthGuard requireRole={['customer', 'admin']}>
       <WebMyAccount />
     </AuthGuard>
   );
