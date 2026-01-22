@@ -103,6 +103,7 @@ function LoginForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: data.user.email,
+            name: data.user.name,
             source: 'login',
           }),
         }).catch(() => {

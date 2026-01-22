@@ -110,11 +110,13 @@ export async function subscribeToNewsletter(options: SubscribeOptions): Promise<
     }
 
     // Create new subscription
+    // Use provided name, or derive from email prefix as fallback
+    const subscriberName = name || normalizedEmail.split('@')[0];
     const { error: insertError } = await supabase
       .from('newsletter_subscribers')
       .insert({
         email: normalizedEmail,
-        name: name || null,
+        name: subscriberName,
         source,
         is_active: true,
       });
