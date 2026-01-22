@@ -557,7 +557,7 @@ function PartiesContent() {
 
 export default function PartiesPage() {
   return (
-    <AuthGuard requireRole="customer">
+    <AuthGuard requireRole={['customer', 'admin']}>
       <PartiesContent />
     </AuthGuard>
   );
