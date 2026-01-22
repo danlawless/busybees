@@ -38,13 +38,18 @@ interface TimeSlot {
   booking?: PartyBooking;
 }
 
-const PARTY_TIME_SLOTS = {
-  // Weekend slots (Sat-Sun) - 2x 2-hour slots
+interface ApiTimeSlot {
+  startTime: string;
+  endTime: string;
+  label: string;
+}
+
+// Default fallback slots (used if API fails)
+const DEFAULT_TIME_SLOTS = {
   weekend: [
     { startTime: '13:00', endTime: '15:00', duration: 2 as const },
     { startTime: '16:00', endTime: '18:00', duration: 2 as const },
   ],
-  // Weekday slots (Mon-Fri) - 2x 2-hour slots
   weekday: [
     { startTime: '12:00', endTime: '14:00', duration: 2 as const },
     { startTime: '15:00', endTime: '17:00', duration: 2 as const },
@@ -119,15 +124,48 @@ const SAMPLE_BOOKINGS: PartyBooking[] = [
   }
 ];
 
-export function PartyCalendar({ 
-  onBookingSelect, 
-  bookings = SAMPLE_BOOKINGS, 
+export function PartyCalendar({
+  onBookingSelect,
+  bookings = SAMPLE_BOOKINGS,
   onUpdateBookings,
-  readOnly = false 
+  readOnly = false
 }: PartyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [timeSlotsCache, setTimeSlotsCache] = useState<Record<string, ApiTimeSlot[]>>({});
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Fetch time slots from API when a date is selected
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const cacheKey = selectedDate;
+    if (timeSlotsCache[cacheKey]) return; // Already cached
+
+    const fetchTimeSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        // Fetch for private party type (default for customer bookings)
+        const response = await fetch(
+          `/api/party-booking/time-slots?date=${selectedDate}&partyType=private`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setTimeSlotsCache(prev => ({
+            ...prev,
+            [cacheKey]: data.slots || []
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch time slots:', error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchTimeSlots();
+  }, [selectedDate, timeSlotsCache]);
 
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
@@ -154,16 +192,20 @@ export function PartyCalendar({
   const getAvailableTimeSlots = (date: Date): TimeSlot[] => {
     const dateString = formatDateToYYYYMMDD(date);
     const dayBookings = bookings.filter(b => b.date === dateString && b.status !== 'cancelled');
-    
-    const slots = isWeekend(date) ? PARTY_TIME_SLOTS.weekend : PARTY_TIME_SLOTS.weekday;
-    
+
+    // Use cached API slots if available, otherwise fall back to defaults
+    const cachedSlots = timeSlotsCache[dateString];
+    const slots = cachedSlots && cachedSlots.length > 0
+      ? cachedSlots.map(s => ({ startTime: s.startTime, endTime: s.endTime, duration: 2 as const }))
+      : (isWeekend(date) ? DEFAULT_TIME_SLOTS.weekend : DEFAULT_TIME_SLOTS.weekday);
+
     return slots.map(slot => {
       const conflictingBooking = dayBookings.find(booking => {
         const bookingStart = booking.startTime;
         const bookingEnd = booking.endTime;
         const slotStart = slot.startTime;
         const slotEnd = slot.endTime;
-        
+
         // Check for time overlap
         return (
           (slotStart >= bookingStart && slotStart < bookingEnd) ||
@@ -372,6 +414,12 @@ export function PartyCalendar({
               
               {selectedDate ? (
                 <div className="space-y-3">
+                  {loadingSlots && (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      <span className="ml-2 text-sm text-gray-500">Loading time slots...</span>
+                    </div>
+                  )}
                   {getAvailableTimeSlots(parseDateString(selectedDate)).map((slot, index) => (
                     <button
                       key={index}
