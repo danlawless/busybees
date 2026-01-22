@@ -28,7 +28,6 @@ interface PartySchedulingModalProps {
     partyGuests?: number;
     partyNotes?: string;
   };
-  forceCalendarStep?: boolean;
 }
 
 interface TimeSlot {
@@ -46,7 +45,6 @@ export function PartySchedulingModal({
   customerName,
   purchasePrice,
   existingPartyData,
-  forceCalendarStep = false
 }: PartySchedulingModalProps) {
   const [step, setStep] = useState<'calendar' | 'details'>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>(existingPartyData?.partyDate || '');
@@ -92,27 +90,16 @@ export function PartySchedulingModal({
   // Reset state when modal opens/closes or existing data changes
   React.useEffect(() => {
     if (isOpen && existingPartyData) {
-      setSelectedDate(existingPartyData.partyDate || '');
-      setSelectedTimeSlot(
-        existingPartyData.partyStartTime && existingPartyData.partyEndTime 
-          ? {
-              startTime: existingPartyData.partyStartTime,
-              endTime: existingPartyData.partyEndTime,
-              duration: 2,
-              available: true
-            }
-          : null
-      );
+      // Pre-fill the form with existing data but clear the date/time
+      // so user must select a new slot (they're rescheduling after all)
+      setSelectedDate('');
+      setSelectedTimeSlot(null);
       setPartyGuests(existingPartyData.partyGuests || 15);
       setPartyNotes(existingPartyData.partyNotes || '');
-      
-      // If forceCalendarStep is true (rescheduling from modal), always go to calendar
-      if (forceCalendarStep) {
-        setStep('calendar');
-      } else if (existingPartyData.partyDate && existingPartyData.partyStartTime) {
-        // If rescheduling and we have existing data, skip to details step
-        setStep('details');
-      }
+
+      // Always start on calendar step when rescheduling
+      // The user wants to pick a NEW date/time
+      setStep('calendar');
     } else if (isOpen && !existingPartyData) {
       // Fresh scheduling - reset everything
       setStep('calendar');
@@ -121,7 +108,7 @@ export function PartySchedulingModal({
       setPartyGuests(15);
       setPartyNotes('');
     }
-  }, [isOpen, existingPartyData, forceCalendarStep]);
+  }, [isOpen, existingPartyData]);
 
   const handleDateSelect = (date: string, timeSlot: TimeSlot) => {
     setSelectedDate(date);
