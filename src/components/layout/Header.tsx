@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { PromoSpecial } from '@/lib/utils/promoHelpers'
 import { PromoBanner } from '@/components/home/PromoBanner'
 import { createClient } from '@/lib/supabase/client'
-import { PURCHASING_ENABLED } from '@/lib/feature-flags'
+import { PURCHASING_ENABLED, ACCOUNT_ACCESS_ENABLED } from '@/lib/feature-flags'
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -90,8 +90,8 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
               })}
             </div>
 
-            {/* Auth section - hidden when purchasing is disabled */}
-            {PURCHASING_ENABLED && (
+            {/* Auth section - controlled by ACCOUNT_ACCESS_ENABLED flag */}
+            {ACCOUNT_ACCESS_ENABLED && (
               <div className="flex-shrink-0">
                 {isLoggedIn ? (
                   <Link
@@ -187,8 +187,8 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                     </Link>
                   )
                 })}
-                {/* Auth section - hidden when purchasing is disabled */}
-                {PURCHASING_ENABLED && (
+                {/* Auth section - controlled by ACCOUNT_ACCESS_ENABLED flag */}
+                {ACCOUNT_ACCESS_ENABLED && (
                   <div className="mt-6 pt-6 border-t border-neutral-200">
                     {isLoggedIn ? (
                       <Link

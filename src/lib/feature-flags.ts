@@ -20,3 +20,10 @@
  */
 export const PURCHASING_ENABLED = false;
 
+/**
+ * Controls whether the My Account / Login link is shown in the header.
+ * This is separate from purchasing so users can still access their account
+ * even when purchasing is disabled.
+ */
+export const ACCOUNT_ACCESS_ENABLED = true;
+
