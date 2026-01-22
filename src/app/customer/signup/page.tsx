@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Clock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { PURCHASING_ENABLED } from '@/lib/feature-flags';
+import { ACCOUNT_ACCESS_ENABLED } from '@/lib/feature-flags';
 
 function SignupForm() {
   const router = useRouter();
@@ -30,8 +30,8 @@ function SignupForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // Show Coming Soon message when purchasing is disabled
-  if (!PURCHASING_ENABLED) {
+  // Show Coming Soon message when account access is disabled
+  if (!ACCOUNT_ACCESS_ENABLED) {
     return (
       <div className="flex-1 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
