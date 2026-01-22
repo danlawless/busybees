@@ -440,6 +440,30 @@ export interface PurchasePartyData {
 export async function createOrUpdateBookingFromPurchase(
   data: PurchasePartyData
 ): Promise<PartyBooking> {
+  // Pre-validation to catch issues early with clear error messages
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const partyDate = parseDateString(data.partyDate);
+
+  if (partyDate < today) {
+    throw new Error(`Party date ${data.partyDate} must be today or in the future`);
+  }
+
+  if (data.guestCount < 1 || data.guestCount > 50) {
+    throw new Error(`Guest count ${data.guestCount} must be between 1 and 50`);
+  }
+
+  if (!data.purchaseId) {
+    throw new Error('Purchase ID is required to sync party booking');
+  }
+
+  console.log('Syncing party booking from purchase:', {
+    purchaseId: data.purchaseId,
+    customerId: data.customerId,
+    partyDate: data.partyDate,
+    guestCount: data.guestCount,
+  });
+
   const supabase = createAdminClient();
 
   // Check if a booking already exists for this purchase
@@ -503,9 +527,18 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (updateError) {
-      console.error('Error updating party booking from purchase:', updateError);
-      throw new Error('Failed to update party booking');
+      console.error('Error updating party booking from purchase:', {
+        error: updateError,
+        purchaseId: data.purchaseId,
+        bookingId: existingBooking.id,
+      });
+      throw new Error(`Failed to update party booking: ${updateError.message}`);
     }
+
+    console.log('Successfully updated party booking:', {
+      bookingId: updated.id,
+      purchaseId: data.purchaseId,
+    });
 
     return updated;
   } else {
@@ -519,9 +552,18 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (createError) {
-      console.error('Error creating party booking from purchase:', createError);
-      throw new Error('Failed to create party booking');
+      console.error('Error creating party booking from purchase:', {
+        error: createError,
+        purchaseId: data.purchaseId,
+        partyDate: data.partyDate,
+      });
+      throw new Error(`Failed to create party booking: ${createError.message}`);
     }
+
+    console.log('Successfully created party booking:', {
+      bookingId: created.id,
+      purchaseId: data.purchaseId,
+    });
 
     return created;
   }

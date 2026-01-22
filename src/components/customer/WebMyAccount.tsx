@@ -659,7 +659,8 @@ function WebMyAccountContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to schedule party');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to schedule party');
       }
 
       setShowPartyScheduling(false);
@@ -690,7 +691,7 @@ function WebMyAccountContent() {
       console.error('Error scheduling party:', error);
       setSuccessDetails({
         title: 'Error Scheduling Party',
-        message: 'Failed to schedule party. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to schedule party. Please try again.'
       });
       setShowSuccessModal(true);
     }

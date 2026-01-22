@@ -531,7 +531,8 @@ function PartiesContent() {
               });
 
               if (!response.ok) {
-                throw new Error('Failed to schedule party');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to schedule party');
               }
 
               // Refresh party purchases
@@ -547,7 +548,7 @@ function PartiesContent() {
               setTimeout(() => setMessage(null), 3000);
             } catch (error) {
               console.error('Error scheduling party:', error);
-              setMessage({ type: 'error', text: 'Failed to schedule party. Please try again.' });
+              setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to schedule party. Please try again.' });
               setTimeout(() => setMessage(null), 5000);
             }
           }}

@@ -183,12 +183,21 @@ async function handleUpdate(
         notes: partyData.party_notes || undefined,
       });
     } catch (syncError) {
-      // Return error so customer knows to retry or contact support
-      console.error('Error syncing to party_bookings:', syncError);
-      return NextResponse.json(
-        { error: 'Party scheduled but failed to sync to booking system. Please contact support.' },
-        { status: 500 }
-      );
+      const errorMessage = syncError instanceof Error
+        ? syncError.message
+        : 'Unknown error';
+
+      console.error('Party booking sync failed:', {
+        error: errorMessage,
+        purchaseId: id,
+        partyDate: partyData.party_date,
+        customerId: user.id,
+      });
+
+      return NextResponse.json({
+        error: `Booking sync failed: ${errorMessage}`,
+        purchaseId: id,
+      }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -197,9 +206,13 @@ async function handleUpdate(
       message: 'Party scheduled successfully',
     });
   } catch (error) {
-    console.error('Error updating purchase:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error updating purchase:', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { error: 'Failed to schedule party' },
+      { error: `Failed to schedule party: ${errorMessage}` },
       { status: 500 }
     );
   }
