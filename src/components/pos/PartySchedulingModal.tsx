@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { X, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
@@ -63,8 +63,31 @@ export function PartySchedulingModal({
   const [partyGuests, setPartyGuests] = useState(existingPartyData?.partyGuests || 15);
   const [partyNotes, setPartyNotes] = useState(existingPartyData?.partyNotes || '');
   const [isScheduling, setIsScheduling] = useState(false);
+  const [existingBookings, setExistingBookings] = useState<PartyBooking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
 
   const isRescheduling = !!existingPartyData?.partyDate;
+
+  // Fetch existing bookings when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchBookings = async () => {
+        setLoadingBookings(true);
+        try {
+          const response = await fetch('/api/party-booking/bookings');
+          if (response.ok) {
+            const data = await response.json();
+            setExistingBookings(data.bookings || []);
+          }
+        } catch (error) {
+          console.error('Failed to fetch existing bookings:', error);
+        } finally {
+          setLoadingBookings(false);
+        }
+      };
+      fetchBookings();
+    }
+  }, [isOpen]);
 
   // Reset state when modal opens/closes or existing data changes
   React.useEffect(() => {
@@ -240,11 +263,18 @@ export function PartySchedulingModal({
                 <p className="text-gray-600">Choose from available 2-hour time slots</p>
               </div>
               
-              <PartyCalendar 
-                onBookingSelect={handleDateSelect}
-                bookings={[]} // Empty for now, could integrate with existing bookings
-                readOnly={false}
-              />
+              {loadingBookings ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-3 text-gray-600">Loading availability...</span>
+                </div>
+              ) : (
+                <PartyCalendar
+                  onBookingSelect={handleDateSelect}
+                  bookings={existingBookings}
+                  readOnly={false}
+                />
+              )}
             </div>
           )}
 

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Crown, Calendar, Clock, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { PartyType, TIME_SLOTS } from '@/lib/validations/party-booking';
+import { PartyType } from '@/lib/validations/party-booking';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface PartyTypeStepProps {

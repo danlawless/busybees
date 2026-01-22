@@ -48,3 +48,4 @@ sentry.properties
 # ai-coding-config submodule (not tracked)
 ai-coding-config/
 .gitmodules
+.env*.local

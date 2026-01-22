@@ -5,12 +5,15 @@
  * Query params:
  * - date: YYYY-MM-DD format
  * - partyType: 'private' | 'semi_private'
+ *
+ * NOTE: Time slots must be configured in the database (party_time_slots table).
+ * No fallbacks - if no slots are configured, returns empty array.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import { TIME_SLOTS, PartyType } from '@/lib/validations/party-booking';
+import { PartyType } from '@/lib/validations/party-booking';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,29 +51,30 @@ export async function GET(request: NextRequest) {
       .order('start_time', { ascending: true });
 
     if (error) {
-      logger.warn({ error }, 'Failed to fetch time slots from database, using defaults');
+      logger.error({ error }, 'Failed to fetch time slots from database');
+      return NextResponse.json(
+        { error: 'Failed to fetch time slots from database', details: error.message },
+        { status: 500 }
+      );
     }
 
-    // Use database slots if available, otherwise fall back to hardcoded defaults
-    let slots: Array<{ startTime: string; endTime: string; label: string }>;
+    // Database only - no fallbacks
+    const slots = (dbSlots || []).map((slot) => ({
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      label: slot.label,
+    }));
 
-    if (dbSlots && dbSlots.length > 0) {
-      slots = dbSlots.map((slot) => ({
-        startTime: slot.start_time,
-        endTime: slot.end_time,
-        label: slot.label,
-      }));
-    } else {
-      // Fall back to hardcoded defaults
-      const defaultSlots = isWeekend
-        ? TIME_SLOTS[partyType].weekend
-        : TIME_SLOTS[partyType].weekday;
-      slots = [...defaultSlots];
+    if (slots.length === 0) {
+      logger.warn(
+        { date: dateStr, partyType, dayType },
+        'No time slots configured in database for this date/party type'
+      );
     }
 
     logger.info(
-      { date: dateStr, partyType, dayType, slotCount: slots.length, source: dbSlots?.length ? 'database' : 'defaults' },
-      'Fetched time slots'
+      { date: dateStr, partyType, dayType, slotCount: slots.length },
+      'Fetched time slots from database'
     );
 
     return NextResponse.json({

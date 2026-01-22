@@ -44,89 +44,11 @@ interface ApiTimeSlot {
   label: string;
 }
 
-// Default fallback slots (used if API fails)
-const DEFAULT_TIME_SLOTS = {
-  weekend: [
-    { startTime: '13:00', endTime: '15:00', duration: 2 as const },
-    { startTime: '16:00', endTime: '18:00', duration: 2 as const },
-  ],
-  weekday: [
-    { startTime: '12:00', endTime: '14:00', duration: 2 as const },
-    { startTime: '15:00', endTime: '17:00', duration: 2 as const },
-  ]
-};
 
-// Sample booking data
-const SAMPLE_BOOKINGS: PartyBooking[] = [
-  {
-    id: 'booking_1',
-    date: formatDateToYYYYMMDD(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)), // 2 days from now
-    startTime: '13:00',
-    endTime: '15:00',
-    duration: 2,
-    customerName: 'Sarah Johnson',
-    customerPhone: '(555) 123-4567',
-    customerEmail: 'sarah.johnson@email.com',
-    partyType: 'semi-private',
-    guestCount: 12,
-    totalPrice: 350,
-    status: 'confirmed',
-    notes: 'Princess theme party',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'booking_2',
-    date: formatDateToYYYYMMDD(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)), // 5 days from now
-    startTime: '16:00',
-    endTime: '18:00',
-    duration: 2,
-    customerName: 'Mike Chen',
-    customerPhone: '(555) 987-6543',
-    customerEmail: 'mike.chen@email.com',
-    partyType: 'private',
-    guestCount: 18,
-    totalPrice: 0, // Pricing coming soon
-    status: 'confirmed',
-    notes: 'Superhero theme',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'booking_3',
-    date: formatDateToYYYYMMDD(new Date(Date.now() + 9 * 24 * 60 * 60 * 1000)), // 9 days from now
-    startTime: '12:00',
-    endTime: '14:00',
-    duration: 2,
-    customerName: 'Lisa Williams',
-    customerPhone: '(555) 456-7890',
-    customerEmail: 'lisa.williams@email.com',
-    partyType: 'private',
-    guestCount: 15,
-    totalPrice: 425,
-    status: 'confirmed',
-    notes: 'Unicorn theme party',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'booking_4',
-    date: formatDateToYYYYMMDD(new Date(Date.now() + 12 * 24 * 60 * 60 * 1000)), // 12 days from now
-    startTime: '15:00',
-    endTime: '17:00',
-    duration: 2,
-    customerName: 'David Rodriguez',
-    customerPhone: '(555) 234-5678',
-    customerEmail: 'david.rodriguez@email.com',
-    partyType: 'semi-private',
-    guestCount: 20,
-    totalPrice: 0, // Pricing coming soon
-    status: 'pending',
-    notes: 'Dinosaur theme, needs confirmation',
-    createdAt: new Date().toISOString()
-  }
-];
 
 export function PartyCalendar({
   onBookingSelect,
-  bookings = SAMPLE_BOOKINGS,
+  bookings = [],
   onUpdateBookings,
   readOnly = false
 }: PartyCalendarProps) {
@@ -184,20 +106,17 @@ export function PartyCalendar({
     });
   };
 
-  const isWeekend = (date: Date) => {
-    const day = date.getDay();
-    return day === 0 || day === 6; // Sunday or Saturday
-  };
-
   const getAvailableTimeSlots = (date: Date): TimeSlot[] => {
     const dateString = formatDateToYYYYMMDD(date);
     const dayBookings = bookings.filter(b => b.date === dateString && b.status !== 'cancelled');
 
-    // Use cached API slots if available, otherwise fall back to defaults
+    // Only use API slots from cache - no fallbacks
     const cachedSlots = timeSlotsCache[dateString];
-    const slots = cachedSlots && cachedSlots.length > 0
-      ? cachedSlots.map(s => ({ startTime: s.startTime, endTime: s.endTime, duration: 2 as const }))
-      : (isWeekend(date) ? DEFAULT_TIME_SLOTS.weekend : DEFAULT_TIME_SLOTS.weekday);
+    if (!cachedSlots || cachedSlots.length === 0) {
+      return []; // No slots available if not fetched from API
+    }
+
+    const slots = cachedSlots.map(s => ({ startTime: s.startTime, endTime: s.endTime, duration: 2 as const }));
 
     return slots.map(slot => {
       const conflictingBooking = dayBookings.find(booking => {

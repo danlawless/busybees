@@ -9,7 +9,6 @@ import { Database } from '../supabase/database.types';
 import {
   CompleteBooking,
   calculateBookingPrice,
-  getAvailableTimeSlots,
   isValidBookingDate,
 } from '../validations/party-booking';
 import { formatDateToYYYYMMDD, parseDateString } from '../utils';
@@ -31,6 +30,51 @@ export interface DateAvailability {
   hasPrivateSlots: boolean;
   hasSemiPrivateSlots: boolean;
   slots: TimeSlotAvailability[];
+}
+
+/**
+ * Fetch time slots from the database for a given party type and day type
+ * No fallbacks - returns empty array if no slots configured
+ */
+async function fetchTimeSlotsFromDB(
+  partyType: 'private' | 'semi_private',
+  dayType: 'weekend' | 'weekday'
+): Promise<Array<{ startTime: string; endTime: string; label: string }>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('party_time_slots')
+    .select('start_time, end_time, label')
+    .eq('party_type', partyType)
+    .eq('day_type', dayType)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch time slots from database:', error);
+    return [];
+  }
+
+  return (data || []).map((slot) => ({
+    startTime: slot.start_time,
+    endTime: slot.end_time,
+    label: slot.label,
+  }));
+}
+
+/**
+ * Get time slots for a specific date from the database
+ */
+async function getTimeSlotsForDate(
+  date: Date,
+  partyType: 'private' | 'semi_private'
+): Promise<Array<{ startTime: string; endTime: string; label: string }>> {
+  const dayOfWeek = date.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const dayType = isWeekend ? 'weekend' : 'weekday';
+
+  return fetchTimeSlotsFromDB(partyType, dayType);
 }
 
 /**
@@ -138,6 +182,7 @@ export async function isTimeSlotAvailable(
 
 /**
  * Get availability for a specific date with all time slots
+ * Fetches time slots from the database - no fallbacks
  */
 export async function getDateAvailability(
   date: string,
@@ -146,8 +191,8 @@ export async function getDateAvailability(
   // Use parseDateString to avoid UTC vs local timezone bug
   const dateObj = parseDateString(date);
 
-  // Get possible time slots for this date and party type
-  const possibleSlots = getAvailableTimeSlots(dateObj, partyType);
+  // Get possible time slots from database
+  const possibleSlots = await getTimeSlotsForDate(dateObj, partyType);
 
   if (possibleSlots.length === 0) {
     return [];
@@ -179,6 +224,7 @@ export async function getDateAvailability(
 
 /**
  * Get availability for a month (for calendar display)
+ * Fetches time slots from the database - no fallbacks
  */
 export async function getMonthAvailability(
   year: number,
@@ -193,6 +239,14 @@ export async function getMonthAvailability(
   // Get all bookings for the month
   const bookings = await getBookingsForDateRange(startDateStr, endDateStr);
 
+  // Pre-fetch time slots from database for both party types and day types
+  const [privateWeekend, privateWeekday, semiPrivateWeekend, semiPrivateWeekday] = await Promise.all([
+    fetchTimeSlotsFromDB('private', 'weekend'),
+    fetchTimeSlotsFromDB('private', 'weekday'),
+    fetchTimeSlotsFromDB('semi_private', 'weekend'),
+    fetchTimeSlotsFromDB('semi_private', 'weekday'),
+  ]);
+
   const availabilityMap = new Map<string, DateAvailability>();
 
   // Iterate through each day in the month
@@ -200,10 +254,12 @@ export async function getMonthAvailability(
   while (currentDate <= endDate) {
     const dateStr = formatDateToYYYYMMDD(currentDate);
     const dayBookings = bookings.filter((b) => b.party_date === dateStr);
+    const dayOfWeek = currentDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    // Get slots for both party types
-    const privateSlots = getAvailableTimeSlots(currentDate, 'private');
-    const semiPrivateSlots = getAvailableTimeSlots(currentDate, 'semi_private');
+    // Get slots for both party types based on day type
+    const privateSlots = isWeekend ? privateWeekend : privateWeekday;
+    const semiPrivateSlots = isWeekend ? semiPrivateWeekend : semiPrivateWeekday;
 
     // Check availability
     const checkSlotAvailability = (
@@ -440,31 +496,39 @@ export interface PurchasePartyData {
 export async function createOrUpdateBookingFromPurchase(
   data: PurchasePartyData
 ): Promise<PartyBooking> {
+  console.log('🎉 [PARTY-BOOKING-SYNC] Starting createOrUpdateBookingFromPurchase...');
+  console.log('🎉 [PARTY-BOOKING-SYNC] Input data:', JSON.stringify(data, null, 2));
+
   // Pre-validation to catch issues early with clear error messages
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const partyDate = parseDateString(data.partyDate);
 
   if (partyDate < today) {
+    console.error('🎉 [PARTY-BOOKING-SYNC] Error: Party date is in the past');
     throw new Error(`Party date ${data.partyDate} must be today or in the future`);
   }
 
   if (data.guestCount < 1 || data.guestCount > 50) {
+    console.error('🎉 [PARTY-BOOKING-SYNC] Error: Invalid guest count');
     throw new Error(`Guest count ${data.guestCount} must be between 1 and 50`);
   }
 
   if (!data.purchaseId) {
+    console.error('🎉 [PARTY-BOOKING-SYNC] Error: No purchase ID');
     throw new Error('Purchase ID is required to sync party booking');
   }
 
-  console.log('Syncing party booking from purchase:', {
+  console.log('🎉 [PARTY-BOOKING-SYNC] Validation passed, syncing party booking:', {
     purchaseId: data.purchaseId,
     customerId: data.customerId,
     partyDate: data.partyDate,
     guestCount: data.guestCount,
   });
 
+  console.log('🎉 [PARTY-BOOKING-SYNC] Creating admin client...');
   const supabase = createAdminClient();
+  console.log('🎉 [PARTY-BOOKING-SYNC] Admin client created, checking for existing booking...');
 
   // Check if a booking already exists for this purchase
   const { data: existingBooking, error: findError } = await supabase
@@ -473,9 +537,15 @@ export async function createOrUpdateBookingFromPurchase(
     .eq('purchase_id', data.purchaseId)
     .single();
 
+  console.log('🎉 [PARTY-BOOKING-SYNC] Existing booking lookup result:', {
+    found: !!existingBooking,
+    errorCode: findError?.code,
+    errorMessage: findError?.message,
+  });
+
   if (findError && findError.code !== 'PGRST116') {
     // PGRST116 is "no rows returned" - that's expected for new bookings
-    console.error('Error finding existing booking:', findError);
+    console.error('🎉 [PARTY-BOOKING-SYNC] Error finding existing booking:', findError);
     throw new Error('Failed to check for existing booking');
   }
 
@@ -518,6 +588,7 @@ export async function createOrUpdateBookingFromPurchase(
   };
 
   if (existingBooking) {
+    console.log('🎉 [PARTY-BOOKING-SYNC] Updating existing booking:', existingBooking.id);
     // Update existing booking
     const { data: updated, error: updateError } = await supabase
       .from('party_bookings')
@@ -527,7 +598,7 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (updateError) {
-      console.error('Error updating party booking from purchase:', {
+      console.error('🎉 [PARTY-BOOKING-SYNC] Error updating party booking:', {
         error: updateError,
         purchaseId: data.purchaseId,
         bookingId: existingBooking.id,
@@ -535,15 +606,17 @@ export async function createOrUpdateBookingFromPurchase(
       throw new Error(`Failed to update party booking: ${updateError.message}`);
     }
 
-    console.log('Successfully updated party booking:', {
+    console.log('🎉 [PARTY-BOOKING-SYNC] Successfully updated party booking:', {
       bookingId: updated.id,
       purchaseId: data.purchaseId,
     });
 
     return updated;
   } else {
+    console.log('🎉 [PARTY-BOOKING-SYNC] Creating new booking...');
     // Create new booking - bookingData already has all required fields including pricing
     const insertData: PartyBookingInsert = bookingData as PartyBookingInsert;
+    console.log('🎉 [PARTY-BOOKING-SYNC] Insert data:', JSON.stringify(insertData, null, 2));
 
     const { data: created, error: createError } = await supabase
       .from('party_bookings')
@@ -552,15 +625,18 @@ export async function createOrUpdateBookingFromPurchase(
       .single();
 
     if (createError) {
-      console.error('Error creating party booking from purchase:', {
+      console.error('🎉 [PARTY-BOOKING-SYNC] Error creating party booking:', {
         error: createError,
+        code: createError.code,
+        details: createError.details,
+        hint: createError.hint,
         purchaseId: data.purchaseId,
         partyDate: data.partyDate,
       });
       throw new Error(`Failed to create party booking: ${createError.message}`);
     }
 
-    console.log('Successfully created party booking:', {
+    console.log('🎉 [PARTY-BOOKING-SYNC] Successfully created party booking:', {
       bookingId: created.id,
       purchaseId: data.purchaseId,
     });

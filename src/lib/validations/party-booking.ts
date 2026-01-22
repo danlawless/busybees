@@ -203,23 +203,8 @@ export const PACKAGE_PRICING = {
   },
 } as const;
 
-// Time slot configuration per issue #101 requirements
-export const TIME_SLOTS = {
-  private: {
-    // Saturday & Sunday only: 1:00-3:00 or 3:30-5:30
-    weekend: [
-      { startTime: '13:00', endTime: '15:00', label: '1:00 PM - 3:00 PM' },
-      { startTime: '15:30', endTime: '17:30', label: '3:30 PM - 5:30 PM' },
-    ],
-    weekday: [], // Private parties not available weekdays
-  },
-  semi_private: {
-    // Monday-Friday: 9:00 AM - 5:00 PM (call to book)
-    weekday: [{ startTime: '09:00', endTime: '17:00', label: '9:00 AM - 5:00 PM' }],
-    // Saturday & Sunday: 10:00 AM - 12:00 PM
-    weekend: [{ startTime: '10:00', endTime: '12:00', label: '10:00 AM - 12:00 PM' }],
-  },
-} as const;
+// Time slots are now stored in the database (party_time_slots table)
+// No hardcoded fallbacks - fetch from /api/party-booking/time-slots
 
 // Additional kids pricing - per issue #101
 export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
@@ -250,36 +235,16 @@ export function calculateBookingPrice(
 }
 
 /**
- * Get available time slots for a given date and party type
- * Per issue #101:
- * - Private: Sat/Sun 1:00-3:00 or 3:30-5:30
- * - Semi-Private: Mon-Fri 9:00-5:00, Sat/Sun 10:00-12:00
+ * @deprecated Time slots should be fetched from the database via /api/party-booking/time-slots
+ * This function is kept for type compatibility but throws an error if called.
  */
 export function getAvailableTimeSlots(
-  date: Date,
-  partyType: PartyType
+  _date: Date,
+  _partyType: PartyType
 ): Array<{ startTime: string; endTime: string; label: string }> {
-  const dayOfWeek = date.getDay(); // 0 = Sunday, 1-5 = Mon-Fri, 6 = Saturday
-
-  if (partyType === 'private') {
-    // Private parties only on weekends (Sat/Sun)
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return [...TIME_SLOTS.private.weekend];
-    }
-    return [];
-  }
-
-  // Semi-private parties
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    // Weekend (Sat/Sun): 10:00 AM - 12:00 PM
-    return [...TIME_SLOTS.semi_private.weekend];
-  }
-  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-    // Weekdays (Mon-Fri): 9:00 AM - 5:00 PM
-    return [...TIME_SLOTS.semi_private.weekday];
-  }
-
-  return [];
+  throw new Error(
+    'getAvailableTimeSlots is deprecated. Time slots must be fetched from the database via /api/party-booking/time-slots'
+  );
 }
 
 /**
@@ -294,9 +259,10 @@ export function isValidBookingDate(date: Date): boolean {
 }
 
 /**
- * Check if a date has any available slots for a party type
+ * @deprecated Check availability via the database, not this function
  */
-export function hasAvailableSlots(date: Date, partyType: PartyType): boolean {
-  const slots = getAvailableTimeSlots(date, partyType);
-  return slots.length > 0;
+export function hasAvailableSlots(_date: Date, _partyType: PartyType): boolean {
+  throw new Error(
+    'hasAvailableSlots is deprecated. Check availability via /api/party-booking/time-slots'
+  );
 }

@@ -16,8 +16,11 @@ export async function POST(request: NextRequest) {
   let bookingId: string | undefined;
   let logContext: Record<string, unknown> = {};
 
+  console.log('🎉 [PARTY-BOOKING-CREATE] API route called');
+
   try {
     const body = await request.json();
+    console.log('🎉 [PARTY-BOOKING-CREATE] Request body:', JSON.stringify(body, null, 2));
 
     // Validate the request body
     const validationResult = CompleteBookingSchema.safeParse(body);
@@ -63,10 +66,12 @@ export async function POST(request: NextRequest) {
 
     // Create the booking in the database
     try {
+      console.log('🎉 [PARTY-BOOKING-CREATE] About to call createPartyBooking...');
       const booking = await createPartyBooking(bookingData, customerId);
       bookingId = booking.id;
       logContext.bookingId = bookingId;
 
+      console.log('🎉 [PARTY-BOOKING-CREATE] Booking created with ID:', bookingId);
       logger.info(
         { ...logContext, bookingId },
         '💾 Party booking created in database'
@@ -227,6 +232,8 @@ export async function POST(request: NextRequest) {
       { ...logContext, sessionId: checkoutSession.id, checkoutUrl: checkoutSession.url },
       '🎊 Party booking flow completed successfully'
     );
+
+    console.log('🎉 [PARTY-BOOKING-CREATE] Success! Returning checkout URL:', checkoutSession.url);
 
     return NextResponse.json({
       success: true,
