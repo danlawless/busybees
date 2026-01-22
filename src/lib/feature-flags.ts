@@ -18,7 +18,7 @@
  *
  * To re-enable, simply change this to `true`.
  */
-export const PURCHASING_ENABLED = false;
+export const PURCHASING_ENABLED = true;
 
 /**
  * Controls whether the My Account / Login link is shown in the header.

@@ -21,6 +21,7 @@ export interface GiftCard {
   code: string;
   amount: number;
   remaining_amount: number;
+  purchaser_user_id: string | null;
   purchaser_email: string;
   purchaser_name: string;
   recipient_email: string;
@@ -39,6 +40,7 @@ export interface GiftCard {
 
 export interface CreateGiftCardData {
   amount: number;
+  purchaser_user_id?: string;
   purchaser_email: string;
   purchaser_name: string;
   recipient_email: string;
@@ -225,6 +227,7 @@ export async function createGiftCard(data: CreateGiftCardData): Promise<GiftCard
       code: code!,
       amount: data.amount,
       remaining_amount: data.amount,
+      purchaser_user_id: data.purchaser_user_id || null,
       purchaser_email: data.purchaser_email,
       purchaser_name: data.purchaser_name,
       recipient_email: data.recipient_email,
@@ -607,7 +610,7 @@ export async function getUserRedeemedGiftCards(userId: string): Promise<GiftCard
 }
 
 /**
- * Get user's purchased gift cards
+ * Get user's purchased gift cards by email
  */
 export async function getUserPurchasedGiftCards(email: string): Promise<GiftCard[]> {
   const supabase = createAdminClient();
@@ -620,6 +623,26 @@ export async function getUserPurchasedGiftCards(email: string): Promise<GiftCard
 
   if (error) {
     logger.error({ error, email }, 'Failed to fetch user purchased gift cards');
+    throw new Error('Failed to fetch gift cards');
+  }
+
+  return data || [];
+}
+
+/**
+ * Get user's purchased gift cards by user ID
+ */
+export async function getUserPurchasedGiftCardsByUserId(userId: string): Promise<GiftCard[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('gift_cards')
+    .select('*')
+    .eq('purchaser_user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    logger.error({ error, userId }, 'Failed to fetch user purchased gift cards by user ID');
     throw new Error('Failed to fetch gift cards');
   }
 

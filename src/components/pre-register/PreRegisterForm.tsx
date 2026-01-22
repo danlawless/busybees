@@ -24,6 +24,7 @@ import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon';
 import { fadeInUp, staggerContainer } from '@/lib/utils';
 import { logger } from '@/lib/client-logger';
 import { PURCHASING_ENABLED } from '@/lib/feature-flags';
+import { createClient } from '@/lib/supabase/client';
 
 interface Child {
   id: string;
@@ -256,7 +257,24 @@ export function PreRegisterForm() {
         throw new Error(result.error || 'Failed to submit pre-registration');
       }
 
-      setIsSubmitted(true);
+      // Account created - now sign them in automatically
+      const cleanPhone = formData.phone.replace(/[^\d]/g, '');
+      const supabase = createClient();
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email.trim().toLowerCase(),
+        password: `PHONE-${cleanPhone}`,
+      });
+
+      if (signInError) {
+        // If sign-in fails, still show success but don't redirect to dashboard
+        logger.warn({ error: signInError }, 'Auto sign-in after pre-registration failed');
+        setIsSubmitted(true);
+        return;
+      }
+
+      // Successfully signed in - redirect to customer dashboard
+      router.push('/customer/dashboard');
     } catch (error) {
       logger.error({ error }, 'Pre-registration submission error');
       alert('There was an error submitting your registration. Please try again or contact us directly.');

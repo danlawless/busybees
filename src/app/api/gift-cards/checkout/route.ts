@@ -1,9 +1,11 @@
 /**
  * Gift Card Checkout API Route
  * Creates Stripe checkout session for gift card purchases
+ * REQUIRES AUTHENTICATION - gift cards must be linked to user accounts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { getGiftCardDenominations } from '@/lib/services/gift-cards';
 import { logger } from '@/lib/logger';
@@ -22,9 +24,23 @@ const checkoutSchema = z.object({
 /**
  * POST /api/gift-cards/checkout
  * Create a Stripe checkout session for gift card purchase
+ * REQUIRES AUTHENTICATION
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify user is authenticated
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required to purchase gift cards' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     // Validate input
@@ -76,6 +92,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         type: 'gift_card',
         amount: data.amount.toString(),
+        purchaser_user_id: user.id,
         purchaser_email: data.purchaser_email,
         purchaser_name: data.purchaser_name,
         recipient_email: data.recipient_email,
@@ -89,6 +106,7 @@ export async function POST(request: NextRequest) {
       {
         sessionId: session.id,
         amount: data.amount,
+        purchaserUserId: user.id,
         purchaser: data.purchaser_email,
         recipient: data.recipient_email,
       },

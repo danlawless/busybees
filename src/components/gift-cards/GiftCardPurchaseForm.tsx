@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gift,
@@ -17,6 +17,7 @@ import {
   Check,
   Loader2,
   Clock,
+  LogIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -25,6 +26,16 @@ import { fadeInUp, staggerContainer } from '@/lib/utils';
 import { GiftCardPreview } from './GiftCardPreview';
 import { logger } from '@/lib/client-logger';
 import { PURCHASING_ENABLED } from '@/lib/feature-flags';
+import { useAuth } from '@/hooks/useAuth';
+
+// Gift card purchase intent stored in sessionStorage
+interface GiftCardPurchaseIntent {
+  amount: number | null;
+  recipient_name: string;
+  recipient_email: string;
+  personal_message: string;
+  delivery_method: 'email_recipient' | 'email_self';
+}
 
 interface Denomination {
   id: string;
@@ -51,6 +62,8 @@ const steps = [
 ];
 
 export function GiftCardPurchaseForm() {
+  const router = useRouter();
+  const { isAuthenticated, userProfile, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [denominations, setDenominations] = useState<Denomination[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +79,42 @@ export function GiftCardPurchaseForm() {
     delivery_method: 'email_recipient',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Check for purchase intent on mount and pre-fill form
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && userProfile) {
+      // Pre-fill purchaser info from user profile
+      setFormData((prev) => ({
+        ...prev,
+        purchaser_name: prev.purchaser_name || userProfile.name || '',
+        purchaser_email: prev.purchaser_email || userProfile.email || '',
+      }));
+
+      // Check for stored purchase intent (from redirect after signup)
+      const storedIntent = sessionStorage.getItem('giftCardPurchaseIntent');
+      if (storedIntent) {
+        try {
+          const intent: GiftCardPurchaseIntent = JSON.parse(storedIntent);
+          setFormData((prev) => ({
+            ...prev,
+            amount: intent.amount ?? prev.amount,
+            recipient_name: intent.recipient_name || prev.recipient_name,
+            recipient_email: intent.recipient_email || prev.recipient_email,
+            personal_message: intent.personal_message || prev.personal_message,
+            delivery_method: intent.delivery_method || prev.delivery_method,
+          }));
+          // Clear the stored intent
+          sessionStorage.removeItem('giftCardPurchaseIntent');
+          // Skip to the step after amount if amount was pre-selected
+          if (intent.amount) {
+            setCurrentStep(1);
+          }
+        } catch {
+          sessionStorage.removeItem('giftCardPurchaseIntent');
+        }
+      }
+    }
+  }, [authLoading, isAuthenticated, userProfile]);
 
   // Fetch denominations on mount
   useEffect(() => {
@@ -155,6 +204,22 @@ export function GiftCardPurchaseForm() {
   };
 
   const handlePurchase = async () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Store purchase intent for after signup/login
+      const purchaseIntent: GiftCardPurchaseIntent = {
+        amount: formData.amount,
+        recipient_name: formData.recipient_name,
+        recipient_email: formData.recipient_email,
+        personal_message: formData.personal_message,
+        delivery_method: formData.delivery_method,
+      };
+      sessionStorage.setItem('giftCardPurchaseIntent', JSON.stringify(purchaseIntent));
+      // Redirect to signup with return URL
+      router.push('/customer/signup?redirect=/gift-cards/purchase');
+      return;
+    }
+
     setSending(true);
     try {
       // Create checkout session for gift card
@@ -170,6 +235,19 @@ export function GiftCardPurchaseForm() {
         window.location.href = data.url;
       } else {
         const error = await response.json();
+        // Handle 401 unauthorized - redirect to login
+        if (response.status === 401) {
+          const purchaseIntent: GiftCardPurchaseIntent = {
+            amount: formData.amount,
+            recipient_name: formData.recipient_name,
+            recipient_email: formData.recipient_email,
+            personal_message: formData.personal_message,
+            delivery_method: formData.delivery_method,
+          };
+          sessionStorage.setItem('giftCardPurchaseIntent', JSON.stringify(purchaseIntent));
+          router.push('/customer/signup?redirect=/gift-cards/purchase');
+          return;
+        }
         setErrors({ submit: error.error || 'Failed to create checkout session' });
       }
     } catch (error) {
@@ -558,6 +636,24 @@ export function GiftCardPurchaseForm() {
                       </div>
                     </div>
 
+                    {/* Authentication Notice */}
+                    {!authLoading && !isAuthenticated && (
+                      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <LogIn className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-800">
+                              Account required to purchase
+                            </p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              Please sign up or log in to complete your gift card purchase.
+                              Your gift card details will be saved.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row gap-4">
                       <Button
@@ -586,13 +682,23 @@ export function GiftCardPurchaseForm() {
                       <Button
                         variant="primary"
                         onClick={handlePurchase}
-                        disabled={sending}
+                        disabled={sending || authLoading}
                         className="flex-1"
                       >
-                        {sending ? (
+                        {authLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Loading...
+                          </>
+                        ) : sending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Processing...
+                          </>
+                        ) : !isAuthenticated ? (
+                          <>
+                            <LogIn className="w-4 h-4 mr-2" />
+                            Sign Up to Purchase
                           </>
                         ) : (
                           <>

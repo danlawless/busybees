@@ -130,9 +130,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.log('Processing gift card purchase');
 
     try {
-      // Create the gift card
+      // Create the gift card with purchaser user ID
       const giftCard = await createGiftCard({
         amount: parseFloat(metadata.amount),
+        purchaser_user_id: metadata.purchaser_user_id || undefined,
         purchaser_email: metadata.purchaser_email,
         purchaser_name: metadata.purchaser_name,
         recipient_email: metadata.recipient_email,
