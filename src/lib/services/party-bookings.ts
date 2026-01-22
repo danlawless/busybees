@@ -119,16 +119,15 @@ export async function getBookingsForDate(date: string): Promise<PartyBooking[]> 
 }
 
 /**
- * Get bookings for a date range (for calendar display)
- * Uses admin client to bypass RLS - needed for public availability checking
+ * Get bookings for a date range (for authorized users only)
+ * Returns full booking data - respects RLS policies
+ * For public availability checking, use the get_booked_party_slots RPC function
  */
 export async function getBookingsForDateRange(
   startDate: string,
   endDate: string
 ): Promise<PartyBooking[]> {
-  // Use admin client to see ALL bookings regardless of who booked them
-  // This is necessary for availability checking to work correctly
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('party_bookings')

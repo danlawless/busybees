@@ -1,17 +1,18 @@
 /**
  * Party Booking Availability API Route
- * Returns available time slots for a date range
+ * Returns booked time slots for a date range using a secure Postgres function.
+ * The function uses SECURITY DEFINER to bypass RLS and returns only
+ * non-sensitive data (dates and times) - no PII is exposed.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getBookingsForDateRange } from '@/lib/services/party-bookings';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Normalize time to HH:MM format for consistent comparison
  * PostgreSQL TIME can return HH:MM:SS, we normalize to HH:MM
  */
 function normalizeTime(time: string): string {
-  // Handle HH:MM:SS format - extract just HH:MM
   const parts = time.split(':');
   if (parts.length >= 2) {
     return `${parts[0]}:${parts[1]}`;
@@ -41,30 +42,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all bookings for the date range (uses admin client to see all bookings)
-    const bookings = await getBookingsForDateRange(startDate, endDate);
+    const supabase = await createClient();
 
-    // Group bookings by date and extract booked times (normalized to HH:MM)
+    // Call the SECURITY DEFINER function that bypasses RLS
+    // but only returns non-sensitive data (dates and times)
+    const { data: bookedSlots, error } = await supabase.rpc('get_booked_party_slots', {
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (error) {
+      console.error('Error fetching booked slots:', error);
+      return NextResponse.json(
+        { error: 'Failed to check availability' },
+        { status: 500 }
+      );
+    }
+
+    // Group by date and normalize times
     const bookedSlotsByDate = new Map<string, string[]>();
 
-    bookings.forEach((booking) => {
-      const date = booking.party_date;
+    (bookedSlots || []).forEach((slot: { party_date: string; start_time: string }) => {
+      const date = slot.party_date;
       const times = bookedSlotsByDate.get(date) || [];
-      // Normalize time format for consistent comparison with time slots
-      times.push(normalizeTime(booking.start_time));
+      times.push(normalizeTime(slot.start_time));
       bookedSlotsByDate.set(date, times);
     });
 
     // Convert to array format for response
-    const bookedSlots = Array.from(bookedSlotsByDate.entries()).map(([date, times]) => ({
+    const groupedSlots = Array.from(bookedSlotsByDate.entries()).map(([date, times]) => ({
       date,
       times,
     }));
 
     return NextResponse.json({
       success: true,
-      bookedSlots,
-      totalBookings: bookings.length,
+      bookedSlots: groupedSlots,
+      totalBookings: bookedSlots?.length || 0,
     });
   } catch (error) {
     console.error('Availability check error:', error);

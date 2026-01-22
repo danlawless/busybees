@@ -216,7 +216,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <AuthGuard requireRole={['customer', 'admin']}>
+    <AuthGuard requireRole="customer">
       <ProfileContent />
     </AuthGuard>
   );

@@ -35,8 +35,7 @@ export function AuthGuard({ children, requireRole, redirectTo = '/customer/login
           if (profile.role === 'customer') {
             router.push('/customer/dashboard');
           } else {
-            // Staff/admin trying to access customer pages - redirect to admin area
-            router.push('/admin/parties');
+            router.push('/pos');
           }
         }
       }
