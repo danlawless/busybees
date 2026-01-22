@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
 // Child schema for validation
 const childSchema = z.object({
@@ -23,6 +24,7 @@ const preRegisterSchema = z.object({
   parentName: z.string().min(1, 'Parent/Guardian name is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().regex(/^\(\d{3}\) \d{3}-\d{4}$/, 'Please enter a valid phone number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   children: z.array(childSchema).min(1, 'At least one child is required'),
   marketingOptIn: z.boolean().optional(),
 });
@@ -43,10 +45,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { parentName, email, children, marketingOptIn } = validationResult.data;
+    const { parentName, email, password, children, marketingOptIn } = validationResult.data;
 
     // Clean phone number for storage (remove formatting)
     const cleanPhone = validationResult.data.phone.replace(/[^\d]/g, '');
+
+    // Hash the password for web login
+    const webPasswordHash = await bcrypt.hash(password, 10);
 
     // Use admin client to bypass RLS
     const supabase = createAdminClient();
@@ -117,7 +122,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user profile record
+    // Create user profile record with web password
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: newUser, error: userError } = await (supabase.from('users') as any)
       .insert({
@@ -126,6 +131,8 @@ export async function POST(request: NextRequest) {
         name: parentName.trim(),
         email: email.trim().toLowerCase(),
         role: 'customer',
+        has_web_password: true,
+        web_password_hash: webPasswordHash,
       })
       .select()
       .single();

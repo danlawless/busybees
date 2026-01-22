@@ -36,6 +36,8 @@ interface FormData {
   parentName: string;
   email: string;
   phone: string;
+  password: string;
+  confirmPassword: string;
   children: Child[];
   marketingOptIn: boolean;
 }
@@ -44,6 +46,8 @@ interface FormErrors {
   parentName?: string;
   email?: string;
   phone?: string;
+  password?: string;
+  confirmPassword?: string;
   children?: string;
   childErrors?: Record<string, { name?: string; birthdate?: string }>;
 }
@@ -54,6 +58,8 @@ export function PreRegisterForm() {
     parentName: '',
     email: '',
     phone: '',
+    password: '',
+    confirmPassword: '',
     children: [{ id: crypto.randomUUID(), name: '', birthdate: '' }],
     marketingOptIn: true,
   });
@@ -125,6 +131,18 @@ export function PreRegisterForm() {
       newErrors.phone = 'Phone number is required';
     } else if (cleanPhone.length !== 10) {
       newErrors.phone = 'Please enter a valid 10-digit phone number';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     // Validate children
@@ -243,6 +261,7 @@ export function PreRegisterForm() {
           parentName: formData.parentName.trim(),
           email: formData.email.trim(),
           phone: formData.phone,
+          password: formData.password,
           children: formData.children.map(child => ({
             name: child.name.trim(),
             birthdate: child.birthdate,
@@ -257,19 +276,23 @@ export function PreRegisterForm() {
         throw new Error(result.error || 'Failed to submit pre-registration');
       }
 
-      // Account created - now sign them in automatically
-      const cleanPhone = formData.phone.replace(/[^\d]/g, '');
-      const supabase = createClient();
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email.trim().toLowerCase(),
-        password: `PHONE-${cleanPhone}`,
+      // Account created - now sign them in automatically using web-login API
+      // (which properly sets cookies and handles the session)
+      const loginResponse = await fetch('/api/auth/web-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: formData.phone.replace(/[^\d]/g, ''),
+          password: formData.password,
+        }),
       });
 
+      const signInError = !loginResponse.ok;
+
       if (signInError) {
-        // If sign-in fails, still show success but don't redirect to dashboard
-        logger.warn({ error: signInError }, 'Auto sign-in after pre-registration failed');
-        setIsSubmitted(true);
+        // Account was created but sign-in failed - redirect to login page
+        logger.error({ error: signInError }, 'Auto sign-in after pre-registration failed');
+        router.push('/customer/login?message=Account created! Please log in with your email.');
         return;
       }
 
@@ -481,6 +504,52 @@ export function PreRegisterForm() {
                         />
                         {errors.phone && (
                           <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-charcoal-700 mb-2">
+                          Password *
+                        </label>
+                        <input
+                          type="password"
+                          id="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          className={`w-full px-4 py-3 rounded-lg border transition-colors duration-200 ${
+                            errors.password
+                              ? 'border-red-300 bg-red-50 focus:border-red-500'
+                              : 'border-neutral-300 bg-white focus:border-primary-500'
+                          } focus:outline-none focus:ring-2 focus:ring-primary-500/20`}
+                          placeholder="Create a password"
+                        />
+                        {errors.password && (
+                          <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal-700 mb-2">
+                          Confirm Password *
+                        </label>
+                        <input
+                          type="password"
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          className={`w-full px-4 py-3 rounded-lg border transition-colors duration-200 ${
+                            errors.confirmPassword
+                              ? 'border-red-300 bg-red-50 focus:border-red-500'
+                              : 'border-neutral-300 bg-white focus:border-primary-500'
+                          } focus:outline-none focus:ring-2 focus:ring-primary-500/20`}
+                          placeholder="Confirm your password"
+                        />
+                        {errors.confirmPassword && (
+                          <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
                         )}
                       </div>
                     </div>
