@@ -448,6 +448,7 @@ export interface Database {
           expiry_month: number;
           expiry_year: number;
           is_default: boolean;
+          stripe_mode: 'test' | 'live';
           created_at: string;
           updated_at: string;
         };
@@ -460,6 +461,7 @@ export interface Database {
           expiry_month: number;
           expiry_year: number;
           is_default?: boolean;
+          stripe_mode: 'test' | 'live';
           created_at?: string;
           updated_at?: string;
         };
@@ -469,6 +471,7 @@ export interface Database {
           stripe_payment_method_id?: string;
           last4?: string;
           brand?: string;
+          stripe_mode?: 'test' | 'live';
           expiry_month?: number;
           expiry_year?: number;
           is_default?: boolean;

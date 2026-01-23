@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripeClient } from '@/lib/stripe/client';
+import { getStripeClient, getStripeMode } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
 import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { createGiftCard, markGiftCardAsSent } from '@/lib/services/gift-cards';
@@ -429,23 +429,28 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
     return;
   }
 
-  // Check if this is the first/only payment method
+  // Get the current Stripe mode
+  const stripeMode = await getStripeMode();
+
+  // Check if this is the first/only payment method for this mode
   const { data: existingCards } = await supabase
     .from('saved_cards')
     .select('id')
-    .eq('customer_id', userId);
+    .eq('customer_id', userId)
+    .eq('stripe_mode', stripeMode);
 
   const isDefault = !existingCards || existingCards.length === 0;
 
-  // If setting as default, unset other defaults first
+  // If setting as default, unset other defaults first (only for current mode)
   if (isDefault) {
     await supabase
       .from('saved_cards')
       .update({ is_default: false })
-      .eq('customer_id', userId);
+      .eq('customer_id', userId)
+      .eq('stripe_mode', stripeMode);
   }
 
-  // Save payment method to database
+  // Save payment method to database with stripe_mode
   const { error } = await supabase.from('saved_cards').insert({
     customer_id: userId,
     stripe_payment_method_id: paymentMethodId,
@@ -454,12 +459,13 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
     expiry_month: card.exp_month,
     expiry_year: card.exp_year,
     is_default: isDefault,
+    stripe_mode: stripeMode,
   });
 
   if (error) {
     console.error('Error saving payment method to database:', error);
   } else {
-    console.log('Payment method saved successfully for user:', userId);
+    console.log(`Payment method saved successfully for user: ${userId} (${stripeMode} mode)`);
   }
 }
 

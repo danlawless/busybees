@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getStripeMode } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 
 export async function GET(
@@ -32,11 +33,13 @@ export async function GET(
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    // Fetch saved cards for this customer
+    // Fetch saved cards for this customer (filtered by current Stripe mode)
+    const stripeMode = await getStripeMode();
     const { data: savedCards, error: cardsError } = await supabase
       .from('saved_cards')
-      .select('id, last4, brand, expiry_month, expiry_year, is_default')
+      .select('id, stripe_payment_method_id, last4, brand, expiry_month, expiry_year, is_default')
       .eq('customer_id', customerId)
+      .eq('stripe_mode', stripeMode)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
 

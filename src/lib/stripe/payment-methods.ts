@@ -9,6 +9,9 @@ import { getStripeClient, getStripeMode, getStripeCustomerIdColumn } from './cli
 import { createAdminClient } from '../supabase/server';
 import { logger } from '../logger';
 
+// Re-export getStripeMode for convenience
+export { getStripeMode };
+
 /**
  * Create or retrieve Stripe customer for a user
  * Handles both logged-in users (with database records) and temporary/guest users
@@ -197,21 +200,23 @@ export async function savePaymentMethodToDatabase(
   isDefault: boolean = false
 ): Promise<void> {
   const supabase = createAdminClient();
+  const stripeMode = await getStripeMode();
 
   const card = paymentMethod.card;
   if (!card) {
     throw new Error('Payment method is not a card');
   }
 
-  // If setting as default, unset other defaults first
+  // If setting as default, unset other defaults first (only for current mode)
   if (isDefault) {
     await supabase
       .from('saved_cards')
       .update({ is_default: false })
-      .eq('customer_id', userId);
+      .eq('customer_id', userId)
+      .eq('stripe_mode', stripeMode);
   }
 
-  // Insert new card
+  // Insert new card with stripe_mode
   await supabase.from('saved_cards').insert({
     customer_id: userId,
     stripe_payment_method_id: paymentMethod.id,
@@ -220,7 +225,13 @@ export async function savePaymentMethodToDatabase(
     expiry_month: card.exp_month,
     expiry_year: card.exp_year,
     is_default: isDefault,
+    stripe_mode: stripeMode,
   });
+
+  logger.info(
+    { userId, paymentMethodId: paymentMethod.id, stripeMode, isDefault },
+    `💳 Saved payment method to database (${stripeMode} mode)`
+  );
 }
 
 /**
@@ -239,6 +250,7 @@ export async function deletePaymentMethodFromDatabase(
 
 /**
  * Sync payment methods from Stripe to database
+ * Only syncs cards for the current Stripe mode (test/live)
  */
 export async function syncPaymentMethodsToDatabase(
   userId: string,
@@ -246,15 +258,17 @@ export async function syncPaymentMethodsToDatabase(
 ): Promise<void> {
   const stripe = await getStripeClient();
   const supabase = createAdminClient();
+  const stripeMode = await getStripeMode();
 
   // Get payment methods from Stripe
   const paymentMethods = await listPaymentMethods(stripeCustomerId);
 
-  // Get existing saved cards from database
+  // Get existing saved cards from database FOR THIS MODE ONLY
   const { data: existingCards } = await supabase
     .from('saved_cards')
     .select('stripe_payment_method_id')
-    .eq('customer_id', userId);
+    .eq('customer_id', userId)
+    .eq('stripe_mode', stripeMode);
 
   const existingIds = new Set(
     existingCards?.map((card) => card.stripe_payment_method_id) || []
@@ -276,7 +290,7 @@ export async function syncPaymentMethodsToDatabase(
     }
   }
 
-  // Remove payment methods that no longer exist in Stripe
+  // Remove payment methods that no longer exist in Stripe (for this mode only)
   const stripeIds = new Set(paymentMethods.map((pm) => pm.id));
   const cardsToDelete = existingCards?.filter(
     (card) => !stripeIds.has(card.stripe_payment_method_id)
@@ -286,10 +300,16 @@ export async function syncPaymentMethodsToDatabase(
     await supabase
       .from('saved_cards')
       .delete()
+      .eq('stripe_mode', stripeMode)
       .in(
         'stripe_payment_method_id',
         cardsToDelete.map((card) => card.stripe_payment_method_id)
       );
+
+    logger.info(
+      { userId, stripeMode, deletedCount: cardsToDelete.length },
+      `🗑️ Removed ${cardsToDelete.length} stale payment methods (${stripeMode} mode)`
+    );
   }
 }
 

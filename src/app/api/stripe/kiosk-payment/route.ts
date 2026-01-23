@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getStripeClient, getStripeCustomerIdColumn } from "@/lib/stripe/client";
+import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from "@/lib/stripe/client";
 import { getOrCreateStripeCustomer } from "@/lib/stripe/payment-methods";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
@@ -94,18 +94,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Customer not found" }, { status: 404 });
         }
 
-        // Verify the payment method belongs to this customer
+        // Verify the payment method belongs to this customer AND matches current Stripe mode
+        const stripeMode = await getStripeMode();
         const { data: savedCard, error: cardError } = await adminSupabase
             .from("saved_cards")
             .select("*")
             .eq("customer_id", customerId)
             .eq("stripe_payment_method_id", paymentMethodId)
+            .eq("stripe_mode", stripeMode)
             .single();
 
         if (cardError || !savedCard) {
-            logger.warn({ ...logContext }, "Payment method not found for customer");
+            logger.warn({ ...logContext, stripeMode }, "Payment method not found for customer in current mode");
             return NextResponse.json(
-                { error: "Invalid payment method. Please select a valid saved card." },
+                { error: "Invalid payment method. Please add a new card for this payment mode." },
                 { status: 400 }
             );
         }
