@@ -103,7 +103,17 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 <Calendar className="w-5 h-5 mr-2" />
                 {PURCHASING_ENABLED ? 'Book Your Party Now' : 'Coming Soon'}
               </Button>
-              <Button variant="outline" size="lg" className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50"
+                onClick={() => {
+                  document.getElementById('party-packages')?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                }}
+              >
                 <Gift className="w-5 h-5 mr-2" />
                 View Packages
               </Button>

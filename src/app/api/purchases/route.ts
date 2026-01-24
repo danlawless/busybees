@@ -7,17 +7,32 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllPurchases, getCustomerPurchases, getTodayPurchases, createPurchase } from '@/lib/services/purchases';
+import { getAllPurchases, getCustomerPurchases, getCustomerPurchasesByType, getTodayPurchases, createPurchase } from '@/lib/services/purchases';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customer_id');
     const today = searchParams.get('today') === 'true';
+    const type = searchParams.get('type');
 
     let purchases;
 
-    if (today) {
+    // When filtering by type, authenticate user and use their ID
+    if (type) {
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+
+      purchases = await getCustomerPurchasesByType(user.id, type);
+    } else if (today) {
       purchases = await getTodayPurchases();
     } else if (customerId) {
       purchases = await getCustomerPurchases(customerId);

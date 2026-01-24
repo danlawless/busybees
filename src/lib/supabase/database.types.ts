@@ -375,6 +375,7 @@ export interface Database {
           stripe_coupon_code: string;
           banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
           is_active: boolean;
+          is_staff_only: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -389,6 +390,7 @@ export interface Database {
           stripe_coupon_code: string;
           banner_style?: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
           is_active?: boolean;
+          is_staff_only?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -403,6 +405,7 @@ export interface Database {
           stripe_coupon_code?: string;
           banner_style?: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
           is_active?: boolean;
+          is_staff_only?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -569,6 +572,11 @@ export interface Database {
           payment_status: string | null;
           customer_id: string | null;
           purchase_id: string | null;
+          applied_promo_id: string | null;
+          discount_amount: number;
+          discount_percent: number;
+          discount_applied_by: string | null;
+          discount_applied_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -597,6 +605,11 @@ export interface Database {
           payment_status?: string | null;
           customer_id?: string | null;
           purchase_id?: string | null;
+          applied_promo_id?: string | null;
+          discount_amount?: number;
+          discount_percent?: number;
+          discount_applied_by?: string | null;
+          discount_applied_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -625,6 +638,11 @@ export interface Database {
           payment_status?: string | null;
           customer_id?: string | null;
           purchase_id?: string | null;
+          applied_promo_id?: string | null;
+          discount_amount?: number;
+          discount_percent?: number;
+          discount_applied_by?: string | null;
+          discount_applied_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

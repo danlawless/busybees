@@ -124,6 +124,7 @@ function WebMyAccountContent() {
   const [successDetails, setSuccessDetails] = useState<{
     title: string;
     message: string;
+    variant?: 'success' | 'warning' | 'error';
     details?: any;
   }>({ title: '', message: '' });
 
@@ -520,7 +521,8 @@ function WebMyAccountContent() {
       if (!selectedChildForPurchase) {
         setSuccessDetails({
           title: 'Child Selection Required',
-          message: 'Please select which child this pass is for before purchasing.'
+          message: 'Please select which child this pass is for before purchasing.',
+          variant: 'warning'
         });
         setShowSuccessModal(true);
         return;
@@ -530,7 +532,8 @@ function WebMyAccountContent() {
       if (!selectedChild || !selectedChild.waiverSigned) {
         setSuccessDetails({
           title: 'Waiver Required',
-          message: 'The selected child must have a signed waiver before purchasing a pass.'
+          message: 'The selected child must have a signed waiver before purchasing a pass.',
+          variant: 'warning'
         });
         setShowSuccessModal(true);
         return;
@@ -542,7 +545,8 @@ function WebMyAccountContent() {
     if (!paymentMethod) {
       setSuccessDetails({
         title: 'Payment Method Required',
-        message: 'Please add a payment method in the Payments tab first.'
+        message: 'Please add a payment method in the Payments tab first.',
+        variant: 'warning'
       });
       setShowSuccessModal(true);
       setActiveTab('payments');
@@ -594,7 +598,8 @@ function WebMyAccountContent() {
         // For now, show message - could integrate Stripe.js for 3DS handling
         setSuccessDetails({
           title: 'Additional Authentication Required',
-          message: 'Your bank requires additional verification. Please try again or use a different card.'
+          message: 'Your bank requires additional verification. Please try again or use a different card.',
+          variant: 'warning'
         });
         setShowSuccessModal(true);
         return;
@@ -1809,6 +1814,7 @@ function WebMyAccountContent() {
           onClose={() => setShowSuccessModal(false)}
           title={successDetails.title}
           message={successDetails.message}
+          variant={successDetails.variant}
           details={successDetails.details}
         />
       </div>

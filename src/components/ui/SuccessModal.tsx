@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { X, CheckCircle, Calendar, Clock, Users, DollarSign } from 'lucide-react';
+import { X, CheckCircle, Calendar, Clock, Users, DollarSign, AlertCircle, AlertTriangle } from 'lucide-react';
+
+type ModalVariant = 'success' | 'warning' | 'error';
 
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   message: string;
+  variant?: ModalVariant;
   details?: {
     date?: string;
     time?: string;
@@ -25,16 +28,26 @@ export function SuccessModal({
   onClose,
   title,
   message,
+  variant = 'success',
   details,
   autoCloseDelay = 5000
 }: SuccessModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [countdown, setCountdown] = useState(Math.ceil(autoCloseDelay / 1000));
 
+  // Only auto-close for success variant
+  const shouldAutoClose = variant === 'success';
+
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       setCountdown(Math.ceil(autoCloseDelay / 1000));
+
+      if (!shouldAutoClose) {
+        return () => {
+          // No cleanup needed when auto-close is disabled
+        };
+      }
 
       // Start countdown
       const countdownInterval = setInterval(() => {
@@ -59,7 +72,7 @@ export function SuccessModal({
     } else {
       setIsVisible(false);
     }
-  }, [isOpen, autoCloseDelay]);
+  }, [isOpen, autoCloseDelay, shouldAutoClose]);
 
   const handleClose = () => {
     setIsVisible(false);
@@ -98,9 +111,15 @@ export function SuccessModal({
         }`}
       >
         <div className="p-8 text-center">
-          {/* Success Icon */}
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+          {/* Icon based on variant */}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
+            variant === 'success' ? 'bg-green-100' :
+            variant === 'warning' ? 'bg-amber-100' :
+            'bg-red-100'
+          }`}>
+            {variant === 'success' && <CheckCircle className="w-10 h-10 text-green-600" />}
+            {variant === 'warning' && <AlertTriangle className="w-10 h-10 text-amber-600" />}
+            {variant === 'error' && <AlertCircle className="w-10 h-10 text-red-600" />}
           </div>
 
           {/* Title */}
@@ -150,16 +169,24 @@ export function SuccessModal({
           <div className="flex gap-3">
             <Button
               onClick={handleClose}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              className={`flex-1 text-white ${
+                variant === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                variant === 'warning' ? 'bg-amber-600 hover:bg-amber-700' :
+                'bg-red-600 hover:bg-red-700'
+              }`}
             >
-              Perfect! 🎉
+              {variant === 'success' ? 'Perfect! 🎉' :
+               variant === 'warning' ? 'Got it' :
+               'OK'}
             </Button>
           </div>
 
-          {/* Auto-close countdown */}
-          <p className="text-xs text-gray-400 mt-4">
-            Auto-closing in {countdown} second{countdown !== 1 ? 's' : ''}
-          </p>
+          {/* Auto-close countdown (only for success variant) */}
+          {shouldAutoClose && (
+            <p className="text-xs text-gray-400 mt-4">
+              Auto-closing in {countdown} second{countdown !== 1 ? 's' : ''}
+            </p>
+          )}
 
           {/* Close button */}
           <button

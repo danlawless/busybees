@@ -8,6 +8,7 @@
  * - 'saved_card': Use a saved payment method - requires payment_method_id
  * - 'test': Auto-confirm with test card (development only)
  * - 'cash': Record as cash transaction (no Stripe processing)
+ * - 'complimentary': Free pass (e.g., raffle donations) - no Stripe, $0 price
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,7 +19,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 
-type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash';
+type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
 export async function POST(request: NextRequest) {
   try {
@@ -193,6 +194,13 @@ export async function POST(request: NextRequest) {
 
       logger.info({ customer_id, amount: amountInCents }, '💵 Cash payment recorded');
 
+    } else if (payment_method === 'complimentary') {
+      // Complimentary pass - no Stripe, $0 price
+      paymentIntentId = null;
+      paymentStatus = 'complimentary';
+
+      logger.info({ customer_id, product_name }, '🎁 Complimentary pass issued');
+
     } else {
       // Test mode - create and auto-confirm with test card
       // Only allowed in test mode
@@ -272,7 +280,7 @@ export async function POST(request: NextRequest) {
         type: purchase_type,
         product_id,
         name: product_name,
-        price: product_price * quantity,
+        price: payment_method === 'complimentary' ? 0 : (product_price * quantity),
         purchase_date: now.toISOString(),
         expiry_date: expiryDate?.toISOString() || null,
         used_sessions: 0,

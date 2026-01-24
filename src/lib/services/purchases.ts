@@ -52,6 +52,30 @@ export async function getCustomerPurchases(customerId: string): Promise<Purchase
 }
 
 /**
+ * Get purchases for a customer filtered by type
+ */
+export async function getCustomerPurchasesByType(
+    customerId: string,
+    type: string
+): Promise<Purchase[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("purchases")
+        .select("*")
+        .eq("customer_id", customerId)
+        .eq("type", type)
+        .order("purchase_date", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching customer purchases by type:", error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
  * Get active purchases for a customer
  */
 export async function getActivePurchases(customerId: string): Promise<Purchase[]> {

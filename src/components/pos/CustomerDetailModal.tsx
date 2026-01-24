@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { AddPaymentMethodModal } from './AddPaymentMethodModal';
+import { WaiverModal } from '@/components/ui/WaiverModal';
 import { logger } from '@/lib/client-logger';
 
 interface Child {
@@ -102,6 +103,10 @@ export function CustomerDetailModal({
   // Payment method state
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+
+  // Waiver modal state
+  const [showWaiverModal, setShowWaiverModal] = useState(false);
+  const [waiverChildName, setWaiverChildName] = useState<string | undefined>(undefined);
 
   // Customer edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -753,6 +758,17 @@ export function CustomerDetailModal({
                               )}
                             </div>
                             <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => {
+                                  setWaiverChildName(child.name);
+                                  setShowWaiverModal(true);
+                                }}
+                                size="sm"
+                                variant="outline"
+                                title="View waiver document"
+                              >
+                                📄 View Waiver
+                              </Button>
                               {!child.waiverSigned && (
                                 <Button
                                   onClick={() => handleSignWaiver(child.id)}
@@ -1041,6 +1057,16 @@ export function CustomerDetailModal({
         isOpen={showAddPaymentModal}
         onClose={() => setShowAddPaymentModal(false)}
         onSuccess={handlePaymentMethodAdded}
+      />
+
+      {/* Waiver Modal */}
+      <WaiverModal
+        isOpen={showWaiverModal}
+        onClose={() => {
+          setShowWaiverModal(false);
+          setWaiverChildName(undefined);
+        }}
+        childName={waiverChildName}
       />
     </>
   );

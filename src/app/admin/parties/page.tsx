@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { StaffDiscountApplicator } from '@/components/admin/StaffDiscountApplicator';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
@@ -937,6 +938,21 @@ export default function AdminPartiesPage() {
                         <div className="text-xs text-neutral-600">
                           <strong>Notes:</strong> {booking.notes}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Staff Discount Applicator - only for pending unpaid bookings */}
+                    {booking.status === 'pending' && booking.payment_status !== 'paid' && (
+                      <div className="mt-3 pt-3 border-t border-neutral-200">
+                        <StaffDiscountApplicator
+                          bookingId={booking.id}
+                          currentPromoId={booking.applied_promo_id}
+                          currentDiscountPercent={booking.discount_percent}
+                          currentDiscountAmount={booking.discount_amount}
+                          originalTotal={booking.total_price}
+                          onDiscountApplied={() => fetchBookings()}
+                          onDiscountRemoved={() => fetchBookings()}
+                        />
                       </div>
                     )}
                   </Card>

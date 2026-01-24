@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         stripe_coupon_code: coupon.id,
         banner_style: promo_data.banner_style || 'honeycomb',
         is_active: promo_data.is_active ?? true,
+        is_staff_only: promo_data.is_staff_only ?? false,
       });
     }
 

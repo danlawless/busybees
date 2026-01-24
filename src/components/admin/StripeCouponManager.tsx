@@ -34,6 +34,7 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
     description: '',
     bannerStyle: 'honeycomb' as const,
     createPromo: true,
+    isStaffOnly: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,7 +83,13 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
           description: formData.description,
           banner_style: formData.bannerStyle,
           is_active: true,
+          is_staff_only: formData.isStaffOnly,
         };
+
+        // For staff-only coupons, mark in metadata (no promotion code will be created)
+        if (formData.isStaffOnly) {
+          couponData.metadata.is_staff_only = 'true';
+        }
       }
 
       // Create coupon in Stripe (and promo in DB if requested)
@@ -101,7 +108,8 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
 
       logger.info({ couponId: result.id }, '🎉 Coupon created in Stripe');
 
-      setSuccess(`Coupon "${formData.couponCode}" created successfully!${formData.createPromo ? ' Promo also created.' : ''}`);
+      const staffOnlyMsg = formData.isStaffOnly ? ' (Staff-only)' : '';
+      setSuccess(`Coupon "${formData.couponCode}" created successfully!${staffOnlyMsg}${formData.createPromo ? ' Promo also created.' : ''}`);
 
       // Reset form
       setFormData({
@@ -117,6 +125,7 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
         description: '',
         bannerStyle: 'honeycomb',
         createPromo: true,
+        isStaffOnly: false,
       });
 
       setShowForm(false);
@@ -258,6 +267,25 @@ export function StripeCouponManager({ onCouponCreated }: StripeCouponManagerProp
                 <label htmlFor="createPromo" className="text-sm text-gray-700 font-medium">
                   Also create promotional banner for website
                 </label>
+              </div>
+
+              {/* Staff-Only Toggle */}
+              <div className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg mb-4">
+                <input
+                  type="checkbox"
+                  id="isStaffOnly"
+                  checked={formData.isStaffOnly}
+                  onChange={(e) => setFormData({ ...formData, isStaffOnly: e.target.checked })}
+                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                />
+                <div>
+                  <label htmlFor="isStaffOnly" className="text-sm text-gray-700 font-medium">
+                    Staff-only discount (customers cannot enter this code)
+                  </label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Staff can apply this discount to party bookings through the admin panel
+                  </p>
+                </div>
               </div>
 
               {formData.createPromo && (

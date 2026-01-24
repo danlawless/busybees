@@ -26,6 +26,7 @@ function LoginForm() {
 
   // Check for success messages
   const passwordSet = searchParams.get('passwordSet') === 'true';
+  const passwordReset = searchParams.get('passwordReset') === 'true';
   const message = searchParams.get('message');
 
   // Show Coming Soon message when account access is disabled
@@ -146,6 +147,12 @@ function LoginForm() {
           {passwordSet && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
               Password set successfully! You can now log in.
+            </div>
+          )}
+
+          {passwordReset && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
+              Password reset successfully! You can now log in with your new password.
             </div>
           )}
 

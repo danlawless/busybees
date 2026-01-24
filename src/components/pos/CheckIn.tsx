@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
+import { WaiverModal } from "@/components/ui/WaiverModal";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
@@ -164,6 +165,8 @@ export function CheckIn({
     const [showAddChild, setShowAddChild] = useState(false);
     const [showWaiverModal, setShowWaiverModal] = useState(false);
     const [waiverChild, setWaiverChild] = useState<Child | null>(null);
+    const [showViewWaiverModal, setShowViewWaiverModal] = useState(false);
+    const [viewWaiverChildName, setViewWaiverChildName] = useState<string | undefined>(undefined);
     const [childName, setChildName] = useState("");
     const [childBirthdate, setChildBirthdate] = useState("");
     const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
@@ -187,6 +190,13 @@ export function CheckIn({
     const [partyFilter, setPartyFilter] = useState<"all" | "semi-private" | "private">(
         "all"
     );
+
+    // Complimentary pass state (staff only)
+    const [showComplimentaryModal, setShowComplimentaryModal] = useState(false);
+    const [complimentaryChildId, setComplimentaryChildId] = useState<string>("");
+    const [complimentaryPassId, setComplimentaryPassId] = useState<string>("");
+    const [complimentaryReason, setComplimentaryReason] = useState<string>("");
+    const [isIssuingComplimentary, setIsIssuingComplimentary] = useState(false);
 
     // Fetch POS mode on mount
     useEffect(() => {
@@ -1593,6 +1603,138 @@ export function CheckIn({
         }
     };
 
+    // Handle issuing complimentary pass (staff only)
+    const handleIssueComplimentaryPass = async () => {
+        const customer = selectedCustomer || currentCustomer;
+        if (!customer || !complimentaryChildId || !complimentaryPassId) {
+            setSuccessDetails({
+                title: "Missing Information",
+                message: "Please select a child and pass type.",
+            });
+            setShowSuccessModal(true);
+            return;
+        }
+
+        const selectedChild = customer.children.find(
+            (c) => c.id === complimentaryChildId
+        );
+        if (!selectedChild || !selectedChild.waiverSigned) {
+            setSuccessDetails({
+                title: "Waiver Required",
+                message: "The selected child must have a signed waiver first.",
+            });
+            setShowSuccessModal(true);
+            return;
+        }
+
+        const selectedPass = availablePasses.find(
+            (p) => p.id === complimentaryPassId
+        );
+        if (!selectedPass) return;
+
+        // Age gate validation
+        if (hasAgeRestriction(selectedPass.name)) {
+            const ageValidation = validateAgeForProduct(selectedChild.age, selectedPass.name);
+            if (!ageValidation.valid) {
+                setSuccessDetails({
+                    title: "Age Restriction",
+                    message: ageValidation.error || "This pass is not appropriate for this child's age.",
+                });
+                setShowSuccessModal(true);
+                return;
+            }
+        }
+
+        setIsIssuingComplimentary(true);
+
+        try {
+            // Determine purchase type from pass category
+            let purchaseType: Purchase["type"] = "day_pass";
+            if (selectedPass.category === "weekly") {
+                purchaseType = "weekly_pass";
+            } else if (selectedPass.category === "monthly") {
+                purchaseType = "monthly_pass";
+            }
+
+            const response = await fetch("/api/purchases/pos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    product_id: selectedPass.id,
+                    product_name: selectedPass.name,
+                    product_price: selectedPass.price,
+                    product_description: selectedPass.description || "",
+                    purchase_type: purchaseType,
+                    child_id: complimentaryChildId,
+                    quantity: 1,
+                    payment_method: "complimentary",
+                    metadata: {
+                        complimentary_reason: complimentaryReason || "Raffle donation",
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to issue complimentary pass");
+            }
+
+            // Refresh customer purchases
+            const purchasesResponse = await fetch(
+                `/api/purchases?customer_id=${customer.id}`
+            );
+            if (purchasesResponse.ok) {
+                const { purchases: purchasesData } = await purchasesResponse.json();
+                const purchases = (purchasesData || []).map((p: any) => ({
+                    id: p.id,
+                    type: p.type,
+                    name: p.name,
+                    price: p.price,
+                    purchaseDate: p.purchase_date,
+                    expiryDate: p.expiry_date,
+                    usedSessions: p.used_sessions,
+                    totalSessions: p.total_sessions,
+                    status: p.status,
+                    firstUseDate: p.first_use_date,
+                    actualExpiryDate: p.actual_expiry_date,
+                    childId: p.child_id,
+                }));
+
+                const updatedCustomer = {
+                    ...customer,
+                    purchases: purchases,
+                };
+                onUpdateCustomer(updatedCustomer);
+            }
+
+            // Reset modal state
+            setShowComplimentaryModal(false);
+            setComplimentaryChildId("");
+            setComplimentaryPassId("");
+            setComplimentaryReason("");
+
+            setSuccessDetails({
+                title: "Complimentary Pass Issued",
+                message: `${selectedPass.name} has been issued to ${selectedChild.name} at no charge.`,
+                details: complimentaryReason ? `Reason: ${complimentaryReason}` : undefined,
+            });
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error("Failed to issue complimentary pass:", error);
+            setSuccessDetails({
+                title: "Error",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to issue complimentary pass. Please try again.",
+            });
+            setShowSuccessModal(true);
+        } finally {
+            setIsIssuingComplimentary(false);
+        }
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString("en-US", {
             year: "numeric",
@@ -1969,30 +2111,43 @@ export function CheckIn({
                                                     <span className="font-medium">
                                                         Waiver Status:
                                                     </span>
-                                                    {child.waiverSigned ? (
-                                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                            ✅ Signed
-                                                        </span>
-                                                    ) : (
-                                                        <div className="flex items-center space-x-2">
-                                                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                ❌ Not Signed
+                                                    <div className="flex items-center space-x-2">
+                                                        {child.waiverSigned ? (
+                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                                ✅ Signed
                                                             </span>
-                                                            <Button
-                                                                onClick={() => {
-                                                                    setWaiverChild(
-                                                                        child
-                                                                    );
-                                                                    setShowWaiverModal(
-                                                                        true
-                                                                    );
-                                                                }}
-                                                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                                                            >
-                                                                Sign Waiver
-                                                            </Button>
-                                                        </div>
-                                                    )}
+                                                        ) : (
+                                                            <>
+                                                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                                    ❌ Not Signed
+                                                                </span>
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        setWaiverChild(
+                                                                            child
+                                                                        );
+                                                                        setShowWaiverModal(
+                                                                            true
+                                                                        );
+                                                                    }}
+                                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                                                >
+                                                                    Sign Waiver
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        <Button
+                                                            onClick={() => {
+                                                                setViewWaiverChildName(child.name);
+                                                                setShowViewWaiverModal(true);
+                                                            }}
+                                                            variant="outline"
+                                                            className="px-3 py-1 rounded text-sm"
+                                                            title="View full waiver document"
+                                                        >
+                                                            📄 View Waiver
+                                                        </Button>
+                                                    </div>
                                                 </div>
 
                                                 {/* Active Passes for this child - grouped by pass type */}
@@ -3935,6 +4090,26 @@ export function CheckIn({
                                     )}
                                 </div>
                             </div>
+
+                            {/* Complimentary Pass Section (Staff Only) */}
+                            <div className="mt-6 pt-6 border-t border-gray-200">
+                                <h4 className="font-semibold mb-3 flex items-center">
+                                    <span className="text-xl mr-2">🎁</span>
+                                    Issue Complimentary Pass
+                                </h4>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Issue a free pass for raffle winners, promotions, or customer service.
+                                </p>
+                                <Button
+                                    onClick={() => setShowComplimentaryModal(true)}
+                                    disabled={displayCustomer.children.filter(c => c.waiverSigned).length === 0}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 disabled:opacity-50"
+                                >
+                                    {displayCustomer.children.filter(c => c.waiverSigned).length === 0
+                                        ? "Add Child with Waiver First"
+                                        : "Issue Complimentary Pass"}
+                                </Button>
+                            </div>
                         </Card>
                     )}
                 </div>
@@ -4334,6 +4509,16 @@ export function CheckIn({
                 onSuccess={handleAddPaymentMethodSuccess}
             />
 
+            {/* View Waiver Modal */}
+            <WaiverModal
+                isOpen={showViewWaiverModal}
+                onClose={() => {
+                    setShowViewWaiverModal(false);
+                    setViewWaiverChildName(undefined);
+                }}
+                childName={viewWaiverChildName}
+            />
+
             {/* Payment Success Modal */}
             {showPaymentSuccessModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -4590,6 +4775,104 @@ export function CheckIn({
                             </Button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Complimentary Pass Modal (Staff Only) */}
+            {showComplimentaryModal && displayCustomer && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <Card className="p-6 max-w-md mx-4 w-full">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-3xl">🎁</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">
+                                Issue Complimentary Pass
+                            </h3>
+                            <p className="text-gray-600 text-sm mt-1">
+                                This pass will be issued at no charge.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Child Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Child
+                                </label>
+                                <select
+                                    value={complimentaryChildId}
+                                    onChange={(e) => setComplimentaryChildId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                    <option value="">Choose a child...</option>
+                                    {displayCustomer.children
+                                        .filter((c) => c.waiverSigned)
+                                        .map((child) => (
+                                            <option key={child.id} value={child.id}>
+                                                {child.name} ({child.age} years old)
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            {/* Pass Type Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Pass Type
+                                </label>
+                                <select
+                                    value={complimentaryPassId}
+                                    onChange={(e) => setComplimentaryPassId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                    <option value="">Choose a pass type...</option>
+                                    {availablePasses
+                                        .filter((p) => p.category === "day")
+                                        .map((pass) => (
+                                            <option key={pass.id} value={pass.id}>
+                                                {pass.name} (normally {formatCurrency(pass.price)})
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            {/* Optional Reason */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Reason (optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={complimentaryReason}
+                                    onChange={(e) => setComplimentaryReason(e.target.value)}
+                                    placeholder="e.g., Raffle winner, Customer service"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex space-x-3 mt-6">
+                            <Button
+                                onClick={() => {
+                                    setShowComplimentaryModal(false);
+                                    setComplimentaryChildId("");
+                                    setComplimentaryPassId("");
+                                    setComplimentaryReason("");
+                                }}
+                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleIssueComplimentaryPass}
+                                disabled={!complimentaryChildId || !complimentaryPassId || isIssuingComplimentary}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
+                            >
+                                {isIssuingComplimentary ? "Issuing..." : "Issue Free Pass"}
+                            </Button>
+                        </div>
+                    </Card>
                 </div>
             )}
 

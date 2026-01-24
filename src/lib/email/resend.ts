@@ -1364,6 +1364,157 @@ ${siteUrl}
 }
 
 /**
+ * Send password reset email
+ */
+export async function sendPasswordResetEmail(data: {
+  to: string;
+  name: string;
+  resetToken: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const resetUrl = `${siteUrl}/customer/reset-password?token=${data.resetToken}`;
+
+  const subject = '🔐 Reset Your Busy Bees Password';
+
+  // Plain text fallback
+  const text = `
+Password Reset Request
+
+Hi ${data.name}!
+
+We received a request to reset your Busy Bees account password.
+
+Click the link below to reset your password:
+${resetUrl}
+
+This link will expire in 1 hour.
+
+If you didn't request this password reset, you can safely ignore this email.
+Your password will remain unchanged.
+
+Busy Bees Indoor Play Center
+${siteUrl}
+`;
+
+  // Beautiful HTML email
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
+                <span style="font-size: 36px;">🔐</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                Reset Your Password
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="text-align: center; margin: 0 0 5px; font-size: 18px; font-weight: 600; color: #1f2937;">
+                Hi ${data.name}!
+              </p>
+              <p style="text-align: center; margin: 0 0 25px; font-size: 15px; color: #6b7280; line-height: 1.5;">
+                We received a request to reset your password.<br>
+                Click the button below to create a new password.
+              </p>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 25px;">
+                    <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Expiry Warning -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #854d0e; text-align: center;">
+                      <strong>This link expires in 1 hour.</strong>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Note -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; text-align: center; line-height: 1.5;">
+                      If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Alternative Link -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 0;">
+                    <p style="margin: 0 0 8px; font-size: 12px; color: #9ca3af; text-align: center;">
+                      If the button doesn't work, copy and paste this link:
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #6b7280; text-align: center; word-break: break-all;">
+                      ${resetUrl}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">
+                      Busy Bees Indoor Play Center
+                    </p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
+                      <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+  });
+}
+
+/**
  * Send gift card redeemed notification to purchaser
  */
 export async function sendGiftCardRedeemedEmail(data: {

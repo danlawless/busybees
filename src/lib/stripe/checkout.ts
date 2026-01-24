@@ -31,6 +31,7 @@ export interface CheckoutSessionParams {
   };
   successUrl: string;
   cancelUrl: string;
+  discounts?: Array<{ coupon: string }>;
 }
 
 /**
@@ -102,7 +103,9 @@ export async function createCheckoutSession(params: CheckoutSessionParams): Prom
         ...params.metadata,
         customer_id: params.customerId,
       },
-      allow_promotion_codes: true,
+      // If discounts are pre-applied (staff discount), don't allow additional promo codes
+      allow_promotion_codes: !params.discounts?.length,
+      ...(params.discounts?.length && { discounts: params.discounts }),
     };
 
     // If user wants to save payment method for future use
@@ -179,4 +182,22 @@ export async function createStripeCustomer(email: string, name: string, phone?: 
     name,
     phone,
   });
+}
+
+/**
+ * Expire a checkout session
+ * Used when replacing a session with a new one (e.g., when applying staff discount)
+ */
+export async function expireCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session> {
+  const stripe = await getStripeClient();
+
+  try {
+    const session = await stripe.checkout.sessions.expire(sessionId);
+    logger.info({ sessionId }, '🔄 Checkout session expired');
+    return session;
+  } catch (error) {
+    // Session may already be expired, completed, or not exist
+    logger.warn({ sessionId, error }, '⚠️ Could not expire checkout session');
+    throw error;
+  }
 }
