@@ -97,8 +97,16 @@ export function AddPaymentMethodModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen && !clientSecret && !loading) {
+    if (isOpen) {
+      // Reset state and create fresh SetupIntent each time modal opens
+      setClientSecret(null);
+      setError(null);
+      setLoading(false);
       createSetupIntent();
+    } else {
+      // Clean up when modal closes
+      setClientSecret(null);
+      setError(null);
     }
   }, [isOpen]);
 
@@ -130,6 +138,9 @@ export function AddPaymentMethodModal({
   };
 
   const handleSuccess = () => {
+    // Reset state before calling success callback
+    setClientSecret(null);
+    setError(null);
     onSuccess();
   };
 

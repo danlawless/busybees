@@ -669,13 +669,36 @@ function WebMyAccountContent() {
 
   // Payment method handling
   const handleAddPaymentMethodSuccess = async () => {
-    await fetchData();
+    // Close modal immediately for better UX
     setShowAddCard(false);
-    setSuccessDetails({
-      title: 'Payment Method Added',
-      message: 'Your payment method has been saved successfully!'
-    });
-    setShowSuccessModal(true);
+
+    // Set loading state while we sync
+    setIsLoading(true);
+
+    try {
+      // Small delay to allow Stripe webhook/sync to complete
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Fetch updated data
+      await fetchData();
+
+      // Show success message
+      setSuccessDetails({
+        title: 'Payment Method Added',
+        message: 'Your payment method has been saved successfully!'
+      });
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error refreshing payment methods:', error);
+      setSuccessDetails({
+        title: 'Payment Method Added',
+        message: 'Your card was saved. Please refresh if you don\'t see it.',
+        variant: 'warning'
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteCardClick = (cardId: string) => {
