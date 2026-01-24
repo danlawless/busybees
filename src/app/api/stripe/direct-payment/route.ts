@@ -20,6 +20,26 @@ import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 
+/**
+ * Get a valid return URL for Stripe 3DS redirect
+ * Ensures URL has a valid scheme (https:// or http://)
+ */
+function getReturnUrl(): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (siteUrl) {
+    // If it already has a scheme, use it
+    if (siteUrl.startsWith('http://') || siteUrl.startsWith('https://')) {
+      return `${siteUrl}/customer/purchases`;
+    }
+    // Add https:// if no scheme
+    return `https://${siteUrl}/customer/purchases`;
+  }
+
+  // Fallback for local development
+  return 'http://localhost:3000/customer/purchases';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -206,7 +226,7 @@ export async function POST(request: NextRequest) {
           },
           confirm: true,
           off_session: false, // Customer is present
-          return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/customer/purchases`, // For 3DS if needed
+          return_url: getReturnUrl(), // For 3DS if needed
         });
       }
     );
