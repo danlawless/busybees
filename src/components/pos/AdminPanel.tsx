@@ -666,17 +666,32 @@ export function AdminPanel({
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleForceCheckout = (customerId: string) => {
-    const updatedCustomers = customers.map(customer => {
-      if (customer.id === customerId) {
-        return {
-          ...customer,
-          activeSessions: []
-        };
-      }
-      return customer;
-    });
-    onUpdateCustomers(updatedCustomers);
+  const handleForceCheckout = async (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer || !customer.activeSessions?.length) return;
+
+    try {
+      // End each active session via API
+      await Promise.all(
+        customer.activeSessions.map(session =>
+          fetch(`/api/sessions/${session.id}`, { method: 'PUT' })
+        )
+      );
+
+      // Update local state after successful API calls
+      const updatedCustomers = customers.map(c => {
+        if (c.id === customerId) {
+          return {
+            ...c,
+            activeSessions: []
+          };
+        }
+        return c;
+      });
+      onUpdateCustomers(updatedCustomers);
+    } catch (error) {
+      console.error('Error force checking out sessions:', error);
+    }
   };
 
   const handleRefundClick = (purchaseId: string) => {

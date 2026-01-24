@@ -1,14 +1,16 @@
 /**
  * Cron API Endpoint for Auto-Checkout
- * Runs hourly to check and execute auto-checkout for sessions past closing time
+ * Runs daily to execute auto-checkout for sessions past their auto_checkout_time
  *
  * Protected by CRON_SECRET environment variable
+ *
+ * Note: The SQL function auto_checkout_sessions() handles the time check by comparing
+ * each session's auto_checkout_time against NOW(). This is more reliable than checking
+ * if we're "past closing time" since it handles timezone edge cases correctly.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { getAutoCheckoutSettings } from '@/lib/services/auto-checkout-settings';
-import { isPastClosingTime } from '@/lib/utils/timeUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,27 +26,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get current auto-checkout settings
-    const settings = await getAutoCheckoutSettings();
-    console.log(`Auto-checkout cron: Settings - timezone: ${settings.timezone}, closingTime: ${settings.closingTime}`);
-
-    // Check if we're past the closing time
-    const pastClosing = isPastClosingTime(settings.timezone, settings.closingTime);
-    console.log(`Auto-checkout cron: Past closing time: ${pastClosing}`);
-
-    if (!pastClosing) {
-      return NextResponse.json({
-        success: true,
-        message: 'Not yet closing time',
-        executed: false,
-        settings: {
-          timezone: settings.timezone,
-          closingTime: settings.closingTime
-        }
-      });
-    }
-
     // Execute auto-checkout
+    // The SQL function checks auto_checkout_time < NOW() for each session,
+    // which correctly handles all timezone and day-boundary cases
     const supabase = createAdminClient();
 
     // Call the auto_checkout_sessions function
@@ -59,29 +43,13 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Get count of sessions that were checked out
-    // We query for sessions that ended recently (within last hour) via auto-checkout
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { data: checkedOutSessions, error: countError } = await supabase
-      .from('sessions')
-      .select('id')
-      .not('end_time', 'is', null)
-      .gte('end_time', oneHourAgo)
-      .eq('end_time', supabase.rpc('sessions.auto_checkout_time')); // Sessions where end_time equals auto_checkout_time
-
-    // Note: The exact query above might not work perfectly, but the RPC was called
-    // For simplicity, we just report success
     console.log('Auto-checkout cron: Executed successfully');
 
     return NextResponse.json({
       success: true,
       message: 'Auto-checkout executed',
       executed: true,
-      timestamp: new Date().toISOString(),
-      settings: {
-        timezone: settings.timezone,
-        closingTime: settings.closingTime
-      }
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Auto-checkout cron: Unexpected error', error);
