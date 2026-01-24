@@ -14,50 +14,16 @@ import { AddPaymentMethodModal } from '@/components/pos/AddPaymentMethodModal';
 import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { WaiverModal } from '@/components/ui/WaiverModal';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
-
-// Types matching the POS CustomerDashboard
-interface Child {
-  id: string;
-  name: string;
-  birthdate: string;
-  age: number;
-  waiverSigned: boolean;
-  waiverSignedDate?: string;
-  createdAt: string;
-}
-
-interface Purchase {
-  id: string;
-  type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
-  name: string;
-  price: number;
-  purchaseDate: string;
-  expiryDate?: string;
-  firstUseDate?: string;
-  actualExpiryDate?: string;
-  usedSessions: number;
-  totalSessions: number;
-  status: 'active' | 'expired' | 'used';
-  autoRenew?: boolean;
-  nextRenewalDate?: string;
-  childId?: string;
-  partyDate?: string;
-  partyStartTime?: string;
-  partyEndTime?: string;
-  partyGuests?: number;
-  partyNotes?: string;
-}
-
-interface SavedCard {
-  id: string;
-  last4: string;
-  brand: string;
-  expiryMonth: number;
-  expiryYear: number;
-  isDefault: boolean;
-}
+import {
+  isComplimentaryPurchase,
+  isUnlimitedPurchase,
+  getRemainingSessionsDisplay,
+  getSessionProgressPercent,
+} from '@/lib/utils/customerTransforms';
+import type { Child, Purchase, SavedCard } from '@/lib/types/customer';
 
 type TabType = 'children' | 'passes' | 'parties' | 'payments';
 
@@ -94,6 +60,8 @@ function WebMyAccountContent() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [showWaiverModal, setShowWaiverModal] = useState(false);
   const [waiverChild, setWaiverChild] = useState<Child | null>(null);
+  const [showViewWaiver, setShowViewWaiver] = useState(false);
+  const [viewWaiverChildName, setViewWaiverChildName] = useState<string>();
   const [childName, setChildName] = useState('');
   const [childBirthdate, setChildBirthdate] = useState('');
   const [isAddingChild, setIsAddingChild] = useState(false);
@@ -979,9 +947,20 @@ function WebMyAccountContent() {
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Waiver Status:</span>
                         {child.waiverSigned ? (
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                            ✅ Signed
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                              ✅ Signed
+                            </span>
+                            <button
+                              onClick={() => {
+                                setViewWaiverChildName(child.name);
+                                setShowViewWaiver(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-sm underline"
+                            >
+                              View Waiver
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center space-x-2">
                             <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
@@ -1192,24 +1171,37 @@ function WebMyAccountContent() {
                 <h3 className="text-xl font-semibold mb-4">Your Active Passes</h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {activePassPurchases.map((purchase) => (
-                    <Card key={purchase.id} className="p-6 border-l-4 border-l-green-400">
+                    <Card key={purchase.id} className={`p-6 border-l-4 ${isComplimentaryPurchase(purchase) ? 'border-l-purple-400' : 'border-l-green-400'}`}>
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-lg">{purchase.name}</h4>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-lg">{purchase.name}</h4>
+                            {isComplimentaryPurchase(purchase) && (
+                              <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                                Complimentary
+                              </span>
+                            )}
+                          </div>
                           {purchase.childId && (
                             <p className="text-blue-600 font-medium text-sm">
                               👶 {getChildName(purchase.childId)}
                             </p>
                           )}
-                          <p className="text-gray-600">
-                            {purchase.totalSessions === 999 ? 'Unlimited' :
-                             `${purchase.totalSessions - purchase.usedSessions} visits remaining`}
+                          <p className="text-gray-600 text-sm">
+                            {getRemainingSessionsDisplay(purchase)}
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-2">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                            Active
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                              Active
+                            </span>
+                            {purchase.autoRenew && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                Auto-renew
+                              </span>
+                            )}
+                          </div>
                           {purchase.firstUseDate && purchase.actualExpiryDate && (
                             <CountdownTimer
                               expiryDate={purchase.actualExpiryDate}
@@ -1220,7 +1212,37 @@ function WebMyAccountContent() {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
+                      {/* Session Progress Bar (for non-unlimited passes) */}
+                      {!isUnlimitedPurchase(purchase) && (
+                        <div className="mb-3">
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>{purchase.usedSessions} used</span>
+                            <span>{purchase.totalSessions - purchase.usedSessions} remaining</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-green-500 h-2 rounded-full transition-all"
+                              style={{ width: `${getSessionProgressPercent(purchase)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        {/* Pass Date Info */}
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <p>Purchased: {formatDate(purchase.purchaseDate)}</p>
+                          {purchase.firstUseDate && (
+                            <p>First used: {formatDate(purchase.firstUseDate)}</p>
+                          )}
+                          {purchase.actualExpiryDate && (
+                            <p>Expires: {formatDate(purchase.actualExpiryDate)}</p>
+                          )}
+                          {purchase.autoRenew && purchase.nextRenewalDate && (
+                            <p className="text-blue-600">Next renewal: {formatDate(purchase.nextRenewalDate)}</p>
+                          )}
+                        </div>
+
                         {/* Pass Status Info */}
                         {!purchase.firstUseDate && (
                           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-center text-sm">
@@ -1816,6 +1838,16 @@ function WebMyAccountContent() {
           message={successDetails.message}
           variant={successDetails.variant}
           details={successDetails.details}
+        />
+
+        {/* View Waiver Modal (read-only) */}
+        <WaiverModal
+          isOpen={showViewWaiver}
+          onClose={() => {
+            setShowViewWaiver(false);
+            setViewWaiverChildName(undefined);
+          }}
+          childName={viewWaiverChildName}
         />
       </div>
     </div>
