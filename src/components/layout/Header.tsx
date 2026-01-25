@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { PromoSpecial } from '@/lib/utils/promoHelpers'
 import { PromoBanner } from '@/components/home/PromoBanner'
 import { createClient } from '@/lib/supabase/client'
-import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER } from '@/lib/feature-flags'
+import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED } from '@/lib/feature-flags'
 
 const navigation = [
   { name: 'Home', href: '/' },
