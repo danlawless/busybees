@@ -198,10 +198,12 @@ export function PartySchedulingModal({
                   <span className="text-yellow-600">📅</span>
                   <span>{formatDate(existingPartyData.partyDate!)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-yellow-600">⏰</span>
-                  <span>{formatTime(existingPartyData.partyStartTime!)} - {formatTime(existingPartyData.partyEndTime!)}</span>
-                </div>
+                {existingPartyData.partyStartTime && existingPartyData.partyEndTime && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-600">⏰</span>
+                    <span>{formatTime(existingPartyData.partyStartTime)} - {formatTime(existingPartyData.partyEndTime)}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-yellow-600">👥</span>
                   <span>{existingPartyData.partyGuests} guests</span>
