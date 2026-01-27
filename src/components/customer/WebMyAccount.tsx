@@ -17,6 +17,7 @@ import { SuccessModal } from '@/components/ui/SuccessModal';
 import { WaiverModal } from '@/components/ui/WaiverModal';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
+import { parseDateString } from '@/lib/utils';
 import {
   isComplimentaryPurchase,
   isUnlimitedPurchase,
@@ -253,7 +254,8 @@ function WebMyAccountContent() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Use parseDateString to avoid UTC timezone bug for date-only strings
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'

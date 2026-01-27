@@ -6,6 +6,7 @@
 import { Resend } from 'resend';
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
+import { parseDateString } from '@/lib/utils';
 
 // Business email addresses
 const BUSINESS_EMAIL = 'info@busybeesipc.com';
@@ -850,7 +851,8 @@ export async function sendPartyBookingConfirmationEmail(data: {
 
   const subject = `🎂 Party Booking Confirmed - ${data.childName}'s Birthday!`;
 
-  const formattedDate = new Date(data.partyDate).toLocaleDateString('en-US', {
+  // Use parseDateString to avoid UTC timezone bug for date-only strings
+  const formattedDate = parseDateString(data.partyDate).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

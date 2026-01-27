@@ -10,6 +10,7 @@ import { WaiverModal } from "@/components/ui/WaiverModal";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
+import { parseDateString } from "@/lib/utils";
 
 interface SiblingDiscount {
     id: string;
@@ -1736,7 +1737,8 @@ export function CheckIn({
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
+        // Use parseDateString to avoid UTC timezone bug for date-only strings
+        return parseDateString(dateString).toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",

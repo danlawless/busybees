@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { X, CheckCircle, Calendar, Clock, Users, DollarSign, AlertCircle, AlertTriangle } from 'lucide-react';
+import { parseDateString } from '@/lib/utils';
 
 type ModalVariant = 'success' | 'warning' | 'error';
 
@@ -80,7 +81,8 @@ export function SuccessModal({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Use parseDateString to avoid UTC timezone bug for date-only strings
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

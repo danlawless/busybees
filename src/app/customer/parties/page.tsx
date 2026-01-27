@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
+import { parseDateString } from '@/lib/utils';
 
 interface PartyPackage {
   id: string;
@@ -47,7 +48,10 @@ function formatCurrency(amount: number): string {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  // Use parseDateString to avoid UTC timezone bug
+  // new Date("2025-02-14") parses as UTC midnight, shifting the date back
+  // one day for users west of UTC
+  return parseDateString(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'

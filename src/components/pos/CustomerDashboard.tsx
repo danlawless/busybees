@@ -18,6 +18,7 @@ import {
   getAvailableProducts,
 } from '@/lib/utils/productHelpers';
 import { getNextClosingTime } from '@/lib/utils/timeUtils';
+import { parseDateString } from '@/lib/utils';
 
 interface Child {
   id: string;
@@ -472,7 +473,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const pastPurchases = customer.purchases.filter(p => p.status !== 'active');
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Use parseDateString to avoid UTC timezone bug for date-only strings
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
