@@ -121,7 +121,7 @@ export async function getBookingsForDate(date: string): Promise<PartyBooking[]> 
 /**
  * Get bookings for a date range (for authorized users only)
  * Returns full booking data - respects RLS policies
- * For public availability checking, use the get_booked_party_slots RPC function
+ * For public availability checking, use getBookingsForDateRangePublic() instead
  */
 export async function getBookingsForDateRange(
   startDate: string,
@@ -140,6 +140,34 @@ export async function getBookingsForDateRange(
 
   if (error) {
     console.error('Error fetching bookings for date range:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get bookings for a date range for PUBLIC availability display
+ * Bypasses RLS to see ALL bookings - use only for calendar availability!
+ * The API route must sanitize data before returning to client (no PII)
+ */
+export async function getBookingsForDateRangePublic(
+  startDate: string,
+  endDate: string
+): Promise<PartyBooking[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('party_bookings')
+    .select('*')
+    .gte('party_date', startDate)
+    .lte('party_date', endDate)
+    .neq('status', 'cancelled')
+    .order('party_date', { ascending: true })
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching bookings for date range (public):', error);
     return [];
   }
 

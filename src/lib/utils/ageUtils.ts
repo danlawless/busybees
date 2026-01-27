@@ -3,6 +3,8 @@
  * Handles age calculation and age-based product validation for passes and punch cards
  */
 
+import { parseDateString } from '@/lib/utils';
+
 // Age group types
 export type AgeGroup = 'infant' | 'toddler';
 
@@ -16,7 +18,8 @@ const TODDLER_AGE_THRESHOLD = 2;
  */
 export function calculateAge(birthdate: string): number {
   const today = new Date();
-  const birth = new Date(birthdate);
+  // Use parseDateString to handle YYYY-MM-DD format correctly in all timezones
+  const birth = parseDateString(birthdate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
 

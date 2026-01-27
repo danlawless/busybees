@@ -168,7 +168,8 @@ export function CustomerDetailModal({
   };
 
   const calculateAge = (birthdate: string): number => {
-    const birth = new Date(birthdate);
+    // Use parseDateString to handle YYYY-MM-DD format correctly in all timezones
+    const birth = parseDateString(birthdate);
     const today = new Date();
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();

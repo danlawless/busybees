@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SignupSuccess } from './SignupSuccess';
+import { parseDateString } from '@/lib/utils';
 
 interface Child {
   id: string;
@@ -74,7 +75,8 @@ interface PhoneLoginProps {
 // Helper function to calculate age from birthdate
 const calculateAge = (birthdate: string): number => {
   const today = new Date();
-  const birth = new Date(birthdate);
+  // Use parseDateString to handle YYYY-MM-DD format correctly in all timezones
+  const birth = parseDateString(birthdate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
 

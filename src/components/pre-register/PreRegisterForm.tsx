@@ -21,7 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon';
-import { fadeInUp, staggerContainer } from '@/lib/utils';
+import { fadeInUp, staggerContainer, parseDateString } from '@/lib/utils';
 import { logger } from '@/lib/client-logger';
 import { PURCHASING_ENABLED } from '@/lib/feature-flags';
 import { createClient } from '@/lib/supabase/client';
@@ -160,7 +160,8 @@ export function PreRegisterForm() {
         hasChildError = true;
       } else {
         // Validate birthdate is not in the future
-        const birthDate = new Date(child.birthdate);
+        // Use parseDateString to handle YYYY-MM-DD format correctly in all timezones
+        const birthDate = parseDateString(child.birthdate);
         const today = new Date();
         if (birthDate > today) {
           childError.birthdate = 'Birth date cannot be in the future';

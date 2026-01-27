@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { parseDateString } from "@/lib/utils";
 import {
     PromoSpecial,
     getActivePromo,
@@ -63,7 +64,7 @@ const useCountdown = (endDate: string) => {
 
     useEffect(() => {
         const calculateTimeLeft = () => {
-            const end = new Date(endDate).getTime();
+            const end = parseDateString(endDate).getTime();
             const now = new Date().getTime();
             const difference = end - now;
 

@@ -1662,7 +1662,7 @@ export function AdminPanel({
       if (statusB.status === 'scheduled' && statusA.status !== 'scheduled') return 1;
 
       // Within each status group, sort by end date (oldest/earliest end date at top, newest at bottom)
-      return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+      return parseDateString(a.endDate).getTime() - parseDateString(b.endDate).getTime();
     });
 
     return (

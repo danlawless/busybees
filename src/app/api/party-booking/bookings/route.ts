@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getBookingsForDateRange } from '@/lib/services/party-bookings';
+import { getBookingsForDateRangePublic } from '@/lib/services/party-bookings';
 import { formatDateToYYYYMMDD } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
@@ -31,8 +31,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get bookings for the date range
-    const bookings = await getBookingsForDateRange(start, end);
+    // Get ALL bookings for the date range (bypasses RLS for availability display)
+    // This ensures customers can see all booked slots, not just their own
+    const bookings = await getBookingsForDateRangePublic(start, end);
 
     // Transform to minimal format for calendar display (no customer details)
     const calendarBookings = bookings.map((booking) => ({

@@ -3,6 +3,8 @@
  * Utilities for managing marketing promotions and promo codes
  */
 
+import { parseDateString } from '@/lib/utils';
+
 export type BannerStyle =
     | "honeycomb"
     | "gradient-wave"
@@ -38,8 +40,9 @@ export function isPromoActive(promo: PromoSpecial): boolean {
     if (!promo.isActive) return false;
 
     const now = new Date();
-    const start = new Date(promo.startDate);
-    const end = new Date(promo.endDate);
+    // Use parseDateString to handle date-only strings correctly in all timezones
+    const start = parseDateString(promo.startDate);
+    const end = parseDateString(promo.endDate);
 
     return now >= start && now <= end;
 }
@@ -49,8 +52,9 @@ export function isPromoActive(promo: PromoSpecial): boolean {
  */
 export function getPromoStatus(promo: PromoSpecial): PromoStatus {
     const now = new Date();
-    const start = new Date(promo.startDate);
-    const end = new Date(promo.endDate);
+    // Use parseDateString to handle date-only strings correctly in all timezones
+    const start = parseDateString(promo.startDate);
+    const end = parseDateString(promo.endDate);
 
     let status: "active" | "scheduled" | "expired";
 
@@ -112,7 +116,7 @@ export function getScheduledPromos(promos: PromoSpecial[]): PromoSpecial[] {
             return status.status === "scheduled";
         })
         .sort(
-            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            (a, b) => parseDateString(a.startDate).getTime() - parseDateString(b.startDate).getTime()
         );
 }
 
@@ -125,14 +129,15 @@ export function getExpiredPromos(promos: PromoSpecial[]): PromoSpecial[] {
             const status = getPromoStatus(promo);
             return status.status === "expired";
         })
-        .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
+        .sort((a, b) => parseDateString(b.endDate).getTime() - parseDateString(a.endDate).getTime());
 }
 
 /**
  * Format date for display
  */
 export function formatPromoDate(dateString: string): string {
-    const date = new Date(dateString);
+    // Use parseDateString to handle date-only strings correctly in all timezones
+    const date = parseDateString(dateString);
     return date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
