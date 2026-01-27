@@ -676,7 +676,7 @@ export async function sendPurchaseConfirmationEmail(data: {
   const subject = `🐝 Purchase Confirmed - ${data.purchaseName}`;
 
   const expiryInfo = data.expiryDate
-    ? new Date(data.expiryDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? parseDateString(data.expiryDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : 'Never expires';
 
   // Plain text fallback
@@ -1227,7 +1227,7 @@ export async function sendRefundConfirmationEmail(data: {
 
   const subject = `💳 Refund Processed - $${data.refundAmount.toFixed(2)}`;
 
-  const formattedDate = new Date(data.refundDate).toLocaleDateString('en-US', {
+  const formattedDate = parseDateString(data.refundDate).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -1530,7 +1530,7 @@ export async function sendGiftCardRedeemedEmail(data: {
 
   const subject = `🎁 Your gift card was redeemed!`;
 
-  const formattedDate = new Date(data.redeemedAt).toLocaleDateString('en-US', {
+  const formattedDate = parseDateString(data.redeemedAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

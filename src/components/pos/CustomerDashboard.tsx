@@ -1480,7 +1480,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                       <h4 className="font-semibold text-lg">{child.name}</h4>
                       <p className="text-gray-600">Age: {child.age}</p>
                       <p className="text-sm text-gray-500">
-                        Born: {new Date(child.birthdate).toLocaleDateString()}
+                        Born: {parseDateString(child.birthdate).toLocaleDateString()}
                       </p>
                     </div>
                     <button
@@ -1593,7 +1593,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
                     {child.waiverSigned && child.waiverSignedDate && (
                       <p className="text-xs text-gray-500">
-                        Waiver signed: {new Date(child.waiverSignedDate).toLocaleDateString()}
+                        Waiver signed: {parseDateString(child.waiverSignedDate).toLocaleDateString()}
                       </p>
                     )}
                   </div>

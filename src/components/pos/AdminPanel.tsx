@@ -38,6 +38,7 @@ import {
   deleteProduct,
 } from '@/lib/api/products';
 import { CustomerDetailModal } from './CustomerDetailModal';
+import { parseDateString } from '@/lib/utils';
 
 interface Child {
   id: string;
@@ -594,7 +595,8 @@ export function AdminPanel({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Use parseDateString to handle both date-only and timestamp formats
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -3374,7 +3376,7 @@ export function AdminPanel({
     );
 
     const formatSubscribedDate = (dateString: string) => {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return parseDateString(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',

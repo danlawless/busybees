@@ -151,7 +151,7 @@ export function CustomerDetailModal({
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateString(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

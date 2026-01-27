@@ -250,10 +250,10 @@ function PartiesContent() {
 
   // Calculate membership info
   const memberSince = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? parseDateString(profile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'N/A';
   const lastVisit = profile?.updated_at
-    ? new Date(profile.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? parseDateString(profile.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Today';
 
   if (isLoading) {

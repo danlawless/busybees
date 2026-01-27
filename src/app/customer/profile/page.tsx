@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+import { parseDateString } from '@/lib/utils';
 
 function ProfileContent() {
   const { user, profile } = useUser();
@@ -189,7 +190,7 @@ function ProfileContent() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Member Since</p>
                 <p className="text-lg text-gray-900">
-                  {new Date(profile.created_at).toLocaleDateString()}
+                  {parseDateString(profile.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>

@@ -72,15 +72,35 @@ export function formatDateToYYYYMMDD(date: Date): string {
 }
 
 /**
- * Parses a YYYY-MM-DD date string to a Date object in LOCAL timezone.
- * This avoids the timezone bug where new Date("2025-01-18") parses as UTC midnight,
- * which for users west of UTC shifts the date back by one day.
+ * Parses a date string to a Date object, handling multiple formats:
+ * - Date-only strings (YYYY-MM-DD): Parsed as LOCAL timezone to avoid UTC bug
+ * - ISO timestamps (2025-01-18T12:00:00Z): Parsed normally with new Date()
+ * - Other formats: Falls back to new Date() parsing
  *
- * ALWAYS use this function instead of new Date(dateString) for date-only strings.
+ * The UTC bug: new Date("2025-01-18") parses as UTC midnight, which for users
+ * west of UTC shifts the displayed date back by one day.
+ *
+ * ALWAYS use this function instead of new Date(dateString) for date strings.
  */
 export function parseDateString(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  // Handle null/undefined/empty strings
+  if (!dateString) {
+    return new Date(NaN); // Returns Invalid Date
+  }
+
+  // If it contains 'T' or space with time, it's a timestamp - use standard parsing
+  if (dateString.includes('T') || /\d{4}-\d{2}-\d{2}\s\d{2}:/.test(dateString)) {
+    return new Date(dateString);
+  }
+
+  // Check if it's a date-only string (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  // Fallback for other formats
+  return new Date(dateString);
 }
 
 // Business hours helpers
