@@ -16,7 +16,7 @@ function RuleSectionIcon({ src, alt, title }: { src: string; alt: string; title:
       src={src}
       alt={alt}
       fill
-      className="object-cover w-full h-full"
+      className="object-contain w-full h-full"
       sizes="(max-width: 768px) 100vw, 33vw"
       onError={() => setFailed(true)}
     />
@@ -129,7 +129,7 @@ export function RulesAndWaiver() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card padding="none" className="h-full border-2 border-primary-200/50 shadow-soft hover:shadow-honey transition-all duration-300 rounded-3xl overflow-hidden">
                   <CardContent className="p-0 flex flex-col">
-                    <div className="w-full h-40 sm:h-48 bg-white relative overflow-hidden">
+                    <div className="w-full h-40 sm:h-48 bg-white relative overflow-hidden p-3 sm:p-4">
                       <RuleSectionIcon src={section.iconSrc} alt={section.title} title={section.title} />
                     </div>
                     <div className="p-6">
