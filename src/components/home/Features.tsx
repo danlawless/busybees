@@ -118,8 +118,8 @@ export function Features() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card padding="none" className={`h-full text-left group relative overflow-hidden ${feature.accentColor} border-2 ${feature.accentBorder} shadow-soft hover:shadow-honey transition-all duration-300 hover:-translate-y-1 rounded-3xl`}>
                   <CardContent className="p-0 flex flex-col">
-                    {/* Icon on white - top of card, fills container */}
-                    <div className="bg-white rounded-t-3xl w-full h-48 sm:h-56 overflow-hidden relative p-3 sm:p-4 group-hover:scale-[1.02] transition-transform duration-300">
+                    {/* Icon area - top of card, fills container */}
+                    <div className="bg-primary-50 rounded-t-3xl w-full h-48 sm:h-56 overflow-hidden relative p-3 sm:p-4 group-hover:scale-[1.02] transition-transform duration-300">
                       <div className="absolute inset-0">
                         <FeatureIcon
                           src={feature.iconSrc}
