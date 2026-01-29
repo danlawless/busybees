@@ -23,7 +23,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <motion.div
         ref={ref}
         className={cn(
-          'bg-white rounded-2xl shadow-soft border border-neutral-100',
+          'bg-white rounded-3xl shadow-soft border border-primary-200/20',
           paddingStyles[padding],
           hover && 'hover:shadow-medium transition-all duration-300 honeycomb-hover',
           className

@@ -58,18 +58,18 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
         <PromoBanner promo={activePromo} onDismiss={onDismissBanner} />
       )}
 
-      {/* Condensed Header */}
-      <div className="bg-white/95 backdrop-blur-sm border-b border-neutral-200 shadow-md">
+      {/* Header Bar */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-primary-200/30 shadow-soft">
         {/* Navigation Section */}
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-8 py-3">
+          <div className="hidden md:flex md:items-center md:gap-8 py-3.5">
             {/* Compact logo */}
             <Link href="/" className="flex-shrink-0">
               <Logo size="md" animate={false} showText={false} />
             </Link>
 
-            <div className="flex items-center justify-center gap-4 flex-1">
+            <div className="flex items-center justify-center gap-3 flex-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -77,12 +77,11 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3",
+                      "font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4",
                       isActive
-                        ? "text-gray-900 shadow-md border border-yellow-400"
-                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                        ? "text-charcoal-800 bg-primary-400 shadow-soft border border-primary-500/30"
+                        : "text-charcoal-700 hover:text-charcoal-800 hover:bg-primary-100"
                     )}
-                    style={isActive ? { backgroundColor: '#fde047' } : {}}
                   >
                     {item.name}
                   </Link>
@@ -97,12 +96,11 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                   <Link
                     href="/customer/dashboard"
                     className={cn(
-                      "flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3",
+                      "flex items-center gap-2 font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4",
                       pathname.startsWith('/customer')
-                        ? "text-gray-900 shadow-md border border-yellow-400"
-                        : "text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                        ? "text-charcoal-800 bg-primary-400 shadow-soft border border-primary-500/30"
+                        : "text-charcoal-700 hover:text-charcoal-800 hover:bg-primary-100"
                     )}
-                    style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
                   >
                     <User className="h-4 w-4" />
                     My Account
@@ -110,7 +108,7 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                 ) : (
                   <Link
                     href="/customer/login"
-                    className="flex items-center gap-2 font-medium tracking-wide uppercase rounded-md transition-all duration-200 text-sm py-2 px-3 text-charcoal-700 hover:text-primary-600 hover:bg-primary-100"
+                    className="flex items-center gap-2 font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4 text-charcoal-700 hover:text-charcoal-800 hover:bg-primary-100"
                   >
                     <User className="h-4 w-4" />
                     Login
@@ -121,13 +119,13 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center justify-between py-3">
+          <div className="md:hidden flex items-center justify-between py-3.5">
             <Link href="/" className="flex-shrink-0">
               <Logo size="sm" animate={false} showText={false} />
             </Link>
             <button
               type="button"
-              className="rounded-md text-neutral-700 hover:bg-primary-100 hover:text-primary-600 transition-colors duration-200 p-2"
+              className="rounded-full text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800 transition-colors duration-200 p-2.5"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
@@ -142,32 +140,32 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
         {mobileMenuOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-50 bg-black/50 md:hidden"
+              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm md:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white px-6 py-6 sm:ring-1 sm:ring-neutral-900/10 md:hidden"
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#FFFDF7] px-8 py-8 sm:ring-1 sm:ring-primary-200/30 md:hidden rounded-l-3xl"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-8">
                 <Link href="/" className="flex items-center">
                   <Logo size="md" animate={false} showText={false} />
                 </Link>
                 <button
                   type="button"
-                  className="rounded-md p-2 text-neutral-700 hover:bg-primary-100 hover:text-primary-600"
+                  className="rounded-full p-2.5 text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <X className="h-6 w-6" aria-hidden="true" />
                 </button>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {navigation.map((item) => {
                   const isActive = pathname === item.href
                   return (
@@ -175,12 +173,11 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                       key={item.name}
                       href={item.href}
                       className={cn(
-                        "block rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide transition-all duration-200",
+                        "block rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide transition-all duration-200",
                         isActive
-                          ? "text-gray-900 shadow-md border border-yellow-400"
-                          : "text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
+                          ? "text-charcoal-800 bg-primary-400 shadow-soft"
+                          : "text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
                       )}
-                      style={isActive ? { backgroundColor: '#fde047' } : {}}
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       {item.name}
@@ -189,17 +186,16 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                 })}
                 {/* Auth section - controlled by ACCOUNT_ACCESS_ENABLED flag */}
                 {ACCOUNT_ACCESS_ENABLED && (
-                  <div className="mt-6 pt-6 border-t border-neutral-200">
+                  <div className="mt-8 pt-8 border-t border-primary-200/30">
                     {isLoggedIn ? (
                       <Link
                         href="/customer/dashboard"
                         className={cn(
-                          "flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide transition-all duration-200",
+                          "flex items-center gap-2 rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide transition-all duration-200",
                           pathname.startsWith('/customer')
-                            ? "text-gray-900 shadow-md border border-yellow-400"
-                            : "text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
+                            ? "text-charcoal-800 bg-primary-400 shadow-soft"
+                            : "text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
                         )}
-                        style={pathname.startsWith('/customer') ? { backgroundColor: '#fde047' } : {}}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <User className="h-5 w-5" />
@@ -208,7 +204,7 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                     ) : (
                       <Link
                         href="/customer/login"
-                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-medium uppercase tracking-wide text-charcoal-700 hover:bg-primary-100 hover:text-primary-600"
+                        className="flex items-center gap-2 rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <User className="h-5 w-5" />

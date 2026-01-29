@@ -108,13 +108,13 @@ const PromoBanner = ({
 
     return (
         <motion.div
-            className="mt-6 mx-auto max-w-4xl"
+            className="mt-8 mx-auto max-w-4xl"
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.3 }}
         >
-            <div className="relative bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="relative bg-gradient-to-r from-primary-500 via-primary-400 to-primary-500 rounded-3xl shadow-honey overflow-hidden">
                 {/* Close Button */}
                 <button
                     onClick={onDismiss}
@@ -124,9 +124,9 @@ const PromoBanner = ({
                     <X className="w-5 h-5 text-white" />
                 </button>
 
-                <div className="px-4 py-5 sm:px-6 sm:py-6">
+                <div className="px-5 py-6 sm:px-8 sm:py-8">
                     {/* Header Text */}
-                    <div className="text-center mb-4">
+                    <div className="text-center mb-5">
                         <h3 className="text-xl sm:text-2xl font-black text-white drop-shadow-md mb-1">
                             Save {promo.discountPercent}% with code
                         </h3>
@@ -136,21 +136,21 @@ const PromoBanner = ({
                     </div>
 
                     {/* Countdown Timer */}
-                    <div className="flex justify-center items-center gap-2 sm:gap-3 mb-4">
-                        <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-2 sm:px-4 sm:py-2 min-w-[60px] sm:min-w-[70px]">
-                            <div className="text-xl sm:text-2xl font-black text-orange-600 leading-none">
+                    <div className="flex justify-center items-center gap-3 sm:gap-4 mb-5">
+                        <div className="bg-white/90 backdrop-blur rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 min-w-[65px] sm:min-w-[75px]">
+                            <div className="text-xl sm:text-2xl font-black text-primary-600 leading-none">
                                 {timeLeft.days}
                             </div>
-                            <div className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase mt-1">
+                            <div className="text-[10px] sm:text-xs font-medium text-charcoal-600 uppercase mt-1">
                                 Days
                             </div>
                         </div>
                         <div className="text-white text-2xl font-black pb-3">:</div>
-                        <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-2 sm:px-4 sm:py-2 min-w-[60px] sm:min-w-[70px]">
-                            <div className="text-xl sm:text-2xl font-black text-orange-600 leading-none">
+                        <div className="bg-white/90 backdrop-blur rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 min-w-[65px] sm:min-w-[75px]">
+                            <div className="text-xl sm:text-2xl font-black text-primary-600 leading-none">
                                 {String(timeLeft.hours).padStart(2, "0")}
                             </div>
-                            <div className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase mt-1">
+                            <div className="text-[10px] sm:text-xs font-medium text-charcoal-600 uppercase mt-1">
                                 Hours
                             </div>
                         </div>
@@ -158,31 +158,31 @@ const PromoBanner = ({
 
                     {/* Promo Code Box */}
                     <div className="flex items-center justify-center">
-                        <div className="inline-flex items-center gap-2 bg-white rounded-xl px-4 py-3 shadow-lg">
-                            <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
-                            <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                        <div className="inline-flex items-center gap-2.5 bg-white rounded-2xl px-5 py-3.5 shadow-soft">
+                            <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+                            <span className="text-xs sm:text-sm font-semibold text-charcoal-700">
                                 USE CODE
                             </span>
-                            <span className="font-mono font-bold text-base sm:text-lg text-orange-600">
+                            <span className="font-mono font-bold text-base sm:text-lg text-primary-600">
                                 {promo.stripeCouponCode}
                             </span>
                             <button
                                 onClick={handleCopy}
-                                className="ml-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="ml-2 p-1.5 hover:bg-neutral-100 rounded-xl transition-colors"
                                 aria-label="Copy promo code"
                             >
                                 {copied ? (
                                     <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                                 ) : (
-                                    <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                                    <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-600" />
                                 )}
                             </button>
                         </div>
                     </div>
 
                     {/* Badge */}
-                    <div className="flex justify-center mt-4">
-                        <div className="bg-red-500 text-white px-6 py-2 rounded-full text-sm sm:text-base font-black shadow-lg transform -rotate-2">
+                    <div className="flex justify-center mt-5">
+                        <div className="bg-[#FFB3BA] text-charcoal-800 px-6 py-2 rounded-full text-sm sm:text-base font-black shadow-soft transform -rotate-2">
                             {promo.discountPercent}% OFF
                         </div>
                     </div>
@@ -437,11 +437,11 @@ export function Pricing() {
     // Loading state
     if (loadingPasses) {
         return (
-            <section className="relative py-20 bg-neutral-50 overflow-visible">
-                <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
+            <section className="relative py-24 bg-[#FFFDF7] overflow-visible">
+                <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
                     <div className="text-center">
                         <Loader2 className="w-12 h-12 animate-spin text-primary-500 mx-auto" />
-                        <p className="mt-4 text-neutral-600">Loading passes...</p>
+                        <p className="mt-4 text-charcoal-600">Loading passes...</p>
                     </div>
                 </div>
             </section>
@@ -449,8 +449,8 @@ export function Pricing() {
     }
 
     return (
-        <section className="relative py-20 bg-neutral-50 overflow-visible">
-            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
+        <section className="relative py-24 bg-[#FFFDF7] overflow-visible">
+            <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
                 {/* Purchase Success Message */}
                 <AnimatePresence>
                     {purchaseSuccess && (
@@ -458,7 +458,7 @@ export function Pricing() {
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-center"
+                            className="mb-8 p-5 bg-[#A8E6CF]/20 border border-[#A8E6CF]/40 rounded-2xl text-center"
                         >
                             <p className="text-green-800 font-semibold">{purchaseSuccess}</p>
                             <p className="text-green-600 text-sm mt-1">Redirecting to your account...</p>
@@ -468,16 +468,16 @@ export function Pricing() {
 
                 {/* Header */}
                 <motion.div
-                    className="text-center mb-16"
+                    className="text-center mb-20"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6 }}
                 >
-                    <h2 className="text-3xl font-bold text-neutral-900 sm:text-4xl mb-4">
+                    <h2 className="text-3xl font-bold text-charcoal-800 sm:text-4xl mb-5">
                         Services & Pricing
                     </h2>
-                    <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+                    <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
                         Choose the option that works best for your family
                     </p>
 
@@ -499,43 +499,43 @@ export function Pricing() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6 }}
-                        className="mb-12"
+                        className="mb-16"
                     >
-                        <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">
+                        <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
                             General Admission
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                             {dayPlans.map((plan) => {
                                 const Icon = plan.icon;
                                 const isPurchasing = purchasingPassId === plan.id;
                                 return (
                                     <Card
                                         key={plan.id}
-                                        className="h-full relative flex flex-col"
+                                        className="h-full relative flex flex-col rounded-3xl"
                                     >
                                         <CardHeader className="text-center pb-4">
-                                            <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <Icon className="w-6 h-6 text-primary-600" />
+                                            <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                                                <Icon className="w-7 h-7 text-primary-500" />
                                             </div>
                                             <CardTitle className="text-lg">
                                                 {plan.name}
                                             </CardTitle>
-                                            <div className="mt-4">
-                                                <div className="text-4xl font-bold text-primary-600">
+                                            <div className="mt-5">
+                                                <div className="text-4xl font-bold text-primary-500">
                                                     ${plan.price}
                                                 </div>
                                             </div>
                                         </CardHeader>
                                         <CardContent className="pt-0 flex-1 flex flex-col">
-                                            <ul className="space-y-2 mb-6 flex-1">
+                                            <ul className="space-y-3 mb-8 flex-1">
                                                 {plan.features.map(
                                                     (feature, featureIndex) => (
                                                         <li
                                                             key={featureIndex}
                                                             className="flex items-start"
                                                         >
-                                                            <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
-                                                            <span className="text-neutral-600 text-sm">
+                                                            <Check className="w-4 h-4 text-[#A8E6CF] mr-2.5 mt-0.5 flex-shrink-0" />
+                                                            <span className="text-charcoal-600 text-sm">
                                                                 {feature}
                                                             </span>
                                                         </li>
@@ -543,7 +543,7 @@ export function Pricing() {
                                                 )}
                                             </ul>
                                             <Button
-                                                className="w-full mt-auto"
+                                                className="w-full mt-auto rounded-2xl"
                                                 variant="primary"
                                                 size="sm"
                                                 onClick={() => handlePurchase(plan)}
@@ -575,14 +575,14 @@ export function Pricing() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: 0.1 }}
-                        className="mb-12 overflow-visible"
+                        className="mb-16 overflow-visible"
                     >
-                        <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">
+                        <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
                             Monthly Memberships
                         </h3>
                         {activePromo && (
-                            <div className="text-center mb-6">
-                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 px-6 py-3 rounded-full border-2 border-green-400 shadow-lg">
+                            <div className="text-center mb-8">
+                                <div className="inline-flex items-center gap-2 bg-[#A8E6CF]/20 px-6 py-3 rounded-full border-2 border-[#A8E6CF]/50 shadow-soft">
                                     <TrendingDown className="w-5 h-5 text-green-700" />
                                     <span className="font-bold text-green-900">
                                         Save with code {activePromo.stripeCouponCode}!
@@ -590,7 +590,7 @@ export function Pricing() {
                                 </div>
                             </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-visible pt-20">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto overflow-visible pt-20">
                             {monthlyPlans.map((plan) => {
                                 const Icon = plan.icon;
                                 const isPurchasing = purchasingPassId === plan.id;
@@ -611,7 +611,7 @@ export function Pricing() {
                                     <div key={plan.id} className="relative">
                                         {activePromo && (
                                             <div className="absolute -top-4 -right-4 z-30">
-                                                <div className="bg-gradient-to-br from-red-500 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-black shadow-2xl transform rotate-12 border-2 border-white">
+                                                <div className="bg-[#FFB3BA] text-charcoal-800 px-4 py-2 rounded-full text-sm font-black shadow-soft transform rotate-12 border-2 border-white">
                                                     <div className="flex items-center gap-1">
                                                         <Sparkles className="w-4 h-4" />
                                                         SAVE ${savings?.toFixed(0)}!
@@ -620,36 +620,36 @@ export function Pricing() {
                                             </div>
                                         )}
                                         <Card
-                                            className={`h-full relative flex flex-col overflow-visible z-10 ${
+                                            className={`h-full relative flex flex-col overflow-visible z-10 rounded-3xl ${
                                                 plan.popular
-                                                    ? "ring-2 ring-primary-500 shadow-large"
+                                                    ? "ring-2 ring-primary-500 shadow-honey"
                                                     : ""
                                             } ${
                                                 activePromo
-                                                    ? "ring-4 ring-yellow-400 shadow-2xl"
+                                                    ? "ring-4 ring-primary-400 shadow-honey"
                                                     : ""
                                             }`}
                                         >
                                             {plan.popular && (
                                                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
-                                                    <div className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
+                                                    <div className="bg-primary-500 text-white px-5 py-1.5 rounded-full text-sm font-medium flex items-center">
                                                         <Star className="w-4 h-4 mr-1" />
                                                         Most Popular
                                                     </div>
                                                 </div>
                                             )}
                                             <CardHeader className="text-center pb-4">
-                                                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Icon className="w-6 h-6 text-primary-600" />
+                                                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                                                    <Icon className="w-7 h-7 text-primary-500" />
                                                 </div>
                                                 <CardTitle className="text-lg">
                                                     {plan.name}
                                                 </CardTitle>
-                                                <div className="mt-4">
+                                                <div className="mt-5">
                                                     {activePromo ? (
                                                         <div className="space-y-2">
                                                             <div className="flex items-center justify-center gap-2">
-                                                                <span className="text-2xl font-bold text-gray-400 line-through">
+                                                                <span className="text-2xl font-bold text-charcoal-400 line-through">
                                                                     ${plan.price}
                                                                 </span>
                                                                 <span className="text-4xl font-black text-green-600">
@@ -659,7 +659,7 @@ export function Pricing() {
                                                                     )}
                                                                 </span>
                                                             </div>
-                                                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg px-4 py-2">
+                                                            <div className="bg-[#A8E6CF]/20 border-2 border-[#A8E6CF]/40 rounded-2xl px-4 py-2">
                                                                 <div className="text-sm font-bold text-green-800">
                                                                     💰 You save $
                                                                     {savings?.toFixed(2)}
@@ -675,22 +675,22 @@ export function Pricing() {
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="text-4xl font-bold text-primary-600">
+                                                        <div className="text-4xl font-bold text-primary-500">
                                                             ${plan.price}
                                                         </div>
                                                     )}
                                                 </div>
                                             </CardHeader>
                                             <CardContent className="pt-0 flex-1 flex flex-col">
-                                                <ul className="space-y-2 mb-6 flex-1">
+                                                <ul className="space-y-3 mb-8 flex-1">
                                                     {plan.features.map(
                                                         (feature, featureIndex) => (
                                                             <li
                                                                 key={featureIndex}
                                                                 className="flex items-start"
                                                             >
-                                                                <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
-                                                                <span className="text-neutral-600 text-sm">
+                                                                <Check className="w-4 h-4 text-[#A8E6CF] mr-2.5 mt-0.5 flex-shrink-0" />
+                                                                <span className="text-charcoal-600 text-sm">
                                                                     {feature}
                                                                 </span>
                                                             </li>
@@ -698,21 +698,21 @@ export function Pricing() {
                                                     )}
                                                 </ul>
                                                 {activePromo && (
-                                                    <div className="mb-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg text-center shadow-md">
+                                                    <div className="mb-4 p-3.5 bg-primary-100/50 border-2 border-primary-300/40 rounded-2xl text-center shadow-soft">
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <Sparkles className="w-4 h-4 text-yellow-600" />
-                                                            <span className="text-sm text-yellow-900 font-bold">
+                                                            <Sparkles className="w-4 h-4 text-primary-600" />
+                                                            <span className="text-sm text-charcoal-800 font-bold">
                                                                 {
                                                                     activePromo.discountPercent
                                                                 }
                                                                 % OFF Applied at Checkout!
                                                             </span>
-                                                            <Sparkles className="w-4 h-4 text-yellow-600" />
+                                                            <Sparkles className="w-4 h-4 text-primary-600" />
                                                         </div>
                                                     </div>
                                                 )}
                                                 <Button
-                                                    className="w-full mt-auto"
+                                                    className="w-full mt-auto rounded-2xl"
                                                     variant="primary"
                                                     size="sm"
                                                     onClick={() => handlePurchase(plan)}
@@ -745,22 +745,22 @@ export function Pricing() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="mb-12 overflow-visible"
+                        className="mb-16 overflow-visible"
                     >
-                        <h3 className="text-2xl font-bold text-neutral-900 mb-6 text-center">
+                        <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
                             10-Visit Punch Cards
                         </h3>
                         {activePromo && (
-                            <div className="text-center mb-6">
-                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-full border-2 border-purple-400 shadow-lg">
-                                    <Tag className="w-5 h-5 text-purple-700" />
-                                    <span className="font-bold text-purple-900">
+                            <div className="text-center mb-8">
+                                <div className="inline-flex items-center gap-2 bg-[#B4D7E8]/20 px-6 py-3 rounded-full border-2 border-[#B4D7E8]/50 shadow-soft">
+                                    <Tag className="w-5 h-5 text-blue-700" />
+                                    <span className="font-bold text-blue-900">
                                         Save with code {activePromo.stripeCouponCode}!
                                     </span>
                                 </div>
                             </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto overflow-visible pt-20">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto overflow-visible pt-20">
                             {weeklyPlans.map((plan) => {
                                 const Icon = plan.icon;
                                 const isPurchasing = purchasingPassId === plan.id;
@@ -768,37 +768,37 @@ export function Pricing() {
                                 return (
                                     <div key={plan.id} className="relative">
                                         <div className="absolute -top-4 -right-4 z-30">
-                                            <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-black shadow-2xl transform rotate-12 border-2 border-white">
+                                            <div className="bg-[#B4D7E8] text-charcoal-800 px-4 py-2 rounded-full text-sm font-black shadow-soft transform rotate-12 border-2 border-white">
                                                 <div className="flex items-center gap-1">
                                                     <Tag className="w-4 h-4" />
                                                     GREAT VALUE!
                                                 </div>
                                             </div>
                                         </div>
-                                        <Card className="h-full relative flex flex-col overflow-visible z-10 ring-4 ring-purple-400 shadow-2xl">
+                                        <Card className="h-full relative flex flex-col overflow-visible z-10 ring-4 ring-[#B4D7E8]/60 shadow-honey rounded-3xl">
                                             <CardHeader className="text-center pb-4">
-                                                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Icon className="w-6 h-6 text-primary-600" />
+                                                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                                                    <Icon className="w-7 h-7 text-primary-500" />
                                                 </div>
                                                 <CardTitle className="text-lg">
                                                     {plan.name}
                                                 </CardTitle>
-                                                <div className="mt-4">
-                                                    <div className="text-4xl font-bold text-primary-600">
+                                                <div className="mt-5">
+                                                    <div className="text-4xl font-bold text-primary-500">
                                                         ${plan.price}
                                                     </div>
                                                 </div>
                                             </CardHeader>
                                             <CardContent className="pt-0 flex-1 flex flex-col">
-                                                <ul className="space-y-2 mb-6 flex-1">
+                                                <ul className="space-y-3 mb-8 flex-1">
                                                     {plan.features.map(
                                                         (feature, featureIndex) => (
                                                             <li
                                                                 key={featureIndex}
                                                                 className="flex items-start"
                                                             >
-                                                                <Check className="w-4 h-4 text-secondary-500 mr-2 mt-0.5 flex-shrink-0" />
-                                                                <span className="text-neutral-600 text-sm">
+                                                                <Check className="w-4 h-4 text-[#A8E6CF] mr-2.5 mt-0.5 flex-shrink-0" />
+                                                                <span className="text-charcoal-600 text-sm">
                                                                     {feature}
                                                                 </span>
                                                             </li>
@@ -806,7 +806,7 @@ export function Pricing() {
                                                     )}
                                                 </ul>
                                                 <Button
-                                                    className="w-full mt-auto"
+                                                    className="w-full mt-auto rounded-2xl"
                                                     variant="primary"
                                                     size="sm"
                                                     onClick={() => handlePurchase(plan)}
@@ -834,8 +834,8 @@ export function Pricing() {
 
                 {/* No passes available message */}
                 {passes.length === 0 && !loadingPasses && (
-                    <div className="text-center py-12">
-                        <p className="text-neutral-600">
+                    <div className="text-center py-16">
+                        <p className="text-charcoal-600">
                             No passes are currently available. Please check back later.
                         </p>
                     </div>

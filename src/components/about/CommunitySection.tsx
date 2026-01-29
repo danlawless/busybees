@@ -42,10 +42,10 @@ export function NewsletterSection() {
   }
 
   return (
-    <section className="relative py-20 section-hexagon-medium overflow-hidden">
-      <HoneycombPattern variant="medium" size="lg" />
+    <section className="relative py-24 sm:py-28 section-hexagon-light overflow-hidden">
+      <HoneycombPattern variant="scattered" size="lg" />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
@@ -53,15 +53,15 @@ export function NewsletterSection() {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <span className="inline-block px-4 py-2 bg-honey-100 text-honey-800 rounded-full text-sm font-medium mb-4">
+          <span className="inline-block px-4 py-2 bg-primary-100 text-honey-800 rounded-full text-sm font-medium mb-4">
             Stay Connected
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-            Join Our <span className="text-honey-gradient">Hive</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
+            Join Our <span className="text-honey-500">Hive</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
             Subscribe to our newsletter and stay updated on upcoming events, special promotions,
-            and exciting news from the Busy Bees family.
+            and news from the Busy Bees family.
           </p>
         </motion.div>
 
@@ -73,10 +73,10 @@ export function NewsletterSection() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <Card className="card-pastel">
+            <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
               <CardContent className="p-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6">
-                  <Mail className="w-8 h-8 text-charcoal-700" />
+                <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Mail className="w-8 h-8 text-honey-600" />
                 </div>
 
                 <h3 className="text-2xl font-bold text-charcoal-800 text-center mb-4">
@@ -148,20 +148,20 @@ export function NewsletterSection() {
             viewport={{ once: true }}
           >
             <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center lg:text-left">
-              Upcoming <span className="text-honey-gradient">Events</span>
+              Upcoming <span className="text-honey-500">Events</span>
             </h3>
 
-            <Card className="card-pastel">
+            <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
               <CardContent className="p-12">
                 <div className="text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-6 hexagon-pulse">
-                    <Calendar className="w-10 h-10 text-charcoal-700" />
+                  <div className="w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Calendar className="w-10 h-10 text-honey-600" />
                   </div>
                   <h4 className="text-2xl font-bold text-charcoal-800 mb-4">
-                    Stay Tuned! 🐝
+                    Stay Tuned
                   </h4>
                   <p className="text-lg text-charcoal-600 leading-relaxed">
-                    Exciting events are coming soon! Subscribe to our newsletter to be the first to know about special celebrations, workshops, and family activities.
+                    Exciting events are coming soon. Subscribe to our newsletter to be the first to know about special celebrations, workshops, and family activities.
                   </p>
                 </div>
               </CardContent>
@@ -177,32 +177,30 @@ export function NewsletterSection() {
           viewport={{ once: true }}
           className="text-center"
         >
-          <Card className="max-w-4xl mx-auto card-pastel">
+          <Card className="max-w-4xl mx-auto border-2 border-primary-200/50 shadow-soft rounded-3xl">
             <CardContent className="p-8">
-              <h3 className="text-2xl font-bold text-charcoal-800 mb-8">
-                What You'll <span className="text-honey-gradient">Receive</span>
+              <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
+                What You&apos;ll <span className="text-honey-500">Receive</span>
               </h3>
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-8">
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-6 h-6 text-charcoal-700" />
+                  <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-6 h-6 text-honey-600" />
                   </div>
                   <h4 className="font-semibold text-charcoal-800 mb-2">Event Updates</h4>
                   <p className="text-sm text-charcoal-600">Early access to special events and party bookings</p>
                 </div>
-
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Gift className="w-6 h-6 text-charcoal-700" />
+                  <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Gift className="w-6 h-6 text-honey-600" />
                   </div>
                   <h4 className="font-semibold text-charcoal-800 mb-2">Exclusive Offers</h4>
                   <p className="text-sm text-charcoal-600">Special discounts and promotions for subscribers only</p>
                 </div>
-
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Bell className="w-6 h-6 text-charcoal-700" />
+                  <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Bell className="w-6 h-6 text-honey-600" />
                   </div>
                   <h4 className="font-semibold text-charcoal-800 mb-2">Important News</h4>
                   <p className="text-sm text-charcoal-600">Stay informed about facility updates and new programs</p>

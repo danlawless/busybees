@@ -272,18 +272,18 @@ export function GiftCardPurchaseForm() {
   // Show Coming Soon message when purchasing is disabled
   if (!PURCHASING_ENABLED) {
     return (
-      <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-16 sm:py-20 min-h-[600px] flex items-center justify-center">
+      <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24 min-h-[600px] flex items-center justify-center">
         <HoneycombPattern variant="dense" size="xl" />
-        <div className="relative z-20 text-center max-w-md mx-auto px-4">
-          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Clock className="w-10 h-10 text-amber-600" />
+        <div className="relative z-20 text-center max-w-md mx-auto px-6">
+          <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-primary-500" />
           </div>
           <h2 className="text-3xl font-bold text-charcoal-800 mb-4">Coming Soon</h2>
-          <p className="text-charcoal-600 mb-6">
+          <p className="text-charcoal-600 mb-8">
             Gift card purchases will be available soon. Check back later!
           </p>
           <Link href="/gift-cards">
-            <Button variant="outline">
+            <Button variant="outline" className="rounded-full">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Gift Cards
             </Button>
@@ -295,30 +295,30 @@ export function GiftCardPurchaseForm() {
 
   if (loading) {
     return (
-      <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-16 sm:py-20 min-h-[600px] flex items-center justify-center">
+      <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24 min-h-[600px] flex items-center justify-center">
         <HoneycombPattern variant="dense" size="xl" />
         <div className="relative z-20">
-          <Loader2 className="w-12 h-12 animate-spin text-amber-500" />
+          <Loader2 className="w-12 h-12 animate-spin text-primary-500" />
         </div>
       </section>
     );
   }
 
   return (
-    <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-16 sm:py-20">
+    <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
       <HoneycombPattern variant="dense" size="xl" />
 
-      <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 z-20">
+      <div className="relative mx-auto max-w-4xl px-6 sm:px-8 lg:px-12 z-20">
         <motion.div
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
           {/* Header */}
-          <motion.div variants={fadeInUp} className="text-center mb-8">
+          <motion.div variants={fadeInUp} className="text-center mb-10">
             <Link
               href="/gift-cards"
-              className="inline-flex items-center text-charcoal-600 hover:text-charcoal-800 mb-4"
+              className="inline-flex items-center text-charcoal-600 hover:text-charcoal-800 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Gift Cards
@@ -329,7 +329,7 @@ export function GiftCardPurchaseForm() {
           </motion.div>
 
           {/* Progress Steps */}
-          <motion.div variants={fadeInUp} className="mb-12">
+          <motion.div variants={fadeInUp} className="mb-14">
             <div className="flex items-center justify-center">
               {steps.map((step, index) => {
                 const Icon = step.icon;
@@ -342,10 +342,10 @@ export function GiftCardPurchaseForm() {
                       <div
                         className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                           isComplete
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-[#6cc9a1] text-white'
                             : isActive
-                            ? 'bg-amber-500 text-white shadow-lg scale-110'
-                            : 'bg-gray-200 text-gray-400'
+                            ? 'bg-primary-500 text-white shadow-honey scale-110'
+                            : 'bg-charcoal-200 text-charcoal-400'
                         }`}
                       >
                         {isComplete ? (
@@ -356,7 +356,7 @@ export function GiftCardPurchaseForm() {
                       </div>
                       <p
                         className={`mt-2 text-xs font-medium hidden sm:block ${
-                          isActive ? 'text-amber-600' : 'text-charcoal-500'
+                          isActive ? 'text-primary-600' : 'text-charcoal-500'
                         }`}
                       >
                         {step.title}
@@ -365,7 +365,7 @@ export function GiftCardPurchaseForm() {
                     {index < steps.length - 1 && (
                       <div
                         className={`w-16 sm:w-24 h-1 mx-2 rounded-full transition-all duration-300 ${
-                          index < currentStep ? 'bg-emerald-500' : 'bg-gray-200'
+                          index < currentStep ? 'bg-[#A8E6CF]' : 'bg-charcoal-200'
                         }`}
                       />
                     )}
@@ -377,7 +377,7 @@ export function GiftCardPurchaseForm() {
 
           {/* Form Content */}
           <motion.div variants={fadeInUp}>
-            <Card className="p-8">
+            <Card className="p-9 rounded-3xl">
               <AnimatePresence mode="wait">
                 {/* Step 1: Select Amount */}
                 {currentStep === 0 && (
@@ -388,18 +388,18 @@ export function GiftCardPurchaseForm() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-6">
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
                       Choose a Gift Card Amount
                     </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
                       {denominations.map((denom) => (
                         <button
                           key={denom.id}
                           onClick={() => updateFormData('amount', denom.amount)}
-                          className={`p-6 rounded-xl border-2 transition-all duration-200 ${
+                          className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
                             formData.amount === denom.amount
-                              ? 'border-amber-500 bg-amber-50 shadow-md scale-105'
-                              : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50/50'
+                              ? 'border-primary-500 bg-primary-50 shadow-honey scale-105'
+                              : 'border-charcoal-200 hover:border-primary-300 hover:bg-primary-50/30'
                           }`}
                         >
                           <span className="text-2xl font-bold text-charcoal-800">
@@ -422,9 +422,9 @@ export function GiftCardPurchaseForm() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="space-y-6"
+                    className="space-y-7"
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-6">
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
                       Enter Details
                     </h2>
 
@@ -435,16 +435,16 @@ export function GiftCardPurchaseForm() {
                       </h3>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-charcoal-700 mb-1">
+                          <label className="block text-sm font-medium text-charcoal-700 mb-1.5">
                             Your Name
                           </label>
                           <input
                             type="text"
                             value={formData.purchaser_name}
                             onChange={(e) => updateFormData('purchaser_name', e.target.value)}
-                            className={`w-full px-4 py-3 rounded-lg border ${
-                              errors.purchaser_name ? 'border-red-500' : 'border-gray-300'
-                            } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+                            className={`w-full px-4 py-3 rounded-xl border ${
+                              errors.purchaser_name ? 'border-red-400' : 'border-primary-200/50'
+                            } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
                             placeholder="John Doe"
                           />
                           {errors.purchaser_name && (
@@ -452,16 +452,16 @@ export function GiftCardPurchaseForm() {
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-charcoal-700 mb-1">
+                          <label className="block text-sm font-medium text-charcoal-700 mb-1.5">
                             Your Email
                           </label>
                           <input
                             type="email"
                             value={formData.purchaser_email}
                             onChange={(e) => updateFormData('purchaser_email', e.target.value)}
-                            className={`w-full px-4 py-3 rounded-lg border ${
-                              errors.purchaser_email ? 'border-red-500' : 'border-gray-300'
-                            } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+                            className={`w-full px-4 py-3 rounded-xl border ${
+                              errors.purchaser_email ? 'border-red-400' : 'border-primary-200/50'
+                            } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
                             placeholder="you@example.com"
                           />
                           {errors.purchaser_email && (
@@ -478,16 +478,16 @@ export function GiftCardPurchaseForm() {
                       </h3>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-charcoal-700 mb-1">
+                          <label className="block text-sm font-medium text-charcoal-700 mb-1.5">
                             Recipient Name
                           </label>
                           <input
                             type="text"
                             value={formData.recipient_name}
                             onChange={(e) => updateFormData('recipient_name', e.target.value)}
-                            className={`w-full px-4 py-3 rounded-lg border ${
-                              errors.recipient_name ? 'border-red-500' : 'border-gray-300'
-                            } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+                            className={`w-full px-4 py-3 rounded-xl border ${
+                              errors.recipient_name ? 'border-red-400' : 'border-primary-200/50'
+                            } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
                             placeholder="Jane Doe"
                           />
                           {errors.recipient_name && (
@@ -495,16 +495,16 @@ export function GiftCardPurchaseForm() {
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-charcoal-700 mb-1">
+                          <label className="block text-sm font-medium text-charcoal-700 mb-1.5">
                             Recipient Email
                           </label>
                           <input
                             type="email"
                             value={formData.recipient_email}
                             onChange={(e) => updateFormData('recipient_email', e.target.value)}
-                            className={`w-full px-4 py-3 rounded-lg border ${
-                              errors.recipient_email ? 'border-red-500' : 'border-gray-300'
-                            } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+                            className={`w-full px-4 py-3 rounded-xl border ${
+                              errors.recipient_email ? 'border-red-400' : 'border-primary-200/50'
+                            } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
                             placeholder="recipient@example.com"
                           />
                           {errors.recipient_email && (
@@ -519,16 +519,16 @@ export function GiftCardPurchaseForm() {
                       <h3 className="text-sm font-medium text-charcoal-600 uppercase tracking-wide">
                         Delivery Method
                       </h3>
-                      <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="grid sm:grid-cols-2 gap-5">
                         <button
                           onClick={() => updateFormData('delivery_method', 'email_recipient')}
-                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          className={`p-5 rounded-2xl border-2 text-left transition-all ${
                             formData.delivery_method === 'email_recipient'
-                              ? 'border-amber-500 bg-amber-50'
-                              : 'border-gray-200 hover:border-amber-300'
+                              ? 'border-primary-500 bg-primary-50'
+                              : 'border-charcoal-200 hover:border-primary-300'
                           }`}
                         >
-                          <Mail className="w-5 h-5 text-amber-600 mb-2" />
+                          <Mail className="w-5 h-5 text-primary-500 mb-2" />
                           <p className="font-medium text-charcoal-800">Send to Recipient</p>
                           <p className="text-sm text-charcoal-600">
                             Email sent directly to {formData.recipient_name || 'recipient'}
@@ -536,13 +536,13 @@ export function GiftCardPurchaseForm() {
                         </button>
                         <button
                           onClick={() => updateFormData('delivery_method', 'email_self')}
-                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          className={`p-5 rounded-2xl border-2 text-left transition-all ${
                             formData.delivery_method === 'email_self'
-                              ? 'border-amber-500 bg-amber-50'
-                              : 'border-gray-200 hover:border-amber-300'
+                              ? 'border-primary-500 bg-primary-50'
+                              : 'border-charcoal-200 hover:border-primary-300'
                           }`}
                         >
-                          <Send className="w-5 h-5 text-amber-600 mb-2" />
+                          <Send className="w-5 h-5 text-primary-500 mb-2" />
                           <p className="font-medium text-charcoal-800">Send to Me</p>
                           <p className="text-sm text-charcoal-600">
                             You&apos;ll receive it to forward yourself
@@ -562,7 +562,7 @@ export function GiftCardPurchaseForm() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-6">
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
                       Add a Personal Message (Optional)
                     </h2>
                     <div>
@@ -571,7 +571,7 @@ export function GiftCardPurchaseForm() {
                         onChange={(e) => updateFormData('personal_message', e.target.value)}
                         rows={5}
                         maxLength={500}
-                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                        className="w-full px-4 py-3 rounded-2xl border border-primary-200/50 focus:ring-2 focus:ring-primary-300 focus:border-transparent resize-none bg-white"
                         placeholder="Write a heartfelt message for the recipient... (e.g., Happy Birthday! Hope you enjoy some playtime at Busy Bees! 🐝)"
                       />
                       <p className="mt-2 text-sm text-charcoal-500 text-right">
@@ -590,7 +590,7 @@ export function GiftCardPurchaseForm() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-6">
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
                       Preview Your Gift Card
                     </h2>
 
@@ -605,9 +605,9 @@ export function GiftCardPurchaseForm() {
                     </div>
 
                     {/* Summary */}
-                    <div className="bg-gray-50 rounded-xl p-6 mb-6">
+                    <div className="bg-primary-50/40 rounded-2xl p-7 mb-7">
                       <h3 className="font-semibold text-charcoal-800 mb-4">Order Summary</h3>
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-2.5 text-sm">
                         <div className="flex justify-between">
                           <span className="text-charcoal-600">Gift Card Amount</span>
                           <span className="font-medium">${formData.amount?.toFixed(2)}</span>
@@ -628,24 +628,24 @@ export function GiftCardPurchaseForm() {
                               : formData.purchaser_email}
                           </span>
                         </div>
-                        <hr className="my-3" />
+                        <hr className="my-3 border-primary-200/40" />
                         <div className="flex justify-between text-lg font-bold">
                           <span>Total</span>
-                          <span className="text-amber-600">${formData.amount?.toFixed(2)}</span>
+                          <span className="text-primary-600">${formData.amount?.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Authentication Notice */}
                     {!authLoading && !isAuthenticated && (
-                      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <div className="mb-7 p-5 bg-primary-50 border border-primary-200/50 rounded-2xl">
                         <div className="flex items-start gap-3">
-                          <LogIn className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <LogIn className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
                           <div>
-                            <p className="font-medium text-amber-800">
+                            <p className="font-medium text-charcoal-800">
                               Account required to purchase
                             </p>
-                            <p className="text-sm text-amber-700 mt-1">
+                            <p className="text-sm text-charcoal-600 mt-1">
                               Please sign up or log in to complete your gift card purchase.
                               Your gift card details will be saved.
                             </p>
@@ -660,7 +660,7 @@ export function GiftCardPurchaseForm() {
                         variant="outline"
                         onClick={handleSendTestEmail}
                         disabled={sending}
-                        className="flex-1"
+                        className="flex-1 rounded-full"
                       >
                         {testEmailSent ? (
                           <>
@@ -683,7 +683,7 @@ export function GiftCardPurchaseForm() {
                         variant="primary"
                         onClick={handlePurchase}
                         disabled={sending || authLoading}
-                        className="flex-1"
+                        className="flex-1 rounded-full"
                       >
                         {authLoading ? (
                           <>
@@ -718,17 +718,17 @@ export function GiftCardPurchaseForm() {
 
               {/* Navigation Buttons */}
               {currentStep < 3 && (
-                <div className="flex justify-between mt-8 pt-6 border-t">
+                <div className="flex justify-between mt-9 pt-7 border-t border-primary-100/50">
                   <Button
                     variant="outline"
                     onClick={handleBack}
                     disabled={currentStep === 0}
-                    className={currentStep === 0 ? 'invisible' : ''}
+                    className={`rounded-full ${currentStep === 0 ? 'invisible' : ''}`}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
-                  <Button variant="primary" onClick={handleNext}>
+                  <Button variant="primary" onClick={handleNext} className="rounded-full">
                     Next
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -736,8 +736,8 @@ export function GiftCardPurchaseForm() {
               )}
 
               {currentStep === 3 && (
-                <div className="flex justify-start mt-8 pt-6 border-t">
-                  <Button variant="outline" onClick={handleBack}>
+                <div className="flex justify-start mt-9 pt-7 border-t border-primary-100/50">
+                  <Button variant="outline" onClick={handleBack} className="rounded-full">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Edit
                   </Button>
@@ -750,4 +750,3 @@ export function GiftCardPurchaseForm() {
     </section>
   );
 }
-

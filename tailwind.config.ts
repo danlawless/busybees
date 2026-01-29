@@ -9,78 +9,81 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Enhanced Pastel Primary Colors
+        // Primary: Warm Honey Yellows
         primary: {
-          50: '#fffef9',   // Cream white
-          100: '#fef7d3',  // Pale pastel yellow
-          200: '#fef3c7',  // Light pastel yellow
-          300: '#f5d565',  // Soft honey pastel
-          400: '#f0c674',  // Medium honey pastel
-          500: '#e6b800',  // Rich honey
-          600: '#d4a300',  // Deep honey
-          700: '#b8900',   // Amber
-          800: '#996600',  // Dark amber
-          900: '#7a5200',  // Deepest amber
+          50: '#FFFDF7',
+          100: '#FFF8E7',
+          200: '#FFF3D0',
+          300: '#FFE08A',
+          400: '#FFC933',
+          500: '#FFB900',
+          600: '#E6A600',
+          700: '#CC9300',
+          800: '#B38000',
+          900: '#996D00',
         },
-        // Enhanced Pastel Charcoals
+        // Secondary: Soft Blacks / Charcoals
         charcoal: {
-          50: '#fafafa',   // Softest pastel gray
-          100: '#f5f5f5',  // Light pastel gray
-          200: '#e8e8e8',  // Soft pastel gray
-          300: '#d4d4d4',  // Medium pastel gray
-          400: '#a8a8a8',  // Soft charcoal pastel
-          500: '#8a8a8a',  // Medium charcoal pastel
-          600: '#666666',  // Deep charcoal pastel
-          700: '#404040',  // Rich charcoal
-          800: '#2d2d2d',  // Dark charcoal
-          900: '#1a1a1a',  // Deepest charcoal
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e8e8e8',
+          300: '#d4d4d4',
+          400: '#a8a8a8',
+          500: '#8a8a8a',
+          600: '#6B6B6B',
+          700: '#4A4A4A',
+          800: '#2B2B2B',
+          900: '#1a1a1a',
         },
-        // Enhanced Pastel Honey Colors
+        // Honey shades
         honey: {
-          50: '#fffef9',   // Pure cream white
-          100: '#fff9e6',  // Pale pastel yellow
-          200: '#ffecb3',  // Light pastel gold
-          300: '#f5d565',  // Soft honey pastel
-          400: '#f0c674',  // Medium honey pastel
-          500: '#e6b800',  // Rich honey (primary)
-          600: '#d4a300',  // Deep honey
-          700: '#b89000',  // Dark honey
-          800: '#996600',  // Amber
-          900: '#7a5200',  // Deep amber
+          50: '#FFFDF7',
+          100: '#FFF8E7',
+          200: '#FFF3D0',
+          300: '#FFE08A',
+          400: '#FFC933',
+          500: '#FFB900',
+          600: '#E6A600',
+          700: '#CC9300',
+          800: '#B38000',
+          900: '#996D00',
         },
         // Pastel accent colors
         pastel: {
-          cream: '#fffef9',
-          yellow: '#fff9e6', 
-          gold: '#ffecb3',
-          charcoal: '#2d2d2d',
+          cream: '#FFFDF7',
+          yellow: '#FFF3D0',
+          gold: '#FFE08A',
+          mint: '#A8E6CF',
+          blue: '#B4D7E8',
+          coral: '#FFB3BA',
+          charcoal: '#2B2B2B',
           gray: '#8a8a8a',
         },
-        // Keep secondary for nature elements
+        // Nature green
         secondary: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
-          500: '#22c55e', // Nature green
+          500: '#22c55e',
           600: '#16a34a',
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
         },
-        // Refined neutral palette
+        // Neutral palette
         neutral: {
-          50: '#fafafa',   // Pure light
-          100: '#f5f5f5',  // Soft light
-          200: '#e5e5e5',  // Light gray
-          300: '#d4d4d4',  // Medium light
-          400: '#a3a3a3',  // Medium gray
-          500: '#737373',  // True gray
-          600: '#525252',  // Dark gray
-          700: '#404040',  // Deep gray
-          800: '#262626',  // Very dark
-          900: '#171717',  // Almost black
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
+          900: '#171717',
         },
       },
       fontFamily: {
@@ -109,11 +112,13 @@ const config: Config = {
         'xl': '1rem',
         '2xl': '1.5rem',
         '3xl': '2rem',
+        '4xl': '2.5rem',
       },
       boxShadow: {
-        'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-        'medium': '0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        'large': '0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.05), 0 10px 20px -2px rgba(0, 0, 0, 0.03)',
+        'medium': '0 4px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03)',
+        'large': '0 10px 40px -10px rgba(0, 0, 0, 0.12), 0 20px 25px -5px rgba(0, 0, 0, 0.06)',
+        'honey': '0 8px 30px -5px rgba(255, 185, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.04)',
       },
       animation: {
         'float': 'float 3s ease-in-out infinite',

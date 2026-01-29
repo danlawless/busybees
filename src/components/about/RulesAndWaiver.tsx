@@ -1,11 +1,27 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { Shield, FileText, AlertTriangle, Clock, Users, Zap, Heart, Coffee, PartyPopper, Camera, HandHeart, Baby } from 'lucide-react'
+import { Shield, FileText, AlertTriangle } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+
+function RuleSectionIcon({ src, alt, title }: { src: string; alt: string; title: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return <span className="text-charcoal-600 font-bold text-2xl" aria-hidden>{title.charAt(0)}</span>
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      className="object-cover w-full h-full"
+      sizes="(max-width: 768px) 100vw, 33vw"
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 const generalSafetyRules = [
   'Socks Required – All guests (children and adults) must wear clean, non-slip socks in the play areas. No bare feet or shoes are permitted beyond the lobby.',
@@ -18,37 +34,9 @@ const generalSafetyRules = [
 ]
 
 const ruleSections = [
-  {
-    icon: Baby,
-    title: 'Toddler Area (Under 2 Years)',
-    rules: [
-      'For children under 2 years old only.',
-      'Gentle play only—no running, jumping, or roughhousing.',
-      'Older siblings are welcome to visit but must be seated and gentle at all times.',
-      'Soft toys and equipment should remain in the infant area.'
-    ]
-  },
-  {
-    icon: Coffee,
-    title: 'Food & Beverage Area',
-    rules: [
-      'Food and drinks are only allowed in the designated café/food area.',
-      'Outside food or drinks are allowed (please inform staff of any food allergies in advance).',
-      'Please clean up after yourself; trash bins are provided.',
-      'No glass containers or breakable dishes.'
-    ]
-  },
-  {
-    icon: PartyPopper,
-    title: 'Party Room Use',
-    rules: [
-      'Party room use is by reservation only.',
-      'Please arrive and depart at your scheduled time to allow for cleaning and set-up for the next group.',
-      'Decorations must be approved by staff; no tape or nails on walls.',
-      'Outside entertainment (magicians, characters, etc.) must be pre-approved.',
-      'Guests must follow all general play center rules during parties.'
-    ]
-  }
+  { iconSrc: '/icons/rules-toddler.png', title: 'Toddler Area (Under 2 Years)', rules: ['For children under 2 years old only.', 'Gentle play only—no running, jumping, or roughhousing.', 'Older siblings are welcome to visit but must be seated and gentle at all times.', 'Soft toys and equipment should remain in the infant area.'] },
+  { iconSrc: '/icons/rules-food.png', title: 'Food & Beverage Area', rules: ['Food and drinks are only allowed in the designated café/food area.', 'Outside food or drinks are allowed (please inform staff of any food allergies in advance).', 'Please clean up after yourself; trash bins are provided.', 'No glass containers or breakable dishes.'] },
+  { iconSrc: '/icons/rules-party.png', title: 'Party Room Use', rules: ['Party room use is by reservation only.', 'Please arrive and depart at your scheduled time to allow for cleaning and set-up for the next group.', 'Decorations must be approved by staff; no tape or nails on walls.', 'Outside entertainment (magicians, characters, etc.) must be pre-approved.', 'Guests must follow all general play center rules during parties.'] },
 ]
 
 const additionalPolicies = [
@@ -67,8 +55,8 @@ const waiverPoints = [
 
 export function RulesAndWaiver() {
   return (
-    <section className="relative py-20 section-hexagon-medium overflow-hidden">
-      <HoneycombPattern variant="medium" size="lg" />
+    <section className="relative py-24 sm:py-28 section-hexagon-light overflow-hidden">
+      <HoneycombPattern variant="scattered" size="lg" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -78,11 +66,14 @@ export function RulesAndWaiver() {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-6">
-            Indoor Play Center Rules & <span className="text-honey-gradient">Regulations</span>
+          <span className="inline-block px-4 py-2 bg-primary-100 text-honey-800 rounded-full text-sm font-medium mb-4">
+            Policies
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
+            Rules & <span className="text-honey-500">Regulations</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            We are committed to creating a safe, clean, and fun environment for all our guests. Please take a moment to review and follow our guidelines.
+            We are committed to creating a safe, clean, and fun environment for all our guests.
           </p>
         </motion.div>
 
@@ -94,7 +85,7 @@ export function RulesAndWaiver() {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <Card className="card-pastel border-2 border-honey-200">
+          <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
             <CardContent className="p-8">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mr-4">
@@ -134,34 +125,28 @@ export function RulesAndWaiver() {
           viewport={{ once: true }}
         >
           <div className="grid md:grid-cols-3 gap-8">
-            {ruleSections.map((section, index) => {
-              const Icon = section.icon
-              return (
-                <motion.div key={index} variants={fadeInUp}>
-                  <Card className="h-full card-pastel group hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center mb-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mr-3">
-                          <Icon className="w-5 h-5 text-charcoal-700" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-charcoal-800">
-                          {section.title}
-                        </h4>
-                      </div>
-
+            {ruleSections.map((section, index) => (
+              <motion.div key={index} variants={fadeInUp}>
+                <Card padding="none" className="h-full border-2 border-primary-200/50 shadow-soft hover:shadow-honey transition-all duration-300 rounded-3xl overflow-hidden">
+                  <CardContent className="p-0 flex flex-col">
+                    <div className="w-full h-40 sm:h-48 bg-white relative overflow-hidden">
+                      <RuleSectionIcon src={section.iconSrc} alt={section.title} title={section.title} />
+                    </div>
+                    <div className="p-6">
+                      <h4 className="text-lg font-semibold text-charcoal-800 mb-4">{section.title}</h4>
                       <ul className="space-y-3">
                         {section.rules.map((rule, ruleIndex) => (
                           <li key={ruleIndex} className="flex items-start space-x-2">
-                            <div className="w-2 h-2 bg-honey-400 rounded-full flex-shrink-0 mt-2"></div>
+                            <div className="w-2 h-2 bg-honey-400 rounded-full flex-shrink-0 mt-2" />
                             <p className="text-sm text-charcoal-600 leading-relaxed">{rule}</p>
                           </li>
                         ))}
                       </ul>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
 
@@ -173,7 +158,7 @@ export function RulesAndWaiver() {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <Card className="card-pastel border-2 border-honey-200">
+          <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
             <CardContent className="p-8">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mr-4">
@@ -241,7 +226,7 @@ export function RulesAndWaiver() {
             </div>
 
             {/* Important Notice Card */}
-            <Card className="card-pastel border-2 border-honey-200">
+            <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
                   <AlertTriangle className="w-8 h-8 text-red-600" />

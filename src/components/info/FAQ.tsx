@@ -130,25 +130,25 @@ export function FAQ() {
   }
 
   return (
-    <section className="py-16 bg-white">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+    <section className="py-20 sm:py-24 bg-[#FFFDF7]">
+      <div className="mx-auto max-w-4xl px-6 sm:px-8 lg:px-12">
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-14"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl font-bold text-neutral-900 sm:text-4xl mb-4">
+          <h2 className="text-3xl font-bold text-charcoal-800 sm:text-4xl mb-4">
             <HelpCircle className="w-8 h-8 inline mr-3 text-primary-500" />
             Frequently Asked Questions
           </h2>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
             Got questions? We've got answers! Here are the most common questions from families.
           </p>
         </motion.div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           {faqs.map((category, categoryIndex) => (
             <motion.div
               key={categoryIndex}
@@ -157,30 +157,30 @@ export function FAQ() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: categoryIndex * 0.1 }}
             >
-              <h3 className="text-xl font-semibold text-neutral-900 mb-4 flex items-center">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mr-3"></div>
+              <h3 className="text-xl font-semibold text-charcoal-800 mb-5 flex items-center">
+                <div className="w-2.5 h-2.5 bg-primary-500 rounded-full mr-3"></div>
                 {category.category}
               </h3>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {category.questions.map((faq, faqIndex) => {
                   const itemId = `${categoryIndex}-${faqIndex}`
                   const isOpen = openItems.includes(itemId)
 
                   return (
-                    <Card key={faqIndex} className="overflow-hidden">
+                    <Card key={faqIndex} className="overflow-hidden rounded-2xl">
                       <button
                         onClick={() => toggleItem(itemId)}
-                        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-2xl"
+                        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 rounded-2xl"
                       >
-                        <CardContent className="p-6 hover:bg-neutral-50 transition-colors">
+                        <CardContent className="p-6 hover:bg-primary-50/30 transition-colors">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-medium text-neutral-900 pr-4">
+                            <h4 className="font-medium text-charcoal-800 pr-4">
                               {faq.question}
                             </h4>
                             <ChevronDown
                               className={cn(
-                                "w-5 h-5 text-neutral-500 transition-transform flex-shrink-0",
+                                "w-5 h-5 text-charcoal-500 transition-transform flex-shrink-0",
                                 isOpen && "transform rotate-180"
                               )}
                             />
@@ -197,8 +197,8 @@ export function FAQ() {
                             transition={{ duration: 0.3 }}
                           >
                             <div className="px-6 pb-6 pt-0">
-                              <div className="border-t border-neutral-100 pt-4">
-                                <p className="text-neutral-600 leading-relaxed">
+                              <div className="border-t border-primary-100/50 pt-4">
+                                <p className="text-charcoal-600 leading-relaxed">
                                   {faq.answer}
                                 </p>
                               </div>

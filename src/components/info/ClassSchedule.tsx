@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Calendar, Star, Mail, Sparkles } from 'lucide-react'
+import { Calendar, Mail } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { HoneycombPattern } from '@/components/ui/BeeIcon'
 
 export function ClassSchedule() {
   const [email, setEmail] = useState('')
@@ -18,15 +18,9 @@ export function ClassSchedule() {
     try {
       const response = await fetch('/api/newsletter', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: `${firstName} ${lastName}`.trim(),
-          email
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `${firstName} ${lastName}`.trim(), email }),
       })
-
       if (response.ok) {
         setIsSubmitted(true)
         setEmail('')
@@ -40,134 +34,120 @@ export function ClassSchedule() {
   }
 
   return (
-    <section className="relative py-20 section-hexagon-light overflow-hidden min-h-[80vh] flex items-center">
-      <HoneycombPattern variant="scattered" size="lg" />
+    <section className="relative py-16 sm:py-24 overflow-hidden min-h-[80vh] flex items-center">
+      {/* Hero background - in-component Image so it always shows (z-0, not negative) */}
+      <div className="absolute inset-0 z-0" aria-hidden>
+        <Image
+          src="/hero-background.png"
+          alt=""
+          fill
+          className="object-cover object-center"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/20 via-transparent to-[#FFF8E7]/15" aria-hidden />
+      </div>
 
-      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 w-full">
-        {/* Main Content */}
+      <div className="relative z-10 mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 w-full">
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <div className="inline-block mb-6">
-            <div className="relative">
-              <Calendar className="w-24 h-24 text-honey-400 mx-auto mb-4 animate-pulse" />
-              <Sparkles className="w-8 h-8 text-honey-500 absolute -top-2 -right-2 animate-bounce" />
-            </div>
+          <span className="inline-block px-4 py-2 bg-primary-100 text-honey-800 rounded-full text-sm font-medium mb-4">
+            Classes
+          </span>
+          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Calendar className="w-8 h-8 text-honey-600" />
           </div>
-
-          <h1 className="text-5xl sm:text-6xl font-bold text-charcoal-800 mb-6">
-            Stay <span className="text-honey-600">Tuned!</span>
+          <h1 className="text-4xl sm:text-5xl font-bold text-charcoal-800 mb-4">
+            Stay <span className="text-honey-500">Tuned</span>
           </h1>
-
-          <p className="text-xl text-charcoal-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            We're developing exciting class programs for your little ones! From Mommy and Me sessions to Kids Yoga,
-            Story Time to Zumbini - amazing activities are coming soon.
+          <p className="text-lg text-charcoal-600 max-w-xl mx-auto leading-relaxed mb-6">
+            We&apos;re developing class programs for your little ones—Mommy and Me, Story Time, Kids Yoga, Lego Build, Toddler Tunes, Zumbini and more.
           </p>
-
-          <div className="inline-flex items-center space-x-2 bg-honey-100 px-6 py-3 rounded-full mb-12">
-            <Star className="w-5 h-5 text-honey-600" />
-            <span className="text-charcoal-700 font-medium">Classes launching soon!</span>
-            <Star className="w-5 h-5 text-honey-600" />
-          </div>
+          <p className="text-sm text-charcoal-500 font-medium">
+            Classes launching soon
+          </p>
         </motion.div>
 
-        {/* Newsletter Signup */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <Card className="bg-gradient-to-br from-honey-50 to-yellow-50 border-2 border-honey-200 shadow-xl">
-            <CardContent className="p-8 md:p-12">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-4">
-                  <Mail className="w-8 h-8 text-charcoal-700" />
+          <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
+            <CardContent className="p-8">
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Mail className="w-7 h-7 text-honey-600" />
                 </div>
-
-                <h2 className="text-3xl font-bold text-charcoal-800 mb-3">
-                  Be the First to Know!
-                </h2>
-                <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
-                  Sign up for our newsletter to get notified when classes launch, plus receive exclusive updates and special offers.
+                <h2 className="text-xl font-bold text-charcoal-800 mb-2">Be the First to Know</h2>
+                <p className="text-charcoal-600 text-sm max-w-md mx-auto">
+                  Sign up and we&apos;ll notify you when classes launch, plus exclusive updates and offers.
                 </p>
               </div>
 
               {!isSubmitted ? (
-                <form onSubmit={handleNewsletterSubmit} className="max-w-xl mx-auto">
-                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <form onSubmit={handleNewsletterSubmit} className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <input
                       type="text"
-                      placeholder="First Name"
+                      placeholder="First name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
-                      className="px-4 py-3 border-2 border-honey-200 rounded-lg bg-white focus:ring-2 focus:ring-honey-300 focus:border-transparent transition-all"
+                      className="px-4 py-3 border border-primary-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-300 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      placeholder="Last Name"
+                      placeholder="Last name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required
-                      className="px-4 py-3 border-2 border-honey-200 rounded-lg bg-white focus:ring-2 focus:ring-honey-300 focus:border-transparent transition-all"
+                      className="px-4 py-3 border border-primary-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-300 focus:border-transparent"
                     />
                   </div>
-                  <div className="mb-4">
-                    <input
-                      type="email"
-                      placeholder="Email Address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 border-2 border-honey-200 rounded-lg bg-white focus:ring-2 focus:ring-honey-300 focus:border-transparent transition-all"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-honey-400 to-honey-500 hover:from-honey-500 hover:to-honey-600 text-white font-bold shadow-lg hover:shadow-xl transition-all"
-                  >
-                    <Mail className="w-5 h-5 mr-2" />
-                    Join Our Newsletter
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-primary-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-300 focus:border-transparent"
+                  />
+                  <Button type="submit" size="lg" className="w-full">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Notify Me
                   </Button>
                 </form>
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Star className="w-8 h-8 text-green-600" />
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-green-700 mb-2">
-                    Thank You!
-                  </h3>
-                  <p className="text-green-600">
-                    You're all set! We'll notify you as soon as classes launch.
-                  </p>
+                  <h3 className="text-xl font-bold text-charcoal-800 mb-2">Thank you</h3>
+                  <p className="text-charcoal-600 text-sm">We&apos;ll notify you when classes launch.</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Coming Soon Preview */}
-        <motion.div
-          className="mt-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+        <motion.p
+          className="mt-8 text-center text-sm text-charcoal-500"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
           viewport={{ once: true }}
         >
-          <p className="text-charcoal-600 mb-4">
-            <span className="font-semibold text-charcoal-800">Coming Soon:</span> Mommy and Me • Story Time • Kids Yoga • Lego Build • Toddler Tunes • Zumbini
-          </p>
-          <p className="text-sm text-charcoal-500 italic">
-            Designed for ages 0-6 years with engaging activities for every stage
-          </p>
-        </motion.div>
+          Ages 0–6 • Mommy and Me • Story Time • Kids Yoga • Lego Build • Toddler Tunes • Zumbini
+        </motion.p>
       </div>
     </section>
   )

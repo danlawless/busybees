@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Gift, Calendar, Users, Star, Sparkles, Clock } from 'lucide-react'
-import { HoneycombPattern, FloatingHoneycombs } from '@/components/ui/BeeIcon'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -15,10 +14,10 @@ interface PartiesHeroProps {
 }
 
 const partyHighlights = [
-  { icon: Gift, text: 'Stress-Free Setup', color: 'from-pink-200 to-pink-300' },
-  { icon: Users, text: 'Up to 20 Kids', color: 'from-blue-200 to-blue-300' },
-  { icon: Clock, text: '2 Hours of Fun', color: 'from-green-200 to-green-300' },
-  { icon: Sparkles, text: 'Magical Memories', color: 'from-purple-200 to-purple-300' }
+  { icon: Gift, text: 'Stress-Free Setup' },
+  { icon: Users, text: 'Up to 20 Kids' },
+  { icon: Clock, text: '2 Hours of Fun' },
+  { icon: Sparkles, text: 'Magical Memories' }
 ]
 
 const quickStats = [
@@ -48,11 +47,21 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
   }
 
   return (
-    <section className="relative overflow-hidden section-hexagon-dense hexagon-overlay py-20 sm:py-24">
-      <HoneycombPattern variant="dense" size="xl" animated />
-      <FloatingHoneycombs />
+    <section className="relative overflow-hidden py-20 sm:py-24 min-h-[28rem]">
+      {/* Hero background - in-component so it always shows */}
+      <div className="absolute inset-0 z-0" aria-hidden>
+        <Image
+          src="/hero-background.png"
+          alt=""
+          fill
+          className="object-cover object-center"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/20 via-transparent to-[#FFF8E7]/15" aria-hidden />
+      </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content Side */}
           <motion.div
@@ -81,10 +90,10 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col items-center space-y-2 card-pastel px-3 py-4 rounded-2xl shadow-soft group hover:shadow-medium transition-all duration-300"
+                    className="flex flex-col items-center space-y-2 bg-white/90 backdrop-blur-sm px-3 py-4 rounded-2xl shadow-soft border border-primary-200/30 group hover:shadow-medium transition-all duration-300"
                   >
-                    <div className={`w-12 h-12 bg-gradient-to-br ${highlight.color} hexagon-shape flex items-center justify-center group-hover:scale-110 transition-transform duration-300 hexagon-pulse`}>
-                      <Icon className="w-6 h-6 text-charcoal-700" />
+                    <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                      <Icon className="w-6 h-6 text-honey-600" />
                     </div>
                     <span className="text-xs font-medium text-charcoal-800 text-center">{highlight.text}</span>
                   </div>
@@ -95,8 +104,9 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button
+                variant="primary"
                 size="lg"
-                className="bg-gradient-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="shadow-soft hover:shadow-medium transition-all duration-300"
                 onClick={handleBookParty}
                 disabled={!PURCHASING_ENABLED || authLoading}
               >
@@ -106,7 +116,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 border-honey-400 text-honey-700 hover:bg-honey-50"
+                className="border-2 border-primary-300 text-charcoal-700 hover:bg-primary-50"
                 onClick={() => {
                   document.getElementById('party-packages')?.scrollIntoView({
                     behavior: 'smooth',
@@ -147,7 +157,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative rounded-3xl overflow-hidden shadow-soft border border-primary-200/30">
               {/* Main Party Image */}
               <div className="aspect-[4/3] relative">
                 <Image
@@ -158,24 +168,24 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                   priority
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
 
-                {/* Floating party elements */}
-                <div className="absolute top-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200 to-pink-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-float">
-                  <Sparkles className="w-8 h-8 text-charcoal-600" />
+                {/* Floating party elements - honey/amber theme */}
+                <div className="absolute top-4 left-4 w-14 h-14 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
+                  <Sparkles className="w-7 h-7 text-honey-600" />
                 </div>
 
-                <div className="absolute top-4 right-4 w-14 h-14 bg-gradient-to-br from-purple-200 to-purple-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-rotate">
-                  <Star className="w-7 h-7 text-charcoal-600" />
+                <div className="absolute top-4 right-4 w-12 h-12 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
+                  <Star className="w-6 h-6 text-honey-600" />
                 </div>
 
-                <div className="absolute bottom-4 left-4 w-12 h-12 bg-gradient-to-br from-blue-200 to-blue-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape hexagon-pulse">
-                  <Users className="w-6 h-6 text-charcoal-600" />
+                <div className="absolute bottom-4 left-4 w-12 h-12 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
+                  <Users className="w-6 h-6 text-honey-600" />
                 </div>
 
-                <div className="absolute bottom-4 right-4 w-18 h-18 bg-gradient-to-br from-green-200 to-green-300 rounded-2xl shadow-lg flex items-center justify-center hexagon-shape">
-                  <div className="text-center text-charcoal-600">
-                    <Calendar className="w-6 h-6 mx-auto mb-1" />
+                <div className="absolute bottom-4 right-4 w-14 h-14 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
+                  <div className="text-center text-honey-600">
+                    <Calendar className="w-6 h-6 mx-auto mb-0.5" />
                     <p className="text-xs font-bold">BOOK</p>
                   </div>
                 </div>
@@ -184,7 +194,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
 
             {/* Floating testimonial bubble */}
             <motion.div
-              className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 max-w-xs card-pastel"
+              className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-soft border border-primary-200/30 p-4 max-w-xs"
               animate={{
                 y: [0, -5, 0],
                 rotate: [0, 1, 0]
@@ -196,8 +206,8 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
               }}
             >
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-pink-200 to-pink-300 rounded-full flex items-center justify-center hexagon-shape">
-                  <Star className="w-5 h-5 text-charcoal-600" />
+                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center border border-primary-200/50">
+                  <Star className="w-5 h-5 text-honey-600" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-charcoal-800">"Best party ever!"</p>

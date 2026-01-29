@@ -77,8 +77,8 @@ function PartiesContent() {
       <PartiesHero onBookParty={handleBookParty} />
 
       {/* Book Party CTA Section */}
-      <section className="relative py-16 bg-gradient-to-r from-honey-100 to-yellow-100">
-        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+      <section className="relative py-16 overflow-hidden min-h-[20rem] flex items-center bg-[#FFF8E7]/70">
+        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -95,10 +95,11 @@ function PartiesContent() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
+                variant="primary"
                 size="lg"
                 onClick={handleBookParty}
                 disabled={!PURCHASING_ENABLED || authLoading}
-                className="bg-gradient-to-r from-honey-500 to-yellow-500 hover:from-honey-600 hover:to-yellow-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="shadow-soft hover:shadow-medium transition-all duration-300"
               >
                 <Gift className="w-6 h-6 mr-2" />
                 {PURCHASING_ENABLED ? 'Book Your Party Now' : 'Coming Soon'}
@@ -113,7 +114,7 @@ function PartiesContent() {
                     block: 'start',
                   })
                 }}
-                className="border-2 border-charcoal-400 text-charcoal-700"
+                className="border-2 border-primary-300 text-charcoal-700 hover:bg-primary-50"
               >
                 <Calendar className="w-5 h-5 mr-2" />
                 View Packages First
@@ -144,8 +145,8 @@ function PartiesContent() {
       </div>
 
       {/* Bottom CTA */}
-      <section className="py-16 bg-charcoal-800">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+      <section className="relative py-16 bg-charcoal-800 overflow-hidden">
+        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -160,10 +161,11 @@ function PartiesContent() {
               Book your party today!
             </p>
             <Button
+              variant="primary"
               size="lg"
               onClick={handleBookParty}
               disabled={!PURCHASING_ENABLED || authLoading}
-              className="bg-gradient-to-r from-honey-400 to-yellow-500 hover:from-honey-500 hover:to-yellow-600 text-charcoal-800 font-bold text-lg"
+              className="bg-primary-500 hover:bg-primary-600 text-charcoal-800 font-bold text-lg shadow-soft hover:shadow-medium border-0"
             >
               <Gift className="w-6 h-6 mr-2" />
               {PURCHASING_ENABLED ? 'Start Booking Now' : 'Coming Soon'}

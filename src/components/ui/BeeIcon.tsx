@@ -86,12 +86,12 @@ export function HoneycombPattern({ className, variant = 'light', size = 'md', an
   }
 
   const variants = {
-    light: { stroke: '#f5d565', fill: 'none', opacity: 'opacity-6' },
-    medium: { stroke: '#e6b800', fill: 'none', opacity: 'opacity-12' },
-    dark: { stroke: '#b89000', fill: 'none', opacity: 'opacity-18' },
-    subtle: { stroke: '#fff9e6', fill: '#fffef9', opacity: 'opacity-4' },
-    dense: { stroke: '#f0c674', fill: '#fff9e6', opacity: 'opacity-15' },
-    scattered: { stroke: '#f5d565', fill: 'none', opacity: 'opacity-8' }
+    light: { stroke: '#FFB900', fill: 'none', opacity: 'opacity-6' },
+    medium: { stroke: '#E6A600', fill: 'none', opacity: 'opacity-10' },
+    dark: { stroke: '#CC9300', fill: 'none', opacity: 'opacity-15' },
+    subtle: { stroke: '#FFF3D0', fill: '#FFFDF7', opacity: 'opacity-4' },
+    dense: { stroke: '#FFC933', fill: '#FFF3D0', opacity: 'opacity-12' },
+    scattered: { stroke: '#FFB900', fill: 'none', opacity: 'opacity-6' }
   }
 
   const patternSize = sizes[size]

@@ -231,7 +231,7 @@ export function GiftCardRedemption() {
                   onChange={handleCodeChange}
                   placeholder="BBGC-XXXX-XXXX-XXXX"
                   maxLength={19}
-                  className="w-full px-4 py-4 text-center text-xl font-mono tracking-wider rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent uppercase"
+                  className="w-full px-4 py-4 text-center text-xl font-mono tracking-wider rounded-2xl border border-primary-200/50 focus:ring-2 focus:ring-[#A8E6CF] focus:border-transparent uppercase bg-white"
                   disabled={validating || redeeming}
                 />
               </div>

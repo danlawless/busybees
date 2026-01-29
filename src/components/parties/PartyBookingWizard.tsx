@@ -226,9 +226,9 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
         exit={{ opacity: 0, scale: 0.95 }}
         className="w-full max-w-4xl max-h-[90vh] flex flex-col"
       >
-        <Card className="flex-1 overflow-hidden flex flex-col bg-white">
+        <Card className="flex-1 overflow-hidden flex flex-col bg-white border-2 border-primary-200/30 shadow-soft">
           {/* Header */}
-          <div className="p-6 border-b bg-gradient-to-r from-honey-50 to-yellow-50">
+          <div className="p-6 border-b border-primary-200/30 bg-primary-50/80">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-charcoal-800">Book Your Party</h2>
               <Button variant="outline" size="sm" onClick={onClose}>
@@ -298,10 +298,10 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
           </div>
 
           {/* Footer with Price Summary & Navigation */}
-          <div className="p-6 border-t bg-gray-50">
+          <div className="p-6 border-t border-primary-200/30 bg-primary-50/50">
             {/* Price Summary */}
             {pricing && (
-              <div className="mb-4 p-4 bg-white rounded-lg border">
+              <div className="mb-4 p-4 bg-white rounded-xl border border-primary-200/30 shadow-soft">
                 <div className="flex justify-between items-center">
                   <div>
                     <span className="text-sm text-gray-600">
@@ -336,9 +336,9 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
 
               {currentStep < STEPS.length ? (
                 <Button
+                  variant="primary"
                   onClick={goToNextStep}
                   disabled={!stepValid || isSubmitting}
-                  className="bg-honey-500 hover:bg-honey-600 text-white"
                 >
                   Next
                   <ChevronRight className="w-4 h-4 ml-2" />
@@ -347,7 +347,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
                 <Button
                   onClick={handleSubmit}
                   disabled={!stepValid || isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white border-0"
                 >
                   {isSubmitting ? (
                     <>
