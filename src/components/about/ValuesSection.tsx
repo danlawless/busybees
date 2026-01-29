@@ -72,7 +72,7 @@ export function ValuesSection() {
             <motion.div key={index} variants={fadeInUp}>
               <Card padding="none" className={`h-full text-left group relative overflow-hidden ${value.accentColor} border-2 ${value.accentBorder} shadow-soft hover:shadow-honey transition-all duration-300 hover:-translate-y-1 rounded-3xl`}>
                 <CardContent className="p-0 flex flex-col">
-                  <div className="w-full h-48 sm:h-56 bg-white overflow-hidden relative p-3 sm:p-4">
+                  <div className="w-full h-48 sm:h-56 bg-[#FFFDF7] overflow-hidden relative p-3 sm:p-4">
                     <div className="absolute inset-0">
                       <ValueIcon src={value.iconSrc} alt={value.title} title={value.title} className="w-full h-full" />
                     </div>

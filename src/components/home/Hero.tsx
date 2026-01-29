@@ -160,7 +160,7 @@ export function Hero() {
                   key={index}
                   className="flex flex-col bg-white rounded-2xl shadow-soft border border-primary-200/30 hover:shadow-medium transition-shadow overflow-hidden"
                 >
-                  <div className="w-full h-48 sm:h-56 bg-white overflow-hidden relative p-3 sm:p-4">
+                  <div className="w-full h-48 sm:h-56 bg-[#FFFDF7] overflow-hidden relative p-3 sm:p-4">
                     <Image
                       src={item.iconSrc}
                       alt=""
