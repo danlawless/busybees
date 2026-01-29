@@ -154,18 +154,18 @@ export function Hero() {
             <h3 className="text-xl font-semibold text-charcoal-800 mb-8 text-center">
               Good to Know
             </h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
               {goodToKnowItems.map((item, index) => (
                 <div
                   key={index}
                   className="flex flex-col bg-white rounded-2xl shadow-soft border border-primary-200/30 hover:shadow-medium transition-shadow overflow-hidden"
                 >
-                  <div className="w-full h-48 sm:h-56 bg-white overflow-hidden relative">
+                  <div className="w-full h-48 sm:h-56 bg-white overflow-hidden relative p-3 sm:p-4">
                     <Image
                       src={item.iconSrc}
                       alt=""
                       fill
-                      className="object-cover"
+                      className="object-contain p-2"
                       sizes="(max-width: 640px) 50vw, 25vw"
                     />
                   </div>
