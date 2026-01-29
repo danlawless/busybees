@@ -129,7 +129,7 @@ export function RulesAndWaiver() {
               <motion.div key={index} variants={fadeInUp}>
                 <Card padding="none" className="h-full border-2 border-primary-200/50 shadow-soft hover:shadow-honey transition-all duration-300 rounded-3xl overflow-hidden">
                   <CardContent className="p-0 flex flex-col">
-                    <div className="w-full h-40 sm:h-48 bg-primary-50 relative overflow-hidden p-3 sm:p-4">
+                    <div className="w-full h-40 sm:h-48 bg-[#FFFDF7] relative overflow-hidden p-3 sm:p-4">
                       <RuleSectionIcon src={section.iconSrc} alt={section.title} title={section.title} />
                     </div>
                     <div className="p-6">
