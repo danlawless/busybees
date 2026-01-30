@@ -66,6 +66,16 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     }
 
+    // Check if user has an email address on file
+    if (!user.email || user.email.trim() === '') {
+      console.error('Password reset requested but user has no email on file:', user.id);
+      return NextResponse.json({
+        message: 'If an account exists with that phone number, you will receive a password reset email.',
+        success: true,
+        noEmail: true
+      }, { status: 200 });
+    }
+
     // Generate secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
@@ -103,7 +113,11 @@ export async function POST(request: NextRequest) {
 
     if (!emailResult.success) {
       console.error('Failed to send password reset email:', emailResult.error);
-      // Still return success to prevent enumeration
+      return NextResponse.json({
+        message: 'If an account exists with that phone number, you will receive a password reset email.',
+        success: true,
+        emailFailed: true
+      }, { status: 200 });
     }
 
     return NextResponse.json({
