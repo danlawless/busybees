@@ -5,12 +5,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { createPartyBooking, updateBookingWithStripeSession } from '@/lib/services/party-bookings';
+import { createPartyBooking, updateBookingWithStripeSession, updatePartyBooking } from '@/lib/services/party-bookings';
 import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { createCheckoutSession } from '@/lib/stripe/checkout';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
+
+const MEMBERSHIP_COUPON_ID = 'MEMBER10';
+const MEMBERSHIP_DISCOUNT_PERCENT = 10;
+const MEMBERSHIP_COUPON_NAME = 'Membership Party Discount';
 
 export async function POST(request: NextRequest) {
   let bookingId: string | undefined;
@@ -149,8 +154,66 @@ export async function POST(request: NextRequest) {
     // Get or create a temporary customer ID for non-logged-in users
     const tempCustomerId = customerId || `temp_${bookingId}`;
 
+    // Check if the user is an active monthly pass member for automatic discount
+    let memberDiscount: { couponId: string; discountPercent: number; discountAmount: number } | null = null;
+
+    if (customerId) {
+      try {
+        const adminSupabase = createAdminClient();
+        const { data: activePurchases } = await adminSupabase
+          .from('purchases')
+          .select('id, type, status')
+          .eq('customer_id', customerId)
+          .eq('type', 'monthly_pass')
+          .eq('status', 'active')
+          .limit(1);
+
+        if (activePurchases && activePurchases.length > 0) {
+          // User is an active member - ensure MEMBER10 coupon exists in Stripe
+          const stripe = await getStripeClient();
+          try {
+            await stripe.coupons.retrieve(MEMBERSHIP_COUPON_ID);
+          } catch (couponError: unknown) {
+            if ((couponError as { code?: string })?.code === 'resource_missing') {
+              await stripe.coupons.create({
+                id: MEMBERSHIP_COUPON_ID,
+                name: MEMBERSHIP_COUPON_NAME,
+                percent_off: MEMBERSHIP_DISCOUNT_PERCENT,
+                duration: 'once',
+                metadata: {
+                  type: 'membership_party_discount',
+                  description: '10% discount for monthly membership holders on party bookings',
+                },
+              });
+              logger.info({}, '🏷️ Created MEMBER10 coupon in Stripe');
+            } else {
+              throw couponError;
+            }
+          }
+
+          const discountAmount = (pricing.totalPrice * MEMBERSHIP_DISCOUNT_PERCENT) / 100;
+          memberDiscount = {
+            couponId: MEMBERSHIP_COUPON_ID,
+            discountPercent: MEMBERSHIP_DISCOUNT_PERCENT,
+            discountAmount,
+          };
+
+          logger.info(
+            { ...logContext, discountPercent: MEMBERSHIP_DISCOUNT_PERCENT, discountAmount },
+            '🏷️ Active member detected - applying automatic 10% party discount'
+          );
+        }
+      } catch (memberCheckError) {
+        // Don't block the booking if membership check fails - just skip the discount
+        logger.warn(
+          { ...logContext, error: memberCheckError },
+          '⚠️ Failed to check membership status for auto-discount, proceeding without discount'
+        );
+      }
+    }
+
     logger.info(
-      { ...logContext, tempCustomerId, totalAmount: pricing.totalPrice },
+      { ...logContext, tempCustomerId, totalAmount: pricing.totalPrice, hasMemberDiscount: !!memberDiscount },
       '💳 Creating Stripe checkout session'
     );
 
@@ -174,9 +237,11 @@ export async function POST(request: NextRequest) {
           child_name: bookingData.childName,
           package_name: bookingData.packageName,
           party_type: bookingData.partyType,
+          ...(memberDiscount && { member_discount_applied: 'true' }),
         },
         successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
+        ...(memberDiscount && { discounts: [{ coupon: memberDiscount.couponId }] }),
       });
 
       logger.info(
@@ -201,12 +266,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update booking with Stripe session ID
+    // Update booking with Stripe session ID and member discount info
     try {
       await updateBookingWithStripeSession(bookingId, checkoutSession.id);
 
+      // If member discount was applied, record it on the booking
+      if (memberDiscount) {
+        await updatePartyBooking(bookingId, {
+          discount_amount: memberDiscount.discountAmount,
+          discount_percent: memberDiscount.discountPercent,
+          discount_applied_by: 'system',
+          discount_applied_at: new Date().toISOString(),
+        });
+      }
+
       logger.info(
-        { ...logContext, sessionId: checkoutSession.id },
+        { ...logContext, sessionId: checkoutSession.id, memberDiscount: !!memberDiscount },
         '💾 Updated booking with Stripe session ID'
       );
     } catch (updateError) {
@@ -233,6 +308,12 @@ export async function POST(request: NextRequest) {
       bookingId,
       checkoutUrl: checkoutSession.url,
       sessionId: checkoutSession.id,
+      ...(memberDiscount && {
+        memberDiscount: {
+          discountPercent: memberDiscount.discountPercent,
+          discountAmount: memberDiscount.discountAmount,
+        },
+      }),
     });
   } catch (error) {
     logger.error(
