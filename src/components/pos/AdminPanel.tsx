@@ -450,7 +450,7 @@ export function AdminPanel({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-staff-pin': '1234', // Staff mode authorization
+          'x-staff-pin': '0297', // Staff mode authorization
         },
       });
       if (response.ok) {

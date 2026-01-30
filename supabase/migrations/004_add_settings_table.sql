@@ -42,6 +42,6 @@ INSERT INTO public.settings (key, value, description, is_encrypted) VALUES
   ('stripe_webhook_secret', '', 'Stripe webhook signing secret (starts with whsec_)', true),
   ('maintenance_mode', 'false', 'Enable maintenance mode to prevent customer access', false),
   ('closing_time', '20:00', 'Default closing time for auto-checkout (HH:MM)', false),
-  ('staff_pin', '1234', 'Default staff PIN for quick access (change this!)', true)
+  ('staff_pin', '0297', 'Default staff PIN for quick access (change this!)', true)
 ON CONFLICT (key) DO NOTHING;
 
