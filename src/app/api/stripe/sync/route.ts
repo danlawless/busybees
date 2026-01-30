@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check for staff PIN header (for POS staff mode)
     const staffPin = request.headers.get('x-staff-pin');
-    const isStaffMode = staffPin === '1234'; // Same PIN as POS staff mode
+    const isStaffMode = staffPin === '0297'; // Same PIN as POS staff mode
 
     if (!isStaffMode) {
       // Verify admin access via Supabase auth
