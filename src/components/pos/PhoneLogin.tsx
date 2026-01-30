@@ -381,7 +381,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
 
   const handleAdminPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassword === '1234') {
+    if (adminPassword === '0297') {
       setShowAdminModal(false);
       setAdminPassword('');
       setAdminError('');
