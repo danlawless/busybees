@@ -31,5 +31,5 @@ export const ACCOUNT_ACCESS_ENABLED = true;
  * This is separate from ACCOUNT_ACCESS_ENABLED so you can enable access
  * (for testing via direct URL) without showing it in the navigation yet.
  */
-export const SHOW_ACCOUNT_IN_HEADER = false;
+export const SHOW_ACCOUNT_IN_HEADER = true;
 
