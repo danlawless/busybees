@@ -486,7 +486,7 @@ function WebMyAccountContent() {
       return;
     }
 
-    const isPassPurchase = !productId.includes('party');
+    const isPassPurchase = availablePasses.some(p => p.id === productId);
 
     if (isPassPurchase) {
       if (!selectedChildForPurchase) {
@@ -530,16 +530,28 @@ function WebMyAccountContent() {
     setProcessingProduct(productId);
 
     try {
-      // Map product type
+      // Map product type from category field
       let purchaseType: Purchase['type'];
-      if (productId.includes('party')) {
-        purchaseType = 'party_package';
-      } else if (productId.includes('day')) {
+      if (product.category === 'day') {
         purchaseType = 'day_pass';
-      } else if (productId.includes('weekly')) {
+      } else if (product.category === 'weekly') {
         purchaseType = 'weekly_pass';
-      } else {
+      } else if (product.category === 'monthly') {
         purchaseType = 'monthly_pass';
+      } else if (isPassPurchase) {
+        // Fallback: infer from name if category not set
+        const lowerName = product.name.toLowerCase();
+        if (lowerName.includes('day')) {
+          purchaseType = 'day_pass';
+        } else if (lowerName.includes('punch') || lowerName.includes('weekly')) {
+          purchaseType = 'weekly_pass';
+        } else if (lowerName.includes('monthly') || lowerName.includes('membership')) {
+          purchaseType = 'monthly_pass';
+        } else {
+          purchaseType = 'day_pass';
+        }
+      } else {
+        purchaseType = 'party_package';
       }
 
       // Use direct payment API with saved card for one-click purchase
