@@ -10,33 +10,23 @@ import { logger } from '@/lib/logger';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { z } from 'zod';
 
+const StandardPackageSchema = z.object({
+  name: z.string(),
+  semiPrivatePrice: z.number().min(0),
+  privatePrice: z.number().min(0),
+  maxGuests: z.number().min(1),
+  duration: z.number().min(1),
+  description: z.string(),
+  features: z.array(z.string()),
+});
+
 const PackageConfigSchema = z.object({
-  queen_bee: z.object({
-    name: z.string(),
-    semiPrivatePrice: z.number().min(0),
-    privatePrice: z.number().min(0),
-    maxGuests: z.number().min(1),
-    duration: z.number().min(1),
-    description: z.string(),
-    features: z.array(z.string()),
-  }),
-  worker_bee: z.object({
-    name: z.string(),
-    semiPrivatePrice: z.number().min(0),
-    privatePrice: z.number().min(0),
-    maxGuests: z.number().min(1),
-    duration: z.number().min(1),
-    description: z.string(),
-    features: z.array(z.string()),
-  }),
-  basic_bee: z.object({
-    name: z.string(),
-    semiPrivatePrice: z.number().min(0),
-    privatePrice: z.number().min(0),
-    maxGuests: z.number().min(1),
-    duration: z.number().min(1),
-    description: z.string(),
-    features: z.array(z.string()),
+  queen_bee: StandardPackageSchema,
+  worker_bee: StandardPackageSchema,
+  basic_bee: StandardPackageSchema,
+  group_rate: StandardPackageSchema.extend({
+    minGuests: z.number().min(1),
+    pricePerChild: z.number().min(0),
   }),
 });
 

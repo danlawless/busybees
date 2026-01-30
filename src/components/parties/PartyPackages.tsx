@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Gift, Users, Crown, Sparkles, Star, CheckCircle } from 'lucide-react'
+import { Gift, Users, Crown, Sparkles, Star, CheckCircle, DollarSign } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -78,6 +78,29 @@ const partyPackages = [
       'Dedicated party host assistance'
     ],
     popular: false
+  },
+  {
+    name: 'Group Rate',
+    description: 'Homeschool & daycare groups (10-30 children)',
+    icon: Users,
+    color: 'from-green-200 to-green-300',
+    borderColor: 'border-green-300',
+    accentColor: 'from-green-500 to-green-600',
+    semiPrivatePrice: 12,
+    privatePrice: 12,
+    maxGuests: 30,
+    duration: '2 hours',
+    isPerChild: true,
+    minGuests: 10,
+    features: [
+      '$12 per child',
+      'Minimum 10 children required',
+      'Maximum 30 children',
+      'Access to play area',
+      'Group coordinator assistance',
+      'Flexible scheduling'
+    ],
+    popular: false
   }
 ]
 
@@ -109,7 +132,7 @@ export function PartyPackages() {
 
         {/* Package Cards */}
         <motion.div
-          className="grid lg:grid-cols-3 gap-8 mb-12"
+          className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -148,7 +171,9 @@ export function PartyPackages() {
                       <div className="flex justify-center items-center space-x-4">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4 text-honey-600" />
-                          <span className="text-sm text-charcoal-600">{pkg.maxGuests} guests</span>
+                          <span className="text-sm text-charcoal-600">
+                            {pkg.isPerChild ? `${pkg.minGuests}-${pkg.maxGuests}` : pkg.maxGuests} guests
+                          </span>
                         </div>
                         <div className="w-1 h-1 bg-charcoal-400 rounded-full"></div>
                         <span className="text-sm text-charcoal-600">{pkg.duration}</span>
@@ -158,14 +183,31 @@ export function PartyPackages() {
                     {/* Pricing Section */}
                     <div className="text-center mb-8">
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-                          <span className="font-medium text-charcoal-700">Private:</span>
-                          <span className="text-2xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-                          <span className="font-medium text-charcoal-700">Semi-Private:</span>
-                          <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
-                        </div>
+                        {pkg.isPerChild ? (
+                          <>
+                            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                              <span className="font-medium text-charcoal-700">Per Child:</span>
+                              <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                              <span className="font-medium text-charcoal-700">Range:</span>
+                              <span className="text-lg font-bold text-charcoal-800">
+                                ${pkg.minGuests * pkg.semiPrivatePrice} - ${pkg.maxGuests * pkg.semiPrivatePrice}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                              <span className="font-medium text-charcoal-700">Private:</span>
+                              <span className="text-2xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
+                              <span className="font-medium text-charcoal-700">Semi-Private:</span>
+                              <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 

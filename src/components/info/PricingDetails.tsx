@@ -86,9 +86,9 @@ const additionalServices = [
   {
     icon: Users,
     title: 'Group Rates',
-    description: 'Homeschool & daycare groups (10+ children)',
-    price: 'Contact us',
-    note: 'Special pricing available'
+    description: 'Homeschool & daycare groups (10-30 children)',
+    price: '$12/child',
+    note: '$120 min (10 kids) — $360 max (30 kids)'
   }
 ]
 

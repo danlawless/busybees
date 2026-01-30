@@ -17,6 +17,10 @@ import {
   PackageName,
   calculateBookingPrice,
   PACKAGE_PRICING,
+  GROUP_RATE_MIN_CHILDREN,
+  GROUP_RATE_MAX_CHILDREN,
+  MAX_CHILDREN,
+  INCLUDED_KIDS,
 } from '@/lib/validations/party-booking';
 
 interface PartyBookingWizardProps {
@@ -82,7 +86,23 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
   const [stepValid, setStepValid] = useState(false);
 
   const updateFormData = useCallback((updates: Partial<BookingFormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+    setFormData((prev) => {
+      const next = { ...prev, ...updates };
+
+      // Adjust guest count when switching packages
+      if (updates.packageName && updates.packageName !== prev.packageName) {
+        if (updates.packageName === 'group_rate') {
+          // Set to group rate default/minimum of 10
+          next.guestCount = GROUP_RATE_MIN_CHILDREN;
+        } else if (prev.packageName === 'group_rate') {
+          // Switching from group rate to standard — clamp to standard default
+          next.guestCount = Math.min(next.guestCount, MAX_CHILDREN);
+          if (next.guestCount < 1) next.guestCount = INCLUDED_KIDS;
+        }
+      }
+
+      return next;
+    });
     setError(null);
   }, []);
 

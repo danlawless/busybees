@@ -554,7 +554,7 @@ export interface Database {
           customer_phone: string;
           customer_address: string | null;
           party_type: 'private' | 'semi_private';
-          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee';
+          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate';
           party_date: string;
           start_time: string;
           end_time: string;
@@ -587,7 +587,7 @@ export interface Database {
           customer_phone: string;
           customer_address?: string | null;
           party_type: 'private' | 'semi_private';
-          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee';
+          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate';
           party_date: string;
           start_time: string;
           end_time: string;

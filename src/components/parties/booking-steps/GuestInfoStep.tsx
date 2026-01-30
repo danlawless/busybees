@@ -8,6 +8,9 @@ import {
   ADDITIONAL_KIDS_PRICE,
   INCLUDED_KIDS,
   MAX_CHILDREN,
+  GROUP_RATE_PRICE_PER_CHILD,
+  GROUP_RATE_MIN_CHILDREN,
+  GROUP_RATE_MAX_CHILDREN,
   calculateBookingPrice,
 } from '@/lib/validations/party-booking';
 import type { BookingFormData } from '../PartyBookingWizard';
@@ -21,24 +24,30 @@ interface GuestInfoStepProps {
 export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const isGroupRate = formData.packageName === 'group_rate';
+  const minGuests = isGroupRate ? GROUP_RATE_MIN_CHILDREN : 1;
+  const maxGuests = isGroupRate ? GROUP_RATE_MAX_CHILDREN : MAX_CHILDREN;
+
   // Validate step
   useEffect(() => {
     const newErrors: Record<string, string> = {};
 
     // Child name is optional - waivers signed when party arrives
 
-    if (formData.guestCount < 1) {
-      newErrors.guestCount = 'At least 1 guest is required';
-    } else if (formData.guestCount > MAX_CHILDREN) {
-      newErrors.guestCount = `Maximum ${MAX_CHILDREN} children allowed`;
+    if (formData.guestCount < minGuests) {
+      newErrors.guestCount = isGroupRate
+        ? `Minimum ${GROUP_RATE_MIN_CHILDREN} children required for group rate`
+        : 'At least 1 guest is required';
+    } else if (formData.guestCount > maxGuests) {
+      newErrors.guestCount = `Maximum ${maxGuests} children allowed`;
     }
 
     setErrors(newErrors);
     onValidChange(Object.keys(newErrors).length === 0);
-  }, [formData.childName, formData.guestCount, onValidChange]);
+  }, [formData.childName, formData.guestCount, formData.packageName, onValidChange, minGuests, maxGuests, isGroupRate]);
 
   const handleGuestCountChange = (delta: number) => {
-    const newCount = Math.max(1, Math.min(MAX_CHILDREN, formData.guestCount + delta));
+    const newCount = Math.max(minGuests, Math.min(maxGuests, formData.guestCount + delta));
     onUpdate({ guestCount: newCount });
   };
 
@@ -104,7 +113,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
             type="button"
             variant="outline"
             onClick={() => handleGuestCountChange(-1)}
-            disabled={formData.guestCount <= 1}
+            disabled={formData.guestCount <= minGuests}
             className="w-12 h-12 rounded-full"
           >
             <Minus className="w-5 h-5" />
@@ -119,7 +128,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
             type="button"
             variant="outline"
             onClick={() => handleGuestCountChange(1)}
-            disabled={formData.guestCount >= MAX_CHILDREN}
+            disabled={formData.guestCount >= maxGuests}
             className="w-12 h-12 rounded-full"
           >
             <Plus className="w-5 h-5" />
@@ -130,18 +139,27 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
         {pricing && (
           <div className="mt-6 pt-6 border-t">
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Included children (up to {INCLUDED_KIDS})</span>
-                <span>Included</span>
-              </div>
-
-              {pricing.additionalKids > 0 && (
-                <div className="flex justify-between text-amber-700">
-                  <span>
-                    Additional children ({pricing.additionalKids} × ${ADDITIONAL_KIDS_PRICE})
-                  </span>
-                  <span>+${pricing.additionalKidsPrice}</span>
+              {isGroupRate ? (
+                <div className="flex justify-between text-gray-600">
+                  <span>{formData.guestCount} children × ${GROUP_RATE_PRICE_PER_CHILD}</span>
+                  <span>${pricing.totalPrice}</span>
                 </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Included children (up to {INCLUDED_KIDS})</span>
+                    <span>Included</span>
+                  </div>
+
+                  {pricing.additionalKids > 0 && (
+                    <div className="flex justify-between text-amber-700">
+                      <span>
+                        Additional children ({pricing.additionalKids} × ${ADDITIONAL_KIDS_PRICE})
+                      </span>
+                      <span>+${pricing.additionalKidsPrice}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -173,9 +191,18 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
 
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
-          <strong>{INCLUDED_KIDS} children are included</strong> with your package. Each
-          additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {MAX_CHILDREN} children total).
-          The birthday child counts toward your guest total.
+          {isGroupRate ? (
+            <>
+              <strong>Group Rate: ${GROUP_RATE_PRICE_PER_CHILD} per child.</strong> Minimum {GROUP_RATE_MIN_CHILDREN} children,
+              maximum {GROUP_RATE_MAX_CHILDREN} children.
+            </>
+          ) : (
+            <>
+              <strong>{INCLUDED_KIDS} children are included</strong> with your package. Each
+              additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {MAX_CHILDREN} children total).
+              The birthday child counts toward your guest total.
+            </>
+          )}
         </p>
       </div>
     </div>

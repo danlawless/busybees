@@ -39,6 +39,7 @@ const PACKAGE_LABELS = {
   queen_bee: 'Queen Bee',
   worker_bee: 'Worker Bee',
   basic_bee: 'Basic Bee',
+  group_rate: 'Group Rate',
 };
 
 export default function AdminPartiesPage() {

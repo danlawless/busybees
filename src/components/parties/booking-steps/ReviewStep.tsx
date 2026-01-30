@@ -15,7 +15,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { PACKAGE_PRICING, GROUP_RATE_PRICE_PER_CHILD } from '@/lib/validations/party-booking';
 import { parseDateString } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
@@ -54,6 +54,7 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
   };
 
   const packageInfo = formData.packageName ? PACKAGE_PRICING[formData.packageName] : null;
+  const isGroupRate = formData.packageName === 'group_rate';
 
   return (
     <div className="space-y-6">
@@ -143,16 +144,18 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
           <div className="flex justify-between items-start">
             <div>
               <div className="font-semibold text-charcoal-800">
-                {packageInfo?.name || 'Package'} Package
+                {packageInfo?.name || 'Package'} {isGroupRate ? '' : 'Package'}
               </div>
               <div className="text-sm text-gray-600">
-                {formData.partyType === 'private' ? 'Private Party' : 'Semi-Private Party'}
+                {isGroupRate
+                  ? `${formData.guestCount} children × $${GROUP_RATE_PRICE_PER_CHILD}/child`
+                  : formData.partyType === 'private' ? 'Private Party' : 'Semi-Private Party'}
               </div>
             </div>
             <div className="text-right font-semibold">${pricing?.basePrice || 0}</div>
           </div>
 
-          {pricing && pricing.additionalKids > 0 && (
+          {!isGroupRate && pricing && pricing.additionalKids > 0 && (
             <div className="flex justify-between items-start text-amber-700">
               <div>
                 <div className="font-medium">Additional Children</div>

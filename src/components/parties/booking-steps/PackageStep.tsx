@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Gift, Sparkles, Crown, Users, CheckCircle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { PackageName, PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { PackageName, PACKAGE_PRICING, GROUP_RATE_PRICE_PER_CHILD } from '@/lib/validations/party-booking';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface PackageStepProps {
@@ -41,6 +41,15 @@ const packages = [
     bgColor: 'bg-pink-50',
     popular: false,
   },
+  {
+    id: 'group_rate' as PackageName,
+    name: 'Group Rate',
+    icon: Users,
+    color: 'from-green-200 to-green-300',
+    borderColor: 'border-green-400',
+    bgColor: 'bg-green-50',
+    popular: false,
+  },
 ];
 
 export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepProps) {
@@ -61,13 +70,15 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {packages.map((pkg) => {
           const Icon = pkg.icon;
           const pricing = PACKAGE_PRICING[pkg.id];
           const isSelected = formData.packageName === pkg.id;
-          const displayPrice =
-            formData.partyType === 'private' ? pricing.privatePrice : pricing.semiPrivatePrice;
+          const isGroupRate = pkg.id === 'group_rate';
+          const displayPrice = isGroupRate
+            ? GROUP_RATE_PRICE_PER_CHILD
+            : formData.partyType === 'private' ? pricing.privatePrice : pricing.semiPrivatePrice;
 
           return (
             <motion.div
@@ -115,12 +126,14 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
                   <div className="text-center">
                     <div className="text-3xl font-bold text-charcoal-800">${displayPrice}</div>
                     <div className="text-sm text-gray-500">
-                      {formData.partyType === 'private' ? 'Private' : 'Semi-Private'}
+                      {isGroupRate ? 'per child' : formData.partyType === 'private' ? 'Private' : 'Semi-Private'}
                     </div>
                   </div>
                   <div className="flex items-center justify-center mt-2 text-sm text-gray-600">
                     <Users className="w-4 h-4 mr-1" />
-                    Up to {pricing.maxGuests} guests • {pricing.duration} hours
+                    {isGroupRate
+                      ? `${pricing.minGuests}-${pricing.maxGuests} children • ${pricing.duration} hours`
+                      : `Up to ${pricing.maxGuests} guests • ${pricing.duration} hours`}
                   </div>
                 </div>
 
@@ -146,7 +159,15 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
 
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
-          <strong>15 kids included</strong> with all packages. Additional kids are $15 each (max 20 children total).
+          {formData.packageName === 'group_rate' ? (
+            <>
+              <strong>Group Rate: ${GROUP_RATE_PRICE_PER_CHILD}/child</strong> — minimum 10, maximum 30 children.
+            </>
+          ) : (
+            <>
+              <strong>15 kids included</strong> with all packages. Additional kids are $15 each (max 20 children total).
+            </>
+          )}
         </p>
       </div>
     </div>

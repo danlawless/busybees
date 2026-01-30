@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { createPartyBooking, updateBookingWithStripeSession } from '@/lib/services/party-bookings';
-import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING, GROUP_RATE_PRICE_PER_CHILD } from '@/lib/validations/party-booking';
 import { createCheckoutSession } from '@/lib/stripe/checkout';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
@@ -127,17 +127,27 @@ export async function POST(request: NextRequest) {
     });
 
     // Build line items for Stripe
-    const lineItems = [
-      {
-        price: pricing.basePrice,
-        quantity: 1,
-        name: `${packageInfo.name} Party Package`,
-        description: `${bookingData.partyType === 'private' ? 'Private' : 'Semi-Private'} party on ${formattedDate} at ${formatTime(bookingData.startTime)}`,
-      },
-    ];
+    const isGroupRate = bookingData.packageName === 'group_rate';
+    const lineItems = isGroupRate
+      ? [
+          {
+            price: GROUP_RATE_PRICE_PER_CHILD,
+            quantity: bookingData.guestCount,
+            name: `${packageInfo.name} — Group Admission`,
+            description: `${bookingData.guestCount} children on ${formattedDate} at ${formatTime(bookingData.startTime)}`,
+          },
+        ]
+      : [
+          {
+            price: pricing.basePrice,
+            quantity: 1,
+            name: `${packageInfo.name} Party Package`,
+            description: `${bookingData.partyType === 'private' ? 'Private' : 'Semi-Private'} party on ${formattedDate} at ${formatTime(bookingData.startTime)}`,
+          },
+        ];
 
-    // Add additional kids if any
-    if (pricing.additionalKids > 0) {
+    // Add additional kids if any (standard packages only)
+    if (!isGroupRate && pricing.additionalKids > 0) {
       lineItems.push({
         price: 15, // $15 per additional kid
         quantity: pricing.additionalKids,
