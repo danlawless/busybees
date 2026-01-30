@@ -305,6 +305,26 @@ export function AdminPanel({
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterSearchTerm, setNewsletterSearchTerm] = useState('');
 
+  // Newsletter compose states
+  const [showCompose, setShowCompose] = useState(false);
+  const [newsletterSubject, setNewsletterSubject] = useState('');
+  const [newsletterHeading, setNewsletterHeading] = useState('');
+  const [newsletterBody, setNewsletterBody] = useState('');
+  const [newsletterCtaText, setNewsletterCtaText] = useState('');
+  const [newsletterCtaUrl, setNewsletterCtaUrl] = useState('');
+  const [newsletterSending, setNewsletterSending] = useState(false);
+  const [newsletterSendResult, setNewsletterSendResult] = useState<{
+    success: boolean;
+    sent: number;
+    failed: number;
+    total: number;
+  } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [confirmSend, setConfirmSend] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // Customer loading state
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersStats, setCustomersStats] = useState({ total: 0, withPurchases: 0, active: 0 });
@@ -3369,6 +3389,118 @@ export function AdminPanel({
     }
   };
 
+  const handleSendNewsletter = async () => {
+    if (!confirmSend) {
+      setConfirmSend(true);
+      setTimeout(() => setConfirmSend(false), 5000);
+      return;
+    }
+
+    setConfirmSend(false);
+    setNewsletterSending(true);
+    setNewsletterSendResult(null);
+
+    try {
+      const payload: Record<string, string> = {
+        subject: newsletterSubject,
+        heading: newsletterHeading,
+        body: newsletterBody,
+      };
+      if (newsletterCtaText && newsletterCtaUrl) {
+        payload.ctaText = newsletterCtaText;
+        payload.ctaUrl = newsletterCtaUrl;
+      }
+
+      const response = await fetch('/api/newsletter/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setNewsletterSendResult({
+          success: true,
+          sent: data.sent,
+          failed: data.failed,
+          total: data.total,
+        });
+      } else {
+        setNewsletterSendResult({
+          success: false,
+          sent: 0,
+          failed: 0,
+          total: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send newsletter:', error);
+      setNewsletterSendResult({
+        success: false,
+        sent: 0,
+        failed: 0,
+        total: 0,
+      });
+    } finally {
+      setNewsletterSending(false);
+    }
+  };
+
+  const handleSendTestNewsletter = async () => {
+    if (!testEmail || !isComposeValid) return;
+
+    setTestSending(true);
+    setTestResult(null);
+
+    try {
+      const payload: Record<string, string> = {
+        testEmail,
+        subject: newsletterSubject,
+        heading: newsletterHeading,
+        body: newsletterBody,
+      };
+      if (newsletterCtaText && newsletterCtaUrl) {
+        payload.ctaText = newsletterCtaText;
+        payload.ctaUrl = newsletterCtaUrl;
+      }
+
+      const response = await fetch('/api/newsletter/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        setTestResult({ success: true, message: `Test email sent to ${testEmail}` });
+      } else {
+        const data = await response.json();
+        setTestResult({ success: false, message: data.error || 'Failed to send test email' });
+      }
+    } catch (error) {
+      console.error('Failed to send test newsletter:', error);
+      setTestResult({ success: false, message: 'Failed to send test email' });
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  const resetComposeForm = () => {
+    setNewsletterSubject('');
+    setNewsletterHeading('');
+    setNewsletterBody('');
+    setNewsletterCtaText('');
+    setNewsletterCtaUrl('');
+    setNewsletterSendResult(null);
+    setShowPreview(false);
+    setConfirmSend(false);
+    setShowCompose(false);
+    setTestEmail('');
+    setTestResult(null);
+  };
+
+  const isComposeValid = newsletterSubject.trim() && newsletterHeading.trim() && newsletterBody.trim();
+
   const renderNewsletter = () => {
     const filteredSubscribers = newsletterSubscribers.filter(sub =>
       sub.name.toLowerCase().includes(newsletterSearchTerm.toLowerCase()) ||
@@ -3407,6 +3539,278 @@ export function AdminPanel({
           </Card>
         </div>
 
+        {/* Send Newsletter Section */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Send Newsletter</h3>
+              <p className="text-sm text-gray-500">
+                Compose and send a newsletter to all {newsletterStats.active} active subscribers
+              </p>
+            </div>
+            {!showCompose && (
+              <Button
+                onClick={() => {
+                  setShowCompose(true);
+                  setNewsletterSendResult(null);
+                }}
+                size="sm"
+                disabled={newsletterStats.active === 0}
+              >
+                &#x270F;&#xFE0F; Compose Newsletter
+              </Button>
+            )}
+          </div>
+
+          {showCompose && (
+            <div className="space-y-4">
+              {/* Subject Line */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Subject Line
+                </label>
+                <input
+                  type="text"
+                  value={newsletterSubject}
+                  onChange={(e) => setNewsletterSubject(e.target.value)}
+                  placeholder="e.g. Exciting News from Busy Bees!"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  maxLength={200}
+                />
+              </div>
+
+              {/* Heading */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Newsletter Heading
+                </label>
+                <input
+                  type="text"
+                  value={newsletterHeading}
+                  onChange={(e) => setNewsletterHeading(e.target.value)}
+                  placeholder="e.g. What's Buzzing This Month"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  maxLength={200}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  This appears as the main title in the email header
+                </p>
+              </div>
+
+              {/* Body Content */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Newsletter Content
+                </label>
+                <textarea
+                  value={newsletterBody}
+                  onChange={(e) => setNewsletterBody(e.target.value)}
+                  placeholder={"Write your newsletter content here...\n\nUse blank lines to separate paragraphs.\n\nShare updates, promotions, events, or any news with your subscribers!"}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent min-h-[200px] resize-y"
+                  maxLength={10000}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {newsletterBody.length}/10,000 characters &middot; Use blank lines between paragraphs
+                </p>
+              </div>
+
+              {/* CTA Button (Optional) */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Call-to-Action Button <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      type="text"
+                      value={newsletterCtaText}
+                      onChange={(e) => setNewsletterCtaText(e.target.value)}
+                      placeholder="Button text, e.g. Book Now"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="url"
+                      value={newsletterCtaUrl}
+                      onChange={(e) => setNewsletterCtaUrl(e.target.value)}
+                      placeholder="Button URL, e.g. https://busybeesipc.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Add a button that links to your website, a booking page, or a promotion
+                </p>
+              </div>
+
+              {/* Preview Toggle */}
+              {isComposeValid && (
+                <div>
+                  <Button
+                    onClick={() => setShowPreview(!showPreview)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {showPreview ? '&#x1F4DD; Hide Preview' : '&#x1F441; Preview Email'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Email Preview */}
+              {showPreview && isComposeValid && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                    <p className="text-xs text-gray-500">Email Preview</p>
+                    <p className="text-sm font-medium text-gray-700">{newsletterSubject}</p>
+                  </div>
+                  <div className="bg-[#fffdf7] p-4">
+                    {/* Mini preview matching the actual template */}
+                    <div className="max-w-[400px] mx-auto bg-white rounded-xl overflow-hidden shadow-sm">
+                      {/* Header */}
+                      <div className="bg-gradient-to-br from-yellow-500 to-orange-500 p-6 text-center">
+                        <div className="w-12 h-12 bg-white/25 rounded-full mx-auto mb-3 flex items-center justify-center border-2 border-white/40">
+                          <span className="text-2xl">&#x1F41D;</span>
+                        </div>
+                        <h2 className="text-white text-lg font-bold">{newsletterHeading}</h2>
+                        <p className="text-white/80 text-xs mt-1">Busy Bees Indoor Play Center</p>
+                      </div>
+                      {/* Body */}
+                      <div className="p-5">
+                        <p className="text-gray-800 font-semibold text-sm mb-3">
+                          Hi [Subscriber Name]! &#x1F44B;
+                        </p>
+                        <div className="text-gray-600 text-xs leading-relaxed space-y-2">
+                          {newsletterBody.split('\n\n').filter(p => p.trim()).map((paragraph, i) => (
+                            <p key={i}>{paragraph}</p>
+                          ))}
+                        </div>
+                        {newsletterCtaText && newsletterCtaUrl && (
+                          <div className="text-center mt-4">
+                            <span className="inline-block bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-semibold py-2 px-5 rounded-full">
+                              {newsletterCtaText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Footer */}
+                      <div className="border-t border-yellow-100 px-5 py-3 text-center">
+                        <p className="text-[10px] text-gray-400">Busy Bees Indoor Play Center &middot; busybeesipc.com</p>
+                        <p className="text-[9px] text-gray-300 mt-1">Unsubscribe</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Send Test Email */}
+              {isComposeValid && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-blue-800 mb-2">
+                    &#x1F9EA; Send Test Email
+                  </label>
+                  <p className="text-xs text-blue-600 mb-3">
+                    Send a test version to yourself before sending to all subscribers. Subject will be prefixed with [TEST].
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => {
+                        setTestEmail(e.target.value);
+                        setTestResult(null);
+                      }}
+                      placeholder="Enter your email address"
+                      className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                    <Button
+                      onClick={handleSendTestNewsletter}
+                      size="sm"
+                      variant="outline"
+                      disabled={!testEmail || testSending}
+                      className="whitespace-nowrap border-blue-300 text-blue-700 hover:bg-blue-100"
+                    >
+                      {testSending ? 'Sending...' : '&#x1F4E8; Send Test'}
+                    </Button>
+                  </div>
+                  {testResult && (
+                    <p className={`text-sm mt-2 ${testResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                      {testResult.success ? '&#x2705;' : '&#x274C;'} {testResult.message}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Send Result */}
+              {newsletterSendResult && (
+                <div className={`rounded-lg p-4 ${
+                  newsletterSendResult.success
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-red-50 border border-red-200'
+                }`}>
+                  {newsletterSendResult.success ? (
+                    <div>
+                      <p className="font-semibold text-green-800">
+                        &#x2705; Newsletter sent successfully!
+                      </p>
+                      <p className="text-sm text-green-700 mt-1">
+                        Sent to {newsletterSendResult.sent} of {newsletterSendResult.total} subscribers.
+                        {newsletterSendResult.failed > 0 && (
+                          <span className="text-orange-600">
+                            {' '}{newsletterSendResult.failed} failed to deliver.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-semibold text-red-800">
+                        &#x274C; Failed to send newsletter
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Please check the email configuration and try again.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <Button
+                  onClick={resetComposeForm}
+                  size="sm"
+                  variant="outline"
+                  disabled={newsletterSending}
+                >
+                  Cancel
+                </Button>
+                <div className="flex items-center space-x-3">
+                  {confirmSend && (
+                    <span className="text-sm text-orange-600 font-medium animate-pulse">
+                      Click again to confirm sending to {newsletterStats.active} subscribers
+                    </span>
+                  )}
+                  <Button
+                    onClick={handleSendNewsletter}
+                    size="sm"
+                    disabled={!isComposeValid || newsletterSending || newsletterStats.active === 0}
+                    className={confirmSend ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                  >
+                    {newsletterSending
+                      ? '&#x1F4E8; Sending...'
+                      : confirmSend
+                        ? `&#x2705; Confirm Send to ${newsletterStats.active}`
+                        : `&#x1F4E8; Send to ${newsletterStats.active} Subscribers`
+                    }
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
         {/* Subscriber List */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -3425,7 +3829,7 @@ export function AdminPanel({
                 variant="outline"
                 disabled={newsletterLoading}
               >
-                🔄 Refresh
+                &#x1F504; Refresh
               </Button>
             </div>
           </div>
@@ -3436,7 +3840,7 @@ export function AdminPanel({
             </div>
           ) : filteredSubscribers.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 text-lg mb-2">📧 No subscribers yet</p>
+              <p className="text-gray-500 text-lg mb-2">&#x1F4E7; No subscribers yet</p>
               <p className="text-sm text-gray-400">
                 Newsletter signups from the website footer will appear here
               </p>
@@ -3555,7 +3959,7 @@ export function AdminPanel({
             size="sm"
             variant="outline"
           >
-            📥 Export Active Subscribers (CSV)
+            &#x1F4E5; Export Active Subscribers (CSV)
           </Button>
         </Card>
       </div>

@@ -1517,6 +1517,169 @@ ${siteUrl}
 }
 
 /**
+ * Send a newsletter email to a single subscriber
+ * Used by the bulk send endpoint to send to each active subscriber
+ */
+export async function sendNewsletterEmail(data: {
+  to: string;
+  subscriberName: string;
+  subject: string;
+  heading: string;
+  body: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  subscriberEmail: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const unsubscribeUrl = `${siteUrl}/newsletter/unsubscribe?email=${encodeURIComponent(data.subscriberEmail)}`;
+
+  // Convert newlines in body to HTML paragraphs
+  const bodyHtml = data.body
+    .split('\n\n')
+    .map(paragraph => paragraph.trim())
+    .filter(paragraph => paragraph.length > 0)
+    .map(paragraph => `<p style="margin: 0 0 16px; font-size: 15px; color: #4b5563; line-height: 1.7;">${paragraph.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+  // Plain text fallback
+  const text = `
+${data.heading}
+
+Hi ${data.subscriberName}!
+
+${data.body}
+
+${data.ctaText && data.ctaUrl ? `${data.ctaText}: ${data.ctaUrl}\n` : ''}
+---
+Busy Bees Indoor Play Center
+${siteUrl}
+
+To unsubscribe from our newsletter: ${unsubscribeUrl}
+`;
+
+  // Beautiful on-brand HTML newsletter template
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${data.subject}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #fffdf7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffdf7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+
+          <!-- Header with honeycomb gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #fbbf24 100%); padding: 40px 30px; text-align: center;">
+              <!-- Decorative bees -->
+              <div style="margin-bottom: 8px;">
+                <span style="font-size: 18px; opacity: 0.7;">&#x2728;</span>
+                <span style="font-size: 14px; opacity: 0.5;">&nbsp;</span>
+                <span style="font-size: 22px; opacity: 0.8;">&#x2728;</span>
+              </div>
+              <!-- Bee Logo Circle -->
+              <div style="width: 80px; height: 80px; background-color: rgba(255,255,255,0.25); border-radius: 50%; margin: 0 auto 18px; line-height: 80px; border: 3px solid rgba(255,255,255,0.4);">
+                <span style="font-size: 40px;">&#x1F41D;</span>
+              </div>
+              <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.15); line-height: 1.3;">
+                ${data.heading}
+              </h1>
+              <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 14px; letter-spacing: 0.5px;">
+                Busy Bees Indoor Play Center
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 35px 30px 20px;">
+
+              <!-- Greeting -->
+              <p style="margin: 0 0 20px; font-size: 17px; font-weight: 600; color: #1f2937;">
+                Hi ${data.subscriberName}! &#x1F44B;
+              </p>
+
+              <!-- Newsletter Body Content -->
+              <div style="margin-bottom: 25px;">
+                ${bodyHtml}
+              </div>
+
+              ${data.ctaText && data.ctaUrl ? `
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 30px;">
+                    <a href="${data.ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                      ${data.ctaText}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+            </td>
+          </tr>
+
+          <!-- Honeycomb divider -->
+          <tr>
+            <td style="padding: 0 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-top: 2px solid #fef3c7;"></td>
+                  <td style="width: 60px; text-align: center; padding: 0 10px;">
+                    <span style="font-size: 20px;">&#x1F41D;</span>
+                  </td>
+                  <td style="border-top: 2px solid #fef3c7;"></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 25px 30px 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">
+                      &#x1F4CD; Busy Bees Indoor Play Center
+                    </p>
+                    <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">
+                      &#x1F310; <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none; font-weight: 500;">busybeesipc.com</a>
+                    </p>
+                    <p style="margin: 0 0 15px; font-size: 13px; color: #9ca3af;">
+                      Thank you for being part of our Busy Bees family! &#x1F49B;
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #d1d5db;">
+                      <a href="${unsubscribeUrl}" style="color: #d1d5db; text-decoration: underline;">Unsubscribe</a> from our newsletter
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject: data.subject,
+    text,
+    html,
+  });
+}
+
+/**
  * Send gift card redeemed notification to purchaser
  */
 export async function sendGiftCardRedeemedEmail(data: {
