@@ -13,6 +13,7 @@ import {
   Gift,
   CheckCircle,
   CreditCard,
+  Tag,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
@@ -28,9 +29,11 @@ interface ReviewStepProps {
     additionalKids: number;
   } | null;
   onValidChange: (isValid: boolean) => void;
+  isMember?: boolean;
+  memberDiscountPercent?: number;
 }
 
-export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps) {
+export function ReviewStep({ formData, pricing, onValidChange, isMember, memberDiscountPercent }: ReviewStepProps) {
   // Always valid if we got here
   useEffect(() => {
     onValidChange(true);
@@ -54,6 +57,11 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
   };
 
   const packageInfo = formData.packageName ? PACKAGE_PRICING[formData.packageName] : null;
+
+  // Calculate member discount
+  const discountPercent = isMember && memberDiscountPercent ? memberDiscountPercent : 0;
+  const discountAmount = pricing ? Math.round((pricing.totalPrice * discountPercent) / 100 * 100) / 100 : 0;
+  const discountedTotal = pricing ? pricing.totalPrice - discountAmount : 0;
 
   return (
     <div className="space-y-6">
@@ -156,17 +164,41 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
             <div className="flex justify-between items-start text-amber-700">
               <div>
                 <div className="font-medium">Additional Children</div>
-                <div className="text-sm">{pricing.additionalKids} × $15</div>
+                <div className="text-sm">{pricing.additionalKids} x $15</div>
               </div>
               <div className="font-semibold">+${pricing.additionalKidsPrice}</div>
             </div>
           )}
 
+          {isMember && discountAmount > 0 && (
+            <div className="flex justify-between items-start text-green-700">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                <div>
+                  <div className="font-medium">Member Discount</div>
+                  <div className="text-sm">{discountPercent}% off (monthly pass holder)</div>
+                </div>
+              </div>
+              <div className="font-semibold">-${discountAmount.toFixed(0)}</div>
+            </div>
+          )}
+
           <div className="border-t border-honey-200 pt-4 flex justify-between items-center">
             <div className="text-lg font-bold text-charcoal-800">Total</div>
-            <div className="text-2xl font-bold text-charcoal-800">
-              ${pricing?.totalPrice || 0}
-            </div>
+            {isMember && discountAmount > 0 ? (
+              <div className="text-right">
+                <div className="text-sm text-gray-400 line-through">
+                  ${pricing?.totalPrice || 0}
+                </div>
+                <div className="text-2xl font-bold text-green-700">
+                  ${discountedTotal.toFixed(0)}
+                </div>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-charcoal-800">
+                ${pricing?.totalPrice || 0}
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -204,6 +236,9 @@ export function ReviewStep({ formData, pricing, onValidChange }: ReviewStepProps
           <strong>Secure Payment:</strong> You&apos;ll be redirected to our secure payment
           processor (Stripe) to complete your booking. Your payment information is encrypted and
           never stored on our servers.
+          {isMember && discountAmount > 0 && (
+            <> Your {discountPercent}% member discount will be applied at checkout.</>
+          )}
         </p>
       </motion.div>
     </div>
