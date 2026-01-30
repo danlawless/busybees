@@ -17,6 +17,8 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const [noEmail, setNoEmail] = useState(false);
+  const [emailFailed, setEmailFailed] = useState(false);
 
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/[^\d]/g, '');
@@ -34,6 +36,8 @@ export default function ForgotPasswordPage() {
     setPhone(formatted);
     setError('');
     setNeedsPasswordSetup(false);
+    setNoEmail(false);
+    setEmailFailed(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +46,8 @@ export default function ForgotPasswordPage() {
     setError('');
     setSuccess(false);
     setNeedsPasswordSetup(false);
+    setNoEmail(false);
+    setEmailFailed(false);
 
     try {
       const response = await fetch('/api/auth/forgot-password', {
@@ -60,6 +66,10 @@ export default function ForgotPasswordPage() {
 
       if (data.needsPasswordSetup) {
         setNeedsPasswordSetup(true);
+      } else if (data.noEmail) {
+        setNoEmail(true);
+      } else if (data.emailFailed) {
+        setEmailFailed(true);
       } else {
         setSuccess(true);
       }
@@ -142,6 +152,20 @@ export default function ForgotPasswordPage() {
                     >
                       Click here to set up your password
                     </Link>
+                  </div>
+                )}
+
+                {noEmail && (
+                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+                    <p className="mb-2">We don&apos;t have an email address on file for your account, so we&apos;re unable to send a reset link.</p>
+                    <p>Please contact us at <a href="mailto:info@busybeesipc.com" className="text-yellow-700 hover:text-yellow-900 font-medium underline">info@busybeesipc.com</a> or visit our front desk to update your email and reset your password.</p>
+                  </div>
+                )}
+
+                {emailFailed && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    <p className="mb-2">We were unable to send the password reset email. Please try again in a few minutes.</p>
+                    <p>If the problem persists, contact us at <a href="mailto:info@busybeesipc.com" className="text-red-600 hover:text-red-800 font-medium underline">info@busybeesipc.com</a> for assistance.</p>
                   </div>
                 )}
 
