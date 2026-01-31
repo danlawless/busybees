@@ -814,9 +814,9 @@ function WebMyAccountContent() {
 
         {/* Gift Card Redemption */}
         <Card className="p-4 bg-amber-50 border-amber-200">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-xl">🎁</span>
               </div>
               <div>
@@ -833,7 +833,7 @@ function WebMyAccountContent() {
                   setGiftCardError(null);
                 }}
                 placeholder="BBGC-XXXX-XXXX-XXXX"
-                className="px-3 py-2 border rounded-lg font-mono text-sm w-52"
+                className="px-3 py-2 border rounded-lg font-mono text-sm flex-1 min-w-0 sm:w-52"
                 disabled={redeemingGiftCard}
               />
               <Button
@@ -872,58 +872,58 @@ function WebMyAccountContent() {
         )}
 
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <nav className="flex space-x-2 p-2">
+        <div className="border-b border-gray-200 bg-gray-50 rounded-lg overflow-hidden">
+          <nav className="flex space-x-1 sm:space-x-2 p-1.5 sm:p-2 overflow-x-auto">
             <button
               onClick={() => setActiveTab('children')}
-              className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
                 activeTab === 'children'
                   ? 'bg-blue-500 text-white shadow-lg transform scale-105 border-2 border-blue-600'
                   : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
               }`}
             >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-2xl">👶</span>
-                <span>Children ({children.length})</span>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">👶</span>
+                <span>Children<span className="sm:hidden"><br />({children.length})</span><span className="hidden sm:inline"> ({children.length})</span></span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('passes')}
-              className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
                 activeTab === 'passes'
                   ? 'bg-yellow-500 text-white shadow-lg transform scale-105 border-2 border-yellow-600'
                   : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
               }`}
             >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-2xl">🎫</span>
-                <span>Passes ({activePassPurchases.length})</span>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">🎫</span>
+                <span>Passes<span className="sm:hidden"><br />({activePassPurchases.length})</span><span className="hidden sm:inline"> ({activePassPurchases.length})</span></span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('parties')}
-              className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
                 activeTab === 'parties'
                   ? 'bg-purple-500 text-white shadow-lg transform scale-105 border-2 border-purple-600'
                   : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
               }`}
             >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-2xl">🎉</span>
-                <span>Parties ({activePartyPurchases.length})</span>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">🎉</span>
+                <span>Parties<span className="sm:hidden"><br />({activePartyPurchases.length})</span><span className="hidden sm:inline"> ({activePartyPurchases.length})</span></span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('payments')}
-              className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 ${
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
                 activeTab === 'payments'
                   ? 'bg-green-500 text-white shadow-lg transform scale-105 border-2 border-green-600'
                   : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
               }`}
             >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-2xl">💳</span>
-                <span>Payments ({savedCards.length})</span>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">💳</span>
+                <span>Payments<span className="sm:hidden"><br />({savedCards.length})</span><span className="hidden sm:inline"> ({savedCards.length})</span></span>
               </div>
             </button>
           </nav>
