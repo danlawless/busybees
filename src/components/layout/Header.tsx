@@ -123,14 +123,31 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
             <Link href="/" className="flex-shrink-0">
               <Logo size="sm" animate={false} showText={false} />
             </Link>
-            <button
-              type="button"
-              className="rounded-full text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800 transition-colors duration-200 p-2.5"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5" aria-hidden="true" />
-              <span className="ml-2 font-medium text-xs">MENU</span>
-            </button>
+            <div className="flex items-center gap-1">
+              {/* Quick access profile/login button */}
+              {ACCOUNT_ACCESS_ENABLED && !isLoading && (
+                <Link
+                  href={isLoggedIn ? '/customer/dashboard' : '/customer/login'}
+                  className={cn(
+                    "rounded-full p-2.5 transition-colors duration-200",
+                    pathname.startsWith('/customer')
+                      ? "text-charcoal-800 bg-primary-400"
+                      : "text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
+                  )}
+                  aria-label={isLoggedIn ? 'My Account' : 'Login'}
+                >
+                  <User className="h-5 w-5" aria-hidden="true" />
+                </Link>
+              )}
+              <button
+                type="button"
+                className="rounded-full text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800 transition-colors duration-200 p-2.5"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu className="h-5 w-5" aria-hidden="true" />
+                <span className="ml-2 font-medium text-xs">MENU</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
