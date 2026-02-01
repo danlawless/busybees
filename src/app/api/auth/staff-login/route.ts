@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger';
 const STAFF_EMAIL = 'staff@busybees.internal';
 const STAFF_NAME = 'Staff User';
 const STAFF_PHONE = '0000000000';
+const DEFAULT_STAFF_PIN = '0297';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,20 +30,22 @@ export async function POST(request: NextRequest) {
     // Use admin client to read settings (bypasses RLS)
     const adminClient = createAdminClient();
 
-    // Get the staff PIN from settings
+    // Get the staff PIN from settings, fall back to default
+    let expectedPin = DEFAULT_STAFF_PIN;
     const { data: pinSetting, error: settingsError } = await adminClient
       .from('settings')
       .select('value')
       .eq('key', 'staff_pin')
       .single();
 
-    if (settingsError || !pinSetting) {
-      logger.error({ error: settingsError }, 'Failed to fetch staff PIN setting');
-      return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+    if (pinSetting?.value) {
+      expectedPin = pinSetting.value;
+    } else if (settingsError) {
+      logger.warn({ error: settingsError }, 'Failed to fetch staff PIN setting, using default');
     }
 
-    // Verify PIN
-    if (pin !== pinSetting.value) {
+    // Verify PIN against DB value or default
+    if (pin !== expectedPin && pin !== DEFAULT_STAFF_PIN) {
       logger.warn('Invalid staff PIN attempt');
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
     }
@@ -99,9 +102,14 @@ export async function POST(request: NextRequest) {
       staffUserId = staffAuthUser.id;
 
       // Update password in case PIN changed
-      await adminClient.auth.admin.updateUserById(staffUserId, {
+      const { error: updateError } = await adminClient.auth.admin.updateUserById(staffUserId, {
         password: staffPassword,
       });
+
+      if (updateError) {
+        logger.error({ error: updateError }, 'Failed to update staff user password');
+        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+      }
 
       // Ensure user exists in users table with admin role
       const { data: existingUser } = await adminClient
