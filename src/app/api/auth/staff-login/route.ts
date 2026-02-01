@@ -1,6 +1,7 @@
 /**
- * Staff Login API Route
- * Authenticates staff using PIN and creates a Supabase session
+ * @deprecated Use /api/auth/staff-auth instead (phone+password auth).
+ * This PIN-based route is kept for backward compatibility during transition.
+ * Staff Login API Route - Authenticates staff using PIN and creates a Supabase session
  */
 
 import { NextRequest, NextResponse } from 'next/server';

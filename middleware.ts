@@ -84,17 +84,54 @@ export async function middleware(request: NextRequest) {
     response.cookies.delete('sb-refresh-token');
   }
 
-  // Protect admin/staff routes
+  // Protect admin routes - require admin role
   const url = request.nextUrl.clone();
-  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/staff')) {
+  if (url.pathname.startsWith('/admin')) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         url.pathname = '/auth/staff';
         return NextResponse.redirect(url);
       }
+
+      // Verify admin role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData || userData.role !== 'admin') {
+        url.pathname = '/pos';
+        return NextResponse.redirect(url);
+      }
     } catch {
-      // Auth error - redirect to login
+      url.pathname = '/auth/staff';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Protect staff routes - require staff or admin role
+  if (url.pathname.startsWith('/staff')) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        url.pathname = '/auth/staff';
+        return NextResponse.redirect(url);
+      }
+
+      // Verify staff or admin role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData || !['staff', 'admin'].includes(userData.role)) {
+        url.pathname = '/pos';
+        return NextResponse.redirect(url);
+      }
+    } catch {
       url.pathname = '/auth/staff';
       return NextResponse.redirect(url);
     }

@@ -47,7 +47,11 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/busy-bees-favicon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/busy-bees-favicon.png" />
         <link rel="shortcut icon" href="/busy-bees-favicon.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#f5d565" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${gloriaHallelujah.className} font-body antialiased`}>
         {children}

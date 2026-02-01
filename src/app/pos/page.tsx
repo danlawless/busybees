@@ -7,6 +7,10 @@ import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
 import { CheckIn } from "@/components/pos/CheckIn";
 import { AdminPanel } from "../../components/pos/AdminPanel";
 import { AddPaymentMethodModal } from "@/components/pos/AddPaymentMethodModal";
+import { Toaster } from "sonner";
+import { useCheckinNotifications } from "@/hooks/useCheckinNotifications";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { PWAInstallPrompt } from "@/components/pos/PWAInstallPrompt";
 import {
     PromoSpecial,
     getPromosFromStorage,
@@ -94,10 +98,12 @@ export default function POSPage() {
     const [currentView, setCurrentView] = useState<ViewMode>("login");
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
     const [isStaffMode, setIsStaffMode] = useState(false);
-    const [showPinModal, setShowPinModal] = useState(false);
-    const [pin, setPin] = useState("");
-    const [pinError, setPinError] = useState("");
-    const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
+    const [staffUser, setStaffUser] = useState<{ id: string; name: string; role: 'staff' | 'admin' } | null>(null);
+    const [showStaffLoginModal, setShowStaffLoginModal] = useState(false);
+    const [staffPhone, setStaffPhone] = useState("");
+    const [staffPassword, setStaffPassword] = useState("");
+    const [staffLoginError, setStaffLoginError] = useState("");
+    const [isAuthenticatingStaff, setIsAuthenticatingStaff] = useState(false);
     const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
     const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -130,6 +136,12 @@ export default function POSPage() {
     const [parties, setParties] = useState<PartyProduct[]>([]);
     const [products, setProducts] = useState<FoodProduct[]>([]);
     const [volumeDiscounts, setVolumeDiscounts] = useState<VolumeDiscount[]>([]);
+
+    // Register service worker for PWA
+    useServiceWorker();
+
+    // Realtime check-in notifications (staff/admin mode only)
+    useCheckinNotifications(isStaffMode);
 
     // Initialize promos from database
     useEffect(() => {
@@ -289,59 +301,72 @@ export default function POSPage() {
         setCurrentView("login");
     };
 
+    const formatStaffPhone = (value: string) => {
+        const digits = value.replace(/[^\d]/g, '');
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    };
+
     const handleStaffToggle = () => {
         if (isStaffMode) {
-            // Exit staff mode immediately
             setIsStaffMode(false);
+            setStaffUser(null);
             setCurrentView("login");
         } else {
-            // Show PIN modal to enter staff mode
-            setShowPinModal(true);
-            setPin("");
-            setPinError("");
+            setShowStaffLoginModal(true);
+            setStaffPhone("");
+            setStaffPassword("");
+            setStaffLoginError("");
         }
     };
 
-    const handlePinSubmit = async (e: React.FormEvent) => {
+    const handleStaffLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin.length !== 4) return;
+        const cleanPhone = staffPhone.replace(/[^\d]/g, '');
+        if (cleanPhone.length !== 10 || !staffPassword) return;
 
-        setIsAuthenticatingPin(true);
-        setPinError("");
+        setIsAuthenticatingStaff(true);
+        setStaffLoginError("");
 
         try {
-            const response = await fetch('/api/auth/staff-login', {
+            const response = await fetch('/api/auth/staff-auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pin }),
+                body: JSON.stringify({ phone: cleanPhone, password: staffPassword }),
             });
 
+            const data = await response.json();
+
             if (response.ok) {
+                setStaffUser({ id: data.user.id, name: data.user.name, role: data.user.role });
                 setIsStaffMode(true);
                 setCurrentView("admin");
-                setShowPinModal(false);
-                setPin("");
-                setPinError("");
+                setShowStaffLoginModal(false);
+                setStaffPhone("");
+                setStaffPassword("");
+                setStaffLoginError("");
             } else {
-                const data = await response.json();
-                setPinError(data.error || "Invalid PIN. Please try again.");
-                setPin("");
+                setStaffLoginError(data.error || "Invalid credentials. Please try again.");
+                setStaffPassword("");
             }
         } catch {
-            setPinError("Authentication failed. Please try again.");
-            setPin("");
+            setStaffLoginError("Authentication failed. Please try again.");
+            setStaffPassword("");
         } finally {
-            setIsAuthenticatingPin(false);
+            setIsAuthenticatingStaff(false);
         }
     };
 
-    const handlePinCancel = () => {
-        setShowPinModal(false);
-        setPin("");
-        setPinError("");
+    const handleStaffLoginCancel = () => {
+        setShowStaffLoginModal(false);
+        setStaffPhone("");
+        setStaffPassword("");
+        setStaffLoginError("");
     };
 
-    const handleAdminAccessFromWelcome = () => {
+    const handleAdminAccessFromWelcome = (user?: { id: string; name: string; role: 'staff' | 'admin' }) => {
+        if (user) setStaffUser(user);
         setIsStaffMode(true);
         setCurrentView("admin");
     };
@@ -583,7 +608,7 @@ export default function POSPage() {
             {currentView !== "login" && (
                 <div className="bg-white shadow-lg border-b-4 border-yellow-400">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-between items-center py-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 py-4">
                             <button
                                 onClick={handleStaffToggle}
                                 className="flex items-center space-x-4 hover:bg-gray-50 rounded-lg p-2 transition-colors group"
@@ -607,7 +632,7 @@ export default function POSPage() {
                                                 : "text-gray-900"
                                         }`}
                                     >
-                                        Busy Bees POS {isStaffMode && "(Staff Mode)"}
+                                        Busy Bees POS {isStaffMode && `(${staffUser?.role === 'admin' ? 'Admin' : 'Staff'})`}
                                     </h1>
                                     <p
                                         className={`text-sm transition-colors ${
@@ -617,7 +642,7 @@ export default function POSPage() {
                                         }`}
                                     >
                                         {isStaffMode
-                                            ? "Staff Management System"
+                                            ? `Logged in as ${staffUser?.name || 'Staff'}`
                                             : "Point of Sale & Check-in System"}
                                     </p>
                                 </div>
@@ -909,13 +934,14 @@ export default function POSPage() {
                             onUpdateProducts={setProducts}
                             volumeDiscounts={volumeDiscounts}
                             onUpdateVolumeDiscounts={setVolumeDiscounts}
+                            userRole={staffUser?.role || 'staff'}
                         />
                     )}
                 </div>
             )}
 
-            {/* PIN Authentication Modal */}
-            {showPinModal && (
+            {/* Staff Login Modal */}
+            {showStaffLoginModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
                         <div className="text-center mb-6">
@@ -923,54 +949,68 @@ export default function POSPage() {
                                 <span className="text-3xl">🔒</span>
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                Staff Access Required
+                                Staff Login
                             </h2>
                             <p className="text-gray-600">
-                                Enter PIN to access Staff Mode
+                                Enter your phone number and password
                             </p>
                         </div>
 
-                        <form onSubmit={handlePinSubmit} className="space-y-4">
+                        <form onSubmit={handleStaffLoginSubmit} className="space-y-4" autoComplete="off">
                             <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    value={staffPhone}
+                                    onChange={(e) => setStaffPhone(formatStaffPhone(e.target.value))}
+                                    placeholder="(555) 123-4567"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg disabled:opacity-50"
+                                    maxLength={14}
+                                    autoFocus
+                                    disabled={isAuthenticatingStaff}
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                                 <input
                                     type="password"
-                                    value={pin}
-                                    onChange={(e) => setPin(e.target.value)}
-                                    placeholder="Enter 4-digit PIN"
-                                    className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 tracking-widest disabled:opacity-50"
-                                    maxLength={4}
-                                    autoFocus
-                                    disabled={isAuthenticatingPin}
+                                    value={staffPassword}
+                                    onChange={(e) => setStaffPassword(e.target.value)}
+                                    placeholder="Enter password"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg disabled:opacity-50"
+                                    disabled={isAuthenticatingStaff}
+                                    autoComplete="off"
                                 />
                             </div>
 
-                            {pinError && (
+                            {staffLoginError && (
                                 <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
-                                    {pinError}
+                                    {staffLoginError}
                                 </div>
                             )}
 
                             <div className="flex space-x-3">
                                 <button
                                     type="button"
-                                    onClick={handlePinCancel}
+                                    onClick={handleStaffLoginCancel}
                                     className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
-                                    disabled={isAuthenticatingPin}
+                                    disabled={isAuthenticatingStaff}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={pin.length !== 4 || isAuthenticatingPin}
+                                    disabled={staffPhone.replace(/[^\d]/g, '').length !== 10 || !staffPassword || isAuthenticatingStaff}
                                     className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                                 >
-                                    {isAuthenticatingPin ? 'Authenticating...' : 'Enter'}
+                                    {isAuthenticatingStaff ? 'Logging in...' : 'Login'}
                                 </button>
                             </div>
                         </form>
 
                         <div className="mt-4 text-xs text-gray-500 text-center">
-                            Staff members only • Authorized access required
+                            Staff members only • Individual accounts required
                         </div>
                     </div>
                 </div>
@@ -1032,6 +1072,12 @@ export default function POSPage() {
                 </div>
             )}
 
+            {/* Toast Notifications */}
+            <Toaster position="top-right" richColors />
+
+            {/* PWA Install Prompt */}
+            <PWAInstallPrompt />
+
             {/* Payment Modal - Integrated with Stripe */}
             <AddPaymentMethodModal
                 isOpen={showPaymentModal}
@@ -1070,6 +1116,7 @@ export default function POSPage() {
                                 handleAddPaymentMethod();
                             }}
                             className="space-y-4"
+                            autoComplete="off"
                         >
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1083,6 +1130,7 @@ export default function POSPage() {
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     disabled={processingPayment}
                                     required
+                                    autoComplete="off"
                                 />
                             </div>
 
@@ -1104,6 +1152,7 @@ export default function POSPage() {
                                     disabled={processingPayment}
                                     maxLength={19}
                                     required
+                                    autoComplete="off"
                                 />
                             </div>
 
@@ -1135,6 +1184,7 @@ export default function POSPage() {
                                         disabled={processingPayment}
                                         maxLength={5}
                                         required
+                                        autoComplete="off"
                                     />
                                 </div>
                                 <div>
@@ -1158,6 +1208,7 @@ export default function POSPage() {
                                         disabled={processingPayment}
                                         maxLength={4}
                                         required
+                                        autoComplete="off"
                                     />
                                 </div>
                             </div>

@@ -41,3 +41,17 @@ export async function hasRole(requiredRole: UserRole | UserRole[]) {
   return user.role === requiredRole;
 }
 
+/**
+ * Check if current user is staff or admin
+ */
+export async function isStaffOrAdmin() {
+  return hasRole(['staff', 'admin']);
+}
+
+/**
+ * Check if current user is admin
+ */
+export async function isAdmin() {
+  return hasRole('admin');
+}
+

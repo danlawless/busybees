@@ -8,16 +8,25 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendWelcomeEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, name, email } = body;
+    const { phone, name, email, password } = body;
 
     // Validate required fields
-    if (!phone || !name || !email) {
+    if (!phone || !name || !email || !password) {
       return NextResponse.json(
-        { error: 'Phone, name, and email are required' },
+        { error: 'Phone, name, email, and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters' },
         { status: 400 }
       );
     }
@@ -96,6 +105,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Hash the customer password
+    const webPasswordHash = await bcrypt.hash(password, 12);
+
     // Create user profile record with the auth user's ID
     const { data: newUser, error: insertError } = await supabase
       .from('users')
@@ -105,6 +117,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.trim(),
         role: 'customer',
+        web_password_hash: webPasswordHash,
+        has_web_password: true,
         last_login: new Date().toISOString(),
       })
       .select()
