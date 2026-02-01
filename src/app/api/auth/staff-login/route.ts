@@ -50,58 +50,73 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
     }
 
-    // PIN is valid - now authenticate or create staff user
-    // Check if staff user exists in auth
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const staffAuthUser = existingUsers?.users?.find(u => u.email === STAFF_EMAIL);
-
-    // Generate a deterministic password from the PIN (for Supabase auth)
+    // PIN is valid - generate password for Supabase auth
     const staffPassword = `STAFF-PIN-${pin}-AUTH`;
 
+    // Ensure staff auth user exists with correct password.
+    // Use create-first approach: try to create, and if user already exists,
+    // find and update their password instead.
     let staffUserId: string;
 
-    if (!staffAuthUser) {
-      // Create staff auth user
-      const { data: newAuthUser, error: createAuthError } = await adminClient.auth.admin.createUser({
-        email: STAFF_EMAIL,
-        password: staffPassword,
-        email_confirm: true,
-        user_metadata: {
-          name: STAFF_NAME,
-          role: 'admin',
-        },
-      });
+    const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+      email: STAFF_EMAIL,
+      password: staffPassword,
+      email_confirm: true,
+      user_metadata: {
+        name: STAFF_NAME,
+        role: 'admin',
+      },
+    });
 
-      if (createAuthError || !newAuthUser.user) {
-        logger.error({ error: createAuthError }, 'Failed to create staff auth user');
-        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
-      }
-
-      staffUserId = newAuthUser.user.id;
+    if (createData?.user) {
+      // New user created successfully
+      staffUserId = createData.user.id;
+      logger.info({ staffUserId }, 'Created new staff auth user');
 
       // Create staff user in users table
       const { error: createUserError } = await adminClient
         .from('users')
-        .insert({
+        .upsert({
           id: staffUserId,
           phone: STAFF_PHONE,
           name: STAFF_NAME,
           email: STAFF_EMAIL,
           role: 'admin',
-        });
+        }, { onConflict: 'id' });
 
       if (createUserError) {
         logger.error({ error: createUserError }, 'Failed to create staff user record');
-        // Clean up auth user if profile creation fails
         await adminClient.auth.admin.deleteUser(staffUserId);
         return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
       }
-
-      logger.info({ staffUserId }, 'Created new staff user');
     } else {
+      // User already exists - find them and update password
+      logger.info({ createError: createError?.message }, 'Staff user exists, updating password');
+
+      // List users with large page size to avoid pagination issues
+      const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({
+        perPage: 1000,
+      });
+
+      if (listError) {
+        logger.error({ error: listError }, 'Failed to list users');
+        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+      }
+
+      const staffAuthUser = listData?.users?.find(u => u.email === STAFF_EMAIL);
+
+      if (!staffAuthUser) {
+        // Very unusual: create failed but user not found in list
+        logger.error(
+          { createError: createError?.message },
+          'Staff user create failed and not found in user list'
+        );
+        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+      }
+
       staffUserId = staffAuthUser.id;
 
-      // Update password in case PIN changed
+      // Update password to match current PIN
       const { error: updateError } = await adminClient.auth.admin.updateUserById(staffUserId, {
         password: staffPassword,
       });
@@ -112,33 +127,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Ensure user exists in users table with admin role
-      const { data: existingUser } = await adminClient
+      await adminClient
         .from('users')
-        .select('id, role')
-        .eq('id', staffUserId)
-        .single();
-
-      if (!existingUser) {
-        // Create user record if missing
-        await adminClient
-          .from('users')
-          .insert({
-            id: staffUserId,
-            phone: STAFF_PHONE,
-            name: STAFF_NAME,
-            email: STAFF_EMAIL,
-            role: 'admin',
-          });
-      } else if (existingUser.role !== 'admin') {
-        // Update role if not admin
-        await adminClient
-          .from('users')
-          .update({ role: 'admin' })
-          .eq('id', staffUserId);
-      }
+        .upsert({
+          id: staffUserId,
+          phone: STAFF_PHONE,
+          name: STAFF_NAME,
+          email: STAFF_EMAIL,
+          role: 'admin',
+        }, { onConflict: 'id' });
     }
 
-    // Now sign in the staff user using session client
+    // Create session by signing in as staff user
     const response = NextResponse.json({ success: true, message: 'Staff authenticated' });
 
     const supabaseSession = createServerClient(
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (signInError) {
-      logger.error({ error: signInError }, 'Failed to sign in staff user');
+      logger.error({ error: signInError, staffUserId }, 'Failed to sign in staff user');
       return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
     }
 
