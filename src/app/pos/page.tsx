@@ -143,6 +143,26 @@ export default function POSPage() {
     // Realtime check-in notifications (staff/admin mode only)
     useCheckinNotifications(isStaffMode);
 
+    // Restore staff/admin session on mount
+    useEffect(() => {
+        const restoreSession = async () => {
+            try {
+                const response = await fetch('/api/auth/me');
+                if (response.ok) {
+                    const { user } = await response.json();
+                    if (user && (user.role === 'staff' || user.role === 'admin')) {
+                        setStaffUser({ id: user.id, name: user.name, role: user.role });
+                        setIsStaffMode(true);
+                        setCurrentView("admin");
+                    }
+                }
+            } catch {
+                // No session to restore
+            }
+        };
+        restoreSession();
+    }, []);
+
     // Initialize promos from database
     useEffect(() => {
         const loadPromos = async () => {
@@ -310,15 +330,24 @@ export default function POSPage() {
 
     const handleStaffToggle = () => {
         if (isStaffMode) {
-            setIsStaffMode(false);
-            setStaffUser(null);
-            setCurrentView("login");
+            handleStaffLogout();
         } else {
             setShowStaffLoginModal(true);
             setStaffPhone("");
             setStaffPassword("");
             setStaffLoginError("");
         }
+    };
+
+    const handleStaffLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {
+            // Continue with local logout even if API fails
+        }
+        setIsStaffMode(false);
+        setStaffUser(null);
+        setCurrentView("login");
     };
 
     const handleStaffLoginSubmit = async (e: React.FormEvent) => {
@@ -649,6 +678,14 @@ export default function POSPage() {
                             </button>
 
                             <div className="flex items-center space-x-4">
+                                {isStaffMode && (
+                                    <button
+                                        onClick={handleStaffLogout}
+                                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                                    >
+                                        Logout
+                                    </button>
+                                )}
                                 {currentCustomer && !isStaffMode && (
                                     <>
                                         {/* Inactivity Timer */}
