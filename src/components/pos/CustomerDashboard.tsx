@@ -723,13 +723,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
 
-    // Now proceed with the purchase using the selected child
+    // Proceed directly to purchase (no second confirmation needed)
     if (selectedProductForPurchase) {
-      handlePurchase(selectedProductForPurchase);
+      handleConfirmPurchaseWithChild(selectedProductForPurchase, childId);
     }
   };
 
-  const handleConfirmPurchase = async (productId: string) => {
+  const handleConfirmPurchaseWithChild = async (productId: string, childId?: string) => {
     // Clear confirmation state and timeout
     setConfirmingProduct(null);
     if (confirmTimeout) {
@@ -745,10 +745,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     }
 
     const isPassPurchase = !productId.includes('party');
+    const effectiveChildId = childId || selectedChildForPurchase;
 
     if (isPassPurchase) {
       // For pass purchases, require child selection
-      if (!selectedChildForPurchase) {
+      if (!effectiveChildId) {
         setSuccessDetails({
           title: 'Child Selection Required',
           message: 'Please select which child this pass is for before purchasing.'
@@ -758,7 +759,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       }
 
       // Check if the selected child has a signed waiver
-      const selectedChild = customer.children.find(c => c.id === selectedChildForPurchase);
+      const selectedChild = customer.children.find(c => c.id === effectiveChildId);
       if (!selectedChild || !selectedChild.waiverSigned) {
         setSuccessDetails({
           title: 'Waiver Required',
@@ -767,6 +768,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         setShowSuccessModal(true);
         return;
       }
+    }
+
+    // Update the state for the API call
+    if (childId) {
+      setSelectedChildForPurchase(childId);
     }
 
     // Prevent multiple simultaneous purchases
@@ -799,7 +805,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           product_price: product.price,
           product_description: product.description,
           purchase_type: purchaseType,
-          child_id: isPassPurchase ? selectedChildForPurchase : undefined,
+          child_id: isPassPurchase ? effectiveChildId : undefined,
           quantity: 1,
           metadata: {},
         }),
@@ -868,6 +874,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       setIsProcessing(false);
       setProcessingProduct('');
     }
+  };
+
+  const handleConfirmPurchase = async (productId: string) => {
+    return handleConfirmPurchaseWithChild(productId);
   };
 
   const handleAddCard = async () => {
@@ -2004,21 +2014,20 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           return;
                         }
 
-                        // Step 3: Show Child Selection Modal
-                        if (confirmingProduct === product.id) {
-                          handleConfirmPurchase(product.id);
+                        // Step 3: If only one child with signed waiver, purchase immediately
+                        const eligibleChildren = customer.children.filter(c => c.waiverSigned);
+                        if (eligibleChildren.length === 1) {
+                          handleConfirmPurchaseWithChild(product.id, eligibleChildren[0].id);
                         } else {
-                          // Show child selection modal
+                          // Multiple children — show selection modal
                           setSelectedProductForPurchase(product.id);
                           setShowChildSelectionModal(true);
                         }
                       }}
                       size="lg"
-                      disabled={processingProduct === product.id}
+                      disabled={processingProduct === product.id || isProcessing}
                       className={`px-6 py-3 text-white transition-colors ${
-                        confirmingProduct === product.id
-                          ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                          : processingProduct === product.id
+                        processingProduct === product.id
                           ? 'bg-blue-600'
                           : customer.children.length === 0
                           ? 'bg-blue-500 hover:bg-blue-600'
@@ -2029,8 +2038,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     >
                       {processingProduct === product.id
                         ? 'Processing...'
-                        : confirmingProduct === product.id
-                        ? '✓ Confirm Purchase'
                         : customer.children.length === 0
                         ? '👶 Add Child First'
                         : customer.savedCards.length === 0
@@ -2227,18 +2234,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           setActiveTab('payments');
                           return;
                         }
-                        if (confirmingProduct === product.id) {
-                          handleConfirmPurchase(product.id);
-                        } else {
-                          handlePurchase(product.id);
-                        }
+                        handleConfirmPurchase(product.id);
                       }}
                       size="lg"
-                      disabled={processingProduct === product.id}
+                      disabled={processingProduct === product.id || isProcessing}
                       className={`px-6 py-3 text-white transition-colors ${
-                        confirmingProduct === product.id
-                          ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
-                          : processingProduct === product.id
+                        processingProduct === product.id
                           ? 'bg-purple-500'
                           : customer.savedCards.length === 0
                           ? 'bg-yellow-500 hover:bg-yellow-600'
@@ -2247,8 +2248,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     >
                       {processingProduct === product.id
                         ? 'Processing...'
-                        : confirmingProduct === product.id
-                        ? '✓ Confirm Purchase'
                         : customer.savedCards.length === 0
                         ? '💳 Add Payment First'
                         : 'Buy Now'
