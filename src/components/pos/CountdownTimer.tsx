@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 type PassType = 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
 
@@ -19,6 +19,12 @@ export function CountdownTimer({ expiryDate, type, onExpired }: CountdownTimerPr
     total: number;
   }>({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
 
+  const hasExpiredRef = useRef(false);
+
+  useEffect(() => {
+    hasExpiredRef.current = false;
+  }, [expiryDate]);
+
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date().getTime();
@@ -34,7 +40,8 @@ export function CountdownTimer({ expiryDate, type, onExpired }: CountdownTimerPr
         setTimeLeft({ days, hours, minutes, seconds, total: difference });
       } else {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
-        if (onExpired) {
+        if (onExpired && !hasExpiredRef.current) {
+          hasExpiredRef.current = true;
           onExpired();
         }
       }
