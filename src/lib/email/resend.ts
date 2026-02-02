@@ -10,7 +10,8 @@ import { parseDateString } from '@/lib/utils';
 
 // Business email addresses
 const BUSINESS_EMAIL = 'info@busybeesipc.com';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@busybeesipc.com';
+const DEFAULT_FROM_EMAIL = 'Busy Bees Indoor Play Center <noreply@busybeesipc.com>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL;
 
 // Lazy-initialize Resend client to prevent crashes when API key is missing
 let resendClient: Resend | null = null;
@@ -31,6 +32,7 @@ interface SendEmailOptions {
   text: string;
   html?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 interface EmailResult {
@@ -40,10 +42,17 @@ interface EmailResult {
 }
 
 /**
+ * Check if the email service (Resend) is properly configured
+ */
+export function isEmailServiceConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY;
+}
+
+/**
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  const { to, subject, text, html, replyTo } = options;
+  const { to, subject, text, html, replyTo, headers } = options;
 
   // Get lazy-initialized client (returns null if API key is missing)
   const resend = getResendClient();
@@ -54,12 +63,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
       { to, subject },
       'RESEND_API_KEY not configured - email not sent'
     );
-    // Return success in development to allow form testing
     if (process.env.NODE_ENV === 'development') {
-      logger.info({ to, subject, text }, '📧 Development mode - email would be sent');
-      return { success: true, messageId: 'dev-mode' };
+      logger.info({ to, subject }, '📧 Development mode - email would be sent (RESEND_API_KEY not set)');
     }
-    return { success: false, error: 'Email service not configured' };
+    return { success: false, error: 'Email service not configured. Set RESEND_API_KEY environment variable.' };
   }
 
   try {
@@ -70,6 +77,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
       text,
       html,
       replyTo,
+      headers,
     });
 
     if (error) {
@@ -1676,6 +1684,10 @@ To unsubscribe from our newsletter: ${unsubscribeUrl}
     subject: data.subject,
     text,
     html,
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
   });
 }
 

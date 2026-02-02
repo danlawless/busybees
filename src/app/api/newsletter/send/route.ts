@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { sendNewsletterEmail } from '@/lib/email/resend';
+import { sendNewsletterEmail, isEmailServiceConfigured } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -38,6 +38,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Both button text and URL must be provided together' },
         { status: 400 }
+      );
+    }
+
+    // Verify email service is configured before attempting to send
+    if (!isEmailServiceConfigured()) {
+      logger.error('Newsletter send attempted but RESEND_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'Email service not configured. RESEND_API_KEY environment variable is missing.' },
+        { status: 503 }
       );
     }
 

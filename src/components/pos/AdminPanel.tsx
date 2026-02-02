@@ -348,6 +348,7 @@ export function AdminPanel({
   const [testEmail, setTestEmail] = useState('');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [emailConfigured, setEmailConfigured] = useState<boolean | null>(null);
 
   // Customer loading state
   const [customersLoading, setCustomersLoading] = useState(false);
@@ -392,9 +393,22 @@ export function AdminPanel({
     }
   };
 
+  const checkEmailConfig = async () => {
+    try {
+      const response = await fetch('/api/newsletter/config');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailConfigured(data.emailConfigured);
+      }
+    } catch {
+      setEmailConfigured(false);
+    }
+  };
+
   useEffect(() => {
     if (currentView === 'newsletter') {
       fetchNewsletterSubscribers();
+      checkEmailConfig();
     }
   }, [currentView]);
 
@@ -3639,6 +3653,19 @@ export function AdminPanel({
 
     return (
       <div className="space-y-6">
+        {/* Email Config Warning */}
+        {emailConfigured === false && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 font-medium">
+              &#x26A0;&#xFE0F; Email service not configured
+            </p>
+            <p className="text-red-600 text-sm mt-1">
+              RESEND_API_KEY environment variable is missing. Newsletter emails will not be delivered until this is set.
+              Add your Resend API key to your environment variables to enable email sending.
+            </p>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
