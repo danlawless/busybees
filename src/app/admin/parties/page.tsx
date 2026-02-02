@@ -515,6 +515,28 @@ export default function AdminPartiesPage() {
     }
   };
 
+  const deleteBooking = async (bookingId: string, customerName: string) => {
+    if (!confirm(`Permanently delete party booking for ${customerName}? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      setError('');
+      setSuccessMessage('');
+      const response = await fetch(`/api/admin/party-bookings/${bookingId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      setSuccessMessage('Booking deleted');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err, bookingId }, 'Failed to delete booking');
+      setError(err instanceof Error ? err.message : 'Failed to delete booking');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = parseDateString(dateStr);
     return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
@@ -929,6 +951,12 @@ export default function AdminPartiesPage() {
                               Mark Done
                             </button>
                           )}
+                          <button
+                            onClick={() => deleteBooking(booking.id, booking.customer_name)}
+                            className="text-xs px-2 py-1 bg-red-700 text-white rounded hover:bg-red-800"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1189,6 +1217,14 @@ export default function AdminPartiesPage() {
                                   </button>
                                 </div>
                               )}
+                              <div className="mt-1">
+                                <button
+                                  onClick={() => deleteBooking(booking.id, booking.customer_name)}
+                                  className="w-full text-xs px-2 py-1 bg-red-700 text-white rounded hover:bg-red-800"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>

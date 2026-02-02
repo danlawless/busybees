@@ -1,6 +1,7 @@
 /**
- * Admin Party Booking Update API
+ * Admin Party Booking API
  * PATCH /api/admin/party-bookings/[id] - Update booking status and details
+ * DELETE /api/admin/party-bookings/[id] - Permanently delete a booking
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -75,6 +76,67 @@ export async function PATCH(
     }
 
     logger.error({ error }, 'Unexpected error updating party booking');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData || !['admin', 'staff'].includes(userData.role)) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    const adminSupabase = createAdminClient();
+
+    // Delete linked purchase first to avoid FK constraint
+    const { data: booking } = await adminSupabase
+      .from('party_bookings')
+      .select('purchase_id')
+      .eq('id', id)
+      .single();
+
+    if (booking?.purchase_id) {
+      await adminSupabase
+        .from('purchases')
+        .delete()
+        .eq('id', booking.purchase_id);
+    }
+
+    const { error } = await adminSupabase
+      .from('party_bookings')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error({ error, bookingId: id }, 'Failed to delete party booking');
+      return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
+    }
+
+    logger.info({ bookingId: id, adminEmail: user.email }, 'Deleted party booking');
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logger.error({ error }, 'Unexpected error deleting party booking');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
