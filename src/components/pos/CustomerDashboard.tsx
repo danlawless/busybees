@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { AddPaymentMethodModal } from './AddPaymentMethodModal';
@@ -189,6 +189,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [activeTab, setActiveTab] = useState<'children' | 'passes' | 'parties' | 'payments'>('children');
   const [showPurchase, setShowPurchase] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
+  const [showPassHistory, setShowPassHistory] = useState(false);
+  const [showPartyHistory, setShowPartyHistory] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProduct, setProcessingProduct] = useState<string>('');
@@ -378,17 +380,16 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [cvv, setCvv] = useState('');
   const [cardholderName, setCardholderName] = useState('');
 
-  // Check for expired passes, auto-checkout sessions, and auto-renewals
+  // Check for expired passes and auto-checkout sessions (runs once on mount)
+  const hasCheckedExpiry = useRef(false);
   useEffect(() => {
+    if (hasCheckedExpiry.current) return;
+
     const now = new Date();
     let hasExpiredPasses = false;
     let hasExpiredSessions = false;
-    const hasAutoRenewals = false;
-    const newPurchases: Purchase[] = [];
 
-    // Check for expired passes and auto-renewals
     const updatedPurchases = customer.purchases.map(purchase => {
-      // Check for expiration
       if (purchase.status === 'active' && purchase.actualExpiryDate) {
         const expiryDate = new Date(purchase.actualExpiryDate);
         if (now > expiryDate) {
@@ -396,72 +397,21 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           return { ...purchase, status: 'expired' as const };
         }
       }
-
-      // Temporarily disable auto-renewal logic to prevent duplicates
-      // TODO: Implement proper auto-renewal with better timing control
-      /*
-      // Check for auto-renewal (only if nextRenewalDate is set and not empty)
-      if (purchase.autoRenew && purchase.nextRenewalDate && purchase.nextRenewalDate.trim() !== '' && purchase.status === 'active') {
-        const renewalDate = new Date(purchase.nextRenewalDate);
-        console.log(`Checking renewal for ${purchase.name}: now=${now.toISOString()}, renewalDate=${renewalDate.toISOString()}`);
-
-        // Prevent immediate renewals - must be at least 1 minute in the future when set
-        const timeDiff = renewalDate.getTime() - now.getTime();
-        const oneMinute = 60 * 1000;
-
-        if (now >= renewalDate && timeDiff < -oneMinute) { // Only renew if it's more than 1 minute overdue
-          hasAutoRenewals = true;
-          console.log(`Auto-renewing ${purchase.name} for customer ${customer.name}`);
-
-          // Create new purchase for renewal
-          const renewalId = `r${Date.now()}_${purchase.type}_${Math.random().toString(36).substr(2, 9)}`;
-          const newPurchase: Purchase = {
-            id: renewalId,
-            type: purchase.type,
-            name: purchase.name,
-            price: purchase.price,
-            purchaseDate: now.toISOString(),
-            expiryDate: purchase.type === 'weekly_pass'
-              ? new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
-              : new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            usedSessions: 0,
-            totalSessions: purchase.totalSessions,
-            status: 'active' as const,
-            autoRenew: true, // Keep auto-renew enabled
-          };
-
-          newPurchases.push(newPurchase);
-
-          // Calculate next renewal date for the new purchase
-          const nextRenewalDate = purchase.type === 'weekly_pass'
-            ? new Date(now.getTime() + (7 - 7) * 24 * 60 * 60 * 1000).toISOString() // Will be set properly when first used
-            : new Date(now.getTime() + (30 - 7) * 24 * 60 * 60 * 1000).toISOString();
-
-          return {
-            ...purchase,
-            autoRenew: false, // Disable on old pass
-            nextRenewalDate: undefined
-          };
-        }
-      }
-      */
-
       return purchase;
     });
 
-    // Check for sessions that need auto-checkout (12 hours after check-in)
     const activeSessions = customer.activeSessions || [];
     const updatedSessions = activeSessions.filter(session => {
       const autoCheckoutTime = new Date(session.autoCheckoutTime);
       if (now > autoCheckoutTime) {
         hasExpiredSessions = true;
-        console.log(`Auto-checking out session ${session.id} after 12 hours`);
-        return false; // Remove expired session
+        return false;
       }
-      return true; // Keep active session
+      return true;
     });
 
     if (hasExpiredPasses || hasExpiredSessions) {
+      hasCheckedExpiry.current = true;
       onUpdateCustomer({
         ...customer,
         purchases: updatedPurchases,
@@ -773,13 +723,13 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
 
-    // Now proceed with the purchase using the selected child
+    // Proceed directly to purchase (no second confirmation needed)
     if (selectedProductForPurchase) {
-      handlePurchase(selectedProductForPurchase);
+      handleConfirmPurchaseWithChild(selectedProductForPurchase, childId);
     }
   };
 
-  const handleConfirmPurchase = async (productId: string) => {
+  const handleConfirmPurchaseWithChild = async (productId: string, childId?: string) => {
     // Clear confirmation state and timeout
     setConfirmingProduct(null);
     if (confirmTimeout) {
@@ -795,10 +745,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     }
 
     const isPassPurchase = !productId.includes('party');
+    const effectiveChildId = childId || selectedChildForPurchase;
 
     if (isPassPurchase) {
       // For pass purchases, require child selection
-      if (!selectedChildForPurchase) {
+      if (!effectiveChildId) {
         setSuccessDetails({
           title: 'Child Selection Required',
           message: 'Please select which child this pass is for before purchasing.'
@@ -808,7 +759,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       }
 
       // Check if the selected child has a signed waiver
-      const selectedChild = customer.children.find(c => c.id === selectedChildForPurchase);
+      const selectedChild = customer.children.find(c => c.id === effectiveChildId);
       if (!selectedChild || !selectedChild.waiverSigned) {
         setSuccessDetails({
           title: 'Waiver Required',
@@ -817,6 +768,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
         setShowSuccessModal(true);
         return;
       }
+    }
+
+    // Update the state for the API call
+    if (childId) {
+      setSelectedChildForPurchase(childId);
     }
 
     // Prevent multiple simultaneous purchases
@@ -849,7 +805,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           product_price: product.price,
           product_description: product.description,
           purchase_type: purchaseType,
-          child_id: isPassPurchase ? selectedChildForPurchase : undefined,
+          child_id: isPassPurchase ? effectiveChildId : undefined,
           quantity: 1,
           metadata: {},
         }),
@@ -918,6 +874,10 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       setIsProcessing(false);
       setProcessingProduct('');
     }
+  };
+
+  const handleConfirmPurchase = async (productId: string) => {
+    return handleConfirmPurchaseWithChild(productId);
   };
 
   const handleAddCard = async () => {
@@ -2054,21 +2014,20 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           return;
                         }
 
-                        // Step 3: Show Child Selection Modal
-                        if (confirmingProduct === product.id) {
-                          handleConfirmPurchase(product.id);
+                        // Step 3: If only one child with signed waiver, purchase immediately
+                        const eligibleChildren = customer.children.filter(c => c.waiverSigned);
+                        if (eligibleChildren.length === 1) {
+                          handleConfirmPurchaseWithChild(product.id, eligibleChildren[0].id);
                         } else {
-                          // Show child selection modal
+                          // Multiple children — show selection modal
                           setSelectedProductForPurchase(product.id);
                           setShowChildSelectionModal(true);
                         }
                       }}
                       size="lg"
-                      disabled={processingProduct === product.id}
+                      disabled={processingProduct === product.id || isProcessing}
                       className={`px-6 py-3 text-white transition-colors ${
-                        confirmingProduct === product.id
-                          ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                          : processingProduct === product.id
+                        processingProduct === product.id
                           ? 'bg-blue-600'
                           : customer.children.length === 0
                           ? 'bg-blue-500 hover:bg-blue-600'
@@ -2079,8 +2038,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     >
                       {processingProduct === product.id
                         ? 'Processing...'
-                        : confirmingProduct === product.id
-                        ? '✓ Confirm Purchase'
                         : customer.children.length === 0
                         ? '👶 Add Child First'
                         : customer.savedCards.length === 0
@@ -2095,34 +2052,42 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             </Card>
           </div>
 
-          {/* Pass Purchase History */}
+          {/* Pass Purchase History - collapsed by default */}
           {pastPassPurchases.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-4">Pass Purchase History</h3>
-              <Card className="divide-y">
-                {pastPassPurchases.map((purchase) => (
-                  <div key={purchase.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{purchase.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          Purchased {formatDate(purchase.purchaseDate)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${purchase.price}</p>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          purchase.status === 'used'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {purchase.status === 'used' ? 'Used' : 'Expired'}
-                        </span>
+              <button
+                onClick={() => setShowPassHistory(!showPassHistory)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <span className={`transform transition-transform ${showPassHistory ? 'rotate-90' : ''}`}>&#9654;</span>
+                Expired / Used Passes ({pastPassPurchases.length})
+              </button>
+              {showPassHistory && (
+                <Card className="divide-y mt-2">
+                  {pastPassPurchases.map((purchase) => (
+                    <div key={purchase.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{purchase.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            Purchased {formatDate(purchase.purchaseDate)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${purchase.price}</p>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            purchase.status === 'used'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {purchase.status === 'used' ? 'Used' : 'Expired'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </Card>
+                  ))}
+                </Card>
+              )}
             </div>
           )}
         </div>
@@ -2269,18 +2234,12 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           setActiveTab('payments');
                           return;
                         }
-                        if (confirmingProduct === product.id) {
-                          handleConfirmPurchase(product.id);
-                        } else {
-                          handlePurchase(product.id);
-                        }
+                        handleConfirmPurchase(product.id);
                       }}
                       size="lg"
-                      disabled={processingProduct === product.id}
+                      disabled={processingProduct === product.id || isProcessing}
                       className={`px-6 py-3 text-white transition-colors ${
-                        confirmingProduct === product.id
-                          ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
-                          : processingProduct === product.id
+                        processingProduct === product.id
                           ? 'bg-purple-500'
                           : customer.savedCards.length === 0
                           ? 'bg-yellow-500 hover:bg-yellow-600'
@@ -2289,8 +2248,6 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                     >
                       {processingProduct === product.id
                         ? 'Processing...'
-                        : confirmingProduct === product.id
-                        ? '✓ Confirm Purchase'
                         : customer.savedCards.length === 0
                         ? '💳 Add Payment First'
                         : 'Buy Now'
@@ -2303,39 +2260,47 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
             </Card>
           </div>
 
-          {/* Party Purchase History */}
+          {/* Party Purchase History - collapsed by default */}
           {pastPartyPurchases.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-4">Party Purchase History</h3>
-              <Card className="divide-y">
-                {pastPartyPurchases.map((purchase) => (
-                  <div key={purchase.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{purchase.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          Purchased {formatDate(purchase.purchaseDate)}
-                        </p>
-                        {purchase.partyDate && (
-                          <p className="text-sm text-purple-600">
-                            Party Date: {formatDate(purchase.partyDate)}
+              <button
+                onClick={() => setShowPartyHistory(!showPartyHistory)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <span className={`transform transition-transform ${showPartyHistory ? 'rotate-90' : ''}`}>&#9654;</span>
+                Expired / Used Parties ({pastPartyPurchases.length})
+              </button>
+              {showPartyHistory && (
+                <Card className="divide-y mt-2">
+                  {pastPartyPurchases.map((purchase) => (
+                    <div key={purchase.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{purchase.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            Purchased {formatDate(purchase.purchaseDate)}
                           </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${purchase.price}</p>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          purchase.status === 'used'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {purchase.status === 'used' ? 'Used' : 'Expired'}
-                        </span>
+                          {purchase.partyDate && (
+                            <p className="text-sm text-purple-600">
+                              Party Date: {formatDate(purchase.partyDate)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${purchase.price}</p>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            purchase.status === 'used'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {purchase.status === 'used' ? 'Used' : 'Expired'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </Card>
+                  ))}
+                </Card>
+              )}
             </div>
           )}
         </div>

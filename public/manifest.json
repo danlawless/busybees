@@ -2,8 +2,11 @@
   "name": "Busy Bees Indoor Play Center",
   "short_name": "Busy Bees",
   "description": "A modern, safe and engaging indoor play space for your little ones",
-  "start_url": "/",
+  "start_url": "/pos",
+  "scope": "/pos",
+  "id": "/pos",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#f5d565",
   "background_color": "#FFFFFF",
   "icons": [
@@ -22,6 +25,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check In",
+      "url": "/pos",
+      "description": "Check in to Busy Bees"
     }
   ]
 }

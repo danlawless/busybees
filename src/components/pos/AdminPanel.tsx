@@ -38,6 +38,7 @@ import {
   deleteProduct,
 } from '@/lib/api/products';
 import { CustomerDetailModal } from './CustomerDetailModal';
+import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
 
 interface Child {
@@ -125,6 +126,18 @@ interface AdminPanelProps {
   onUpdateProducts: (products: FoodProduct[]) => void;
   volumeDiscounts: VolumeDiscount[];
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
+  userRole?: 'staff' | 'admin';
+}
+
+interface StaffUser {
+  id: string;
+  phone: string;
+  name: string;
+  email: string;
+  role: 'staff' | 'admin';
+  has_staff_password: boolean;
+  last_login: string | null;
+  created_at: string;
 }
 
 type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'settings';
@@ -159,7 +172,9 @@ export function AdminPanel({
   onUpdateProducts,
   volumeDiscounts,
   onUpdateVolumeDiscounts,
+  userRole = 'admin',
 }: AdminPanelProps) {
+  const isAdmin = userRole === 'admin';
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
@@ -198,6 +213,15 @@ export function AdminPanel({
   const [confirmingCustomerDelete, setConfirmingCustomerDelete] = useState<string | null>(null);
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [customerDeleteError, setCustomerDeleteError] = useState<string | null>(null);
+
+  // Staff management states
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [editingStaffUser, setEditingStaffUser] = useState<StaffUser | null>(null);
+  const [staffFormData, setStaffFormData] = useState({ name: '', phone: '', email: '', password: '', role: 'staff' as 'staff' | 'admin' });
+  const [staffFormError, setStaffFormError] = useState('');
+  const [confirmingStaffDelete, setConfirmingStaffDelete] = useState<string | null>(null);
 
   // Marketing/Promo states
   const [showPromoForm, setShowPromoForm] = useState(false);
@@ -434,6 +458,100 @@ export function AdminPanel({
     };
     fetchPosMode();
   }, []);
+
+  // Fetch staff users (admin only)
+  const fetchStaffUsers = async () => {
+    setStaffLoading(true);
+    try {
+      const response = await fetch('/api/admin/staff');
+      if (response.ok) {
+        const data = await response.json();
+        setStaffUsers(data.staff || []);
+      }
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && currentView === 'settings') {
+      fetchStaffUsers();
+    }
+  }, [isAdmin, currentView]);
+
+  const handleCreateStaffUser = async () => {
+    setStaffFormError('');
+    const { name, phone, email, password, role } = staffFormData;
+    if (!name || !phone || !email || !password) {
+      setStaffFormError('All fields are required');
+      return;
+    }
+    try {
+      const response = await fetch('/api/admin/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, password, role }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStaffUsers([data.user, ...staffUsers]);
+        setShowStaffForm(false);
+        setStaffFormData({ name: '', phone: '', email: '', password: '', role: 'staff' });
+      } else {
+        setStaffFormError(data.error || 'Failed to create staff user');
+      }
+    } catch {
+      setStaffFormError('Failed to create staff user');
+    }
+  };
+
+  const handleUpdateStaffUser = async () => {
+    if (!editingStaffUser) return;
+    setStaffFormError('');
+    const updates: Record<string, string> = {};
+    if (staffFormData.name) updates.name = staffFormData.name;
+    if (staffFormData.phone) updates.phone = staffFormData.phone;
+    if (staffFormData.email) updates.email = staffFormData.email;
+    if (staffFormData.password) updates.password = staffFormData.password;
+    if (staffFormData.role) updates.role = staffFormData.role;
+
+    try {
+      const response = await fetch(`/api/admin/staff/${editingStaffUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStaffUsers(staffUsers.map(u => u.id === editingStaffUser.id ? data.user : u));
+        setShowStaffForm(false);
+        setEditingStaffUser(null);
+        setStaffFormData({ name: '', phone: '', email: '', password: '', role: 'staff' });
+      } else {
+        setStaffFormError(data.error || 'Failed to update staff user');
+      }
+    } catch {
+      setStaffFormError('Failed to update staff user');
+    }
+  };
+
+  const handleDeleteStaffUser = async (id: string) => {
+    if (confirmingStaffDelete !== id) {
+      setConfirmingStaffDelete(id);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/admin/staff/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setStaffUsers(staffUsers.filter(u => u.id !== id));
+        setConfirmingStaffDelete(null);
+      }
+    } catch {
+      console.error('Failed to delete staff user');
+    }
+  };
 
   // Handle POS mode toggle
   const handlePosModeToggle = async (newMode: 'kiosk' | 'staff') => {
@@ -886,29 +1004,33 @@ export function AdminPanel({
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
+        {isAdmin && (
+          <Card className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">💰</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(todaysRevenue)}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(todaysRevenue)}</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
-        <Card className="p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📈</span>
+        {isAdmin && (
+          <Card className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">📈</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
 
       {/* POS Mode Settings - Hidden for now, will be enabled later */}
@@ -957,8 +1079,8 @@ export function AdminPanel({
         </Card>
       )}
 
-      {/* Stripe Product Sync */}
-      <Card className="p-6 border-2 border-blue-200 bg-blue-50">
+      {/* Stripe Product Sync - Admin Only */}
+      {isAdmin && (<Card className="p-6 border-2 border-blue-200 bg-blue-50">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
@@ -1041,7 +1163,7 @@ export function AdminPanel({
             </p>
           </div>
         )}
-      </Card>
+      </Card>)}
 
       {/* Active Sessions */}
       <Card className="p-6">
@@ -1101,10 +1223,10 @@ export function AdminPanel({
                       <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded">
                         Refunded
                       </span>
-                    ) : (
+                    ) : isAdmin ? (
                       <Button
                         onClick={() => {
-                          if (processingRefund === purchase.id) return; // Prevent double-click
+                          if (processingRefund === purchase.id) return;
                           if (confirmingRefund === purchase.id && customer) {
                             handleConfirmRefund(customer.id, purchase.id);
                           } else {
@@ -1128,7 +1250,7 @@ export function AdminPanel({
                           ? '✓ Confirm Refund'
                           : 'Refund'}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
@@ -1298,8 +1420,8 @@ export function AdminPanel({
                         Force Checkout All
                       </Button>
                     )}
-                    {/* Delete Account Button */}
-                    {confirmingCustomerDelete === customer.id ? (
+                    {/* Delete Account Button - Admin Only */}
+                    {isAdmin && (confirmingCustomerDelete === customer.id ? (
                       <div className="flex space-x-2">
                         <Button
                           onClick={() => handleDeleteCustomer(customer.id)}
@@ -1327,7 +1449,7 @@ export function AdminPanel({
                       >
                         Delete Account
                       </Button>
-                    )}
+                    ))}
                   </div>
                   {/* Confirmation Message */}
                   {confirmingCustomerDelete === customer.id && (
@@ -4352,6 +4474,205 @@ export function AdminPanel({
           </div>
         )}
       </Card>
+
+      {/* QR Code for Self Check-in */}
+      <Card className="p-6 border-2 border-green-200 bg-green-50">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-green-800 flex items-center gap-2">
+            <span>📱</span>
+            QR Code Check-In
+          </h3>
+          <p className="text-sm text-green-700 mt-1">
+            Display or print this QR code for customers to self-check-in
+          </p>
+        </div>
+        <QRCodeDisplay />
+      </Card>
+
+      {/* Staff Management - Admin Only */}
+      {isAdmin && (
+        <Card className="p-6 border-2 border-red-200 bg-red-50">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+                <span>👥</span>
+                Staff Management
+              </h3>
+              <p className="text-sm text-red-700 mt-1">
+                Create and manage staff accounts
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setEditingStaffUser(null);
+                setStaffFormData({ name: '', phone: '', email: '', password: '', role: 'staff' });
+                setStaffFormError('');
+                setShowStaffForm(true);
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+            >
+              + Add Staff
+            </button>
+          </div>
+
+          {staffLoading ? (
+            <p className="text-sm text-red-600 animate-pulse">Loading staff users...</p>
+          ) : staffUsers.length === 0 ? (
+            <p className="text-sm text-gray-600">No staff users found. Add one to get started.</p>
+          ) : (
+            <div className="space-y-3">
+              {staffUsers.map(user => (
+                <div key={user.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-100">
+                  <div>
+                    <p className="font-medium text-gray-900">{user.name}</p>
+                    <p className="text-sm text-gray-600">
+                      {user.phone ? `(${user.phone.slice(0, 3)}) ${user.phone.slice(3, 6)}-${user.phone.slice(6)}` : 'No phone'} &middot; {user.email}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {user.role}
+                      </span>
+                      {!user.has_staff_password && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">No password set</span>
+                      )}
+                      {user.last_login && (
+                        <span className="text-xs text-gray-500">
+                          Last login: {new Date(user.last_login).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingStaffUser(user);
+                        setStaffFormData({
+                          name: user.name,
+                          phone: user.phone,
+                          email: user.email,
+                          password: '',
+                          role: user.role,
+                        });
+                        setStaffFormError('');
+                        setShowStaffForm(true);
+                      }}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStaffUser(user.id)}
+                      className={`px-3 py-1.5 text-sm rounded-lg ${
+                        confirmingStaffDelete === user.id
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'bg-gray-100 text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      {confirmingStaffDelete === user.id ? 'Confirm Delete' : 'Delete'}
+                    </button>
+                    {confirmingStaffDelete === user.id && (
+                      <button
+                        onClick={() => setConfirmingStaffDelete(null)}
+                        className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Staff Form Modal */}
+          {showStaffForm && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-red-200">
+              <h4 className="font-semibold text-gray-900 mb-3">
+                {editingStaffUser ? 'Edit Staff User' : 'Add New Staff User'}
+              </h4>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={staffFormData.name}
+                      onChange={(e) => setStaffFormData({ ...staffFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      placeholder="Staff name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                    <input
+                      type="tel"
+                      value={staffFormData.phone}
+                      onChange={(e) => setStaffFormData({ ...staffFormData, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      placeholder="5551234567"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={staffFormData.email}
+                      onChange={(e) => setStaffFormData({ ...staffFormData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      placeholder="staff@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password {editingStaffUser ? '(leave blank to keep)' : '*'}
+                    </label>
+                    <input
+                      type="password"
+                      value={staffFormData.password}
+                      onChange={(e) => setStaffFormData({ ...staffFormData, password: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                      placeholder={editingStaffUser ? 'Unchanged' : 'Min 6 characters'}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select
+                    value={staffFormData.role}
+                    onChange={(e) => setStaffFormData({ ...staffFormData, role: e.target.value as 'staff' | 'admin' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                {staffFormError && (
+                  <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{staffFormError}</p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowStaffForm(false);
+                      setEditingStaffUser(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={editingStaffUser ? handleUpdateStaffUser : handleCreateStaffUser}
+                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+                  >
+                    {editingStaffUser ? 'Update' : 'Create'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 
@@ -4359,7 +4680,7 @@ export function AdminPanel({
     <div className="space-y-6">
       {/* Admin Navigation */}
       <Card className="p-4">
-        <nav className="flex flex-wrap gap-2">
+        <nav className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
           <Button
             onClick={() => setCurrentView('dashboard')}
             variant={currentView === 'dashboard' ? 'default' : 'outline'}
@@ -4374,13 +4695,15 @@ export function AdminPanel({
           >
             👥 Customers
           </Button>
-          <Button
-            onClick={() => setCurrentView('sales')}
-            variant={currentView === 'sales' ? 'default' : 'outline'}
-            size="sm"
-          >
-            💰 Sales
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => setCurrentView('sales')}
+              variant={currentView === 'sales' ? 'default' : 'outline'}
+              size="sm"
+            >
+              💰 Sales
+            </Button>
+          )}
           <Button
             onClick={() => setCurrentView('sessions')}
             variant={currentView === 'sessions' ? 'default' : 'outline'}

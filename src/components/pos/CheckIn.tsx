@@ -853,7 +853,6 @@ export function CheckIn({
     };
 
     const handleCheckIn = async (customer: Customer, purchaseId: string) => {
-        console.log("Checking in with pass ID:", purchaseId);
         const now = new Date();
         const nowIso = now.toISOString();
 
@@ -883,8 +882,6 @@ export function CheckIn({
             }
 
             const { session: dbSession } = await response.json();
-            console.log('Session persisted to database:', dbSession);
-
             // Convert database session to frontend format
             const newSession: Session = {
                 id: dbSession.id,
@@ -899,10 +896,6 @@ export function CheckIn({
                     const newUsedSessions = p.usedSessions + 1;
                     const isFirstUse = !p.firstUseDate;
 
-                    console.log(
-                        `Check-in with ${p.name}: ${p.usedSessions} -> ${newUsedSessions}`
-                    );
-
                     // Calculate actual expiry on first use
                     let actualExpiryDate = p.actualExpiryDate;
                     let firstUseDate = p.firstUseDate;
@@ -911,8 +904,6 @@ export function CheckIn({
                     if (isFirstUse) {
                         firstUseDate = nowIso;
                         actualExpiryDate = calculateActualExpiry(p.type, nowIso);
-                        console.log(`First use! Expiry set to: ${actualExpiryDate}`);
-
                         // If auto-renew is enabled and no renewal date is set, calculate it now
                         if (
                             p.autoRenew &&
@@ -922,9 +913,6 @@ export function CheckIn({
                             nextRenewalDate = new Date(
                                 expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000
                             ).toISOString();
-                            console.log(
-                                `Auto-renew enabled: Next renewal set to ${nextRenewalDate}`
-                            );
                         }
                     }
 
@@ -955,7 +943,6 @@ export function CheckIn({
                 activeSessions: [...(customer.activeSessions || []), newSession],
             };
 
-            console.log("Updated customer with new session:", updatedCustomer);
             onUpdateCustomer(updatedCustomer);
         } catch (error) {
             console.error('Error creating session:', error);
@@ -963,8 +950,6 @@ export function CheckIn({
     };
 
     const handleCheckOut = async (customer: Customer, sessionId: string) => {
-        console.log("Checking out session:", sessionId);
-
         // End session in Supabase
         try {
             const response = await fetch(`/api/sessions/${sessionId}`, {
@@ -978,8 +963,6 @@ export function CheckIn({
             }
 
             const { session: dbSession } = await response.json();
-            console.log('Session ended in database:', dbSession);
-
             // Remove the checked-out session from local state
             const activeSessions = customer.activeSessions || [];
             const updatedSessions = activeSessions.filter(
@@ -991,7 +974,6 @@ export function CheckIn({
                 activeSessions: updatedSessions,
             };
 
-            console.log("Checked out session:", sessionId);
             onUpdateCustomer(updatedCustomer);
         } catch (error) {
             console.error('Error ending session:', error);

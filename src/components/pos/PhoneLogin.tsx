@@ -69,7 +69,7 @@ interface PhoneLoginProps {
   customers: Customer[];
   onLogin: (customer: Customer) => void;
   onNewCustomer: (customer: Customer) => void;
-  onAdminAccess?: () => void;
+  onAdminAccess?: (user?: { id: string; name: string; role: 'staff' | 'admin' }) => void;
 }
 
 // Helper function to calculate age from birthdate
@@ -88,22 +88,29 @@ const calculateAge = (birthdate: string): number => {
 };
 
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
-  // Login state - 10 digit phone number
+  // Login state - multi-step
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [loginStep, setLoginStep] = useState<'phone' | 'password' | 'set-password'>('phone');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Signup state
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPassword, setCustomerPassword] = useState('');
+  const [customerConfirmPassword, setCustomerConfirmPassword] = useState('');
   const [fullPhoneNumber, setFullPhoneNumber] = useState('');
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
+  const [showStaffLogin, setShowStaffLogin] = useState(false);
+  const [staffPhone, setStaffPhone] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [staffError, setStaffError] = useState('');
+  const [staffLoading, setStaffLoading] = useState(false);
 
   // Handle phone number input change
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,12 +132,80 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
+    // Step 1: Phone check
+    if (loginStep === 'phone') {
+      try {
+        const checkResponse = await fetch('/api/auth/pos-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone }),
+        });
+        const checkData = await checkResponse.json();
+
+        if (!checkData.exists) {
+          // New customer - go to signup
+          setFullPhoneNumber(phoneNumber);
+          setIsNewCustomer(true);
+          setIsLoading(false);
+          return;
+        }
+
+        if (checkData.hasPassword) {
+          // Existing user with password - prompt for password
+          setLoginStep('password');
+          setIsLoading(false);
+          return;
+        }
+
+        // Existing user without password - prompt to set one
+        setLoginStep('set-password');
+        setIsLoading(false);
+        return;
+      } catch {
+        setError('Unable to connect. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Step: Set password for existing user
+    if (loginStep === 'set-password') {
+      if (loginPassword.length < 6) {
+        setError('Password must be at least 6 characters');
+        setIsLoading(false);
+        return;
+      }
+      if (loginPassword !== confirmPassword) {
+        setError('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const setPassResponse = await fetch('/api/auth/set-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, password: loginPassword, posFlow: true }),
+        });
+        if (!setPassResponse.ok) {
+          const data = await setPassResponse.json();
+          setError(data.error || 'Failed to set password');
+          setIsLoading(false);
+          return;
+        }
+        // Password set - now login with it
+      } catch {
+        setError('Failed to set password. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Step 2: Login with phone + password
     try {
-      // Attempt login with full phone number
       const response = await fetch('/api/auth/pos-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify({ phone: cleanPhone, password: loginPassword || undefined }),
       });
 
       const data = await response.json();
@@ -310,6 +385,18 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
+    if (!customerPassword || customerPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setIsLoading(false);
+      return;
+    }
+
+    if (customerPassword !== customerConfirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
     const cleanPhone = fullPhoneNumber.replace(/[^\d]/g, '');
 
     if (cleanPhone.length !== 10) {
@@ -327,6 +414,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           phone: cleanPhone,
           name: customerName.trim(),
           email: customerEmail.trim(),
+          password: customerPassword,
         }),
       });
 
@@ -368,36 +456,55 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setSignupSuccess(false);
     setCustomerName('');
     setCustomerEmail('');
+    setCustomerPassword('');
+    setCustomerConfirmPassword('');
     setFullPhoneNumber('');
     setPhoneNumber('');
+    setLoginStep('phone');
+    setLoginPassword('');
+    setConfirmPassword('');
     setError('');
   };
 
-  const handleBeeLogoClick = () => {
-    setShowAdminModal(true);
-    setAdminPassword('');
-    setAdminError('');
+  const formatStaffPhoneInput = (value: string) => {
+    const digits = value.replace(/[^\d]/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   };
 
-  const handleAdminPasswordSubmit = (e: React.FormEvent) => {
+  const handleStaffLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassword === '0297') {
-      setShowAdminModal(false);
-      setAdminPassword('');
-      setAdminError('');
-      if (onAdminAccess) {
-        onAdminAccess();
-      }
-    } else {
-      setAdminError('Incorrect password. Please try again.');
-      setAdminPassword('');
-    }
-  };
+    const cleanPhone = staffPhone.replace(/[^\d]/g, '');
+    if (cleanPhone.length !== 10 || !staffPassword) return;
 
-  const handleCloseAdminModal = () => {
-    setShowAdminModal(false);
-    setAdminPassword('');
-    setAdminError('');
+    setStaffLoading(true);
+    setStaffError('');
+
+    try {
+      const response = await fetch('/api/auth/staff-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, password: staffPassword }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowStaffLogin(false);
+        if (onAdminAccess) {
+          onAdminAccess({ id: data.user.id, name: data.user.name, role: data.user.role });
+        }
+      } else {
+        setStaffError(data.error || 'Invalid credentials');
+        setStaffPassword('');
+      }
+    } catch {
+      setStaffError('Authentication failed. Please try again.');
+      setStaffPassword('');
+    } finally {
+      setStaffLoading(false);
+    }
   };
 
   // Show success message after signup
@@ -411,18 +518,14 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         <div className="w-full max-w-md">
           <Card className="p-8">
           <div className="text-center mb-6">
-            <button
-              type="button"
-              onClick={handleBeeLogoClick}
-              className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
+            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🐝</span>
-            </button>
+            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Busy Bees!</h2>
             <p className="text-gray-600">Let's create your account</p>
           </div>
 
-          <form onSubmit={handleCreateCustomer} className="space-y-6">
+          <form onSubmit={handleCreateCustomer} className="space-y-6" autoComplete="off">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                 Full Phone Number *
@@ -436,6 +539,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                 maxLength={14}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg text-center"
                 required
+                autoComplete="off"
               />
             </div>
 
@@ -451,6 +555,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                 placeholder="Enter your full name"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 required
+                autoComplete="off"
               />
             </div>
 
@@ -466,6 +571,41 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                 placeholder="you@example.com"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                 required
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-2">
+                Create Password *
+              </label>
+              <input
+                type="password"
+                id="signup-password"
+                value={customerPassword}
+                onChange={(e) => setCustomerPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                required
+                autoComplete="off"
+                minLength={6}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="signup-confirm" className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm Password *
+              </label>
+              <input
+                type="password"
+                id="signup-confirm"
+                value={customerConfirmPassword}
+                onChange={(e) => setCustomerConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                required
+                autoComplete="off"
+                minLength={6}
               />
             </div>
 
@@ -505,19 +645,15 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       <div className="w-full max-w-md">
         <Card className="p-8">
         <div className="text-center mb-6">
-          <button
-            type="button"
-            onClick={handleBeeLogoClick}
-            className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4"
-          >
+          <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">🐝</span>
-          </button>
+          </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
           <p className="text-gray-600">Enter your phone number to access your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Phone Number */}
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+          {/* Phone Number - always shown */}
           <div>
             <label htmlFor="login-phone" className="block text-sm font-medium text-gray-700 mb-3 text-center">
               Phone Number
@@ -526,14 +662,86 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               type="tel"
               id="login-phone"
               value={phoneNumber}
-              onChange={handlePhoneChange}
+              onChange={(e) => {
+                handlePhoneChange(e);
+                if (loginStep !== 'phone') {
+                  setLoginStep('phone');
+                  setLoginPassword('');
+                  setConfirmPassword('');
+                }
+              }}
               placeholder="(555) 123-4567"
               maxLength={14}
               className="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-2xl text-center font-medium"
               required
-              autoFocus
+              autoFocus={loginStep === 'phone'}
+              autoComplete="off"
             />
           </div>
+
+          {/* Password field - shown when user has password */}
+          {loginStep === 'password' && (
+            <div>
+              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                id="login-password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
+                required
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
+          )}
+
+          {/* Set password fields - shown for existing users without password */}
+          {loginStep === 'set-password' && (
+            <>
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  Welcome back! Please set a password for your account.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Create Password
+                </label>
+                <input
+                  type="password"
+                  id="new-password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
+                  required
+                  autoFocus
+                  autoComplete="off"
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  id="confirm-new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
+                  required
+                  autoComplete="off"
+                  minLength={6}
+                />
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -543,88 +751,107 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full min-h-[44px]"
             disabled={isLoading}
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? 'Please wait...' :
+              loginStep === 'phone' ? 'Continue' :
+              loginStep === 'set-password' ? 'Set Password & Login' :
+              'Login'}
           </Button>
+
+          {loginStep !== 'phone' && (
+            <button
+              type="button"
+              onClick={handleBackToLogin}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-2"
+            >
+              Use a different phone number
+            </button>
+          )}
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            New to Busy Bees? No problem!
-            <br />
-            Enter your phone number and we'll get started.
-          </p>
+        {loginStep === 'phone' && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              New to Busy Bees? No problem!
+              <br />
+              Enter your phone number and we'll get started.
+            </p>
+          </div>
+        )}
+
+        </Card>
+
+        {/* Staff Login Toggle */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setShowStaffLogin(!showStaffLogin);
+              setStaffPhone('');
+              setStaffPassword('');
+              setStaffError('');
+            }}
+            className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+          >
+            {showStaffLogin ? 'Back to Customer Login' : 'Staff Login'}
+          </button>
         </div>
 
-        {/* Invisible Quick Login for Demo */}
-        <button
-          type="button"
-          onClick={() => setPhoneNumber('(555) 123-4567')}
-          className="absolute top-0 left-0 w-16 h-16 opacity-0 cursor-pointer z-10"
-          title="Demo Login (invisible)"
-        >
-          Demo
-        </button>
-        </Card>
-      </div>
-
-      {/* Admin Password Modal */}
-      {showAdminModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🔒</span>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Admin Access</h2>
-              <p className="text-gray-600">Enter password to access admin dashboard</p>
+        {/* Staff Login Form */}
+        {showStaffLogin && (
+          <Card className="p-6 mt-4 border-2 border-red-200">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Staff Login</h3>
+              <p className="text-sm text-gray-600">Enter your staff credentials</p>
             </div>
 
-            <form onSubmit={handleAdminPasswordSubmit} className="space-y-4">
+            <form onSubmit={handleStaffLoginSubmit} className="space-y-4" autoComplete="off">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  value={staffPhone}
+                  onChange={(e) => setStaffPhone(formatStaffPhoneInput(e.target.value))}
+                  placeholder="(555) 123-4567"
+                  maxLength={14}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg"
+                  autoFocus
+                  disabled={staffLoading}
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input
                   type="password"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                  className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 tracking-widest"
-                  maxLength={20}
-                  autoFocus
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg"
+                  disabled={staffLoading}
+                  autoComplete="off"
                 />
               </div>
 
-              {adminError && (
+              {staffError && (
                 <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded-lg">
-                  {adminError}
+                  {staffError}
                 </div>
               )}
 
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={handleCloseAdminModal}
-                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!adminPassword}
-                  className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Access Admin
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={staffPhone.replace(/[^\d]/g, '').length !== 10 || !staffPassword || staffLoading}
+                className="w-full px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {staffLoading ? 'Logging in...' : 'Staff Login'}
+              </button>
             </form>
-
-            <div className="mt-4 text-xs text-gray-500 text-center">
-              Admin access only • Authorized personnel
-            </div>
-          </div>
-        </div>
-      )}
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

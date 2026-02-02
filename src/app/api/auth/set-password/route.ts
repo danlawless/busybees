@@ -13,10 +13,17 @@ const SALT_ROUNDS = 12;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, email, name, password } = body;
+    const { phone, email, name, password, posFlow } = body;
 
-    // Validate required fields
-    if (!phone || !email || !name || !password) {
+    // POS flow only requires phone + password
+    if (posFlow) {
+      if (!phone || !password) {
+        return NextResponse.json(
+          { error: 'Phone and password are required' },
+          { status: 400 }
+        );
+      }
+    } else if (!phone || !email || !name || !password) {
       return NextResponse.json(
         { error: 'Phone, email, name, and password are required' },
         { status: 400 }
@@ -57,23 +64,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify email matches (case-insensitive)
-    if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
-      return NextResponse.json(
-        { error: 'The email address does not match our records. Please check your information.' },
-        { status: 400 }
-      );
-    }
+    // Skip email/name verification for POS flow (user already identified by phone at kiosk)
+    if (!posFlow) {
+      // Verify email matches (case-insensitive)
+      if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
+        return NextResponse.json(
+          { error: 'The email address does not match our records. Please check your information.' },
+          { status: 400 }
+        );
+      }
 
-    // Verify name matches (case-insensitive, trim whitespace)
-    const normalizedInputName = name.trim().toLowerCase().replace(/\s+/g, ' ');
-    const normalizedStoredName = user.name.trim().toLowerCase().replace(/\s+/g, ' ');
+      // Verify name matches (case-insensitive, trim whitespace)
+      const normalizedInputName = name.trim().toLowerCase().replace(/\s+/g, ' ');
+      const normalizedStoredName = user.name.trim().toLowerCase().replace(/\s+/g, ' ');
 
-    if (!normalizedStoredName.includes(normalizedInputName) && !normalizedInputName.includes(normalizedStoredName)) {
-      return NextResponse.json(
-        { error: 'The name does not match our records. Please enter the name you used when signing up.' },
-        { status: 400 }
-      );
+      if (!normalizedStoredName.includes(normalizedInputName) && !normalizedInputName.includes(normalizedStoredName)) {
+        return NextResponse.json(
+          { error: 'The name does not match our records. Please enter the name you used when signing up.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user already has a web password

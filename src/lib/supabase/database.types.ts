@@ -26,6 +26,8 @@ export interface Database {
           stripe_customer_id_live: string | null;
           web_password_hash: string | null;
           has_web_password: boolean;
+          staff_password_hash: string | null;
+          has_staff_password: boolean;
           last_login: string | null;
           last_visit: string | null;
           pin_hash: string | null;
@@ -43,6 +45,8 @@ export interface Database {
           stripe_customer_id_live?: string | null;
           web_password_hash?: string | null;
           has_web_password?: boolean;
+          staff_password_hash?: string | null;
+          has_staff_password?: boolean;
           last_login?: string | null;
           last_visit?: string | null;
           pin_hash?: string | null;
@@ -60,6 +64,8 @@ export interface Database {
           stripe_customer_id_live?: string | null;
           web_password_hash?: string | null;
           has_web_password?: boolean;
+          staff_password_hash?: string | null;
+          has_staff_password?: boolean;
           last_login?: string | null;
           last_visit?: string | null;
           pin_hash?: string | null;
