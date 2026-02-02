@@ -8,25 +8,16 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendWelcomeEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, name, email, password } = body;
+    const { phone, name, email } = body;
 
     // Validate required fields
-    if (!phone || !name || !email || !password) {
+    if (!phone || !name || !email) {
       return NextResponse.json(
-        { error: 'Phone, name, email, and password are required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate password length
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Phone, name, and email are required' },
         { status: 400 }
       );
     }
@@ -105,10 +96,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash the customer password
-    const webPasswordHash = await bcrypt.hash(password, 12);
-
     // Create user profile record with the auth user's ID
+    // No web password — customer sets one later if they want web portal access
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -117,8 +106,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.trim(),
         role: 'customer',
-        web_password_hash: webPasswordHash,
-        has_web_password: true,
+        has_web_password: false,
         last_login: new Date().toISOString(),
       })
       .select()

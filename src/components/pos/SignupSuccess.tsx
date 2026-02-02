@@ -46,9 +46,9 @@ export function SignupSuccess({ customerName, email }: SignupSuccessProps) {
               <strong>You're all set!</strong> You can now:
             </p>
             <ul className="text-sm text-gray-600 mt-2 space-y-1 ml-4">
-              <li>✓ Check in at our kiosk with your phone + PIN</li>
+              <li>✓ Check in with your phone number</li>
               <li>✓ Purchase passes and book parties</li>
-              <li>✓ Access your account online (after verifying email)</li>
+              <li>✓ Set up a password later to access your account online</li>
             </ul>
           </div>
 
