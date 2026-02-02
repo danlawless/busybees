@@ -88,19 +88,14 @@ const calculateAge = (birthdate: string): number => {
 };
 
 export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }: PhoneLoginProps) {
-  // Login state - multi-step
+  // Login state
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [loginStep, setLoginStep] = useState<'phone' | 'password' | 'set-password'>('phone');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Signup state
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPassword, setCustomerPassword] = useState('');
-  const [customerConfirmPassword, setCustomerConfirmPassword] = useState('');
   const [fullPhoneNumber, setFullPhoneNumber] = useState('');
 
   // UI state
@@ -132,80 +127,34 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
-    // Step 1: Phone check
-    if (loginStep === 'phone') {
-      try {
-        const checkResponse = await fetch('/api/auth/pos-check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanPhone }),
-        });
-        const checkData = await checkResponse.json();
+    // Check if customer exists
+    try {
+      const checkResponse = await fetch('/api/auth/pos-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const checkData = await checkResponse.json();
 
-        if (!checkData.exists) {
-          // New customer - go to signup
-          setFullPhoneNumber(phoneNumber);
-          setIsNewCustomer(true);
-          setIsLoading(false);
-          return;
-        }
-
-        if (checkData.hasPassword) {
-          // Existing user with password - prompt for password
-          setLoginStep('password');
-          setIsLoading(false);
-          return;
-        }
-
-        // Existing user without password - prompt to set one
-        setLoginStep('set-password');
-        setIsLoading(false);
-        return;
-      } catch {
-        setError('Unable to connect. Please try again.');
+      if (!checkData.exists) {
+        // New customer - go to signup
+        setFullPhoneNumber(phoneNumber);
+        setIsNewCustomer(true);
         setIsLoading(false);
         return;
       }
+    } catch {
+      setError('Unable to connect. Please try again.');
+      setIsLoading(false);
+      return;
     }
 
-    // Step: Set password for existing user
-    if (loginStep === 'set-password') {
-      if (loginPassword.length < 6) {
-        setError('Password must be at least 6 characters');
-        setIsLoading(false);
-        return;
-      }
-      if (loginPassword !== confirmPassword) {
-        setError('Passwords do not match');
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const setPassResponse = await fetch('/api/auth/set-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanPhone, password: loginPassword, posFlow: true }),
-        });
-        if (!setPassResponse.ok) {
-          const data = await setPassResponse.json();
-          setError(data.error || 'Failed to set password');
-          setIsLoading(false);
-          return;
-        }
-        // Password set - now login with it
-      } catch {
-        setError('Failed to set password. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-    }
-
-    // Step 2: Login with phone + password
+    // Login with phone only
     try {
       const response = await fetch('/api/auth/pos-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, password: loginPassword || undefined }),
+        body: JSON.stringify({ phone: cleanPhone }),
       });
 
       const data = await response.json();
@@ -385,18 +334,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       return;
     }
 
-    if (!customerPassword || customerPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      setIsLoading(false);
-      return;
-    }
-
-    if (customerPassword !== customerConfirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
     const cleanPhone = fullPhoneNumber.replace(/[^\d]/g, '');
 
     if (cleanPhone.length !== 10) {
@@ -414,7 +351,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
           phone: cleanPhone,
           name: customerName.trim(),
           email: customerEmail.trim(),
-          password: customerPassword,
         }),
       });
 
@@ -456,13 +392,8 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
     setSignupSuccess(false);
     setCustomerName('');
     setCustomerEmail('');
-    setCustomerPassword('');
-    setCustomerConfirmPassword('');
     setFullPhoneNumber('');
     setPhoneNumber('');
-    setLoginStep('phone');
-    setLoginPassword('');
-    setConfirmPassword('');
     setError('');
   };
 
@@ -575,40 +506,6 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               />
             </div>
 
-            <div>
-              <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Create Password *
-              </label>
-              <input
-                type="password"
-                id="signup-password"
-                value={customerPassword}
-                onChange={(e) => setCustomerPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                required
-                autoComplete="off"
-                minLength={6}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="signup-confirm" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password *
-              </label>
-              <input
-                type="password"
-                id="signup-confirm"
-                value={customerConfirmPassword}
-                onChange={(e) => setCustomerConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                required
-                autoComplete="off"
-                minLength={6}
-              />
-            </div>
-
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
@@ -662,86 +559,15 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               type="tel"
               id="login-phone"
               value={phoneNumber}
-              onChange={(e) => {
-                handlePhoneChange(e);
-                if (loginStep !== 'phone') {
-                  setLoginStep('phone');
-                  setLoginPassword('');
-                  setConfirmPassword('');
-                }
-              }}
+              onChange={handlePhoneChange}
               placeholder="(555) 123-4567"
               maxLength={14}
               className="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-2xl text-center font-medium"
               required
-              autoFocus={loginStep === 'phone'}
+              autoFocus
               autoComplete="off"
             />
           </div>
-
-          {/* Password field - shown when user has password */}
-          {loginStep === 'password' && (
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                id="login-password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
-                required
-                autoFocus
-                autoComplete="off"
-              />
-            </div>
-          )}
-
-          {/* Set password fields - shown for existing users without password */}
-          {loginStep === 'set-password' && (
-            <>
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  Welcome back! Please set a password for your account.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Create Password
-                </label>
-                <input
-                  type="password"
-                  id="new-password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Min 6 characters"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
-                  required
-                  autoFocus
-                  autoComplete="off"
-                  minLength={6}
-                />
-              </div>
-              <div>
-                <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirm-new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter password"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-lg"
-                  required
-                  autoComplete="off"
-                  minLength={6}
-                />
-              </div>
-            </>
-          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -754,32 +580,17 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             className="w-full min-h-[44px]"
             disabled={isLoading}
           >
-            {isLoading ? 'Please wait...' :
-              loginStep === 'phone' ? 'Continue' :
-              loginStep === 'set-password' ? 'Set Password & Login' :
-              'Login'}
+            {isLoading ? 'Please wait...' : 'Continue'}
           </Button>
-
-          {loginStep !== 'phone' && (
-            <button
-              type="button"
-              onClick={handleBackToLogin}
-              className="w-full text-sm text-gray-500 hover:text-gray-700 py-2"
-            >
-              Use a different phone number
-            </button>
-          )}
         </form>
 
-        {loginStep === 'phone' && (
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              New to Busy Bees? No problem!
-              <br />
-              Enter your phone number and we'll get started.
-            </p>
-          </div>
-        )}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            New to Busy Bees? No problem!
+            <br />
+            Enter your phone number and we'll get started.
+          </p>
+        </div>
 
         </Card>
 

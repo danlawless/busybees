@@ -1,17 +1,16 @@
 /**
  * POS Login API Route
- * Authenticate users with phone number (+ optional password) for POS system
+ * Authenticate customers with phone number only for POS system
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, password } = body;
+    const { phone } = body;
 
     // Validate input
     if (!phone) {
@@ -45,23 +44,6 @@ export async function POST(request: NextRequest) {
         { error: 'No account found with that phone number' },
         { status: 404 }
       );
-    }
-
-    // If user has a web password, require and verify it
-    if (user.has_web_password && user.web_password_hash) {
-      if (!password) {
-        return NextResponse.json(
-          { error: 'Password is required', needsPassword: true },
-          { status: 401 }
-        );
-      }
-      const passwordValid = await bcrypt.compare(password, user.web_password_hash);
-      if (!passwordValid) {
-        return NextResponse.json(
-          { error: 'Invalid password' },
-          { status: 401 }
-        );
-      }
     }
 
     // Update last login timestamp
@@ -132,7 +114,6 @@ export async function POST(request: NextRequest) {
     // Update the response with user data
     return NextResponse.json({
       user: safeUser,
-      needsPasswordSetup: !user.has_web_password,
       message: 'Login successful'
     }, {
       status: 200,

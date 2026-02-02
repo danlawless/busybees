@@ -1,6 +1,6 @@
 /**
  * POS Check API Route
- * Check if a phone number has an account and whether password is set
+ * Check if a phone number has an existing account
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,19 +25,15 @@ export async function POST(request: NextRequest) {
 
     const { data: user } = await supabase
       .from('users')
-      .select('id, has_web_password, role')
+      .select('id')
       .eq('phone', cleanPhone)
-      .eq('role', 'customer')
       .single();
 
     if (!user) {
-      return NextResponse.json({ exists: false, hasPassword: false });
+      return NextResponse.json({ exists: false });
     }
 
-    return NextResponse.json({
-      exists: true,
-      hasPassword: user.has_web_password || false,
-    });
+    return NextResponse.json({ exists: true });
   } catch (error) {
     console.error('POS check error:', error);
     return NextResponse.json({ error: 'Check failed' }, { status: 500 });
