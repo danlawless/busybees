@@ -19,10 +19,10 @@ export function CountdownTimer({ expiryDate, type, onExpired }: CountdownTimerPr
     total: number;
   }>({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
 
-  const hasFiredExpired = useRef(false);
+  const hasExpiredRef = useRef(false);
 
   useEffect(() => {
-    hasFiredExpired.current = false;
+    hasExpiredRef.current = false;
   }, [expiryDate]);
 
   useEffect(() => {
@@ -40,8 +40,8 @@ export function CountdownTimer({ expiryDate, type, onExpired }: CountdownTimerPr
         setTimeLeft({ days, hours, minutes, seconds, total: difference });
       } else {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
-        if (onExpired && !hasFiredExpired.current) {
-          hasFiredExpired.current = true;
+        if (onExpired && !hasExpiredRef.current) {
+          hasExpiredRef.current = true;
           onExpired();
         }
       }
