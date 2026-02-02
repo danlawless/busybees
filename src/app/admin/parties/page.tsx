@@ -953,7 +953,7 @@ export default function AdminPartiesPage() {
                           )}
                           <button
                             onClick={() => deleteBooking(booking.id, booking.customer_name)}
-                            className="text-xs px-2 py-1 bg-red-700 text-white rounded hover:bg-red-800"
+                            className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                           >
                             Delete
                           </button>
@@ -1220,7 +1220,7 @@ export default function AdminPartiesPage() {
                               <div className="mt-1">
                                 <button
                                   onClick={() => deleteBooking(booking.id, booking.customer_name)}
-                                  className="w-full text-xs px-2 py-1 bg-red-700 text-white rounded hover:bg-red-800"
+                                  className="w-full text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                                 >
                                   Delete
                                 </button>
