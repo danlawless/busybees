@@ -6,7 +6,7 @@
  * Uses web authentication (Supabase) instead of POS phone login
  */
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -100,6 +100,8 @@ function WebMyAccountContent() {
   // Delete confirmation state
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [deleteTimeout, setDeleteTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showPassHistory, setShowPassHistory] = useState(false);
+  const [showPartyHistory, setShowPartyHistory] = useState(false);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -1421,34 +1423,42 @@ function WebMyAccountContent() {
               </Card>
             </div>
 
-            {/* Pass Purchase History */}
+            {/* Pass Purchase History - collapsed by default */}
             {pastPassPurchases.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Pass Purchase History</h3>
-                <Card className="divide-y">
-                  {pastPassPurchases.map((purchase) => (
-                    <div key={purchase.id} className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{purchase.name}</h4>
-                          <p className="text-sm text-gray-600">
-                            Purchased {formatDate(purchase.purchaseDate)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${purchase.price}</p>
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            purchase.status === 'used'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {purchase.status === 'used' ? 'Used' : 'Expired'}
-                          </span>
+                <button
+                  onClick={() => setShowPassHistory(!showPassHistory)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <span className={`transform transition-transform ${showPassHistory ? 'rotate-90' : ''}`}>&#9654;</span>
+                  Expired / Used Passes ({pastPassPurchases.length})
+                </button>
+                {showPassHistory && (
+                  <Card className="divide-y mt-2">
+                    {pastPassPurchases.map((purchase) => (
+                      <div key={purchase.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{purchase.name}</h4>
+                            <p className="text-sm text-gray-600">
+                              Purchased {formatDate(purchase.purchaseDate)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">${purchase.price}</p>
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                              purchase.status === 'used'
+                                ? 'bg-gray-100 text-gray-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {purchase.status === 'used' ? 'Used' : 'Expired'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </Card>
+                    ))}
+                  </Card>
+                )}
               </div>
             )}
           </div>
@@ -1635,39 +1645,47 @@ function WebMyAccountContent() {
               </Card>
             </div>
 
-            {/* Party Purchase History */}
+            {/* Party Purchase History - collapsed by default */}
             {pastPartyPurchases.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold mb-4">Party Purchase History</h3>
-                <Card className="divide-y">
-                  {pastPartyPurchases.map((purchase) => (
-                    <div key={purchase.id} className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{purchase.name}</h4>
-                          <p className="text-sm text-gray-600">
-                            Purchased {formatDate(purchase.purchaseDate)}
-                          </p>
-                          {purchase.partyDate && (
-                            <p className="text-sm text-purple-600">
-                              Party Date: {formatDate(purchase.partyDate)}
+                <button
+                  onClick={() => setShowPartyHistory(!showPartyHistory)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <span className={`transform transition-transform ${showPartyHistory ? 'rotate-90' : ''}`}>&#9654;</span>
+                  Expired / Used Parties ({pastPartyPurchases.length})
+                </button>
+                {showPartyHistory && (
+                  <Card className="divide-y mt-2">
+                    {pastPartyPurchases.map((purchase) => (
+                      <div key={purchase.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{purchase.name}</h4>
+                            <p className="text-sm text-gray-600">
+                              Purchased {formatDate(purchase.purchaseDate)}
                             </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${purchase.price}</p>
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            purchase.status === 'used'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {purchase.status === 'used' ? 'Used' : 'Expired'}
-                          </span>
+                            {purchase.partyDate && (
+                              <p className="text-sm text-purple-600">
+                                Party Date: {formatDate(purchase.partyDate)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">${purchase.price}</p>
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                              purchase.status === 'used'
+                                ? 'bg-gray-100 text-gray-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {purchase.status === 'used' ? 'Used' : 'Expired'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </Card>
+                    ))}
+                  </Card>
+                )}
               </div>
             )}
           </div>
