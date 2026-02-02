@@ -462,7 +462,7 @@ function WebMyAccountContent() {
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
     if (selectedProductForPurchase) {
-      handlePurchase(selectedProductForPurchase);
+      handleConfirmPurchase(selectedProductForPurchase, childId);
     }
   };
 
@@ -472,7 +472,7 @@ function WebMyAccountContent() {
     return defaultCard || savedCards[0] || null;
   };
 
-  const handleConfirmPurchase = async (productId: string) => {
+  const handleConfirmPurchase = async (productId: string, childId?: string) => {
     setConfirmingProduct(null);
     if (confirmTimeout) {
       clearTimeout(confirmTimeout);
@@ -487,9 +487,10 @@ function WebMyAccountContent() {
     }
 
     const isPassPurchase = availablePasses.some(p => p.id === productId);
+    const effectiveChildId = childId || selectedChildForPurchase;
 
     if (isPassPurchase) {
-      if (!selectedChildForPurchase) {
+      if (!effectiveChildId) {
         setSuccessDetails({
           title: 'Child Selection Required',
           message: 'Please select which child this pass is for before purchasing.',
@@ -499,7 +500,7 @@ function WebMyAccountContent() {
         return;
       }
 
-      const selectedChild = children.find(c => c.id === selectedChildForPurchase);
+      const selectedChild = children.find(c => c.id === effectiveChildId);
       if (!selectedChild || !selectedChild.waiverSigned) {
         setSuccessDetails({
           title: 'Waiver Required',
@@ -564,7 +565,7 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? selectedChildForPurchase : undefined,
+          childId: isPassPurchase ? effectiveChildId : undefined,
           paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
@@ -1382,8 +1383,9 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            if (confirmingProduct === product.id) {
-                              handleConfirmPurchase(product.id);
+                            const eligibleChildren = children.filter(c => c.waiverSigned);
+                            if (eligibleChildren.length === 1) {
+                              handleConfirmPurchase(product.id, eligibleChildren[0].id);
                             } else {
                               setSelectedProductForPurchase(product.id);
                               setShowChildSelectionModal(true);
@@ -1392,9 +1394,7 @@ function WebMyAccountContent() {
                           size="lg"
                           disabled={processingProduct === product.id}
                           className={`px-6 py-3 text-white transition-colors ${
-                            confirmingProduct === product.id
-                              ? 'bg-green-600 hover:bg-green-700 animate-pulse'
-                              : processingProduct === product.id
+                            processingProduct === product.id
                               ? 'bg-blue-600'
                               : children.length === 0
                               ? 'bg-blue-500 hover:bg-blue-600'
@@ -1405,8 +1405,6 @@ function WebMyAccountContent() {
                         >
                           {processingProduct === product.id
                             ? 'Processing...'
-                            : confirmingProduct === product.id
-                            ? `✓ Pay ${formatCurrency(product.price)} Now`
                             : children.length === 0
                             ? '👶 Add Child First'
                             : savedCards.length === 0
@@ -1601,18 +1599,12 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            if (confirmingProduct === product.id) {
-                              handleConfirmPurchase(product.id);
-                            } else {
-                              handlePurchase(product.id);
-                            }
+                            handleConfirmPurchase(product.id);
                           }}
                           size="lg"
                           disabled={processingProduct === product.id}
                           className={`px-6 py-3 text-white transition-colors ${
-                            confirmingProduct === product.id
-                              ? 'bg-purple-600 hover:bg-purple-700 animate-pulse'
-                              : processingProduct === product.id
+                            processingProduct === product.id
                               ? 'bg-purple-500'
                               : savedCards.length === 0
                               ? 'bg-yellow-500 hover:bg-yellow-600'
@@ -1621,8 +1613,6 @@ function WebMyAccountContent() {
                         >
                           {processingProduct === product.id
                             ? 'Processing...'
-                            : confirmingProduct === product.id
-                            ? `✓ Pay ${formatCurrency(product.price)} Now`
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
                             : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
