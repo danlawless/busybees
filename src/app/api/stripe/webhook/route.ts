@@ -254,20 +254,38 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  // Calculate expiry dates based on purchase type
+  // Look up pass details from the passes table for accurate session counts and expiry
   const now = new Date();
   let expiryDate = null;
   let totalSessions = 1;
 
-  if (purchase_type === 'day_pass') {
-    expiryDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
-    totalSessions = 1;
-  } else if (purchase_type === 'weekly_pass') {
-    expiryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    totalSessions = 999; // Unlimited
-  } else if (purchase_type === 'monthly_pass') {
-    expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-    totalSessions = 999; // Unlimited
+  if (['day_pass', 'weekly_pass', 'monthly_pass'].includes(purchase_type)) {
+    const { data: passData } = await supabase
+      .from('passes')
+      .select('sessions_included, duration, category')
+      .eq('id', product_id)
+      .single();
+
+    if (passData) {
+      totalSessions = passData.sessions_included;
+      if (passData.category === 'day') {
+        expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to start using
+      } else {
+        expiryDate = new Date(now.getTime() + (passData.duration || 365) * 24 * 60 * 60 * 1000);
+      }
+    } else {
+      console.log('Pass not found in database, using fallback session count');
+      if (purchase_type === 'day_pass') {
+        expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        totalSessions = 1;
+      } else if (purchase_type === 'weekly_pass') {
+        expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+        totalSessions = 10;
+      } else if (purchase_type === 'monthly_pass') {
+        expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+        totalSessions = 999;
+      }
+    }
   }
 
   // Create purchase record
@@ -362,6 +380,32 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     return;
   }
 
+  // Look up pass details for accurate session count
+  let resolvedTotalSessions = parseInt(total_sessions || '0');
+  let expiryDate: string | null = null;
+
+  if (!resolvedTotalSessions && ['day_pass', 'weekly_pass', 'monthly_pass'].includes(product_type)) {
+    const { data: passData } = await supabase
+      .from('passes')
+      .select('sessions_included, duration, category')
+      .eq('id', product_id)
+      .single();
+
+    if (passData) {
+      resolvedTotalSessions = passData.sessions_included;
+      const now = new Date();
+      if (passData.category === 'day') {
+        expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      } else {
+        expiryDate = new Date(now.getTime() + (passData.duration || 365) * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+  }
+
+  if (!resolvedTotalSessions) {
+    resolvedTotalSessions = 1;
+  }
+
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
@@ -371,8 +415,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     name: product_name,
     price: paymentIntent.amount / 100, // Convert cents to dollars
     purchase_date: new Date().toISOString(),
+    expiry_date: expiryDate,
     used_sessions: 0,
-    total_sessions: parseInt(total_sessions || '1'),
+    total_sessions: resolvedTotalSessions,
     status: 'active',
     stripe_payment_intent_id: paymentIntent.id,
   });

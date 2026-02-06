@@ -249,20 +249,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate expiry dates based on purchase type
+    // Look up pass details from the passes table for accurate session counts and expiry
     const now = new Date();
     let expiryDate = null;
     let totalSessions = 1;
 
-    if (purchase_type === 'day_pass') {
-      expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to start using
-      totalSessions = 1;
-    } else if (purchase_type === 'weekly_pass') {
-      expiryDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days to start using
-      totalSessions = 999; // Unlimited
-    } else if (purchase_type === 'monthly_pass') {
-      expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year to start using
-      totalSessions = 999; // Unlimited
+    if (['day_pass', 'weekly_pass', 'monthly_pass'].includes(purchase_type)) {
+      const { data: passData } = await adminSupabase
+        .from('passes')
+        .select('sessions_included, duration, category')
+        .eq('id', product_id)
+        .single();
+
+      if (passData) {
+        totalSessions = passData.sessions_included;
+        // Calculate expiry based on pass duration (deadline to start using)
+        if (passData.category === 'day') {
+          expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to start using day pass
+        } else {
+          // For weekly (punch cards) and monthly passes, use pass duration as expiry window
+          expiryDate = new Date(now.getTime() + (passData.duration || 365) * 24 * 60 * 60 * 1000);
+        }
+      } else {
+        // Fallback if pass not found in database
+        logger.warn({ product_id, purchase_type }, 'Pass not found in database, using fallback session count');
+        if (purchase_type === 'day_pass') {
+          expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          totalSessions = 1;
+        } else if (purchase_type === 'weekly_pass') {
+          expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+          totalSessions = 10;
+        } else if (purchase_type === 'monthly_pass') {
+          expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+          totalSessions = 999;
+        }
+      }
     } else if (purchase_type === 'party_package') {
       expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to book
       totalSessions = 1;

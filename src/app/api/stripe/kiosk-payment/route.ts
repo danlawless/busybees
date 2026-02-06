@@ -232,35 +232,48 @@ export async function POST(request: NextRequest) {
             "💳 Kiosk payment succeeded"
         );
 
-        // Calculate expiry date and sessions based on purchase type
+        // Look up pass details from the passes table for accurate session counts
         const now = new Date();
         let expiryDate: Date | null = null;
         let sessionsPerUnit = 1;
 
-        if (purchaseType === "day_pass") {
-            // Day passes: 1 session per pass, multiply by quantity
-            sessionsPerUnit = 1;
-        } else if (purchaseType === "weekly_pass") {
-            // Punch cards: 10 sessions per card
-            sessionsPerUnit = 10;
-        } else if (purchaseType === "monthly_pass") {
-            // Monthly: unlimited sessions
-            sessionsPerUnit = 999;
+        if (["day_pass", "weekly_pass", "monthly_pass"].includes(purchaseType)) {
+            const { data: passData } = await adminSupabase
+                .from("passes")
+                .select("sessions_included, duration, category")
+                .eq("id", productId)
+                .single();
+
+            if (passData) {
+                sessionsPerUnit = passData.sessions_included;
+                if (passData.category === "day") {
+                    expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                } else {
+                    expiryDate = new Date(now.getTime() + (passData.duration || 365) * 24 * 60 * 60 * 1000);
+                }
+            } else {
+                logger.warn({ productId, purchaseType }, "Pass not found in database, using fallback");
+                if (purchaseType === "day_pass") {
+                    sessionsPerUnit = 1;
+                } else if (purchaseType === "weekly_pass") {
+                    sessionsPerUnit = 10;
+                } else if (purchaseType === "monthly_pass") {
+                    sessionsPerUnit = 999;
+                }
+            }
         } else if (purchaseType === "party_package") {
-            // Party packages have 90-day booking window
             expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + 90);
             sessionsPerUnit = 1;
         } else if (purchaseType === "food_beverage") {
-            // Food/beverage items are immediately "used"
             sessionsPerUnit = 1;
         }
 
         // Calculate total sessions (multiply by quantity for stackable passes)
-        const totalSessions =
-            purchaseType === "monthly_pass"
-                ? 999 // Unlimited doesn't multiply
-                : sessionsPerUnit * quantity;
+        const isUnlimited = sessionsPerUnit === 999;
+        const totalSessions = isUnlimited
+            ? 999 // Unlimited doesn't multiply
+            : sessionsPerUnit * quantity;
 
         // Build product name with quantity
         const purchaseName = quantity > 1 ? `${quantity}x ${productName}` : productName;
