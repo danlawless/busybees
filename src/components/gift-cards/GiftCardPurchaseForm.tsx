@@ -330,7 +330,7 @@ export function GiftCardPurchaseForm() {
           </motion.div>
 
           {/* Progress Steps */}
-          <motion.div variants={fadeInUp} className="mb-14">
+          <motion.div variants={fadeInUp} className="mb-10">
             <div className="flex items-center justify-center">
               {steps.map((step, index) => {
                 const Icon = step.icon;
@@ -339,34 +339,39 @@ export function GiftCardPurchaseForm() {
 
                 return (
                   <React.Fragment key={step.id}>
-                    <div className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => { if (isComplete) setCurrentStep(index); }}
+                      disabled={!isComplete}
+                      className="flex flex-col items-center group"
+                    >
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                           isComplete
-                            ? 'bg-[#6cc9a1] text-white'
+                            ? 'bg-[#6cc9a1] text-white cursor-pointer group-hover:scale-110'
                             : isActive
-                            ? 'bg-primary-500 text-white shadow-honey scale-110'
-                            : 'bg-charcoal-200 text-charcoal-400'
+                            ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-110'
+                            : 'bg-charcoal-100 text-charcoal-400'
                         }`}
                       >
                         {isComplete ? (
-                          <Check className="w-6 h-6" />
+                          <Check className="w-5 h-5 sm:w-6 sm:h-6" />
                         ) : (
-                          <Icon className="w-5 h-5" />
+                          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         )}
                       </div>
                       <p
-                        className={`mt-2 text-xs font-medium hidden sm:block ${
-                          isActive ? 'text-primary-600' : 'text-charcoal-500'
+                        className={`mt-2 text-[10px] sm:text-xs font-medium transition-colors ${
+                          isActive ? 'text-primary-600' : isComplete ? 'text-[#6cc9a1]' : 'text-charcoal-400'
                         }`}
                       >
                         {step.title}
                       </p>
-                    </div>
+                    </button>
                     {index < steps.length - 1 && (
                       <div
-                        className={`w-16 sm:w-24 h-1 mx-2 rounded-full transition-all duration-300 ${
-                          index < currentStep ? 'bg-[#A8E6CF]' : 'bg-charcoal-200'
+                        className={`w-8 sm:w-20 h-0.5 mx-1 sm:mx-2 rounded-full transition-all duration-300 mb-5 ${
+                          index < currentStep ? 'bg-[#6cc9a1]' : 'bg-charcoal-200'
                         }`}
                       />
                     )}
@@ -389,29 +394,40 @@ export function GiftCardPurchaseForm() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-2">
                       Choose a Gift Card Amount
                     </h2>
+                    <p className="text-sm text-charcoal-500 mb-7">
+                      Select how much you&apos;d like to gift. Valid for all Busy Bees purchases.
+                    </p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-                      {denominations.map((denom) => (
-                        <button
-                          key={denom.id}
-                          onClick={() => updateFormData('amount', denom.amount)}
-                          className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-                            Number(formData.amount) === Number(denom.amount)
-                              ? 'border-primary-500 bg-primary-50 shadow-honey scale-105'
-                              : 'border-charcoal-200 hover:border-primary-400 hover:bg-primary-100 hover:scale-[1.03] hover:shadow-md'
-                          }`}
-                        >
-                          <span className={`text-2xl font-bold ${
-                            Number(formData.amount) === Number(denom.amount)
-                              ? 'text-primary-600'
-                              : 'text-charcoal-800'
-                          }`}>
-                            ${denom.amount}
-                          </span>
-                        </button>
-                      ))}
+                      {denominations.map((denom) => {
+                        const isSelected = Number(formData.amount) === Number(denom.amount);
+                        return (
+                          <button
+                            key={denom.id}
+                            onClick={() => updateFormData('amount', denom.amount)}
+                            className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
+                              isSelected
+                                ? 'border-primary-500 bg-primary-500 shadow-lg shadow-primary-500/30 scale-105 ring-2 ring-primary-300 ring-offset-2'
+                                : 'border-charcoal-200 bg-white hover:border-primary-400 hover:bg-primary-50 hover:shadow-lg hover:shadow-primary-500/15 hover:scale-[1.04]'
+                            }`}
+                          >
+                            {isSelected && (
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
+                                <Check className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            )}
+                            <span className={`text-2xl font-bold ${
+                              isSelected
+                                ? 'text-white'
+                                : 'text-charcoal-800'
+                            }`}>
+                              ${denom.amount}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                     {errors.amount && (
                       <p className="mt-4 text-red-500 text-sm">{errors.amount}</p>
@@ -429,13 +445,17 @@ export function GiftCardPurchaseForm() {
                     transition={{ duration: 0.3 }}
                     className="space-y-7"
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
-                      Enter Details
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-2">
+                      Who&apos;s this gift for?
                     </h2>
+                    <p className="text-sm text-charcoal-500 mb-7">
+                      Tell us about you and the lucky recipient.
+                    </p>
 
                     {/* Your Info */}
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-charcoal-600 uppercase tracking-wide">
+                      <h3 className="text-sm font-semibold text-charcoal-700 uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs">1</span>
                         Your Information
                       </h3>
                       <div className="grid sm:grid-cols-2 gap-4">
@@ -478,7 +498,8 @@ export function GiftCardPurchaseForm() {
 
                     {/* Recipient Info */}
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-charcoal-600 uppercase tracking-wide">
+                      <h3 className="text-sm font-semibold text-charcoal-700 uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs">2</span>
                         Recipient Information
                       </h3>
                       <div className="grid sm:grid-cols-2 gap-4">
@@ -521,38 +542,42 @@ export function GiftCardPurchaseForm() {
 
                     {/* Delivery Method */}
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-charcoal-600 uppercase tracking-wide">
+                      <h3 className="text-sm font-semibold text-charcoal-700 uppercase tracking-wide flex items-center gap-2">
+                        <span className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs">3</span>
                         Delivery Method
                       </h3>
                       <div className="grid sm:grid-cols-2 gap-5">
-                        <button
-                          onClick={() => updateFormData('delivery_method', 'email_recipient')}
-                          className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                            formData.delivery_method === 'email_recipient'
-                              ? 'border-primary-500 bg-primary-50'
-                              : 'border-charcoal-200 hover:border-primary-300'
-                          }`}
-                        >
-                          <Mail className="w-5 h-5 text-primary-500 mb-2" />
-                          <p className="font-medium text-charcoal-800">Send to Recipient</p>
-                          <p className="text-sm text-charcoal-600">
-                            Email sent directly to {formData.recipient_name || 'recipient'}
-                          </p>
-                        </button>
-                        <button
-                          onClick={() => updateFormData('delivery_method', 'email_self')}
-                          className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                            formData.delivery_method === 'email_self'
-                              ? 'border-primary-500 bg-primary-50'
-                              : 'border-charcoal-200 hover:border-primary-300'
-                          }`}
-                        >
-                          <Send className="w-5 h-5 text-primary-500 mb-2" />
-                          <p className="font-medium text-charcoal-800">Send to Me</p>
-                          <p className="text-sm text-charcoal-600">
-                            You&apos;ll receive it to forward yourself
-                          </p>
-                        </button>
+                        {([
+                          { value: 'email_recipient' as const, icon: Mail, label: 'Send to Recipient', desc: `Email sent directly to ${formData.recipient_name || 'recipient'}` },
+                          { value: 'email_self' as const, icon: Send, label: 'Send to Me', desc: "You'll receive it to forward yourself" },
+                        ]).map((option) => {
+                          const isSelected = formData.delivery_method === option.value;
+                          const Icon = option.icon;
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() => updateFormData('delivery_method', option.value)}
+                              className={`relative p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-primary-500 bg-primary-50 shadow-lg shadow-primary-500/20 ring-2 ring-primary-300 ring-offset-2'
+                                  : 'border-charcoal-200 bg-white hover:border-primary-400 hover:bg-primary-50/50 hover:shadow-md'
+                              }`}
+                            >
+                              {isSelected && (
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
+                                  <Check className="w-3.5 h-3.5 text-white" />
+                                </div>
+                              )}
+                              <Icon className={`w-5 h-5 mb-2 ${isSelected ? 'text-primary-600' : 'text-primary-400'}`} />
+                              <p className={`font-medium ${isSelected ? 'text-primary-700' : 'text-charcoal-800'}`}>
+                                {option.label}
+                              </p>
+                              <p className={`text-sm ${isSelected ? 'text-primary-600/70' : 'text-charcoal-500'}`}>
+                                {option.desc}
+                              </p>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </motion.div>
@@ -567,21 +592,29 @@ export function GiftCardPurchaseForm() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h2 className="text-xl font-semibold text-charcoal-800 mb-7">
-                      Add a Personal Message (Optional)
+                    <h2 className="text-xl font-semibold text-charcoal-800 mb-2">
+                      Add a Personal Message
                     </h2>
+                    <p className="text-sm text-charcoal-500 mb-7">
+                      Optional - this will appear on the gift card email. Skip it if you prefer!
+                    </p>
                     <div>
                       <textarea
                         value={formData.personal_message}
                         onChange={(e) => updateFormData('personal_message', e.target.value)}
                         rows={5}
                         maxLength={500}
-                        className="w-full px-4 py-3 rounded-2xl border border-primary-200/50 focus:ring-2 focus:ring-primary-300 focus:border-transparent resize-none bg-white"
-                        placeholder="Write a heartfelt message for the recipient... (e.g., Happy Birthday! Hope you enjoy some playtime at Busy Bees! 🐝)"
+                        className="w-full px-5 py-4 rounded-2xl border-2 border-primary-200/40 focus:ring-2 focus:ring-primary-300 focus:border-primary-300 resize-none bg-white text-charcoal-800 placeholder:text-charcoal-400"
+                        placeholder="e.g., Happy Birthday! Hope you enjoy some playtime at Busy Bees! 🐝"
                       />
-                      <p className="mt-2 text-sm text-charcoal-500 text-right">
-                        {formData.personal_message.length}/500 characters
-                      </p>
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-xs text-charcoal-400">
+                          {formData.personal_message.length === 0 ? 'Tip: A personal touch makes it special!' : ''}
+                        </p>
+                        <p className={`text-xs ${formData.personal_message.length > 450 ? 'text-amber-500' : 'text-charcoal-400'}`}>
+                          {formData.personal_message.length}/500
+                        </p>
+                      </div>
                     </div>
                   </motion.div>
                 )}
