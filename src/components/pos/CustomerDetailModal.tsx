@@ -961,6 +961,16 @@ export function CustomerDetailModal({
                               </div>
                               <div className="text-right">
                                 <p className="text-lg font-bold">{formatCurrency(purchase.price)}</p>
+                                {(purchase.giftCardAmountUsed ?? 0) > 0 && (
+                                  <>
+                                    <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-medium mt-1">
+                                      🎁 ${purchase.giftCardAmountUsed?.toFixed(2)} gift card
+                                    </span>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      ${purchase.giftCardAmountUsed?.toFixed(2)} gift card + ${(purchase.price - (purchase.giftCardAmountUsed ?? 0)).toFixed(2)} charged
+                                    </p>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </Card>

@@ -72,6 +72,7 @@ export function transformPurchase(data: RawPurchase): Purchase {
     partyNotes: data.party_notes ?? undefined,
     stripePaymentIntentId: data.stripe_payment_intent_id ?? undefined,
     stripeSubscriptionId: data.stripe_subscription_id ?? undefined,
+    giftCardAmountUsed: data.gift_card_amount_used ?? undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };

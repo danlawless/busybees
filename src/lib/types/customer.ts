@@ -40,6 +40,7 @@ export interface Purchase {
   partyNotes?: string;
   stripePaymentIntentId?: string;
   stripeSubscriptionId?: string;
+  giftCardAmountUsed?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -116,6 +117,7 @@ export interface RawPurchase {
   party_notes?: string | null;
   stripe_payment_intent_id?: string | null;
   stripe_subscription_id?: string | null;
+  gift_card_amount_used?: number | null;
   created_at: string;
   updated_at: string;
 }

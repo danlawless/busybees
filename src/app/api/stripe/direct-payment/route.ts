@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
         productName,
         totalAmount,
         paymentIntentId: `giftcard_${Date.now()}`,
+        giftCardAmountUsed,
       });
 
       return NextResponse.json({
@@ -272,6 +273,7 @@ export async function POST(request: NextRequest) {
       productName,
       totalAmount,
       paymentIntentId: paymentIntent.id,
+      giftCardAmountUsed,
     });
 
     logger.info(
@@ -349,6 +351,7 @@ async function createPurchaseRecord(
     productName: string;
     totalAmount: number;
     paymentIntentId: string;
+    giftCardAmountUsed?: number;
   }
 ) {
   // Resolve purchase defaults from passes table (throws if pass not found)
@@ -374,6 +377,7 @@ async function createPurchaseRecord(
       total_sessions: totalSessions,
       status: 'active',
       stripe_payment_intent_id: params.paymentIntentId,
+      gift_card_amount_used: params.giftCardAmountUsed || 0,
     })
     .select()
     .single();

@@ -1222,6 +1222,11 @@ function WebMyAccountContent() {
                                 Complimentary
                               </span>
                             )}
+                            {(purchase.giftCardAmountUsed ?? 0) > 0 && (
+                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                                🎁 ${purchase.giftCardAmountUsed?.toFixed(2)} gift card applied
+                              </span>
+                            )}
                           </div>
                           {purchase.childId && (
                             <p className="text-blue-600 font-medium text-sm">
@@ -1374,6 +1379,13 @@ function WebMyAccountContent() {
                               💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
                             </p>
                           )}
+                          {giftCardBalance > 0 && (
+                            <p className="text-xs text-amber-600 mt-1 font-medium">
+                              {giftCardBalance >= product.price
+                                ? '🎁 Fully covered by gift card balance!'
+                                : `🎁 $${Math.min(giftCardBalance, product.price).toFixed(2)} gift card credit will be applied`}
+                            </p>
+                          )}
                         </div>
                         <Button
                           onClick={() => {
@@ -1444,6 +1456,11 @@ function WebMyAccountContent() {
                           </div>
                           <div className="text-right">
                             <p className="font-medium">${purchase.price}</p>
+                            {(purchase.giftCardAmountUsed ?? 0) > 0 && (
+                              <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-medium mb-1">
+                                🎁 ${purchase.giftCardAmountUsed?.toFixed(2)} gift card applied
+                              </span>
+                            )}
                             <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                               purchase.status === 'used'
                                 ? 'bg-gray-100 text-gray-800'
@@ -1600,6 +1617,13 @@ function WebMyAccountContent() {
                           {savedCards.length > 0 && (
                             <p className="text-xs text-green-600 mt-1">
                               💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
+                            </p>
+                          )}
+                          {giftCardBalance > 0 && (
+                            <p className="text-xs text-amber-600 mt-1 font-medium">
+                              {giftCardBalance >= product.price
+                                ? '🎁 Fully covered by gift card balance!'
+                                : `🎁 $${Math.min(giftCardBalance, product.price).toFixed(2)} gift card credit will be applied`}
                             </p>
                           )}
                         </div>

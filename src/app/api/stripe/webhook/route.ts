@@ -296,6 +296,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     total_sessions: totalSessions,
     status: 'active',
     stripe_payment_intent_id: session.payment_intent as string,
+    gift_card_amount_used: parseFloat(metadata.gift_card_amount || '0'),
     party_date: party_date || null,
     party_start_time: party_time || null,
     party_guests: party_guests ? parseInt(party_guests) : null,
@@ -403,6 +404,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     total_sessions: resolvedTotalSessions,
     status: 'active',
     stripe_payment_intent_id: paymentIntent.id,
+    gift_card_amount_used: parseFloat(metadata.gift_card_amount || '0'),
   });
 
   if (error) {

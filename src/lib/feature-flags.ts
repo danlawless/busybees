@@ -33,3 +33,10 @@ export const ACCOUNT_ACCESS_ENABLED = true;
  */
 export const SHOW_ACCOUNT_IN_HEADER = true;
 
+/**
+ * Controls whether Gift Cards appear in the navigation and are publicly accessible.
+ * When false, the Gift Cards link is hidden from the header nav.
+ * The pages still exist (accessible via direct URL) for admin testing.
+ */
+export const SHOW_GIFT_CARDS = true;
+

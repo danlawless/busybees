@@ -277,6 +277,7 @@ export interface Database {
           party_end_time: string | null;
           party_guests: number | null;
           party_notes: string | null;
+          gift_card_amount_used: number;
           created_at: string;
           updated_at: string;
         };
@@ -304,6 +305,7 @@ export interface Database {
           party_end_time?: string | null;
           party_guests?: number | null;
           party_notes?: string | null;
+          gift_card_amount_used?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -331,6 +333,7 @@ export interface Database {
           party_end_time?: string | null;
           party_guests?: number | null;
           party_notes?: string | null;
+          gift_card_amount_used?: number;
           created_at?: string;
           updated_at?: string;
         };
