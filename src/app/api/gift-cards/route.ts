@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 // Schema for creating a gift card
 const createGiftCardSchema = z.object({
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.coerce.number().positive('Amount must be positive'),
   purchaser_email: z.string().email('Invalid purchaser email'),
   purchaser_name: z.string().min(1, 'Purchaser name is required'),
   recipient_email: z.string().email('Invalid recipient email'),
@@ -102,8 +102,9 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Validate amount against available denominations
+    // Supabase returns NUMERIC(10,2) as strings - coerce for comparison
     const denominations = await getGiftCardDenominations();
-    const validAmount = denominations.some(d => d.amount === data.amount);
+    const validAmount = denominations.some(d => Number(d.amount) === Number(data.amount));
 
     if (!validAmount) {
       return NextResponse.json(

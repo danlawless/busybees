@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.coerce.number().positive('Amount must be positive'),
   purchaser_email: z.string().email('Invalid purchaser email'),
   purchaser_name: z.string().min(1, 'Purchaser name is required'),
   recipient_email: z.string().email('Invalid recipient email'),
@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validation = checkoutSchema.safeParse(body);
     if (!validation.success) {
+      logger.warn(
+        { errors: validation.error.errors, body: { ...body, purchaser_email: '[redacted]', recipient_email: '[redacted]' } },
+        'Gift card checkout validation failed'
+      );
       return NextResponse.json(
         { error: validation.error.errors[0].message },
         { status: 400 }
@@ -55,10 +59,15 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Validate amount against available denominations
+    // Supabase returns NUMERIC(10,2) as strings - coerce for comparison
     const denominations = await getGiftCardDenominations();
-    const validAmount = denominations.some((d) => d.amount === data.amount);
+    const validAmount = denominations.some((d) => Number(d.amount) === Number(data.amount));
 
     if (!validAmount) {
+      logger.warn(
+        { submittedAmount: data.amount, availableDenominations: denominations.map(d => ({ id: d.id, amount: d.amount, type: typeof d.amount })) },
+        'Gift card checkout: invalid denomination'
+      );
       return NextResponse.json(
         { error: 'Invalid gift card amount' },
         { status: 400 }

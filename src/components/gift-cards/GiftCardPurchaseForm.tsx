@@ -235,6 +235,7 @@ export function GiftCardPurchaseForm() {
         window.location.href = data.url;
       } else {
         const error = await response.json();
+        logger.error({ error: error.error, status: response.status }, 'Gift card checkout failed');
         // Handle 401 unauthorized - redirect to login
         if (response.status === 401) {
           const purchaseIntent: GiftCardPurchaseIntent = {
