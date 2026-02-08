@@ -133,9 +133,27 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   // Handle gift card purchase
   if (metadata.type === 'gift_card') {
-    console.log('Processing gift card purchase');
+    console.log('🎁 [Webhook] Processing gift card purchase:', {
+      sessionId: session.id,
+      amount: metadata.amount,
+      purchaserEmail: metadata.purchaser_email,
+      recipientEmail: metadata.recipient_email,
+      deliveryMethod: metadata.delivery_method,
+    });
 
     try {
+      // Check if gift card was already created (e.g., by self-healing verify endpoint)
+      const { data: existing } = await supabase
+        .from('gift_cards')
+        .select('id, code')
+        .eq('stripe_checkout_session_id', session.id)
+        .single();
+
+      if (existing) {
+        console.log('🎁 [Webhook] Gift card already exists for this session:', existing.id);
+        return;
+      }
+
       // Create the gift card with purchaser user ID
       const giftCard = await createGiftCard({
         amount: parseFloat(metadata.amount),
@@ -150,7 +168,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         stripe_payment_intent_id: session.payment_intent as string,
       });
 
-      console.log('Gift card created:', giftCard.id, giftCard.code);
+      console.log('🎁 [Webhook] Gift card created:', giftCard.id, giftCard.code);
 
       // Determine recipient email based on delivery method
       const deliveryEmail = metadata.delivery_method === 'email_self'
@@ -172,12 +190,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
       if (emailResult.success) {
         await markGiftCardAsSent(giftCard.id);
-        console.log('🎁 Gift card email sent successfully to:', deliveryEmail);
+        console.log('🎁 [Webhook] Gift card email sent successfully to:', deliveryEmail);
       } else {
-        console.error('Failed to send gift card email:', emailResult.error);
+        console.error('🎁 [Webhook] Failed to send gift card email:', emailResult.error);
       }
     } catch (error) {
-      console.error('Error processing gift card purchase:', error);
+      console.error('🎁 [Webhook] Error processing gift card purchase:', error);
     }
 
     return;

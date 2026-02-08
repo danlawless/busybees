@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -32,28 +32,34 @@ interface VerificationResult {
   delivery_method?: string | null;
 }
 
+const MAX_WEBHOOK_RETRIES = 4; // Retries before triggering self-healing
+const RETRY_INTERVAL_MS = 3000;
+const INITIAL_DELAY_MS = 1500;
+
 export function GiftCardSuccess() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const retryCountRef = useRef(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
 
-  const verifyPurchase = useCallback(async (isRetry = false) => {
-    if (!sessionId) {
-      setError('No session ID provided');
-      setLoading(false);
-      return;
-    }
+  const verifyPurchase = useCallback(async () => {
+    if (!sessionId || !isMountedRef.current) return;
 
-    if (!isRetry) {
-      setLoading(true);
-    }
+    const currentRetry = retryCountRef.current;
+
+    // After initial polling window, tell the server to create the gift card if missing
+    const createIfMissing = currentRetry > MAX_WEBHOOK_RETRIES;
+    const url = `/api/gift-cards/verify?session_id=${encodeURIComponent(sessionId)}${createIfMissing ? '&create_if_missing=true' : ''}`;
 
     try {
-      const response = await fetch(`/api/gift-cards/verify?session_id=${encodeURIComponent(sessionId)}`);
+      const response = await fetch(url);
       const data = await response.json();
+
+      if (!isMountedRef.current) return;
 
       if (!response.ok) {
         setError(data.error || 'Failed to verify purchase');
@@ -63,28 +69,47 @@ export function GiftCardSuccess() {
 
       setVerification(data);
       setError(null);
+      setLoading(false);
 
-      // If still processing (webhook hasn't fired yet), retry up to 5 times
-      if (data.status === 'processing' && retryCount < 5) {
-        setTimeout(() => {
-          setRetryCount((prev) => prev + 1);
-        }, 3000);
+      // If still processing, schedule another retry
+      if (data.status === 'processing') {
+        retryCountRef.current += 1;
+        // Keep retrying — after MAX_WEBHOOK_RETRIES the self-healing will kick in
+        if (retryCountRef.current <= MAX_WEBHOOK_RETRIES + 2) {
+          timerRef.current = setTimeout(() => {
+            verifyPurchase();
+          }, RETRY_INTERVAL_MS);
+        }
+        // After self-healing retries are also exhausted, stop polling
       }
-    } catch (err) {
+    } catch {
+      if (!isMountedRef.current) return;
       setError('Unable to verify your purchase. Please check your email for confirmation.');
-    } finally {
       setLoading(false);
     }
-  }, [sessionId, retryCount]);
+  }, [sessionId]);
 
   useEffect(() => {
-    // Small initial delay to give the webhook a head start
-    const timer = setTimeout(() => {
-      verifyPurchase();
-    }, retryCount === 0 ? 1500 : 0);
+    isMountedRef.current = true;
+    retryCountRef.current = 0;
 
-    return () => clearTimeout(timer);
-  }, [verifyPurchase, retryCount]);
+    // Initial delay to give the webhook a head start
+    timerRef.current = setTimeout(() => {
+      verifyPurchase();
+    }, INITIAL_DELAY_MS);
+
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [verifyPurchase]);
+
+  const handleManualRetry = () => {
+    retryCountRef.current = MAX_WEBHOOK_RETRIES + 1; // Skip straight to self-healing
+    setLoading(true);
+    setError(null);
+    verifyPurchase();
+  };
 
   // Extract display data from either the complete gift card or session metadata
   const amount = verification?.gift_card?.amount ?? verification?.amount;
@@ -94,8 +119,9 @@ export function GiftCardSuccess() {
   const emailSent = verification?.gift_card?.email_sent ?? false;
   const isComplete = verification?.status === 'complete';
   const isProcessing = verification?.status === 'processing';
+  const retriesExhausted = isProcessing && retryCountRef.current > MAX_WEBHOOK_RETRIES + 2;
 
-  if (loading && retryCount === 0) {
+  if (loading && !verification) {
     return (
       <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-16 sm:py-20 min-h-[600px] flex items-center justify-center">
         <HoneycombPattern variant="dense" size="xl" />
@@ -120,7 +146,7 @@ export function GiftCardSuccess() {
           </h2>
           <p className="text-charcoal-600 mb-6">{error}</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => { setRetryCount(0); verifyPurchase(); }} variant="primary">
+            <Button onClick={handleManualRetry} variant="primary">
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
@@ -224,10 +250,16 @@ export function GiftCardSuccess() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-charcoal-800 mb-2">
-                    {isComplete && emailSent ? 'Email Delivered!' : 'Email on the Way!'}
+                    {isComplete && emailSent
+                      ? 'Email Delivered!'
+                      : retriesExhausted
+                      ? 'Processing Taking Longer Than Expected'
+                      : 'Email on the Way!'}
                   </h3>
                   <p className="text-charcoal-600 text-sm">
-                    {deliveryMethod === 'email_self'
+                    {retriesExhausted
+                      ? 'Your payment was successful. The gift card email may take a few minutes to arrive. If you don\'t receive it within 10 minutes, please contact us at info@busybeesipc.com.'
+                      : deliveryMethod === 'email_self'
                       ? 'A beautifully designed gift card email has been sent to you. You can forward it to the recipient whenever you\'re ready.'
                       : 'A beautifully designed gift card email has been sent to the recipient. They\'ll find their unique redemption code inside, along with your personal message.'}
                   </p>
@@ -238,12 +270,14 @@ export function GiftCardSuccess() {
 
               <div className="space-y-4 text-sm text-charcoal-600">
                 <div className="flex items-center">
-                  <span className="text-emerald-500 mr-2">✓</span>
+                  <span className="text-emerald-500 mr-2">&#10003;</span>
                   Payment processed successfully
                 </div>
                 <div className="flex items-center">
                   {isComplete ? (
-                    <span className="text-emerald-500 mr-2">✓</span>
+                    <span className="text-emerald-500 mr-2">&#10003;</span>
+                  ) : retriesExhausted ? (
+                    <span className="text-amber-500 mr-2">&#9888;</span>
                   ) : (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-500 mr-2" />
                   )}
@@ -251,13 +285,25 @@ export function GiftCardSuccess() {
                 </div>
                 <div className="flex items-center">
                   {isComplete && emailSent ? (
-                    <span className="text-emerald-500 mr-2">✓</span>
+                    <span className="text-emerald-500 mr-2">&#10003;</span>
+                  ) : retriesExhausted ? (
+                    <span className="text-amber-500 mr-2">&#9888;</span>
                   ) : (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-500 mr-2" />
                   )}
                   Email delivered to recipient
                 </div>
               </div>
+
+              {/* Manual retry button when retries are exhausted */}
+              {retriesExhausted && (
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <Button onClick={handleManualRetry} variant="outline" size="sm" className="rounded-full">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Check Again
+                  </Button>
+                </div>
+              )}
             </Card>
           </motion.div>
 
