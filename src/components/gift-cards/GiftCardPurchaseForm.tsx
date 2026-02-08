@@ -83,12 +83,19 @@ export function GiftCardPurchaseForm() {
   // Check for purchase intent on mount and pre-fill form
   useEffect(() => {
     if (!authLoading && isAuthenticated && userProfile) {
-      // Pre-fill purchaser info from user profile
-      setFormData((prev) => ({
-        ...prev,
-        purchaser_name: prev.purchaser_name || userProfile.name || '',
-        purchaser_email: prev.purchaser_email || userProfile.email || '',
-      }));
+      // Pre-fill purchaser info from user profile (skip internal staff accounts)
+      const isInternalAccount =
+        userProfile.email?.endsWith('@busybees.internal') ||
+        userProfile.role === 'staff' ||
+        userProfile.role === 'admin';
+
+      if (!isInternalAccount) {
+        setFormData((prev) => ({
+          ...prev,
+          purchaser_name: prev.purchaser_name || userProfile.name || '',
+          purchaser_email: prev.purchaser_email || userProfile.email || '',
+        }));
+      }
 
       // Check for stored purchase intent (from redirect after signup)
       const storedIntent = sessionStorage.getItem('giftCardPurchaseIntent');
@@ -467,6 +474,7 @@ export function GiftCardPurchaseForm() {
                             type="text"
                             value={formData.purchaser_name}
                             onChange={(e) => updateFormData('purchaser_name', e.target.value)}
+                            autoComplete="off"
                             className={`w-full px-4 py-3 rounded-xl border ${
                               errors.purchaser_name ? 'border-red-400' : 'border-primary-200/50'
                             } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
@@ -484,6 +492,7 @@ export function GiftCardPurchaseForm() {
                             type="email"
                             value={formData.purchaser_email}
                             onChange={(e) => updateFormData('purchaser_email', e.target.value)}
+                            autoComplete="off"
                             className={`w-full px-4 py-3 rounded-xl border ${
                               errors.purchaser_email ? 'border-red-400' : 'border-primary-200/50'
                             } focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white`}
@@ -559,20 +568,20 @@ export function GiftCardPurchaseForm() {
                               onClick={() => updateFormData('delivery_method', option.value)}
                               className={`relative p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
                                 isSelected
-                                  ? 'border-primary-500 bg-primary-50 shadow-lg shadow-primary-500/20 ring-2 ring-primary-300 ring-offset-2'
-                                  : 'border-charcoal-200 bg-white hover:border-primary-400 hover:bg-primary-50/50 hover:shadow-md'
+                                  ? 'border-amber-400 bg-amber-400 shadow-lg shadow-amber-400/30 ring-2 ring-amber-300 ring-offset-2'
+                                  : 'border-charcoal-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:shadow-md'
                               }`}
                             >
                               {isSelected && (
-                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
                                   <Check className="w-3.5 h-3.5 text-white" />
                                 </div>
                               )}
-                              <Icon className={`w-5 h-5 mb-2 ${isSelected ? 'text-primary-600' : 'text-primary-400'}`} />
-                              <p className={`font-medium ${isSelected ? 'text-primary-700' : 'text-charcoal-800'}`}>
+                              <Icon className={`w-5 h-5 mb-2 ${isSelected ? 'text-charcoal-700' : 'text-charcoal-400'}`} />
+                              <p className={`font-medium ${isSelected ? 'text-charcoal-800' : 'text-charcoal-800'}`}>
                                 {option.label}
                               </p>
-                              <p className={`text-sm ${isSelected ? 'text-primary-600/70' : 'text-charcoal-500'}`}>
+                              <p className={`text-sm ${isSelected ? 'text-charcoal-700/70' : 'text-charcoal-500'}`}>
                                 {option.desc}
                               </p>
                             </button>
