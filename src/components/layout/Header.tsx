@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, User } from 'lucide-react'
+import { Menu, X, User, LogOut } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 import { PromoSpecial } from '@/lib/utils/promoHelpers'
@@ -33,6 +33,12 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -91,20 +97,29 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
 
             {/* Auth section - controlled by SHOW_ACCOUNT_IN_HEADER flag */}
             {SHOW_ACCOUNT_IN_HEADER && (
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex items-center gap-2">
                 {isLoggedIn ? (
-                  <Link
-                    href="/customer/dashboard"
-                    className={cn(
-                      "flex items-center gap-2 font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4",
-                      pathname.startsWith('/customer')
-                        ? "text-charcoal-800 bg-primary-400 shadow-soft border border-primary-500/30"
-                        : "text-charcoal-700 hover:text-charcoal-800 hover:bg-primary-100"
-                    )}
-                  >
-                    <User className="h-4 w-4" />
-                    My Account
-                  </Link>
+                  <>
+                    <Link
+                      href="/customer/dashboard"
+                      className={cn(
+                        "flex items-center gap-2 font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4",
+                        pathname.startsWith('/customer')
+                          ? "text-charcoal-800 bg-primary-400 shadow-soft border border-primary-500/30"
+                          : "text-charcoal-700 hover:text-charcoal-800 hover:bg-primary-100"
+                      )}
+                    >
+                      <User className="h-4 w-4" />
+                      My Account
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 font-medium tracking-wide uppercase rounded-full transition-all duration-200 text-sm py-2 px-4 text-charcoal-700 hover:text-charcoal-800 hover:bg-red-100"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <Link
                     href="/customer/login"
@@ -186,21 +201,33 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
                 })}
                 {/* Auth section - controlled by ACCOUNT_ACCESS_ENABLED flag */}
                 {ACCOUNT_ACCESS_ENABLED && (
-                  <div className="mt-8 pt-8 border-t border-primary-200/30">
+                  <div className="mt-8 pt-8 border-t border-primary-200/30 space-y-2">
                     {isLoggedIn ? (
-                      <Link
-                        href="/customer/dashboard"
-                        className={cn(
-                          "flex items-center gap-2 rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide transition-all duration-200",
-                          pathname.startsWith('/customer')
-                            ? "text-charcoal-800 bg-primary-400 shadow-soft"
-                            : "text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
-                        )}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <User className="h-5 w-5" />
-                        My Account
-                      </Link>
+                      <>
+                        <Link
+                          href="/customer/dashboard"
+                          className={cn(
+                            "flex items-center gap-2 rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide transition-all duration-200",
+                            pathname.startsWith('/customer')
+                              ? "text-charcoal-800 bg-primary-400 shadow-soft"
+                              : "text-charcoal-700 hover:bg-primary-100 hover:text-charcoal-800"
+                          )}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <User className="h-5 w-5" />
+                          My Account
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setMobileMenuOpen(false)
+                            handleLogout()
+                          }}
+                          className="flex items-center gap-2 rounded-2xl px-5 py-3 text-lg font-medium uppercase tracking-wide text-charcoal-700 hover:bg-red-100 hover:text-charcoal-800 transition-all duration-200 w-full"
+                        >
+                          <LogOut className="h-5 w-5" />
+                          Logout
+                        </button>
+                      </>
                     ) : (
                       <Link
                         href="/customer/login"
