@@ -34,9 +34,9 @@ export function InfoHero() {
             {/* Current Status */}
             <div className="mt-10">
               <div className="inline-flex items-center space-x-3 bg-white/80 backdrop-blur-sm px-7 py-3.5 rounded-full border border-primary-300/40 shadow-soft">
-                <div className="w-3 h-3 rounded-full bg-primary-500 animate-pulse"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="font-bold text-charcoal-800">
-                  Opening in January 2026! 🎉
+                  We're Open! 🎉
                 </span>
               </div>
             </div>
