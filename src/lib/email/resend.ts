@@ -239,7 +239,8 @@ export async function sendGiftCardEmail(data: {
     personalMessage?: string;
   };
 }): Promise<EmailResult> {
-  const { giftCard } = data;
+  // Defensively coerce amount - Supabase NUMERIC(10,2) may arrive as string
+  const giftCard = { ...data.giftCard, amount: Number(data.giftCard.amount) };
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
 
   const subject = `🎁 You've received a $${giftCard.amount.toFixed(2)} Busy Bees Gift Card!`;
@@ -1702,6 +1703,8 @@ export async function sendGiftCardRedeemedEmail(data: {
   redeemedAt: string;
 }): Promise<EmailResult> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  // Defensively coerce amount - Supabase NUMERIC(10,2) may arrive as string
+  const amount = Number(data.amount);
 
   const subject = `🎁 Your gift card was redeemed!`;
 
@@ -1717,7 +1720,7 @@ Gift Card Redeemed!
 
 Hi ${data.purchaserName}!
 
-Great news! The $${data.amount.toFixed(2)} gift card you sent to ${data.recipientName} has been redeemed!
+Great news! The $${amount.toFixed(2)} gift card you sent to ${data.recipientName} has been redeemed!
 
 Redeemed on: ${formattedDate}
 
@@ -1772,7 +1775,7 @@ ${siteUrl}
                       Your gift card to <strong>${data.recipientName}</strong>
                     </p>
                     <p style="margin: 0; font-size: 32px; font-weight: 700; color: #ffffff;">
-                      $${data.amount.toFixed(2)}
+                      $${amount.toFixed(2)}
                     </p>
                     <p style="margin: 10px 0 0; font-size: 13px; color: rgba(255,255,255,0.8);">
                       was redeemed on ${formattedDate}

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const previewSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   purchaser_name: z.string().min(1),
   purchaser_email: z.string().email(),
   recipient_name: z.string().min(1),

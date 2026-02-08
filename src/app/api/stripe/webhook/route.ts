@@ -158,11 +158,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         : metadata.recipient_email;
 
       // Send gift card email
+      // Coerce amount to number - Supabase returns NUMERIC(10,2) as strings
       const emailResult = await sendGiftCardEmail({
         to: deliveryEmail,
         giftCard: {
           code: giftCard.code,
-          amount: giftCard.amount,
+          amount: Number(giftCard.amount),
           recipientName: metadata.recipient_name,
           purchaserName: metadata.purchaser_name,
           personalMessage: metadata.personal_message || undefined,
