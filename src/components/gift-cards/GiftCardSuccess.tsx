@@ -24,7 +24,6 @@ interface VerificationResult {
     email_sent: boolean;
     card_status: string;
   };
-  // Fallback fields from session metadata when webhook hasn't processed yet
   amount?: number | null;
   recipient_name?: string | null;
   recipient_email?: string | null;
@@ -32,9 +31,8 @@ interface VerificationResult {
   delivery_method?: string | null;
 }
 
-const MAX_WEBHOOK_RETRIES = 4; // Retries before triggering self-healing
+const MAX_RETRIES = 3;
 const RETRY_INTERVAL_MS = 3000;
-const INITIAL_DELAY_MS = 1500;
 
 export function GiftCardSuccess() {
   const searchParams = useSearchParams();
@@ -49,14 +47,10 @@ export function GiftCardSuccess() {
   const verifyPurchase = useCallback(async () => {
     if (!sessionId || !isMountedRef.current) return;
 
-    const currentRetry = retryCountRef.current;
-
-    // After initial polling window, tell the server to create the gift card if missing
-    const createIfMissing = currentRetry > MAX_WEBHOOK_RETRIES;
-    const url = `/api/gift-cards/verify?session_id=${encodeURIComponent(sessionId)}${createIfMissing ? '&create_if_missing=true' : ''}`;
-
     try {
-      const response = await fetch(url);
+      const response = await fetch(
+        `/api/gift-cards/verify?session_id=${encodeURIComponent(sessionId)}`
+      );
       const data = await response.json();
 
       if (!isMountedRef.current) return;
@@ -71,16 +65,10 @@ export function GiftCardSuccess() {
       setError(null);
       setLoading(false);
 
-      // If still processing, schedule another retry
-      if (data.status === 'processing') {
+      // If still processing (rare — only if creation itself failed), retry a few times
+      if (data.status === 'processing' && retryCountRef.current < MAX_RETRIES) {
         retryCountRef.current += 1;
-        // Keep retrying — after MAX_WEBHOOK_RETRIES the self-healing will kick in
-        if (retryCountRef.current <= MAX_WEBHOOK_RETRIES + 2) {
-          timerRef.current = setTimeout(() => {
-            verifyPurchase();
-          }, RETRY_INTERVAL_MS);
-        }
-        // After self-healing retries are also exhausted, stop polling
+        timerRef.current = setTimeout(verifyPurchase, RETRY_INTERVAL_MS);
       }
     } catch {
       if (!isMountedRef.current) return;
@@ -93,10 +81,8 @@ export function GiftCardSuccess() {
     isMountedRef.current = true;
     retryCountRef.current = 0;
 
-    // Initial delay to give the webhook a head start
-    timerRef.current = setTimeout(() => {
-      verifyPurchase();
-    }, INITIAL_DELAY_MS);
+    // Small delay to let Stripe finalize the redirect
+    timerRef.current = setTimeout(verifyPurchase, 1000);
 
     return () => {
       isMountedRef.current = false;
@@ -105,13 +91,13 @@ export function GiftCardSuccess() {
   }, [verifyPurchase]);
 
   const handleManualRetry = () => {
-    retryCountRef.current = MAX_WEBHOOK_RETRIES + 1; // Skip straight to self-healing
+    retryCountRef.current = 0;
     setLoading(true);
     setError(null);
     verifyPurchase();
   };
 
-  // Extract display data from either the complete gift card or session metadata
+  // Extract display data
   const amount = verification?.gift_card?.amount ?? verification?.amount;
   const recipientName = verification?.gift_card?.recipient_name ?? verification?.recipient_name;
   const recipientEmail = verification?.gift_card?.recipient_email ?? verification?.recipient_email;
@@ -119,7 +105,7 @@ export function GiftCardSuccess() {
   const emailSent = verification?.gift_card?.email_sent ?? false;
   const isComplete = verification?.status === 'complete';
   const isProcessing = verification?.status === 'processing';
-  const retriesExhausted = isProcessing && retryCountRef.current > MAX_WEBHOOK_RETRIES + 2;
+  const retriesExhausted = isProcessing && retryCountRef.current >= MAX_RETRIES;
 
   if (loading && !verification) {
     return (
@@ -202,9 +188,9 @@ export function GiftCardSuccess() {
             <p className="text-lg text-charcoal-600 mb-8">
               {isComplete && emailSent
                 ? 'Your gift card has been created and the email has been delivered.'
-                : isProcessing
-                ? 'Payment confirmed! Your gift card is being prepared...'
-                : 'Your gift card has been created and the email is on its way.'}
+                : isComplete
+                ? 'Your gift card has been created and the email is on its way.'
+                : 'Payment confirmed! Your gift card is being prepared...'}
             </p>
           </motion.div>
 
@@ -295,7 +281,6 @@ export function GiftCardSuccess() {
                 </div>
               </div>
 
-              {/* Manual retry button when retries are exhausted */}
               {retriesExhausted && (
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <Button onClick={handleManualRetry} variant="outline" size="sm" className="rounded-full">
