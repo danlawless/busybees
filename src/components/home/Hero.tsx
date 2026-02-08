@@ -135,7 +135,7 @@ export function Hero() {
               <Link href="/pre-register">
                 <Button variant="primary" size="lg" className="min-w-48 rounded-full">
                   <UserPlus className="w-5 h-5 mr-2" />
-                  Pre-Register Now
+                  Register Now
                 </Button>
               </Link>
             ) : (

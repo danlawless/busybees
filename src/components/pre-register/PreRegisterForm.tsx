@@ -333,7 +333,7 @@ export function PreRegisterForm() {
             </h1>
 
             <p className="text-xl text-charcoal-600 mb-8">
-              Thanks for pre-registering, {formData.parentName.split(' ')[0]}!
+              Thanks for registering, {formData.parentName.split(' ')[0]}!
               Your family is now in our system and ready for a speedy check-in.
             </p>
 
@@ -408,7 +408,7 @@ export function PreRegisterForm() {
             Skip the line at check-in!
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-charcoal-800 sm:text-5xl mb-4">
-            Pre-Register Your Family
+            Register Your Family
           </h1>
           <p className="text-lg sm:text-xl text-charcoal-600 max-w-2xl mx-auto">
             Get in our system now so when you arrive, you can skip the registration line and get straight to playing!

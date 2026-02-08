@@ -9,8 +9,8 @@ import { Layout } from '@/components/layout/Layout';
 import { PreRegisterForm } from '@/components/pre-register/PreRegisterForm';
 
 export const metadata: Metadata = {
-  title: 'Pre-Register | Busy Bees Indoor Play Center',
-  description: 'Pre-register your family before your first visit to Busy Bees Indoor Play Center. Skip the line and get straight to playing!',
+  title: 'Register | Busy Bees Indoor Play Center',
+  description: 'Register your family for Busy Bees Indoor Play Center. Skip the line and get straight to playing!',
 };
 
 export default function PreRegisterPage() {
