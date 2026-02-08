@@ -457,7 +457,7 @@ export function CustomerDetailModal({
   };
 
   const activePasses = customer.purchases.filter(p => p.status === 'active' && p.type.includes('pass'));
-  const totalSpent = customer.purchases.reduce((sum, p) => sum + p.price, 0);
+  const totalSpent = customer.purchases.reduce((sum, p) => sum + Number(p.price), 0);
 
   const tabs: { id: TabType; label: string; icon: string; count?: number }[] = [
     { id: 'profile', label: 'Profile', icon: '👤' },

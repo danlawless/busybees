@@ -770,7 +770,7 @@ export function AdminPanel({
   const totalRevenue = customers.reduce((sum, customer) =>
     sum + customer.purchases
       .filter(purchase => purchase.status !== 'refunded')
-      .reduce((purchaseSum, purchase) => purchaseSum + purchase.price, 0), 0
+      .reduce((purchaseSum, purchase) => purchaseSum + Number(purchase.price), 0), 0
   );
 
   const filteredPurchases = customers.flatMap(c => c.purchases).filter(p => {
@@ -799,7 +799,7 @@ export function AdminPanel({
     }
   });
 
-  const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + purchase.price, 0);
+  const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
   // Today's purchases for Dashboard and Sessions views (includes refunded for display)
   const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
@@ -811,7 +811,7 @@ export function AdminPanel({
   // Revenue excludes refunded purchases
   const todaysRevenue = todaysPurchases
     .filter(p => p.status !== 'refunded')
-    .reduce((sum, purchase) => sum + purchase.price, 0);
+    .reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
@@ -1294,7 +1294,7 @@ export function AdminPanel({
                   <p className="text-xs text-gray-500 mt-1">
                     Member since {formatDate(customer.createdAt)} •
                     {customer.purchases.length} purchases •
-                    Total spent: {formatCurrency(customer.purchases.reduce((sum, p) => sum + p.price, 0))}
+                    Total spent: {formatCurrency(customer.purchases.reduce((sum, p) => sum + Number(p.price), 0))}
                   </p>
 
                   {/* Active Passes */}
@@ -1437,7 +1437,7 @@ export function AdminPanel({
         <div className="space-y-3">
           {['day_pass', 'monthly_pass', 'party_package', 'food_beverage'].map(type => {
             const purchases = filteredPurchases.filter(p => p.type === type);
-            const revenue = purchases.reduce((sum, p) => sum + p.price, 0);
+            const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
             return (
               <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
@@ -4815,6 +4815,28 @@ export function AdminPanel({
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium flex items-center gap-2"
+          >
+            <span>Open Dashboard</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </Card>
+
+      {/* Quick Access: Reports Dashboard */}
+      <Card className="p-4 mt-4 bg-gradient-to-r from-teal-50 to-cyan-50 border-teal-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <h3 className="font-semibold text-teal-900">Reports Dashboard</h3>
+              <p className="text-sm text-teal-600">Revenue, customers, and business analytics</p>
+            </div>
+          </div>
+          <a
+            href="https://www.busybeesipc.com/admin/reports"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium flex items-center gap-2"
           >
             <span>Open Dashboard</span>
             <span>↗</span>

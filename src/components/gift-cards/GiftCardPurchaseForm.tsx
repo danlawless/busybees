@@ -398,12 +398,16 @@ export function GiftCardPurchaseForm() {
                           key={denom.id}
                           onClick={() => updateFormData('amount', denom.amount)}
                           className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-                            formData.amount === denom.amount
+                            Number(formData.amount) === Number(denom.amount)
                               ? 'border-primary-500 bg-primary-50 shadow-honey scale-105'
-                              : 'border-charcoal-200 hover:border-primary-300 hover:bg-primary-50/30'
+                              : 'border-charcoal-200 hover:border-primary-400 hover:bg-primary-100 hover:scale-[1.03] hover:shadow-md'
                           }`}
                         >
-                          <span className="text-2xl font-bold text-charcoal-800">
+                          <span className={`text-2xl font-bold ${
+                            Number(formData.amount) === Number(denom.amount)
+                              ? 'text-primary-600'
+                              : 'text-charcoal-800'
+                          }`}>
                             ${denom.amount}
                           </span>
                         </button>

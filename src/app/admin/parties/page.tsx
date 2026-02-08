@@ -622,7 +622,7 @@ export default function AdminPartiesPage() {
     upcoming: bookings.filter((b) => b.party_date >= formatDateToYYYYMMDD(new Date())).length,
     totalRevenue: bookings
       .filter((b) => b.status !== 'cancelled')
-      .reduce((sum, b) => sum + b.total_price, 0),
+      .reduce((sum, b) => sum + Number(b.total_price), 0),
   };
 
   // PIN Lock Screen

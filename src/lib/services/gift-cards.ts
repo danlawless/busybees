@@ -354,8 +354,8 @@ export async function validateGiftCard(code: string): Promise<{
     return { valid: false, error: 'This gift card has already been fully redeemed' };
   }
 
-  // Check remaining balance
-  if (giftCard.remaining_amount <= 0) {
+  // Check remaining balance (coerce - Supabase returns NUMERIC as string)
+  if (Number(giftCard.remaining_amount) <= 0) {
     return { valid: false, error: 'This gift card has no remaining balance' };
   }
 
@@ -391,8 +391,9 @@ export async function redeemGiftCard(
     return { success: false, error: 'User not found' };
   }
 
-  const currentBalance = user.gift_card_balance || 0;
-  const amountToCredit = giftCard.remaining_amount;
+  // Coerce NUMERIC fields - Supabase returns NUMERIC(10,2) as strings
+  const currentBalance = Number(user.gift_card_balance) || 0;
+  const amountToCredit = Number(giftCard.remaining_amount);
   const newBalance = currentBalance + amountToCredit;
 
   // Start a transaction-like operation
@@ -488,7 +489,8 @@ export async function applyGiftCardBalance(
     throw new Error('User not found');
   }
 
-  const currentBalance = user.gift_card_balance || 0;
+  // Coerce NUMERIC field - Supabase returns NUMERIC(10,2) as strings
+  const currentBalance = Number(user.gift_card_balance) || 0;
 
   if (currentBalance <= 0) {
     return {
@@ -549,7 +551,7 @@ export async function getUserGiftCardBalance(userId: string): Promise<number> {
     return 0;
   }
 
-  return data?.gift_card_balance || 0;
+  return Number(data?.gift_card_balance) || 0;
 }
 
 /**
