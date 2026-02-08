@@ -6,9 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Gift, Calendar, Users, Star, Sparkles, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
-import { PURCHASING_ENABLED } from '@/lib/feature-flags'
-
 interface PartiesHeroProps {
   onBookParty?: () => void
 }
@@ -29,22 +26,6 @@ const quickStats = [
 
 export function PartiesHero({ onBookParty }: PartiesHeroProps) {
   const router = useRouter()
-  const { isAuthenticated, loading: authLoading } = useAuth()
-
-  // Handle booking button click - redirect to signup if not authenticated
-  const handleBookParty = () => {
-    if (authLoading) return
-
-    if (isAuthenticated) {
-      // Use the callback prop to show booking wizard if provided
-      if (onBookParty) {
-        onBookParty()
-      }
-    } else {
-      // Redirect to signup with return URL
-      router.push('/customer/signup?redirect=/parties')
-    }
-  }
 
   return (
     <section className="relative overflow-hidden py-20 sm:py-24 min-h-[28rem]">
@@ -107,11 +88,10 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 variant="primary"
                 size="lg"
                 className="shadow-soft hover:shadow-medium transition-all duration-300"
-                onClick={handleBookParty}
-                disabled={!PURCHASING_ENABLED || authLoading}
+                onClick={() => router.push('/customer/login')}
               >
                 <Calendar className="w-5 h-5 mr-2" />
-                {PURCHASING_ENABLED ? 'Book Your Party Now' : 'Coming Soon'}
+                Purchase in My Account
               </Button>
               <Button
                 variant="outline"
