@@ -276,8 +276,8 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   >
-                    <option value="semi-private">Semi-Private (Coming Soon)</option>
-                    <option value="private">Private (Coming Soon)</option>
+                    <option value="semi-private">Semi-Private</option>
+                    <option value="private">Private</option>
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     {formData.partyType === 'private' 

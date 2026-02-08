@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
@@ -187,14 +188,16 @@ export function Features() {
               <p className="text-lg text-charcoal-600 max-w-2xl mx-auto mb-8 leading-relaxed">
                 Come experience the Busy Bees difference—a place where everyone feels welcome, safe, and excited to play.
               </p>
-              <div className="inline-flex flex-col items-center gap-3 rounded-2xl bg-white/90 px-8 py-6 border border-primary-200/60 shadow-soft">
-                <span className="text-xl font-bold text-honey-600 tracking-tight">
-                  Coming Soon
-                </span>
-                <span className="text-sm text-charcoal-600">
-                  Follow us for opening updates
-                </span>
-              </div>
+              <Link href="/customer/login">
+                <div className="inline-flex flex-col items-center gap-3 rounded-2xl bg-white/90 px-8 py-6 border border-primary-200/60 shadow-soft hover:shadow-medium transition-all duration-300 cursor-pointer">
+                  <span className="text-xl font-bold text-honey-600 tracking-tight">
+                    Purchase in My Account
+                  </span>
+                  <span className="text-sm text-charcoal-600">
+                    Sign up to get started
+                  </span>
+                </div>
+              </Link>
             </div>
           </div>
         </motion.div>

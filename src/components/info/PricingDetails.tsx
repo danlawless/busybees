@@ -128,7 +128,7 @@ export function PricingDetails() {
                   <CardTitle className="text-xl">{pricing.category}</CardTitle>
                   <div className="mt-2">
                     <span className="text-3xl font-bold text-primary-600">
-                      Coming Soon
+                      {formatPrice(pricing.price)}
                     </span>
                     {pricing.highlight && (
                       <div className="mt-2">
@@ -183,7 +183,7 @@ export function PricingDetails() {
                     <CardTitle className="text-xl">{option.title}</CardTitle>
                     <div className="mt-4">
                       <span className="text-3xl font-bold text-primary-600">
-                        Coming Soon
+                        {formatPrice(option.price)}
                       </span>
                     </div>
                     <p className="text-neutral-600 mt-2">{option.description}</p>

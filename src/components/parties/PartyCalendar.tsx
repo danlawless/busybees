@@ -442,9 +442,9 @@ export function PartyCalendar({
               <div className="bg-green-50 p-4 rounded-lg">
                 <h4 className="font-medium text-green-900">Party Options</h4>
                 <div className="text-sm text-green-700 mt-1">
-                  <div>Private Party: Coming Soon (2 hours)</div>
-                  <div>Semi-Private: Coming Soon (2 hours)</div>
-                  <div>Extra guests: Pricing available soon</div>
+                  <div>Private Party (2 hours)</div>
+                  <div>Semi-Private (2 hours)</div>
+                  <div>See pricing in your account</div>
                 </div>
               </div>
 
