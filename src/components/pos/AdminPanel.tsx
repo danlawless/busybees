@@ -4799,6 +4799,28 @@ export function AdminPanel({
           </a>
         </div>
       </Card>
+
+      {/* Quick Access: Admin Events Dashboard */}
+      <Card className="p-4 mt-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎉</span>
+            <div>
+              <h3 className="font-semibold text-amber-900">Events Management</h3>
+              <p className="text-sm text-amber-600">Create and manage special events</p>
+            </div>
+          </div>
+          <a
+            href="https://www.busybeesipc.com/admin/events"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium flex items-center gap-2"
+          >
+            <span>Open Dashboard</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </Card>
     </div>
   );
 }
