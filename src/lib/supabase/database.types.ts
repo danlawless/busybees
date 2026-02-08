@@ -927,6 +927,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          image_url: string;
+          event_date: string;
+          event_time_start: string;
+          event_time_end: string | null;
+          status: 'draft' | 'published' | 'cancelled';
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          image_url: string;
+          event_date: string;
+          event_time_start: string;
+          event_time_end?: string | null;
+          status?: 'draft' | 'published' | 'cancelled';
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          image_url?: string;
+          event_date?: string;
+          event_time_start?: string;
+          event_time_end?: string | null;
+          status?: 'draft' | 'published' | 'cancelled';
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       password_reset_tokens: {
         Row: {
           id: string;
@@ -971,6 +1013,7 @@ export interface Database {
       banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';
       gift_card_status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
       gift_card_delivery_method: 'email_recipient' | 'email_self';
+      event_status: 'draft' | 'published' | 'cancelled';
     };
     CompositeTypes: {
       [_ in never]: never;

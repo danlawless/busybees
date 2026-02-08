@@ -15,7 +15,7 @@ import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED } fr
 const navigation = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
-  { name: 'Classes', href: '/classes' },
+  { name: 'Events', href: '/events' },
   { name: 'Info', href: '/info' },
   { name: 'Parties', href: '/parties' },
   { name: 'Gift Cards', href: '/gift-cards' },
