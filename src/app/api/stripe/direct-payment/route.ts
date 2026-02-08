@@ -19,6 +19,7 @@ import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gif
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
+import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -350,29 +351,13 @@ async function createPurchaseRecord(
     paymentIntentId: string;
   }
 ) {
+  // Resolve purchase defaults from passes table (throws if pass not found)
   const now = new Date();
-  let expiryDate = null;
-  let totalSessions = 1;
-
-  // Calculate expiry based on purchase type
-  switch (params.purchaseType) {
-    case 'day_pass':
-      expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to use
-      totalSessions = 1;
-      break;
-    case 'weekly_pass':
-      expiryDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days to use
-      totalSessions = 999;
-      break;
-    case 'monthly_pass':
-      expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year to use
-      totalSessions = 999;
-      break;
-    case 'party_package':
-      expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days to book
-      totalSessions = 1;
-      break;
-  }
+  const { totalSessions, expiryDate } = await resolvePurchaseDefaults(
+    params.productId,
+    params.purchaseType,
+    supabase,
+  );
 
   const { data: purchase, error: dbError } = await supabase
     .from('purchases')

@@ -22,6 +22,7 @@ import { getOrCreateStripeCustomer } from "@/lib/stripe/payment-methods";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
+import { resolvePurchaseDefaults } from "@/lib/utils/purchaseDefaults";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -232,44 +233,17 @@ export async function POST(request: NextRequest) {
             "💳 Kiosk payment succeeded"
         );
 
-        // Look up pass details from the passes table for accurate session counts
+        // Resolve purchase defaults from passes table (throws if pass not found)
         const now = new Date();
-        let expiryDate: Date | null = null;
-        let sessionsPerUnit = 1;
-
-        if (["day_pass", "weekly_pass", "monthly_pass"].includes(purchaseType)) {
-            const { data: passData } = await adminSupabase
-                .from("passes")
-                .select("sessions_included, duration, category")
-                .eq("id", productId)
-                .single();
-
-            if (passData) {
-                sessionsPerUnit = passData.sessions_included;
-                if (passData.category === "day") {
-                    expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-                } else {
-                    expiryDate = new Date(now.getTime() + (passData.duration || 365) * 24 * 60 * 60 * 1000);
-                }
-            } else {
-                logger.warn({ productId, purchaseType }, "Pass not found in database, using fallback");
-                if (purchaseType === "day_pass") {
-                    sessionsPerUnit = 1;
-                } else if (purchaseType === "weekly_pass") {
-                    sessionsPerUnit = 10;
-                } else if (purchaseType === "monthly_pass") {
-                    sessionsPerUnit = 999;
-                }
-            }
-        } else if (purchaseType === "party_package") {
-            expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 90);
-            sessionsPerUnit = 1;
-        } else if (purchaseType === "food_beverage") {
-            sessionsPerUnit = 1;
-        }
+        const defaults = await resolvePurchaseDefaults(
+            productId,
+            purchaseType,
+            adminSupabase,
+        );
+        const expiryDate = defaults.expiryDate;
 
         // Calculate total sessions (multiply by quantity for stackable passes)
+        const sessionsPerUnit = defaults.totalSessions;
         const isUnlimited = sessionsPerUnit === 999;
         const totalSessions = isUnlimited
             ? 999 // Unlimited doesn't multiply

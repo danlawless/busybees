@@ -978,12 +978,16 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     }
   };
 
-  const calculateActualExpiry = (type: Purchase['type'], firstUseDate: string): string => {
+  const calculateActualExpiry = (type: Purchase['type'], firstUseDate: string, totalSessions: number = 1): string => {
     const firstUse = new Date(firstUseDate);
 
     switch (type) {
       case 'day_pass':
-        // Expires 12 hours after first use
+        if (totalSessions > 1) {
+          // Multi-visit punch card: 365 days from first use
+          return new Date(firstUse.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        }
+        // Single day pass: 12 hours after first use
         return new Date(firstUse.getTime() + 12 * 60 * 60 * 1000).toISOString();
       case 'weekly_pass':
         // Expires 7 days after first use
@@ -1032,7 +1036,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
 
         if (isFirstUse) {
           firstUseDate = nowIso;
-          actualExpiryDate = calculateActualExpiry(p.type, nowIso);
+          actualExpiryDate = calculateActualExpiry(p.type, nowIso, p.totalSessions);
           console.log(`First use! Expiry set to: ${actualExpiryDate}`);
 
           // If auto-renew is enabled and no renewal date is set, calculate it now

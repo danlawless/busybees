@@ -11,6 +11,7 @@ import { createCheckoutSession } from '@/lib/stripe/checkout';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
 import { getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
+import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
 
 export async function POST(request: NextRequest) {
   try {
@@ -166,23 +167,14 @@ export async function POST(request: NextRequest) {
       await applyGiftCardBalance(user.id, giftCardAmountUsed);
 
       // Create purchase record directly
-      const adminSupabase = createAdminClient();
-
-      // Calculate expiry dates based on purchase type
       const now = new Date();
-      let expiryDate = null;
-      let totalSessions = 1;
 
-      if (purchaseType === 'day_pass') {
-        expiryDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        totalSessions = 1;
-      } else if (purchaseType === 'weekly_pass') {
-        expiryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        totalSessions = 999;
-      } else if (purchaseType === 'monthly_pass') {
-        expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        totalSessions = 999;
-      }
+      // Resolve purchase defaults from passes table (throws if pass not found)
+      const { totalSessions, expiryDate } = await resolvePurchaseDefaults(
+        productId,
+        purchaseType,
+        adminSupabase,
+      );
 
       const { data: purchase, error: purchaseError } = await adminSupabase
         .from('purchases')
