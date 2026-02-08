@@ -7,6 +7,7 @@ import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { WaiverModal } from "@/components/ui/WaiverModal";
+import { GroupChildrenManager } from "./GroupChildrenManager";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
@@ -198,6 +199,20 @@ export function CheckIn({
     const [complimentaryPassId, setComplimentaryPassId] = useState<string>("");
     const [complimentaryReason, setComplimentaryReason] = useState<string>("");
     const [isIssuingComplimentary, setIsIssuingComplimentary] = useState(false);
+
+    // Group children manager state (for group rate bookings)
+    const [showGroupChildrenManager, setShowGroupChildrenManager] = useState(false);
+    const [groupRateGuestCount, setGroupRateGuestCount] = useState(10);
+    const [groupRateProductId, setGroupRateProductId] = useState<string | null>(null);
+    const [pendingGroupChildren, setPendingGroupChildren] = useState<Array<{
+        id: string;
+        name: string;
+        birthdate: string;
+        waiver_signed: boolean;
+        customer_id: string;
+        parent_name: string;
+        is_new_child: boolean;
+    }>>([]);
 
     // Fetch POS mode on mount
     useEffect(() => {
@@ -1298,6 +1313,30 @@ export function CheckIn({
         onUpdateCustomer(updatedCustomer);
     };
 
+    // Check if a product is a group rate product
+    const isGroupRateProduct = (product: { name: string }) => {
+        return product.name.toLowerCase().includes('group rate') ||
+            product.name.toLowerCase().includes('group_rate');
+    };
+
+    // Handle group rate product - opens children manager instead of direct purchase
+    const handleGroupRatePurchase = (productId: string, product: { name: string; price: number }) => {
+        setGroupRateProductId(productId);
+        setGroupRateGuestCount(quantities[productId] || 10);
+        setShowGroupChildrenManager(true);
+    };
+
+    // Callback when group children assignment is complete
+    const handleGroupChildrenComplete = (children: typeof pendingGroupChildren) => {
+        setPendingGroupChildren(children);
+        setShowGroupChildrenManager(false);
+
+        // Proceed with purchase now that children are assigned
+        if (groupRateProductId) {
+            handleConfirmPurchase(groupRateProductId);
+        }
+    };
+
     const handleConfirmPurchase = async (productId: string) => {
         const customer = selectedCustomer || currentCustomer;
         if (!customer) return;
@@ -1571,6 +1610,28 @@ export function CheckIn({
             // Clear selected child for next purchase
             if (isPassPurchase) {
                 setSelectedChildForPurchase("");
+            }
+
+            // Persist group booking children assignments if this was a group rate purchase
+            if (isGroupRateProduct(product) && pendingGroupChildren.length > 0 && purchase?.id) {
+                try {
+                    await fetch("/api/admin/group-booking/assign-children", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            booking_id: purchase.id,
+                            children: pendingGroupChildren.map((c) => ({
+                                child_id: c.id,
+                                waiver_signed_at_booking: c.waiver_signed,
+                                is_new_child: c.is_new_child,
+                            })),
+                        }),
+                    });
+                } catch (assignError) {
+                    console.error("Failed to persist group children assignments:", assignError);
+                }
+                setPendingGroupChildren([]);
+                setGroupRateProductId(null);
             }
 
             setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
@@ -3685,6 +3746,29 @@ export function CheckIn({
                                                     </p>
                                                 </div>
 
+                                                {/* Group Rate: guest count selector */}
+                                                {isGroupRateProduct(product) && (
+                                                    <div className="flex items-center space-x-3 mr-4">
+                                                        <label className="text-sm font-medium text-gray-700">Kids:</label>
+                                                        <select
+                                                            value={quantities[product.id] || 10}
+                                                            onChange={(e) =>
+                                                                setQuantities((prev) => ({
+                                                                    ...prev,
+                                                                    [product.id]: parseInt(e.target.value, 10),
+                                                                }))
+                                                            }
+                                                            className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                                        >
+                                                            {Array.from({ length: 21 }, (_, i) => i + 10).map((n) => (
+                                                                <option key={n} value={n}>
+                                                                    {n} (${(n * 12).toFixed(0)})
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+
                                                 <Button
                                                     onClick={() => {
                                                         const customer =
@@ -3697,6 +3781,12 @@ export function CheckIn({
                                                         ) {
                                                             // Show payment modal instead of alert
                                                             setShowPaymentModal(true);
+                                                            return;
+                                                        }
+
+                                                        // Group rate: open children manager
+                                                        if (isGroupRateProduct(product)) {
+                                                            handleGroupRatePurchase(product.id, product);
                                                             return;
                                                         }
 
@@ -3747,6 +3837,9 @@ export function CheckIn({
                                                                 .length === 0
                                                         ) {
                                                             return "💳 Add Payment First";
+                                                        }
+                                                        if (isGroupRateProduct(product)) {
+                                                            return "Assign Children";
                                                         }
                                                         return purchasingProduct ===
                                                             product.id
@@ -4865,6 +4958,17 @@ export function CheckIn({
                     </Card>
                 </div>
             )}
+
+            {/* Group Children Manager Modal */}
+            <GroupChildrenManager
+                isOpen={showGroupChildrenManager}
+                onClose={() => {
+                    setShowGroupChildrenManager(false);
+                    setGroupRateProductId(null);
+                }}
+                guestCount={groupRateGuestCount}
+                onComplete={handleGroupChildrenComplete}
+            />
 
             {/* Success Modal */}
             <SuccessModal

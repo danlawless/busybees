@@ -12,6 +12,8 @@ interface WaiverModalProps {
   isOpen: boolean;
   onClose: () => void;
   childName?: string;
+  onAgree?: () => void;
+  isSubmitting?: boolean;
 }
 
 const waiverSections = [
@@ -45,7 +47,7 @@ const waiverAgreements = [
   'I have read, understand, and agree to all terms outlined in this waiver',
 ];
 
-export function WaiverModal({ isOpen, onClose, childName }: WaiverModalProps) {
+export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting }: WaiverModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -126,9 +128,27 @@ export function WaiverModal({ isOpen, onClose, childName }: WaiverModalProps) {
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-200">
-          <Button onClick={onClose} className="w-full">
-            Close
-          </Button>
+          {onAgree ? (
+            <div className="flex space-x-3">
+              <Button
+                onClick={onClose}
+                className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={onAgree}
+                disabled={isSubmitting}
+                className="flex-1 bg-honey-500 text-white hover:bg-honey-600 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Signing...' : 'I Agree - Sign Waiver'}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={onClose} className="w-full">
+              Close
+            </Button>
+          )}
         </div>
       </div>
     </div>

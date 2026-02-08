@@ -18,7 +18,7 @@ export const PartyTypeSchema = z.enum(['private', 'semi_private'], {
 });
 
 // Package name enum (per issue requirements)
-export const PackageNameSchema = z.enum(['queen_bee', 'worker_bee', 'basic_bee'], {
+export const PackageNameSchema = z.enum(['queen_bee', 'worker_bee', 'basic_bee', 'group_rate'], {
   message: 'Please select a party package',
 });
 
@@ -69,7 +69,7 @@ export const DateTimeSelectionSchema = z.object({
   endTime: z.string().min(1, 'End time is required'),
 });
 
-// Guest count schema (Step 6) - Max 20 children per issue #101
+// Guest count schema (Step 6) - Max 20 children (30 for group rate)
 export const GuestCountSchema = z.object({
   childName: z
     .string()
@@ -84,7 +84,7 @@ export const GuestCountSchema = z.object({
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')
-    .max(20, 'Maximum 20 children allowed'),
+    .max(30, 'Maximum 30 children allowed'),
   additionalKids: z
     .number()
     .min(0, 'Additional kids cannot be negative')
@@ -122,7 +122,7 @@ export const CompleteBookingSchema = z.object({
   startTime: z.string().min(1, 'Please select a time slot'),
   endTime: z.string().min(1, 'End time is required'),
 
-  // Guest Info - Max 20 children per issue #101
+  // Guest Info - Max 20 children per issue #101 (30 for group rate)
   // Child info is optional - waivers signed when party arrives
   childName: z
     .string()
@@ -133,7 +133,7 @@ export const CompleteBookingSchema = z.object({
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')
-    .max(20, 'Maximum 20 children allowed'),
+    .max(30, 'Maximum 30 children allowed'),
   additionalKids: z.number().min(0).max(5).default(0),
   notes: z.string().max(500).optional(),
 });
@@ -204,6 +204,21 @@ export const PACKAGE_PRICING = {
       'Party setup & breakdown handled',
     ],
   },
+  group_rate: {
+    name: 'Group Rate',
+    semiPrivatePrice: 0, // Not applicable - uses per-child pricing
+    privatePrice: 0, // Not applicable - uses per-child pricing
+    maxGuests: 30,
+    duration: 2,
+    description: 'Group rate: $12 per child (min 10, max 30)',
+    features: [
+      '$12 per child',
+      'Minimum 10 children',
+      'Maximum 30 children',
+      'Access to play area',
+      'Dedicated group coordinator',
+    ],
+  },
 } as const;
 
 // Time slots are now stored in the database (party_time_slots table)
@@ -214,6 +229,11 @@ export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
 export const INCLUDED_KIDS = 15; // 15 kids included with each package
 export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
+// Group rate pricing
+export const GROUP_RATE_PRICE_PER_CHILD = 12; // $12 per child
+export const GROUP_RATE_MIN_CHILDREN = 10;
+export const GROUP_RATE_MAX_CHILDREN = 30;
+
 /**
  * Calculate total price for a party booking
  */
@@ -222,6 +242,17 @@ export function calculateBookingPrice(
   partyType: PartyType,
   guestCount: number
 ): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
+  // Group rate uses per-child pricing instead of base + additional
+  if (packageName === 'group_rate') {
+    const totalPrice = guestCount * GROUP_RATE_PRICE_PER_CHILD;
+    return {
+      basePrice: 0,
+      additionalKidsPrice: 0,
+      totalPrice,
+      additionalKids: 0,
+    };
+  }
+
   const packageInfo = PACKAGE_PRICING[packageName];
   const basePrice = partyType === 'private' ? packageInfo.privatePrice : packageInfo.semiPrivatePrice;
 

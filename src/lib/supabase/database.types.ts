@@ -560,7 +560,7 @@ export interface Database {
           customer_phone: string;
           customer_address: string | null;
           party_type: 'private' | 'semi_private';
-          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee';
+          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate';
           party_date: string;
           start_time: string;
           end_time: string;
@@ -593,7 +593,7 @@ export interface Database {
           customer_phone: string;
           customer_address?: string | null;
           party_type: 'private' | 'semi_private';
-          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee';
+          package_name: 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate';
           party_date: string;
           start_time: string;
           end_time: string;
@@ -626,7 +626,7 @@ export interface Database {
           customer_phone?: string;
           customer_address?: string | null;
           party_type?: 'private' | 'semi_private';
-          package_name?: 'queen_bee' | 'worker_bee' | 'basic_bee';
+          package_name?: 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate';
           party_date?: string;
           start_time?: string;
           end_time?: string;
@@ -966,6 +966,36 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      group_booking_children: {
+        Row: {
+          id: string;
+          booking_id: string;
+          child_id: string;
+          added_by_user_id: string | null;
+          is_new_child: boolean;
+          waiver_signed_at_booking: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          booking_id: string;
+          child_id: string;
+          added_by_user_id?: string | null;
+          is_new_child?: boolean;
+          waiver_signed_at_booking?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          booking_id?: string;
+          child_id?: string;
+          added_by_user_id?: string | null;
+          is_new_child?: boolean;
+          waiver_signed_at_booking?: boolean;
+          created_at?: string;
         };
         Relationships: [];
       };
