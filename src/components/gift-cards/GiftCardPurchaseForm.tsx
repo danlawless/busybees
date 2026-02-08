@@ -409,18 +409,18 @@ export function GiftCardPurchaseForm() {
                             onClick={() => updateFormData('amount', denom.amount)}
                             className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
                               isSelected
-                                ? 'border-primary-500 bg-primary-500 shadow-lg shadow-primary-500/30 scale-105 ring-2 ring-primary-300 ring-offset-2'
-                                : 'border-charcoal-200 bg-white hover:border-primary-400 hover:bg-primary-50 hover:shadow-lg hover:shadow-primary-500/15 hover:scale-[1.04]'
+                                ? 'border-amber-400 bg-amber-400 shadow-lg shadow-amber-400/30 scale-105 ring-2 ring-amber-300 ring-offset-2'
+                                : 'border-charcoal-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:shadow-lg hover:shadow-amber-400/15 hover:scale-[1.04]'
                             }`}
                           >
                             {isSelected && (
-                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
                                 <Check className="w-3.5 h-3.5 text-white" />
                               </div>
                             )}
                             <span className={`text-2xl font-bold ${
                               isSelected
-                                ? 'text-white'
+                                ? 'text-charcoal-800'
                                 : 'text-charcoal-800'
                             }`}>
                               ${denom.amount}
