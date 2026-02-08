@@ -16,6 +16,15 @@ import { formatDateToYYYYMMDD, parseDateString } from '../utils';
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyBookingInsert = Database['public']['Tables']['party_bookings']['Insert'];
 type PartyBookingUpdate = Database['public']['Tables']['party_bookings']['Update'];
+type Event = Database['public']['Tables']['events']['Row'];
+
+/**
+ * Shape used for overlap checks - both bookings and events produce these
+ */
+interface BlockedSlot {
+  start_time: string;
+  end_time: string;
+}
 
 export interface TimeSlotAvailability {
   startTime: string;
@@ -75,6 +84,50 @@ async function getTimeSlotsForDate(
   const dayType = isWeekend ? 'weekend' : 'weekday';
 
   return fetchTimeSlotsFromDB(partyType, dayType);
+}
+
+/**
+ * Get published events for a date range that block party slots.
+ * Uses admin client to bypass RLS since events table has restrictive policies.
+ */
+async function getPublishedEventsForDateRange(
+  startDate: string,
+  endDate: string
+): Promise<Event[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'published')
+    .gte('event_date', startDate)
+    .lte('event_date', endDate)
+    .order('event_date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching published events:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Convert an event into a BlockedSlot for overlap checking.
+ * If event_time_end is null, assumes a 2-hour duration.
+ */
+function eventToBlockedSlot(event: Event): BlockedSlot {
+  let endTime = event.event_time_end;
+  if (!endTime) {
+    // Default to 2 hours after start if no end time specified
+    const [hours, minutes] = event.event_time_start.split(':').map(Number);
+    const endHour = Math.min(hours + 2, 23);
+    endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  }
+  return {
+    start_time: event.event_time_start,
+    end_time: endTime,
+  };
 }
 
 /**
@@ -175,7 +228,8 @@ export async function getBookingsForDateRangePublic(
 }
 
 /**
- * Check if a specific time slot is available for booking
+ * Check if a specific time slot is available for booking.
+ * Checks both party bookings AND published events for conflicts.
  */
 export async function isTimeSlotAvailable(
   date: string,
@@ -185,6 +239,7 @@ export async function isTimeSlotAvailable(
 ): Promise<boolean> {
   const supabase = await createClient();
 
+  // Check party bookings for overlap
   let query = supabase
     .from('party_bookings')
     .select('id')
@@ -207,12 +262,28 @@ export async function isTimeSlotAvailable(
     return false;
   }
 
-  return !data || data.length === 0;
+  if (data && data.length > 0) {
+    return false;
+  }
+
+  // Also check published events for overlap
+  const events = await getPublishedEventsForDateRange(date, date);
+  const hasEventConflict = events.some((event) => {
+    const slot = eventToBlockedSlot(event);
+    return (
+      (startTime >= slot.start_time && startTime < slot.end_time) ||
+      (endTime > slot.start_time && endTime <= slot.end_time) ||
+      (startTime <= slot.start_time && endTime >= slot.end_time)
+    );
+  });
+
+  return !hasEventConflict;
 }
 
 /**
  * Get availability for a specific date with all time slots
  * Fetches time slots from the database - no fallbacks
+ * Checks both party bookings AND published events for conflicts
  */
 export async function getDateAvailability(
   date: string,
@@ -228,24 +299,36 @@ export async function getDateAvailability(
     return [];
   }
 
-  // Get existing bookings for this date
-  const bookings = await getBookingsForDate(date);
+  // Get existing bookings and published events for this date
+  const [bookings, events] = await Promise.all([
+    getBookingsForDate(date),
+    getPublishedEventsForDateRange(date, date),
+  ]);
+
+  // Build combined list of blocked slots (bookings + events)
+  const blockedSlots: (BlockedSlot & { bookingId?: string })[] = [
+    ...bookings.map((b) => ({
+      start_time: b.start_time,
+      end_time: b.end_time,
+      bookingId: b.id,
+    })),
+    ...events.map((e) => eventToBlockedSlot(e)),
+  ];
 
   // Check availability for each slot
   const availability: TimeSlotAvailability[] = possibleSlots.map((slot) => {
-    const conflictingBooking = bookings.find((booking) => {
-      // Check for time overlap
+    const conflict = blockedSlots.find((blocked) => {
       return (
-        (slot.startTime >= booking.start_time && slot.startTime < booking.end_time) ||
-        (slot.endTime > booking.start_time && slot.endTime <= booking.end_time) ||
-        (slot.startTime <= booking.start_time && slot.endTime >= booking.end_time)
+        (slot.startTime >= blocked.start_time && slot.startTime < blocked.end_time) ||
+        (slot.endTime > blocked.start_time && slot.endTime <= blocked.end_time) ||
+        (slot.startTime <= blocked.start_time && slot.endTime >= blocked.end_time)
       );
     });
 
     return {
       ...slot,
-      available: !conflictingBooking,
-      bookingId: conflictingBooking?.id,
+      available: !conflict,
+      bookingId: conflict?.bookingId,
     };
   });
 
@@ -255,6 +338,7 @@ export async function getDateAvailability(
 /**
  * Get availability for a month (for calendar display)
  * Fetches time slots from the database - no fallbacks
+ * Checks both party bookings AND published events for conflicts
  */
 export async function getMonthAvailability(
   year: number,
@@ -266,8 +350,11 @@ export async function getMonthAvailability(
   const startDateStr = formatDateToYYYYMMDD(startDate);
   const endDateStr = formatDateToYYYYMMDD(endDate);
 
-  // Get all bookings for the month
-  const bookings = await getBookingsForDateRange(startDateStr, endDateStr);
+  // Get all bookings and published events for the month
+  const [bookings, events] = await Promise.all([
+    getBookingsForDateRange(startDateStr, endDateStr),
+    getPublishedEventsForDateRange(startDateStr, endDateStr),
+  ]);
 
   // Pre-fetch time slots from database for both party types and day types
   const [privateWeekend, privateWeekday, semiPrivateWeekend, semiPrivateWeekday] = await Promise.all([
@@ -284,28 +371,39 @@ export async function getMonthAvailability(
   while (currentDate <= endDate) {
     const dateStr = formatDateToYYYYMMDD(currentDate);
     const dayBookings = bookings.filter((b) => b.party_date === dateStr);
+    const dayEvents = events.filter((e) => e.event_date === dateStr);
     const dayOfWeek = currentDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Build combined blocked slots for this day
+    const blockedSlots: (BlockedSlot & { bookingId?: string })[] = [
+      ...dayBookings.map((b) => ({
+        start_time: b.start_time,
+        end_time: b.end_time,
+        bookingId: b.id,
+      })),
+      ...dayEvents.map((e) => eventToBlockedSlot(e)),
+    ];
 
     // Get slots for both party types based on day type
     const privateSlots = isWeekend ? privateWeekend : privateWeekday;
     const semiPrivateSlots = isWeekend ? semiPrivateWeekend : semiPrivateWeekday;
 
-    // Check availability
+    // Check availability against combined blocked slots
     const checkSlotAvailability = (
       slots: Array<{ startTime: string; endTime: string; label: string }>
     ): TimeSlotAvailability[] => {
       return slots.map((slot) => {
-        const conflicting = dayBookings.find(
-          (b) =>
-            (slot.startTime >= b.start_time && slot.startTime < b.end_time) ||
-            (slot.endTime > b.start_time && slot.endTime <= b.end_time) ||
-            (slot.startTime <= b.start_time && slot.endTime >= b.end_time)
+        const conflict = blockedSlots.find(
+          (blocked) =>
+            (slot.startTime >= blocked.start_time && slot.startTime < blocked.end_time) ||
+            (slot.endTime > blocked.start_time && slot.endTime <= blocked.end_time) ||
+            (slot.startTime <= blocked.start_time && slot.endTime >= blocked.end_time)
         );
         return {
           ...slot,
-          available: !conflicting,
-          bookingId: conflicting?.id,
+          available: !conflict,
+          bookingId: conflict?.bookingId,
         };
       });
     };

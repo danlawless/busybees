@@ -17,6 +17,7 @@ import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyPackage = Database['public']['Tables']['party_packages']['Row'];
 type PartyTimeSlot = Database['public']['Tables']['party_time_slots']['Row'];
+type Event = Database['public']['Tables']['events']['Row'];
 
 type BookingStatus = 'all' | 'pending' | 'confirmed' | 'cancelled' | 'done';
 type PartyType = 'all' | 'private' | 'semi_private';
@@ -99,6 +100,9 @@ export default function AdminPartiesPage() {
     sortOrder: 0,
   });
 
+  // Events state (for blocking party slots)
+  const [events, setEvents] = useState<Event[]>([]);
+
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
@@ -107,6 +111,7 @@ export default function AdminPartiesPage() {
   useEffect(() => {
     if (isUnlocked) {
       fetchBookings();
+      fetchEvents();
       fetchPartyPackages();
       fetchTimeSlots();
     }
@@ -322,6 +327,24 @@ export default function AdminPartiesPage() {
       logger.error({ error: err }, 'Failed to delete time slot');
       setError(err instanceof Error ? err.message : 'Failed to delete time slot');
     }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/admin/events');
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      const data = await response.json();
+      setEvents(data || []);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to fetch events');
+    }
+  };
+
+  const getEventsForDate = (date: Date): Event[] => {
+    const dateStr = formatDateToYYYYMMDD(date);
+    return events.filter((e) => e.event_date === dateStr && e.status === 'published');
   };
 
   const formatTimeRange = (start: string, end: string) => {
@@ -1029,8 +1052,10 @@ export default function AdminPartiesPage() {
                     {getCalendarDays().map((dayInfo, idx) => {
                       const dateStr = formatDateToYYYYMMDD(dayInfo.date);
                       const dayBookings = getBookingsForDate(dayInfo.date);
+                      const dayEvents = getEventsForDate(dayInfo.date);
                       const isToday = dateStr === formatDateToYYYYMMDD(new Date());
                       const isSelected = dateStr === selectedCalendarDate;
+                      const totalIndicators = dayBookings.length + dayEvents.length;
 
                       return (
                         <button
@@ -1052,9 +1077,19 @@ export default function AdminPartiesPage() {
                             {dayInfo.date.getDate()}
                           </div>
 
-                          {/* Booking indicators */}
+                          {/* Event indicators (shown first) */}
                           <div className="space-y-1">
-                            {dayBookings.slice(0, 3).map((booking) => (
+                            {dayEvents.slice(0, 2).map((event) => (
+                              <div
+                                key={event.id}
+                                className="text-xs px-1 py-0.5 rounded truncate flex items-center gap-1 bg-amber-100 text-amber-800"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-amber-500" />
+                                <span className="truncate">{event.title}</span>
+                              </div>
+                            ))}
+                            {/* Booking indicators */}
+                            {dayBookings.slice(0, Math.max(1, 3 - dayEvents.length)).map((booking) => (
                               <div
                                 key={booking.id}
                                 className={`
@@ -1066,9 +1101,9 @@ export default function AdminPartiesPage() {
                                 <span className="truncate">{formatTime(booking.start_time)}</span>
                               </div>
                             ))}
-                            {dayBookings.length > 3 && (
+                            {totalIndicators > 3 && (
                               <div className="text-xs text-neutral-500 pl-1">
-                                +{dayBookings.length - 3} more
+                                +{totalIndicators - 3} more
                               </div>
                             )}
                           </div>
@@ -1104,6 +1139,10 @@ export default function AdminPartiesPage() {
                         <span className="w-3 h-3 rounded bg-blue-100 border border-blue-200" />
                         <span>Semi-Private</span>
                       </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded bg-amber-100 border border-amber-200" />
+                        <span>Event (blocks slot)</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1130,17 +1169,50 @@ export default function AdminPartiesPage() {
                       const selectedBookings = bookings.filter(
                         (b) => b.party_date === selectedCalendarDate
                       );
+                      const selectedEvents = events.filter(
+                        (e) => e.event_date === selectedCalendarDate && e.status === 'published'
+                      );
 
-                      if (selectedBookings.length === 0) {
+                      if (selectedBookings.length === 0 && selectedEvents.length === 0) {
                         return (
                           <div className="text-center py-6">
-                            <p className="text-neutral-600 text-sm">No parties booked for this date.</p>
+                            <p className="text-neutral-600 text-sm">No parties or events for this date.</p>
                           </div>
                         );
                       }
 
                       return (
                         <div className="space-y-3">
+                          {/* Published events shown first as blocked time */}
+                          {selectedEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className="p-3 rounded-lg border bg-amber-50 border-amber-200"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                  <span className="font-medium text-sm text-charcoal-800">
+                                    {formatTime(event.event_time_start)}
+                                    {event.event_time_end && ` - ${formatTime(event.event_time_end)}`}
+                                  </span>
+                                </div>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                  event
+                                </span>
+                              </div>
+                              <div className="text-sm space-y-1">
+                                <div className="font-medium text-amber-900">{event.title}</div>
+                                {event.description && (
+                                  <div className="text-xs text-amber-700 line-clamp-2">{event.description}</div>
+                                )}
+                                <div className="text-xs text-amber-600 mt-1 pt-1 border-t border-amber-200">
+                                  Blocks party bookings during this time
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {/* Party bookings */}
                           {selectedBookings.map((booking) => (
                             <div
                               key={booking.id}
