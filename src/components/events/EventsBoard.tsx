@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { EventCard } from './EventCard';
+import { formatDateToYYYYMMDD } from '@/lib/utils';
 
 interface PublicEvent {
   id: string;
@@ -49,7 +50,7 @@ export function EventsBoard() {
     past: CategorizedEvent[];
   } => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayStr = formatDateToYYYYMMDD(now);
     const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
 
     const happeningNow: CategorizedEvent[] = [];
