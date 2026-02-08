@@ -105,20 +105,9 @@ export function ValuesSection() {
                 the power of play, while providing families with a safe, clean, and welcoming
                 environment that fosters connection and joy.&rdquo;
               </p>
-              <div className="flex flex-wrap justify-center gap-8">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-honey-600">10+</div>
-                  <div className="text-sm text-charcoal-600">Years of Excellence</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-honey-600">5000+</div>
-                  <div className="text-sm text-charcoal-600">Happy Families</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-honey-600">15+</div>
-                  <div className="text-sm text-charcoal-600">Safety Certifications</div>
-                </div>
-              </div>
+              <p className="text-base text-charcoal-500 italic">
+                Happily providing kids with fun and joy every single day.
+              </p>
             </CardContent>
           </Card>
         </motion.div>

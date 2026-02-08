@@ -2,17 +2,9 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { Heart, Users, Star, Award } from 'lucide-react'
+import { Award } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
-import { Card, CardContent } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-
-const stats = [
-  { icon: Heart, value: '10+', label: 'Years of Love' },
-  { icon: Users, value: '5000+', label: 'Happy Families' },
-  { icon: Star, value: '4.9', label: 'Average Rating' },
-  { icon: Award, value: '15+', label: 'Safety Awards' }
-]
 
 export function AboutHero() {
   return (
@@ -39,33 +31,12 @@ export function AboutHero() {
             </motion.div>
             
             <motion.p variants={fadeInUp} className="text-lg text-charcoal-600 mb-8 leading-relaxed">
-              For over a decade, Busy Bees has been the premier destination for families 
-              seeking safe, fun, and educational play experiences. We're more than just 
-              an indoor playground – we're a community where children's imaginations soar 
-              and lifelong memories are made.
+              Busy Bees is a destination for families seeking safe, fun, and
+              educational play experiences. We're more than just an indoor playground
+              – we're a community where children's imaginations soar and lifelong
+              memories are made.
             </motion.p>
             
-            {/* Stats hidden until opening */}
-            {/* <motion.div variants={fadeInUp} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-              {stats.map((stat, index) => {
-                const Icon = stat.icon
-                return (
-                  <Card key={index} className="text-center card-pastel">
-                    <CardContent className="p-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-honey-200 to-honey-300 hexagon-shape flex items-center justify-center mx-auto mb-3 hexagon-pulse">
-                        <Icon className="w-5 h-5 text-charcoal-700" />
-                      </div>
-                      <div className="text-2xl font-bold text-honey-gradient mb-1">
-                        {stat.value}
-                      </div>
-                      <div className="text-xs text-charcoal-600 font-medium">
-                        {stat.label}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </motion.div> */}
           </motion.div>
           
           {/* Image Side */}
