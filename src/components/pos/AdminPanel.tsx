@@ -1079,92 +1079,6 @@ export function AdminPanel({
         </Card>
       )}
 
-      {/* Stripe Product Sync - Admin Only */}
-      {isAdmin && (<Card className="p-6 border-2 border-blue-200 bg-blue-50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
-              <span>💳</span>
-              Stripe Product Sync
-            </h3>
-            <p className="text-sm text-blue-700 mt-1">
-              Sync your passes, parties, and products to Stripe
-            </p>
-          </div>
-          <button
-            onClick={handleStripeSync}
-            disabled={stripeSyncStatus.syncing || stripeSyncStatus.loading}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              stripeSyncStatus.syncing
-                ? 'bg-blue-300 text-white cursor-wait'
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            {stripeSyncStatus.syncing ? '🔄 Syncing...' : '🚀 Sync All to Stripe'}
-          </button>
-        </div>
-
-        {stripeSyncStatus.loading ? (
-          <p className="text-sm text-blue-600 animate-pulse">Loading sync status...</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <div className="flex items-center gap-2 mb-1">
-                <span>🎫</span>
-                <span className="font-medium text-gray-800">Passes</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-green-600 font-medium">{stripeSyncStatus.passes.synced}</span>
-                <span className="text-gray-500"> synced / </span>
-                <span className={stripeSyncStatus.passes.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
-                  {stripeSyncStatus.passes.unsynced}
-                </span>
-                <span className="text-gray-500"> pending</span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <div className="flex items-center gap-2 mb-1">
-                <span>🎉</span>
-                <span className="font-medium text-gray-800">Parties</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-green-600 font-medium">{stripeSyncStatus.parties.synced}</span>
-                <span className="text-gray-500"> synced / </span>
-                <span className={stripeSyncStatus.parties.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
-                  {stripeSyncStatus.parties.unsynced}
-                </span>
-                <span className="text-gray-500"> pending</span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-100">
-              <div className="flex items-center gap-2 mb-1">
-                <span>🍿</span>
-                <span className="font-medium text-gray-800">Products</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-green-600 font-medium">{stripeSyncStatus.products.synced}</span>
-                <span className="text-gray-500"> synced / </span>
-                <span className={stripeSyncStatus.products.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
-                  {stripeSyncStatus.products.unsynced}
-                </span>
-                <span className="text-gray-500"> pending</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {stripeSyncStatus.lastSyncResult && (
-          <div className="mt-3 p-2 bg-white rounded border border-blue-100">
-            <p className="text-sm text-blue-800">
-              ✅ Last sync: <span className="font-medium">{stripeSyncStatus.lastSyncResult.synced}</span> products synced
-              {stripeSyncStatus.lastSyncResult.errors > 0 && (
-                <span className="text-orange-600"> ({stripeSyncStatus.lastSyncResult.errors} errors)</span>
-              )}
-            </p>
-          </div>
-        )}
-      </Card>)}
-
       {/* Active Sessions */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Active Sessions ({activeSessions.length})</h3>
@@ -1351,7 +1265,7 @@ export function AdminPanel({
             <p className="text-gray-500 text-lg mb-2">👥 No customers found</p>
             <p className="text-sm text-gray-400">
               {customers.length === 0
-                ? 'Customers who sign up via pre-registration or at the kiosk will appear here'
+                ? 'Customers who sign up via registration or at the kiosk will appear here'
                 : 'Try adjusting your search terms'}
             </p>
           </div>
@@ -4669,6 +4583,94 @@ export function AdminPanel({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Stripe Product Sync - Admin Only */}
+      {isAdmin && (
+        <Card className="p-6 border-2 border-blue-200 bg-blue-50">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+                <span>💳</span>
+                Stripe Product Sync
+              </h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Sync your passes, parties, and products to Stripe
+              </p>
+            </div>
+            <button
+              onClick={handleStripeSync}
+              disabled={stripeSyncStatus.syncing || stripeSyncStatus.loading}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                stripeSyncStatus.syncing
+                  ? 'bg-blue-300 text-white cursor-wait'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              {stripeSyncStatus.syncing ? '🔄 Syncing...' : '🚀 Sync All to Stripe'}
+            </button>
+          </div>
+
+          {stripeSyncStatus.loading ? (
+            <p className="text-sm text-blue-600 animate-pulse">Loading sync status...</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <span>🎫</span>
+                  <span className="font-medium text-gray-800">Passes</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-green-600 font-medium">{stripeSyncStatus.passes.synced}</span>
+                  <span className="text-gray-500"> synced / </span>
+                  <span className={stripeSyncStatus.passes.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                    {stripeSyncStatus.passes.unsynced}
+                  </span>
+                  <span className="text-gray-500"> pending</span>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <span>🎉</span>
+                  <span className="font-medium text-gray-800">Parties</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-green-600 font-medium">{stripeSyncStatus.parties.synced}</span>
+                  <span className="text-gray-500"> synced / </span>
+                  <span className={stripeSyncStatus.parties.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                    {stripeSyncStatus.parties.unsynced}
+                  </span>
+                  <span className="text-gray-500"> pending</span>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <span>🍿</span>
+                  <span className="font-medium text-gray-800">Products</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-green-600 font-medium">{stripeSyncStatus.products.synced}</span>
+                  <span className="text-gray-500"> synced / </span>
+                  <span className={stripeSyncStatus.products.unsynced > 0 ? 'text-orange-600 font-medium' : 'text-gray-500'}>
+                    {stripeSyncStatus.products.unsynced}
+                  </span>
+                  <span className="text-gray-500"> pending</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {stripeSyncStatus.lastSyncResult && (
+            <div className="mt-3 p-2 bg-white rounded border border-blue-100">
+              <p className="text-sm text-blue-800">
+                ✅ Last sync: <span className="font-medium">{stripeSyncStatus.lastSyncResult.synced}</span> products synced
+                {stripeSyncStatus.lastSyncResult.errors > 0 && (
+                  <span className="text-orange-600"> ({stripeSyncStatus.lastSyncResult.errors} errors)</span>
+                )}
+              </p>
             </div>
           )}
         </Card>
