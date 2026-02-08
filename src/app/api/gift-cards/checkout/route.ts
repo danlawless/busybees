@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = await getStripeClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
 
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({

@@ -239,8 +239,8 @@ export async function POST(request: NextRequest) {
           party_type: bookingData.partyType,
           ...(memberDiscount && { member_discount_applied: 'true' }),
         },
-        successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
+        successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties?cancelled=true`,
         ...(memberDiscount && { discounts: [{ coupon: memberDiscount.couponId }] }),
       });
 

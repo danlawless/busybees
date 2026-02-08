@@ -171,8 +171,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         promo_id: promo_id,
         applied_by: user.id,
       },
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
+      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties?cancelled=true`,
       discounts: [{ coupon: promo.stripe_coupon_id! }],
     });
 
@@ -349,8 +349,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         package_name: booking.package_name,
         party_type: booking.party_type,
       },
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/parties?cancelled=true`,
+      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties?cancelled=true`,
     });
 
     // Update booking to remove discount info

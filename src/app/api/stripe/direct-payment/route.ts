@@ -37,8 +37,8 @@ function getReturnUrl(): string {
     return `https://${siteUrl}/customer/purchases`;
   }
 
-  // Fallback for local development
-  return 'http://localhost:3000/customer/purchases';
+  // Fallback to production URL
+  return 'https://busybeesipc.com/customer/purchases';
 }
 
 export async function POST(request: NextRequest) {
