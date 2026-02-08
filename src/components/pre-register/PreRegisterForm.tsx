@@ -86,7 +86,7 @@ export function PreRegisterForm() {
                 Coming Soon
               </h2>
               <p className="text-charcoal-600 mb-6">
-                Pre-registration will be available soon. Check back later!
+                Registration will be available soon. Check back later!
               </p>
               <Link href="/">
                 <Button variant="outline" className="w-full">
@@ -274,7 +274,7 @@ export function PreRegisterForm() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit pre-registration');
+        throw new Error(result.error || 'Failed to submit registration');
       }
 
       // Account created - now sign them in automatically using web-login API
@@ -694,14 +694,14 @@ export function PreRegisterForm() {
                       ) : (
                         <>
                           <CheckCircle className="w-5 h-5 mr-2" />
-                          Complete Pre-Registration
+                          Complete Registration
                         </>
                       )}
                     </Button>
                   </div>
 
                   <p className="text-xs text-charcoal-500 text-center">
-                    By pre-registering, you agree to our Terms of Service and Privacy Policy.
+                    By registering, you agree to our Terms of Service and Privacy Policy.
                     You'll still need to sign a waiver and purchase a pass on your first visit.
                   </p>
                 </form>
