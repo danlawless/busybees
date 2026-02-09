@@ -139,11 +139,26 @@ export function ClassSchedule() {
           </Card>
         </motion.div>
 
+        {/* Activity photo previews */}
+        <motion.div
+          className="mt-10 grid grid-cols-4 gap-2"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          viewport={{ once: true }}
+        >
+          {['/album/MH_12624.jpg', '/album/MH_12675.jpg', '/album/MH_12719.jpg', '/album/MH_12787.jpg'].map((src, i) => (
+            <div key={i} className="relative aspect-square rounded-xl overflow-hidden shadow-soft border border-primary-200/30">
+              <Image src={src} alt="" fill className="object-cover" sizes="25vw" loading="lazy" />
+            </div>
+          ))}
+        </motion.div>
+
         <motion.p
-          className="mt-8 text-center text-sm text-charcoal-500"
+          className="mt-5 text-center text-sm text-charcoal-500"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           viewport={{ once: true }}
         >
           Ages 0–6 • Mommy and Me • Story Time • Kids Yoga • Lego Build • Toddler Tunes • Zumbini

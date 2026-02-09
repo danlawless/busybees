@@ -9,46 +9,46 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const galleryImages = [
   {
-    title: 'Princess Party Magic',
-    description: 'Birthday girl and friends in princess costumes',
-    category: 'Princess Theme',
+    title: 'Party Room Fun',
+    description: 'Our decorated party space ready for celebrations',
+    category: 'Party Room',
     color: 'from-pink-100 to-purple-200',
-    src: '/images/princess-party-magic.jpg'
-  },
-  {
-    title: 'Superhero Squad',
-    description: 'Kids in capes celebrating superhero style',
-    category: 'Superhero Theme',
-    color: 'from-blue-100 to-red-200',
-    src: '/images/superhero-squad.jpg'
-  },
-  {
-    title: 'Face Painting Fun',
-    description: 'Professional face painter creating masterpieces',
-    category: 'Entertainment',
-    color: 'from-yellow-100 to-orange-200',
-    src: '/images/face-painting-fun.jpg'
-  },
-  {
-    title: 'Birthday Cake Moment',
-    description: 'Special cake cutting celebration',
-    category: 'Celebration',
-    color: 'from-green-100 to-blue-200',
-    src: '/images/birthday-cake-moment.jpg'
+    src: '/album/MH_12808.jpg'
   },
   {
     title: 'Play Area Adventures',
-    description: 'Kids having blast in our play zones',
+    description: 'Kids having a blast in our colorful play zones',
     category: 'Play Time',
-    color: 'from-purple-100 to-pink-200',
-    src: '/images/play-area-adventures.jpg'
+    color: 'from-blue-100 to-red-200',
+    src: '/album/MH_12728.jpg'
   },
   {
-    title: 'Group Photo Joy',
-    description: 'All party guests together with birthday child',
+    title: 'Creative Play',
+    description: 'Hands-on activities and imaginative fun',
+    category: 'Activities',
+    color: 'from-yellow-100 to-orange-200',
+    src: '/album/MH_12694.jpg'
+  },
+  {
+    title: 'Celebration Time',
+    description: 'Special moments during birthday celebrations',
+    category: 'Celebration',
+    color: 'from-green-100 to-blue-200',
+    src: '/album/MH_12774.jpg'
+  },
+  {
+    title: 'Toddler Zone',
+    description: 'Safe and engaging play for our littlest guests',
+    category: 'Toddler Play',
+    color: 'from-purple-100 to-pink-200',
+    src: '/album/MH_12738.jpg'
+  },
+  {
+    title: 'Group Fun',
+    description: 'Friends playing and making memories together',
     category: 'Memories',
     color: 'from-honey-100 to-yellow-200',
-    src: '/images/group-photo-joy.jpg'
+    src: '/album/MH_12812.jpg'
   }
 ]
 

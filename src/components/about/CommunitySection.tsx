@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import Image from 'next/image'
 import { Mail, Calendar, Bell, Gift, Send } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -151,16 +152,28 @@ export function NewsletterSection() {
               Upcoming <span className="text-honey-500">Events</span>
             </h3>
 
-            <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl">
-              <CardContent className="p-12">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Calendar className="w-10 h-10 text-honey-600" />
+            <Card className="border-2 border-primary-200/50 shadow-soft rounded-3xl overflow-hidden">
+              <CardContent className="p-0">
+                {/* Photo collage header */}
+                <div className="grid grid-cols-3 gap-0.5 h-40 sm:h-48">
+                  <div className="relative overflow-hidden">
+                    <Image src="/album/MH_12636.jpg" alt="" fill className="object-cover" sizes="33vw" />
+                  </div>
+                  <div className="relative overflow-hidden">
+                    <Image src="/album/MH_12671.jpg" alt="" fill className="object-cover" sizes="33vw" />
+                  </div>
+                  <div className="relative overflow-hidden">
+                    <Image src="/album/MH_12716.jpg" alt="" fill className="object-cover" sizes="33vw" />
+                  </div>
+                </div>
+                <div className="p-8 sm:p-10 text-center">
+                  <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                    <Calendar className="w-7 h-7 text-honey-600" />
                   </div>
                   <h4 className="text-2xl font-bold text-charcoal-800 mb-4">
                     Stay Tuned
                   </h4>
-                  <p className="text-lg text-charcoal-600 leading-relaxed">
+                  <p className="text-base text-charcoal-600 leading-relaxed">
                     Exciting events are coming soon. Subscribe to our newsletter to be the first to know about special celebrations, workshops, and family activities.
                   </p>
                 </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { MapPin, Mail, Phone, Instagram, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
@@ -46,6 +47,15 @@ export function Footer() {
 
   return (
     <footer className="relative bg-[#FFFDF7] border-t border-primary-200/30">
+      {/* Photo strip */}
+      <div className="grid grid-cols-8 gap-0">
+        {['/album/MH_12594.jpg', '/album/MH_12629.jpg', '/album/MH_12660.jpg', '/album/MH_12690.jpg', '/album/MH_12726.jpg', '/album/MH_12758.jpg', '/album/MH_12798.jpg', '/album/MH_12825.jpg'].map((src, i) => (
+          <div key={i} className="relative aspect-[3/2] overflow-hidden">
+            <Image src={src} alt="" fill className="object-cover" sizes="12.5vw" loading="lazy" />
+          </div>
+        ))}
+      </div>
+
       <HoneycombPattern variant="light" size="lg" />
 
       <div className="relative mx-auto max-w-7xl px-6 py-12 sm:px-8 lg:px-12">

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, CheckCircle, User, Mail, MessageSquare, ArrowRight, Home } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -206,10 +207,19 @@ export function ContactForm() {
           variants={staggerContainer}
           initial="initial"
           animate="animate"
-          className="max-w-2xl mx-auto"
+          className="max-w-4xl mx-auto"
         >
-          <motion.div variants={fadeInUp}>
-            <Card className="shadow-large">
+          <motion.div variants={fadeInUp} className="grid lg:grid-cols-5 gap-6 items-start">
+            {/* Photo column - visible on lg+ */}
+            <div className="hidden lg:flex flex-col gap-2.5 lg:col-span-2">
+              {['/album/MH_12655.jpg', '/album/MH_12709.jpg', '/album/MH_12779.jpg'].map((src, i) => (
+                <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-soft border border-primary-200/30">
+                  <Image src={src} alt="" fill className="object-cover" sizes="300px" loading="lazy" />
+                </div>
+              ))}
+            </div>
+
+            <Card className="shadow-large lg:col-span-3">
               <CardHeader>
                 <CardTitle className="text-2xl text-center flex items-center justify-center">
                   <MessageSquare className="w-6 h-6 mr-3 text-primary-600" />
@@ -360,7 +370,6 @@ export function ContactForm() {
               </CardContent>
             </Card>
           </motion.div>
-
 
         </motion.div>
 

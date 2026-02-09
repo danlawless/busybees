@@ -154,8 +154,8 @@ export function TeamSection() {
                 {/* Team Photo */}
                 <div className="aspect-[4/3] lg:aspect-auto relative">
                   <Image
-                    src="/images/full-team-photo.jpg"
-                    alt="Full Busy Bees Team - All staff together"
+                    src="/album/MH_12820.jpg"
+                    alt="Inside Busy Bees - our play space"
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"

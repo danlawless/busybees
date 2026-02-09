@@ -190,6 +190,27 @@ export function GiftCardsHero() {
             </Card>
           </motion.div>
 
+          {/* Photo Accent Strip */}
+          <motion.div variants={fadeInUp} className="max-w-5xl mx-auto mb-20">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 rounded-3xl overflow-hidden">
+              {['/album/MH_12631.jpg', '/album/MH_12668.jpg', '/album/MH_12706.jpg', '/album/MH_12756.jpg'].map((src, i) => (
+                <div key={i} className="relative aspect-[3/2] overflow-hidden">
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="25vw"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-charcoal-500 mt-3">
+              Give the gift of unforgettable play experiences
+            </p>
+          </motion.div>
+
           {/* Features */}
           <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {features.map((feature, index) => {

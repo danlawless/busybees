@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Info } from 'lucide-react'
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
@@ -39,6 +40,17 @@ export function InfoHero() {
                   We're Open! 🎉
                 </span>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Photo strip */}
+          <motion.div variants={fadeInUp} className="mt-12 max-w-4xl mx-auto">
+            <div className="flex gap-2 sm:gap-3 justify-center">
+              {['/album/MH_12587.jpg', '/album/MH_12648.jpg', '/album/MH_12697.jpg', '/album/MH_12743.jpg', '/album/MH_12801.jpg'].map((src, i) => (
+                <div key={i} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shadow-soft border border-primary-200/40 flex-shrink-0">
+                  <Image src={src} alt="" fill className="object-cover" sizes="80px" loading="lazy" />
+                </div>
+              ))}
             </div>
           </motion.div>
         </motion.div>

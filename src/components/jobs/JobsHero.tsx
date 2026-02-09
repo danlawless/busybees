@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Users, CheckCircle, Briefcase, Heart } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -73,6 +74,23 @@ export function JobsHero() {
             Join our amazing team and help create magical experiences for children and families!
             We're looking for energetic, caring individuals who love working with kids.
           </p>
+        </motion.div>
+
+        {/* Facility Photo Banner */}
+        <motion.div
+          className="mb-16 rounded-3xl overflow-hidden shadow-soft border border-primary-200/30"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+        >
+          <div className="grid grid-cols-3 gap-0.5">
+            {['/album/MH_12612.jpg', '/album/MH_12680.jpg', '/album/MH_12767.jpg'].map((src, i) => (
+              <div key={i} className="relative aspect-[16/9] overflow-hidden">
+                <Image src={src} alt="" fill className="object-cover" sizes="33vw" loading="lazy" />
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         {/* Job Positions */}
