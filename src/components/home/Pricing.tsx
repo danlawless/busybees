@@ -378,7 +378,9 @@ export function Pricing() {
                         setTimeout(() => {
                             router.push("/customer/dashboard?tab=passes");
                         }, 2000);
-                }
+                    } else {
+                        throw new Error(data.message || "Something went wrong. Please try again.");
+                    }
             } catch (error) {
                     console.error("Direct payment error:", error);
                     alert(error instanceof Error ? error.message : "Payment failed. Please try again.");

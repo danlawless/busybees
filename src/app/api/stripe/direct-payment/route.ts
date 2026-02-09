@@ -353,8 +353,10 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Creates a purchase record in the database.
- * Accepts pre-resolved purchaseDefaults so validation happens before payment.
+ * Creates a purchase record in the database with retry.
+ * This runs AFTER the Stripe charge, so it must succeed — a single transient
+ * DB error (ECONNRESET, timeout) would leave the customer charged with no record.
+ * Retries up to 2 times with a short delay to ride out transient issues.
  */
 async function createPurchaseRecord(
   supabase: ReturnType<typeof createAdminClient>,
@@ -373,31 +375,45 @@ async function createPurchaseRecord(
   const now = new Date();
   const { totalSessions, expiryDate } = params.purchaseDefaults;
 
-  const { data: purchase, error: dbError } = await supabase
-    .from('purchases')
-    .insert({
-      customer_id: params.customerId,
-      child_id: params.childId || null,
-      type: params.purchaseType,
-      product_id: params.productId,
-      name: params.productName,
-      price: params.totalAmount,
-      purchase_date: now.toISOString(),
-      expiry_date: expiryDate?.toISOString() || null,
-      used_sessions: 0,
-      total_sessions: totalSessions,
-      status: 'active',
-      stripe_payment_intent_id: params.paymentIntentId,
-      gift_card_amount_used: params.giftCardAmountUsed || 0,
-    })
-    .select()
-    .single();
+  const row = {
+    customer_id: params.customerId,
+    child_id: params.childId || null,
+    type: params.purchaseType,
+    product_id: params.productId,
+    name: params.productName,
+    price: params.totalAmount,
+    purchase_date: now.toISOString(),
+    expiry_date: expiryDate?.toISOString() || null,
+    used_sessions: 0,
+    total_sessions: totalSessions,
+    status: 'active',
+    stripe_payment_intent_id: params.paymentIntentId,
+    gift_card_amount_used: params.giftCardAmountUsed || 0,
+  };
 
-  if (dbError) {
-    logger.error({ error: dbError, customerId: params.customerId }, 'Failed to create purchase');
-    throw dbError;
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const { data: purchase, error: dbError } = await supabase
+      .from('purchases')
+      .insert(row)
+      .select()
+      .single();
+
+    if (!dbError) return purchase;
+
+    logger.error(
+      { error: dbError, customerId: params.customerId, attempt, maxRetries: MAX_RETRIES },
+      `Failed to create purchase (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
+    );
+
+    if (attempt < MAX_RETRIES) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    } else {
+      throw dbError;
+    }
   }
 
-  return purchase;
+  // Unreachable, but satisfies TypeScript
+  throw new Error('Failed to create purchase after retries');
 }
 
