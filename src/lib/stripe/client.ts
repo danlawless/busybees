@@ -11,10 +11,19 @@ import { createAdminClient } from '../supabase/server';
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
 
+// Cache Stripe keys to avoid redundant DB queries within the same request cycle
+let cachedKeys: { secretKey: string | null; publishableKey: string | null } | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 30_000; // 30 seconds
+
 /**
- * Get Stripe API keys from database settings
+ * Get Stripe API keys from database settings (cached for 30s)
  */
 async function getStripeKeys() {
+  if (cachedKeys && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return cachedKeys;
+  }
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -26,21 +35,28 @@ async function getStripeKeys() {
   if (error) {
     console.error('Error fetching Stripe keys from database:', error);
     // Fallback to environment variables
-    return {
+    const fallback = {
       secretKey: process.env.STRIPE_SECRET_KEY || null,
       publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null,
     };
+    cachedKeys = fallback;
+    cacheTimestamp = Date.now();
+    return fallback;
   }
 
-  const settings = data?.reduce((acc: any, item: any) => {
+  const settings = data?.reduce<Record<string, string>>((acc, item) => {
     acc[item.key] = item.value;
     return acc;
   }, {});
 
-  return {
+  const result = {
     secretKey: settings?.stripe_secret_key || process.env.STRIPE_SECRET_KEY || null,
     publishableKey: settings?.stripe_publishable_key || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null,
   };
+
+  cachedKeys = result;
+  cacheTimestamp = Date.now();
+  return result;
 }
 
 /**

@@ -1,13 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request,
   });
 
   // Handle editor routes - serve static files from public/editor
@@ -27,62 +25,32 @@ export async function middleware(request: NextRequest) {
   }
 
   // Supabase auth session refresh
+  // Uses getAll/setAll to correctly handle chunked JWT cookies
+  // (the old get/set/remove pattern corrupted multi-chunk tokens on refresh)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
   );
 
   // Refresh session if expired - required for Server Components
-  // Wrapped in try/catch to handle invalid/stale refresh tokens gracefully
-  try {
-    await supabase.auth.getUser();
-  } catch {
-    // Invalid refresh token - clear auth cookies to reset state
-    // User will need to log in again
-    response.cookies.delete('sb-access-token');
-    response.cookies.delete('sb-refresh-token');
-  }
+  // This also updates chunked auth cookies via the setAll callback above
+  await supabase.auth.getUser();
 
   // Protect admin routes - require admin role
   const url = request.nextUrl.clone();
