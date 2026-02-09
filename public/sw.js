@@ -1,4 +1,5 @@
-const CACHE_NAME = 'busybees-pos-v1';
+// CACHE_NAME is stamped at build time by scripts/inject-sw-version.js
+const CACHE_NAME = 'busybees-pos-6e7286b';
 const STATIC_ASSETS = [
   '/pos',
   '/busy-bees-favicon.png',

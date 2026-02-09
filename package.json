@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "cross-env TURBOPACK=0 next dev",
     "dev:turbo": "next dev --turbopack",
-    "build": "next build",
+    "build": "node scripts/inject-sw-version.js && next build",
     "start": "next start",
     "lint": "next lint",
     "seed:promos": "tsx scripts/seed-promos.ts",

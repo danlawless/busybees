@@ -191,6 +191,7 @@ export async function POST(request: NextRequest) {
           total_sessions: totalSessions,
           status: 'active',
           stripe_payment_intent_id: `giftcard_${Date.now()}`, // Mark as gift card purchase
+          gift_card_amount_used: giftCardAmountUsed,
         })
         .select()
         .single();

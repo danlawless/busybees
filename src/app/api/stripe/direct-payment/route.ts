@@ -165,11 +165,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate pass exists BEFORE any charge — fail fast if product is invalid
+    let purchaseDefaults: { totalSessions: number; expiryDate: Date | null };
+    try {
+      purchaseDefaults = await resolvePurchaseDefaults(productId, purchaseType, adminSupabase);
+    } catch (err) {
+      logger.error({ ...logContext, error: err }, 'Pass validation failed');
+      return NextResponse.json(
+        { error: 'Invalid product. Please select a valid pass.' },
+        { status: 400 }
+      );
+    }
+
     // If gift card covers entire purchase, skip Stripe payment
     if (amountToCharge === 0) {
       logger.info({ ...logContext, amount: totalAmount }, '🎁 Purchase fully covered by gift card');
-
-      await applyGiftCardBalance(user.id, giftCardAmountUsed);
 
       const purchase = await createPurchaseRecord(adminSupabase, {
         customerId: user.id,
@@ -180,7 +190,10 @@ export async function POST(request: NextRequest) {
         totalAmount,
         paymentIntentId: `giftcard_${Date.now()}`,
         giftCardAmountUsed,
+        purchaseDefaults,
       });
+
+      await applyGiftCardBalance(user.id, giftCardAmountUsed);
 
       return NextResponse.json({
         success: true,
@@ -259,12 +272,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Payment succeeded - apply gift card balance if used
-    if (giftCardAmountUsed > 0) {
-      await applyGiftCardBalance(user.id, giftCardAmountUsed);
-    }
-
-    // Create purchase record
+    // Create purchase record BEFORE deducting gift card — if this fails, no balance is lost
     const purchase = await createPurchaseRecord(adminSupabase, {
       customerId: user.id,
       childId,
@@ -274,7 +282,13 @@ export async function POST(request: NextRequest) {
       totalAmount,
       paymentIntentId: paymentIntent.id,
       giftCardAmountUsed,
+      purchaseDefaults,
     });
+
+    // Deduct gift card balance only after purchase is safely recorded
+    if (giftCardAmountUsed > 0) {
+      await applyGiftCardBalance(user.id, giftCardAmountUsed);
+    }
 
     logger.info(
       {
@@ -339,7 +353,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Creates a purchase record in the database
+ * Creates a purchase record in the database.
+ * Accepts pre-resolved purchaseDefaults so validation happens before payment.
  */
 async function createPurchaseRecord(
   supabase: ReturnType<typeof createAdminClient>,
@@ -352,15 +367,11 @@ async function createPurchaseRecord(
     totalAmount: number;
     paymentIntentId: string;
     giftCardAmountUsed?: number;
+    purchaseDefaults: { totalSessions: number; expiryDate: Date | null };
   }
 ) {
-  // Resolve purchase defaults from passes table (throws if pass not found)
   const now = new Date();
-  const { totalSessions, expiryDate } = await resolvePurchaseDefaults(
-    params.productId,
-    params.purchaseType,
-    supabase,
-  );
+  const { totalSessions, expiryDate } = params.purchaseDefaults;
 
   const { data: purchase, error: dbError } = await supabase
     .from('purchases')

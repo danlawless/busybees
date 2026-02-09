@@ -356,6 +356,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   // Extract metadata from payment intent
   const { customer, metadata } = paymentIntent;
 
+  // Skip if this was a direct payment — that route creates its own purchase record
+  if (metadata?.direct_payment === 'true') {
+    console.log('Skipping purchase creation for direct payment (handled by direct-payment route)');
+    return;
+  }
+
   if (!customer || !metadata) {
     console.log('Missing customer or metadata in payment intent');
     return;
