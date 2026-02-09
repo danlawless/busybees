@@ -608,6 +608,8 @@ function WebMyAccountContent() {
         setShowSuccessModal(true);
 
         await fetchData();
+      } else {
+        throw new Error(data.message || 'Something went wrong. Please try again.');
       }
 
       if (isPassPurchase) {

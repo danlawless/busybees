@@ -356,14 +356,22 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   // Extract metadata from payment intent
   const { customer, metadata } = paymentIntent;
 
-  // Skip if this was a direct payment — that route creates its own purchase record
-  if (metadata?.direct_payment === 'true') {
-    console.log('Skipping purchase creation for direct payment (handled by direct-payment route)');
+  if (!customer || !metadata) {
+    console.log('Missing customer or metadata in payment intent');
     return;
   }
 
-  if (!customer || !metadata) {
-    console.log('Missing customer or metadata in payment intent');
+  // Idempotency: skip if a purchase record already exists for this PaymentIntent.
+  // The direct-payment route creates its own record, so this prevents duplicates
+  // while still acting as a safety net if that route failed after charging.
+  const { data: existingPurchase } = await supabase
+    .from('purchases')
+    .select('id')
+    .eq('stripe_payment_intent_id', paymentIntent.id)
+    .maybeSingle();
+
+  if (existingPurchase) {
+    console.log('Purchase record already exists for PaymentIntent:', paymentIntent.id);
     return;
   }
 

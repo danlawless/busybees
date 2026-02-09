@@ -105,14 +105,16 @@ export default function PurchasePage() {
       }
 
       if (data.success) {
-      // Clear the purchase intent from storage
-      sessionStorage.removeItem('purchaseIntent');
+        // Clear the purchase intent from storage
+        sessionStorage.removeItem('purchaseIntent');
 
         // Show success and redirect
         setPurchaseSuccess(data.message || 'Purchase complete!');
         setTimeout(() => {
           router.push('/customer/account?tab=passes');
         }, 2000);
+      } else {
+        throw new Error(data.message || 'Something went wrong. Please try again.');
       }
     } catch (err) {
       console.error('Direct payment error:', err);
@@ -267,7 +269,7 @@ export default function PurchasePage() {
           {error}
         </p>
         <p className="text-sm text-gray-500 mb-6">
-          Don't worry - no payment was processed.
+          If you were charged, your purchase will be applied automatically. Otherwise, please try again.
         </p>
         <div className="space-y-3">
           <Button
