@@ -170,7 +170,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pass exists BEFORE any charge — fail fast if product is invalid
-    const purchaseDefaults = await resolvePurchaseDefaults(productId, purchaseType, adminSupabase);
+    let purchaseDefaults;
+    try {
+      purchaseDefaults = await resolvePurchaseDefaults(productId, purchaseType, adminSupabase);
+    } catch (defaultsError) {
+      logger.error({ ...logContext, error: defaultsError }, '❌ Invalid product — pass lookup failed');
+      return NextResponse.json(
+        { error: 'Invalid product. Could not find pass details.', details: defaultsError instanceof Error ? defaultsError.message : 'Unknown error' },
+        { status: 400 }
+      );
+    }
+
+    logger.info({ ...logContext, totalSessions: purchaseDefaults.totalSessions, expiryDate: purchaseDefaults.expiryDate }, '✅ Pass defaults resolved');
 
     const now = new Date();
 
@@ -178,7 +189,7 @@ export async function POST(request: NextRequest) {
     if (amountToCharge === 0) {
       logger.info({ ...logContext, amount: totalAmount }, '🎁 Purchase fully covered by gift card');
 
-      // Direct insert (POS pattern)
+      // Direct insert (POS pattern — no gift_card_amount_used, let DB DEFAULT handle it)
       const { data: purchase, error: dbError } = await adminSupabase
         .from('purchases')
         .insert({
@@ -194,17 +205,23 @@ export async function POST(request: NextRequest) {
           total_sessions: purchaseDefaults.totalSessions,
           status: 'active',
           stripe_payment_intent_id: `giftcard_${Date.now()}`,
-          gift_card_amount_used: giftCardAmountUsed,
         })
         .select()
         .single();
 
       if (dbError) {
-        logger.error({ error: dbError, customerId: user.id }, 'Failed to save purchase to database');
+        logger.error({ error: dbError, customerId: user.id }, 'Failed to save gift-card purchase to database');
         throw dbError;
       }
 
+      // Deduct gift card and record amount used (separate update to avoid column-missing failures)
       await applyGiftCardBalance(user.id, giftCardAmountUsed);
+      if (giftCardAmountUsed > 0) {
+        await adminSupabase
+          .from('purchases')
+          .update({ gift_card_amount_used: giftCardAmountUsed })
+          .eq('id', purchase.id);
+      }
 
       return NextResponse.json({
         success: true,
@@ -277,7 +294,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create purchase record BEFORE deducting gift card — direct insert (POS pattern)
+    logger.info({ ...logContext, paymentIntentId: paymentIntent.id }, '✅ Stripe charge succeeded, saving purchase record');
+
+    // Create purchase record — direct insert matching POS pattern exactly
+    // Deliberately omits gift_card_amount_used from the insert to avoid column-missing failures
     const { data: purchase, error: dbError } = await adminSupabase
       .from('purchases')
       .insert({
@@ -293,19 +313,27 @@ export async function POST(request: NextRequest) {
         total_sessions: purchaseDefaults.totalSessions,
         status: 'active',
         stripe_payment_intent_id: paymentIntent.id,
-        gift_card_amount_used: giftCardAmountUsed,
       })
       .select()
       .single();
 
     if (dbError) {
-      logger.error({ error: dbError, customerId: user.id }, 'Failed to save purchase to database');
+      logger.error(
+        { error: dbError, customerId: user.id, paymentIntentId: paymentIntent.id },
+        '❌ CRITICAL: Stripe charged but DB insert failed — purchase not recorded'
+      );
       throw dbError;
     }
 
-    // Deduct gift card balance only after purchase is safely recorded
+    logger.info({ ...logContext, purchaseId: purchase.id }, '✅ Purchase record saved');
+
+    // Deduct gift card balance and record amount used (separate operations)
     if (giftCardAmountUsed > 0) {
       await applyGiftCardBalance(user.id, giftCardAmountUsed);
+      await adminSupabase
+        .from('purchases')
+        .update({ gift_card_amount_used: giftCardAmountUsed })
+        .eq('id', purchase.id);
     }
 
     logger.info(
