@@ -44,6 +44,7 @@ export default function AdminEventsPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTimeStart, setEventTimeStart] = useState('');
   const [eventTimeEnd, setEventTimeEnd] = useState('');
+  const [isFree, setIsFree] = useState(false);
   const [status, setStatus] = useState<EventStatus>('draft');
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState('');
@@ -141,6 +142,7 @@ export default function AdminEventsPage() {
     setEventDate('');
     setEventTimeStart('');
     setEventTimeEnd('');
+    setIsFree(false);
     setStatus('draft');
     setImageUrl('');
     setImagePreview('');
@@ -167,6 +169,7 @@ export default function AdminEventsPage() {
           event_date: eventDate,
           event_time_start: eventTimeStart,
           event_time_end: eventTimeEnd || null,
+          is_free: isFree,
           status,
         }),
       });
@@ -468,6 +471,7 @@ export default function AdminEventsPage() {
                         event_date: editingEvent.event_date,
                         event_time_start: editingEvent.event_time_start,
                         event_time_end: editingEvent.event_time_end,
+                        is_free: editingEvent.is_free,
                         status: editingEvent.status,
                       })}
                       onCancel={() => setEditingEvent(null)}
@@ -503,13 +507,20 @@ export default function AdminEventsPage() {
                               </p>
                             )}
                           </div>
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${
-                              STATUS_COLORS[event.status]
-                            }`}
-                          >
-                            {event.status.toUpperCase()}
-                          </span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {event.is_free && (
+                              <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">
+                                FREE
+                              </span>
+                            )}
+                            <span
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
+                                STATUS_COLORS[event.status]
+                              }`}
+                            >
+                              {event.status.toUpperCase()}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Actions */}
@@ -681,6 +692,20 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
+                {/* Free Event */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="is-free"
+                    checked={isFree}
+                    onChange={(e) => setIsFree(e.target.checked)}
+                    className="h-5 w-5 rounded border-neutral-300 text-honey-500 focus:ring-honey-500"
+                  />
+                  <label htmlFor="is-free" className="text-sm font-medium text-neutral-700">
+                    Free event (included with admission)
+                  </label>
+                </div>
+
                 {/* Status */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
@@ -797,6 +822,18 @@ function EditEventForm({
           rows={2}
           className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
         />
+      </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          id={`is-free-${event.id}`}
+          checked={event.is_free}
+          onChange={(e) => onChange({ ...event, is_free: e.target.checked })}
+          className="h-5 w-5 rounded border-neutral-300 text-honey-500 focus:ring-honey-500"
+        />
+        <label htmlFor={`is-free-${event.id}`} className="text-sm font-medium text-neutral-700">
+          Free event (included with admission)
+        </label>
       </div>
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={onCancel}>

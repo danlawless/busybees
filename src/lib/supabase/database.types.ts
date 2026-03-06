@@ -939,6 +939,7 @@ export interface Database {
           event_date: string;
           event_time_start: string;
           event_time_end: string | null;
+          is_free: boolean;
           status: 'draft' | 'published' | 'cancelled';
           created_by: string | null;
           created_at: string;
@@ -952,6 +953,7 @@ export interface Database {
           event_date: string;
           event_time_start: string;
           event_time_end?: string | null;
+          is_free?: boolean;
           status?: 'draft' | 'published' | 'cancelled';
           created_by?: string | null;
           created_at?: string;
@@ -965,6 +967,7 @@ export interface Database {
           event_date?: string;
           event_time_start?: string;
           event_time_end?: string | null;
+          is_free?: boolean;
           status?: 'draft' | 'published' | 'cancelled';
           created_by?: string | null;
           created_at?: string;
