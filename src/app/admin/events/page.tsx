@@ -477,12 +477,13 @@ export default function AdminEventsPage() {
                     // Event display
                     <div className="flex gap-4">
                       {/* Thumbnail */}
-                      <div className="flex-shrink-0 w-32 h-32 relative rounded-xl overflow-hidden bg-neutral-100">
+                      <div className="flex-shrink-0 w-32 rounded-xl overflow-hidden bg-neutral-100">
                         <Image
                           src={event.image_url}
                           alt={event.title}
-                          fill
-                          className="object-cover"
+                          width={128}
+                          height={128}
+                          className="w-full h-auto"
                           sizes="128px"
                         />
                       </div>
@@ -625,12 +626,13 @@ export default function AdminEventsPage() {
                   </label>
                   {imagePreview || imageUrl ? (
                     <div className="space-y-3">
-                      <div className="relative w-full max-w-md aspect-[4/3] rounded-xl overflow-hidden border border-neutral-200">
+                      <div className="w-full max-w-md rounded-xl overflow-hidden border border-neutral-200">
                         <Image
                           src={imagePreview || imageUrl}
                           alt="Event preview"
-                          fill
-                          className="object-cover"
+                          width={800}
+                          height={600}
+                          className="w-full h-auto"
                           sizes="(max-width: 768px) 100vw, 448px"
                         />
                       </div>

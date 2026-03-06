@@ -67,13 +67,14 @@ export function EventCard({
         </div>
       )}
 
-      {/* Image - takes center stage for the Canva graphic */}
-      <div className="relative w-full aspect-[4/3]">
+      {/* Image - shows the full Canva graphic without cropping */}
+      <div className="relative w-full">
         <Image
           src={imageUrl}
           alt={title}
-          fill
-          className={`object-cover ${isPast ? 'grayscale' : ''}`}
+          width={800}
+          height={600}
+          className={`w-full h-auto ${isPast ? 'grayscale' : ''}`}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       </div>
