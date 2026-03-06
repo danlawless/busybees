@@ -1703,6 +1703,53 @@ To unsubscribe from our newsletter: ${unsubscribeUrl}
 }
 
 /**
+ * Build a newsletter email payload from pre-built HTML (WYSIWYG editor)
+ * Wraps the HTML content with unsubscribe footer
+ */
+export function buildHtmlNewsletterPayload(data: {
+  to: string;
+  subject: string;
+  html: string;
+  subscriberEmail: string;
+}): BatchEmailPayload {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const unsubscribeUrl = `${siteUrl}/newsletter/unsubscribe?email=${encodeURIComponent(data.subscriberEmail)}`;
+
+  // Strip text from HTML for plain text fallback
+  const text = `${data.subject}\n\nView this email in your browser for the best experience.\n\n---\nBusy Bees Indoor Play Center\n${siteUrl}\n\nTo unsubscribe: ${unsubscribeUrl}`;
+
+  // Inject unsubscribe footer before closing body tag
+  const unsubscribeFooter = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+      <tr>
+        <td align="center" style="padding: 15px 30px;">
+          <p style="margin: 0 0 5px; font-size: 13px; color: #9ca3af; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            Busy Bees Indoor Play Center
+          </p>
+          <p style="margin: 0; font-size: 11px; color: #d1d5db; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <a href="${unsubscribeUrl}" style="color: #d1d5db; text-decoration: underline;">Unsubscribe</a> from our newsletter
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  const html = data.html.includes('</body>')
+    ? data.html.replace('</body>', `${unsubscribeFooter}</body>`)
+    : `${data.html}${unsubscribeFooter}`;
+
+  return {
+    to: data.to,
+    subject: data.subject,
+    text,
+    html,
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+  };
+}
+
+/**
  * Send a newsletter email to a single subscriber
  */
 export async function sendNewsletterEmail(data: {
@@ -1716,6 +1763,25 @@ export async function sendNewsletterEmail(data: {
   subscriberEmail: string;
 }): Promise<EmailResult> {
   const payload = buildNewsletterEmailPayload(data);
+  return sendEmail({
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html,
+    headers: payload.headers,
+  });
+}
+
+/**
+ * Send a newsletter email from pre-built HTML (WYSIWYG editor)
+ */
+export async function sendHtmlNewsletterEmail(data: {
+  to: string;
+  subject: string;
+  html: string;
+  subscriberEmail: string;
+}): Promise<EmailResult> {
+  const payload = buildHtmlNewsletterPayload(data);
   return sendEmail({
     to: payload.to,
     subject: payload.subject,

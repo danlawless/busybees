@@ -4,11 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sendNewsletterEmail, isEmailServiceConfigured } from '@/lib/email/resend';
+import { sendNewsletterEmail, sendHtmlNewsletterEmail, isEmailServiceConfigured } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const testNewsletterSchema = z.object({
+const legacyTestSchema = z.object({
   testEmail: z.string().email('Invalid test email address'),
   subject: z.string().min(1, 'Subject is required').max(200, 'Subject too long'),
   heading: z.string().min(1, 'Heading is required').max(200, 'Heading too long'),
@@ -17,22 +17,32 @@ const testNewsletterSchema = z.object({
   ctaUrl: z.string().url('Invalid button URL').optional(),
 });
 
+const htmlTestSchema = z.object({
+  mode: z.literal('html'),
+  testEmail: z.string().email('Invalid test email address'),
+  subject: z.string().min(1, 'Subject is required').max(200, 'Subject too long'),
+  html: z.string().min(1, 'HTML content is required'),
+});
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const isHtmlMode = body.mode === 'html';
 
-    const validationResult = testNewsletterSchema.safeParse(body);
-    if (!validationResult.success) {
-      const errorMessages = validationResult.error.issues.map((issue) => issue.message).join(', ');
-      return NextResponse.json(
-        { error: errorMessages },
-        { status: 400 }
-      );
+    if (isHtmlMode) {
+      const validationResult = htmlTestSchema.safeParse(body);
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.issues.map((i) => i.message).join(', ');
+        return NextResponse.json({ error: errorMessages }, { status: 400 });
+      }
+    } else {
+      const validationResult = legacyTestSchema.safeParse(body);
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.issues.map((i) => i.message).join(', ');
+        return NextResponse.json({ error: errorMessages }, { status: 400 });
+      }
     }
 
-    const { testEmail, subject, heading, body: bodyContent, ctaText, ctaUrl } = validationResult.data;
-
-    // Verify email service is configured before attempting to send
     if (!isEmailServiceConfigured()) {
       logger.error('Test newsletter send attempted but RESEND_API_KEY is not configured');
       return NextResponse.json(
@@ -41,24 +51,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info(
-      { testEmail, subject },
-      '📨 Sending test newsletter email'
-    );
+    const testEmail = body.testEmail as string;
+    const subject = body.subject as string;
 
-    const result = await sendNewsletterEmail({
-      to: testEmail,
-      subscriberName: 'Test Subscriber',
-      subject: `[TEST] ${subject}`,
-      heading,
-      body: bodyContent,
-      ctaText: ctaText || undefined,
-      ctaUrl: ctaUrl || undefined,
-      subscriberEmail: testEmail,
-    });
+    logger.info({ testEmail, subject, mode: isHtmlMode ? 'html' : 'legacy' }, 'Sending test newsletter email');
+
+    const result = isHtmlMode
+      ? await sendHtmlNewsletterEmail({
+          to: testEmail,
+          subject: `[TEST] ${subject}`,
+          html: body.html,
+          subscriberEmail: testEmail,
+        })
+      : await sendNewsletterEmail({
+          to: testEmail,
+          subscriberName: 'Test Subscriber',
+          subject: `[TEST] ${subject}`,
+          heading: body.heading,
+          body: body.body,
+          ctaText: body.ctaText || undefined,
+          ctaUrl: body.ctaUrl || undefined,
+          subscriberEmail: testEmail,
+        });
 
     if (result.success) {
-      logger.info({ testEmail, messageId: result.messageId }, '📨 Test newsletter sent successfully');
+      logger.info({ testEmail, messageId: result.messageId }, 'Test newsletter sent successfully');
       return NextResponse.json({ success: true, messageId: result.messageId });
     }
 
@@ -68,9 +85,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logger.error({ error }, 'Test newsletter send error');
-    return NextResponse.json(
-      { error: 'Failed to send test newsletter' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to send test newsletter' }, { status: 500 });
   }
 }
