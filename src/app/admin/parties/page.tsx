@@ -103,6 +103,23 @@ export default function AdminPartiesPage() {
   // Events state (for blocking party slots)
   const [events, setEvents] = useState<Event[]>([]);
 
+  // Manual booking state
+  const [showManualBookForm, setShowManualBookForm] = useState(false);
+  const [isCreatingManualBooking, setIsCreatingManualBooking] = useState(false);
+  const [manualBooking, setManualBooking] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    partyType: 'private' as SlotPartyType,
+    packageName: 'basic_bee' as 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate',
+    startTime: '',
+    endTime: '',
+    childName: '',
+    childAge: null as number | null,
+    guestCount: 15,
+    notes: '',
+  });
+
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
@@ -326,6 +343,61 @@ export default function AdminPartiesPage() {
     } catch (err) {
       logger.error({ error: err }, 'Failed to delete time slot');
       setError(err instanceof Error ? err.message : 'Failed to delete time slot');
+    }
+  };
+
+  const createManualBooking = async () => {
+    if (!selectedCalendarDate || !manualBooking.startTime || !manualBooking.endTime) {
+      setError('Please select a date and time slot');
+      return;
+    }
+    if (!manualBooking.customerName.trim()) {
+      setError('Customer name is required');
+      return;
+    }
+
+    try {
+      setIsCreatingManualBooking(true);
+      setError('');
+
+      const response = await fetch('/api/admin/party-bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...manualBooking,
+          partyDate: selectedCalendarDate,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create booking');
+      }
+
+      const newBooking = await response.json();
+      setBookings((prev) => [newBooking, ...prev]);
+      setSuccessMessage('Manual booking created successfully!');
+      setShowManualBookForm(false);
+      setManualBooking({
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        partyType: 'private',
+        packageName: 'basic_bee',
+        startTime: '',
+        endTime: '',
+        childName: '',
+        childAge: null,
+        guestCount: 15,
+        notes: '',
+      });
+
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      logger.error({ error: err }, 'Failed to create manual booking');
+      setError(err instanceof Error ? err.message : 'Failed to create manual booking');
+    } finally {
+      setIsCreatingManualBooking(false);
     }
   };
 
@@ -1160,6 +1232,150 @@ export default function AdminPartiesPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {selectedCalendarDate && (
+                    <div className="mb-4">
+                      <Button
+                        size="sm"
+                        onClick={() => setShowManualBookForm(!showManualBookForm)}
+                        className="w-full"
+                      >
+                        {showManualBookForm ? 'Cancel' : '+ Manual Book / Block Slot'}
+                      </Button>
+                    </div>
+                  )}
+
+                  {showManualBookForm && selectedCalendarDate && (
+                    <div className="mb-4 p-3 bg-honey-50 border border-honey-200 rounded-lg space-y-3">
+                      <h4 className="font-medium text-sm text-charcoal-800">Manual Booking</h4>
+
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-700 mb-1">Customer Name *</label>
+                        <input
+                          type="text"
+                          value={manualBooking.customerName}
+                          onChange={(e) => setManualBooking((prev) => ({ ...prev, customerName: e.target.value }))}
+                          placeholder="Name or 'BLOCKED'"
+                          className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Party Type</label>
+                          <select
+                            value={manualBooking.partyType}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, partyType: e.target.value as SlotPartyType }))}
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          >
+                            <option value="private">Private</option>
+                            <option value="semi_private">Semi-Private</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Package</label>
+                          <select
+                            value={manualBooking.packageName}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, packageName: e.target.value as typeof manualBooking.packageName }))}
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          >
+                            <option value="basic_bee">Basic Bee</option>
+                            <option value="worker_bee">Worker Bee</option>
+                            <option value="queen_bee">Queen Bee</option>
+                            <option value="group_rate">Group Rate</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Start Time *</label>
+                          <input
+                            type="time"
+                            value={manualBooking.startTime}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, startTime: e.target.value }))}
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">End Time *</label>
+                          <input
+                            type="time"
+                            value={manualBooking.endTime}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, endTime: e.target.value }))}
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={manualBooking.customerEmail}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                            placeholder="Optional"
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={manualBooking.customerPhone}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, customerPhone: e.target.value }))}
+                            placeholder="Optional"
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Child Name</label>
+                          <input
+                            type="text"
+                            value={manualBooking.childName}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, childName: e.target.value }))}
+                            placeholder="Optional"
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Guests</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={manualBooking.guestCount}
+                            onChange={(e) => setManualBooking((prev) => ({ ...prev, guestCount: parseInt(e.target.value) || 15 }))}
+                            className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-700 mb-1">Notes</label>
+                        <input
+                          type="text"
+                          value={manualBooking.notes}
+                          onChange={(e) => setManualBooking((prev) => ({ ...prev, notes: e.target.value }))}
+                          placeholder="e.g., Phone booking, walk-in, slot block..."
+                          className="w-full px-3 py-1.5 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                        />
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={createManualBooking}
+                        disabled={isCreatingManualBooking || !manualBooking.customerName || !manualBooking.startTime || !manualBooking.endTime}
+                      >
+                        {isCreatingManualBooking ? 'Creating...' : 'Create Booking'}
+                      </Button>
+                    </div>
+                  )}
+
                   {!selectedCalendarDate ? (
                     <p className="text-neutral-600 text-sm">
                       Click on a date in the calendar to view its bookings.

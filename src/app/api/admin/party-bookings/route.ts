@@ -1,15 +1,34 @@
 /**
  * Admin Party Bookings API
  * GET /api/admin/party-bookings - List all bookings with filters
+ * POST /api/admin/party-bookings - Create a manual booking (admin only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { isTimeSlotAvailable } from '@/lib/services/party-bookings';
+import { calculateBookingPrice } from '@/lib/validations/party-booking';
 import type { Database } from '@/lib/supabase/database.types';
 
 type BookingStatus = Database['public']['Tables']['party_bookings']['Row']['status'];
 type PartyType = Database['public']['Tables']['party_bookings']['Row']['party_type'];
+
+const ManualBookingSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required').max(100),
+  customerEmail: z.string().email().optional().default('admin@busybees.com'),
+  customerPhone: z.string().optional().default(''),
+  partyType: z.enum(['private', 'semi_private']),
+  packageName: z.enum(['queen_bee', 'worker_bee', 'basic_bee', 'group_rate']),
+  partyDate: z.string().min(1, 'Party date is required'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  childName: z.string().optional().default('TBD'),
+  childAge: z.number().min(0).max(12).optional().nullable(),
+  guestCount: z.number().min(1).max(30).optional().default(15),
+  notes: z.string().max(500).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -85,6 +104,104 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data || []);
   } catch (error) {
     logger.error({ error }, 'Unexpected error fetching party bookings');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+
+    // Check authentication and admin role
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData || !['admin', 'staff'].includes(userData.role)) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validated = ManualBookingSchema.parse(body);
+
+    // Check slot availability (prevent double-booking)
+    const available = await isTimeSlotAvailable(
+      validated.partyDate,
+      validated.startTime,
+      validated.endTime
+    );
+
+    if (!available) {
+      return NextResponse.json(
+        { error: 'This time slot is already booked or blocked by an event' },
+        { status: 409 }
+      );
+    }
+
+    // Calculate pricing
+    const pricing = calculateBookingPrice(
+      validated.packageName,
+      validated.partyType,
+      validated.guestCount
+    );
+
+    const adminSupabase = createAdminClient();
+
+    const { data, error } = await adminSupabase
+      .from('party_bookings')
+      .insert({
+        customer_name: validated.customerName,
+        customer_email: validated.customerEmail,
+        customer_phone: validated.customerPhone,
+        customer_address: null,
+        party_type: validated.partyType,
+        package_name: validated.packageName,
+        party_date: validated.partyDate,
+        start_time: validated.startTime,
+        end_time: validated.endTime,
+        child_name: validated.childName || 'TBD',
+        child_age: validated.childAge ?? null,
+        guest_count: validated.guestCount,
+        additional_kids: pricing.additionalKids,
+        base_price: pricing.basePrice,
+        additional_kids_price: pricing.additionalKidsPrice,
+        total_price: pricing.totalPrice,
+        status: 'confirmed',
+        payment_status: 'admin_manual',
+        notes: validated.notes
+          ? `[Admin booking by ${user.email}] ${validated.notes}`
+          : `[Admin booking by ${user.email}]`,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error }, 'Failed to create manual party booking');
+      return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
+    }
+
+    logger.info(
+      { bookingId: data.id, date: validated.partyDate, adminEmail: user.email },
+      'Created manual party booking'
+    );
+
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 });
+    }
+
+    logger.error({ error }, 'Unexpected error creating manual party booking');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
