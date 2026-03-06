@@ -1,41 +1,19 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Clock, Users, Crown, Calendar, MapPin, CheckCircle } from 'lucide-react'
+import { Clock, Crown, Calendar, CheckCircle } from 'lucide-react'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const partyTypes = [
   {
-    name: 'Semi-Private Party',
-    description: 'Held during our normal business hours while we are open to the public.',
-    icon: Users,
-    color: 'from-blue-200 to-blue-300',
-    borderColor: 'border-blue-300',
-    accentColor: 'from-blue-500 to-blue-600',
-    schedule: [
-      { day: 'Weekdays', time: '9am - 5pm (call to book)', available: true },
-      { day: 'Saturday & Sunday', time: '10am - 12pm', available: true }
-    ],
-    benefits: [
-      'Access to exclusive party room',
-      'Access to play area during public play',
-      'More affordable pricing option',
-      'Perfect for younger children',
-      'All party essentials included'
-    ],
-    priceNote: 'Second price listed in packages below'
-  },
-  {
     name: 'Private Party',
-    description: 'Scheduled outside of regular business hours, giving you and your guests exclusive access to the entire facility.',
+    description: 'Exclusive access to the entire facility, giving you and your guests a private celebration experience.',
     icon: Crown,
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
     accentColor: 'from-purple-500 to-purple-600',
-
     schedule: [
       { day: 'Saturday & Sunday', time: '1pm - 3pm or 3:30pm - 5:30pm', available: true }
     ],
@@ -46,7 +24,7 @@ const partyTypes = [
       'Perfect for larger groups',
       'Maximum flexibility and customization'
     ],
-    priceNote: 'First price listed in packages below'
+    priceNote: 'See package pricing below'
   }
 ]
 
@@ -71,13 +49,13 @@ export function PartyOptions() {
             Choose Your <span className="text-honey-600">Perfect Party Experience</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-3xl mx-auto">
-            We offer two types of party experiences for you to choose from. Each option provides amazing value with everything you need for an unforgettable celebration!
+            Our private parties give you exclusive access to the entire facility for an unforgettable celebration!
           </p>
         </motion.div>
 
         {/* Party Type Cards */}
         <motion.div
-          className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto"
+          className="grid max-w-xl mx-auto"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -158,28 +136,6 @@ export function PartyOptions() {
           })}
         </motion.div>
 
-        {/* Important Note */}
-        <motion.div
-          className="mt-12 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-        >
-          <Card className="bg-gradient-to-r from-honey-50 to-yellow-50 border-2 border-honey-200 max-w-4xl mx-auto">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-center space-x-2 mb-3">
-                <MapPin className="w-5 h-5 text-honey-600" />
-                <h4 className="font-bold text-charcoal-800">Important Pricing Information</h4>
-              </div>
-              <p className="text-charcoal-600 leading-relaxed">
-                <strong>Please note:</strong> In our party packages below, the <strong>first price listed</strong> reflects our
-                <strong> private party rate</strong>, and the <strong>second price listed</strong> reflects our
-                <strong> semi-private party rate</strong>. Choose the experience that works best for your celebration!
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </section>
   )

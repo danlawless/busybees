@@ -66,8 +66,7 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
           const Icon = pkg.icon;
           const pricing = PACKAGE_PRICING[pkg.id];
           const isSelected = formData.packageName === pkg.id;
-          const displayPrice =
-            formData.partyType === 'private' ? pricing.privatePrice : pricing.semiPrivatePrice;
+          const displayPrice = pricing.privatePrice;
 
           return (
             <motion.div
@@ -115,7 +114,7 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
                   <div className="text-center">
                     <div className="text-3xl font-bold text-charcoal-800">${displayPrice}</div>
                     <div className="text-sm text-gray-500">
-                      {formData.partyType === 'private' ? 'Private' : 'Semi-Private'}
+                      Private Party
                     </div>
                   </div>
                   <div className="flex items-center justify-center mt-2 text-sm text-gray-600">

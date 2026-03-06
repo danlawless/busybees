@@ -166,7 +166,7 @@ function SuccessContent() {
                         {booking.child_name}&apos;s Birthday Party!
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
-                        {booking.party_type === 'private' ? 'Private' : 'Semi-Private'} Party
+                        Private Party
                       </p>
                     </div>
 

@@ -318,9 +318,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No time slots available for this date.</p>
                 <p className="text-sm mt-2">
-                  {formData.partyType === 'private'
-                    ? 'Private parties are only available on weekends.'
-                    : 'Semi-private parties are available Friday afternoon and weekend mornings.'}
+                  Private parties are available on weekends.
                 </p>
               </div>
             )

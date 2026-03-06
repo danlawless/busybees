@@ -6,7 +6,6 @@ import { X, ChevronLeft, ChevronRight, Check, Loader2, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ContactInfoStep } from './booking-steps/ContactInfoStep';
-import { PartyTypeStep } from './booking-steps/PartyTypeStep';
 import { PackageStep } from './booking-steps/PackageStep';
 import { DateTimeStep } from './booking-steps/DateTimeStep';
 import { GuestInfoStep } from './booking-steps/GuestInfoStep';
@@ -54,7 +53,7 @@ const INITIAL_FORM_DATA: BookingFormData = {
   customerEmail: '',
   customerPhone: '',
   customerAddress: '',
-  partyType: null,
+  partyType: 'private',
   packageName: null,
   partyDate: '',
   startTime: '',
@@ -67,11 +66,10 @@ const INITIAL_FORM_DATA: BookingFormData = {
 
 const STEPS = [
   { id: 1, title: 'Contact Info', description: 'Your contact details' },
-  { id: 2, title: 'Party Type', description: 'Private or Semi-Private' },
-  { id: 3, title: 'Package', description: 'Choose your package' },
-  { id: 4, title: 'Date & Time', description: 'Select your slot' },
-  { id: 5, title: 'Guest Info', description: 'Party details' },
-  { id: 6, title: 'Review', description: 'Confirm & pay' },
+  { id: 2, title: 'Package', description: 'Choose your package' },
+  { id: 3, title: 'Date & Time', description: 'Select your slot' },
+  { id: 4, title: 'Guest Info', description: 'Party details' },
+  { id: 5, title: 'Review', description: 'Confirm & pay' },
 ];
 
 export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardProps) {
@@ -199,7 +197,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
         );
       case 2:
         return (
-          <PartyTypeStep
+          <PackageStep
             formData={formData}
             onUpdate={updateFormData}
             onValidChange={handleStepValidChange}
@@ -207,7 +205,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
         );
       case 3:
         return (
-          <PackageStep
+          <DateTimeStep
             formData={formData}
             onUpdate={updateFormData}
             onValidChange={handleStepValidChange}
@@ -215,21 +213,13 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
         );
       case 4:
         return (
-          <DateTimeStep
-            formData={formData}
-            onUpdate={updateFormData}
-            onValidChange={handleStepValidChange}
-          />
-        );
-      case 5:
-        return (
           <GuestInfoStep
             formData={formData}
             onUpdate={updateFormData}
             onValidChange={handleStepValidChange}
           />
         );
-      case 6:
+      case 5:
         return (
           <ReviewStep
             formData={formData}
@@ -345,7 +335,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
                   <div>
                     <span className="text-sm text-gray-600">
                       {formData.packageName && PACKAGE_PRICING[formData.packageName].name} Package
-                      ({formData.partyType === 'private' ? 'Private' : 'Semi-Private'})
+                      (Private Party)
                     </span>
                     {pricing.additionalKids > 0 && (
                       <span className="text-sm text-gray-500 ml-2">
