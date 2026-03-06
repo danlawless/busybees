@@ -1,13 +1,16 @@
 /**
  * API Route: Send Newsletter
- * POST - Send a newsletter email to all active subscribers
+ * POST - Send a newsletter email to all active subscribers using batch API
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { sendNewsletterEmail, isEmailServiceConfigured } from '@/lib/email/resend';
+import { buildNewsletterEmailPayload, sendBatchEmails, isEmailServiceConfigured } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+// Allow up to 120 seconds for batch email sending (Vercel Pro max: 300s)
+export const maxDuration = 120;
 
 const sendNewsletterSchema = z.object({
   subject: z.string().min(1, 'Subject is required').max(200, 'Subject too long'),
@@ -74,56 +77,37 @@ export async function POST(request: NextRequest) {
 
     logger.info(
       { subscriberCount: subscribers.length, subject },
-      '📨 Starting newsletter send'
+      '📨 Starting newsletter batch send'
     );
 
-    // Send to each subscriber with a small delay to avoid rate limits
-    let sent = 0;
-    let failed = 0;
-    const errors: Array<{ email: string; error: string }> = [];
+    // Build all email payloads upfront
+    const payloads = subscribers.map(subscriber =>
+      buildNewsletterEmailPayload({
+        to: subscriber.email,
+        subscriberName: subscriber.name || 'Friend',
+        subject,
+        heading,
+        body: bodyContent,
+        ctaText: ctaText || undefined,
+        ctaUrl: ctaUrl || undefined,
+        subscriberEmail: subscriber.email,
+      })
+    );
 
-    for (const subscriber of subscribers) {
-      try {
-        const result = await sendNewsletterEmail({
-          to: subscriber.email,
-          subscriberName: subscriber.name || 'Friend',
-          subject,
-          heading,
-          body: bodyContent,
-          ctaText: ctaText || undefined,
-          ctaUrl: ctaUrl || undefined,
-          subscriberEmail: subscriber.email,
-        });
-
-        if (result.success) {
-          sent++;
-        } else {
-          failed++;
-          errors.push({ email: subscriber.email, error: result.error || 'Unknown error' });
-        }
-      } catch (error) {
-        failed++;
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        errors.push({ email: subscriber.email, error: errorMessage });
-      }
-
-      // Small delay between sends to avoid rate limiting (50ms)
-      if (sent + failed < subscribers.length) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    }
+    // Send in batches of 100 via Resend batch API
+    const result = await sendBatchEmails(payloads);
 
     logger.info(
-      { sent, failed, total: subscribers.length, subject },
-      '📨 Newsletter send complete'
+      { sent: result.sent, failed: result.failed, total: subscribers.length, subject },
+      '📨 Newsletter batch send complete'
     );
 
     return NextResponse.json({
       success: true,
-      sent,
-      failed,
+      sent: result.sent,
+      failed: result.failed,
       total: subscribers.length,
-      errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+      errors: result.errors.length > 0 ? result.errors.slice(0, 10) : undefined,
     });
   } catch (error) {
     logger.error({ error }, 'Newsletter send error');

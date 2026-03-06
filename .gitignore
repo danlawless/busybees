@@ -50,3 +50,6 @@ sentry.properties
 ai-coding-config/
 .gitmodules
 .env*.local
+
+# QIE Intelligence Framework (symlink — not part of this project)
+_bmad
