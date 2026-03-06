@@ -7,8 +7,38 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllPurchases, getCustomerPurchases, getCustomerPurchasesByType, getTodayPurchases, createPurchase } from '@/lib/services/purchases';
+import { getAllPurchases, getCustomerPurchases, getCustomerPurchasesByType, getTodayPurchases, createPurchase, updatePurchase } from '@/lib/services/purchases';
 import { createClient } from '@/lib/supabase/server';
+
+/**
+ * Auto-expire passes that are past their actual_expiry_date.
+ * Uses "lazy expiration" — updates DB status when passes are fetched.
+ */
+async function expireStalePassesInPlace(purchases: any[]): Promise<any[]> {
+  const now = new Date();
+  const updates: Promise<any>[] = [];
+
+  for (const purchase of purchases) {
+    if (
+      purchase.status === 'active' &&
+      purchase.actual_expiry_date &&
+      new Date(purchase.actual_expiry_date) < now
+    ) {
+      purchase.status = 'expired';
+      updates.push(
+        updatePurchase(purchase.id, { status: 'expired' }).catch((err) =>
+          console.error(`Failed to expire purchase ${purchase.id}:`, err)
+        )
+      );
+    }
+  }
+
+  if (updates.length > 0) {
+    await Promise.all(updates);
+  }
+
+  return purchases;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,6 +133,9 @@ export async function GET(request: NextRequest) {
         purchases = await getCustomerPurchases(user.id);
       }
     }
+
+    // Auto-expire any stale passes before returning
+    await expireStalePassesInPlace(purchases);
 
     return NextResponse.json({ purchases });
   } catch (error) {
