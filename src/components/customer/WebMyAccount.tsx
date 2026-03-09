@@ -771,10 +771,14 @@ function WebMyAccountContent() {
   const purchasesArray = Array.isArray(purchases) ? purchases : [];
   const passPurchases = purchasesArray.filter(p => p.type !== 'party_package');
   const partyPurchases = purchasesArray.filter(p => p.type === 'party_package');
-  const activePassPurchases = passPurchases.filter(p => p.status === 'active');
-  const pastPassPurchases = passPurchases.filter(p => p.status !== 'active');
-  const activePartyPurchases = partyPurchases.filter(p => p.status === 'active');
-  const pastPartyPurchases = partyPurchases.filter(p => p.status !== 'active');
+  // Filter passes: treat passes with expired dates as non-active even if DB status hasn't caught up yet
+  const now = new Date();
+  const isPassExpired = (p: typeof passPurchases[0]) =>
+    p.actualExpiryDate && new Date(p.actualExpiryDate) < now;
+  const activePassPurchases = passPurchases.filter(p => p.status === 'active' && !isPassExpired(p));
+  const pastPassPurchases = passPurchases.filter(p => p.status !== 'active' || isPassExpired(p));
+  const activePartyPurchases = partyPurchases.filter(p => p.status === 'active' && !isPassExpired(p));
+  const pastPartyPurchases = partyPurchases.filter(p => p.status !== 'active' || isPassExpired(p));
 
   // Loading state - only block on initial auth check, not user data loading
   if (userLoading) {

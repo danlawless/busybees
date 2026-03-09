@@ -31,6 +31,7 @@ export const CreateEventSchema = z.object({
     .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:MM format')
     .optional()
     .nullable(),
+  is_free: z.boolean().optional().default(false),
   status: EventStatusSchema.optional().default('draft'),
 });
 
@@ -62,6 +63,7 @@ export const UpdateEventSchema = z.object({
     .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:MM format')
     .optional()
     .nullable(),
+  is_free: z.boolean().optional(),
   status: EventStatusSchema.optional(),
 });
 

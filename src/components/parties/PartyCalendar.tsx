@@ -443,7 +443,7 @@ export function PartyCalendar({
                 <h4 className="font-medium text-green-900">Party Options</h4>
                 <div className="text-sm text-green-700 mt-1">
                   <div>Private Party (2 hours)</div>
-                  <div>Semi-Private (2 hours)</div>
+                  <div>Private (2 hours)</div>
                   <div>See pricing in your account</div>
                 </div>
               </div>

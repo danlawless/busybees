@@ -13,6 +13,7 @@ interface PublicEvent {
   event_date: string;
   event_time_start: string;
   event_time_end: string | null;
+  is_free: boolean;
 }
 
 type EventCategory = 'happening-now' | 'upcoming' | 'past';
@@ -170,6 +171,7 @@ function EventSection({
             eventTimeStart={event.event_time_start}
             eventTimeEnd={event.event_time_end}
             description={event.description}
+            isFree={event.is_free}
             variant={variant}
           />
         ))}

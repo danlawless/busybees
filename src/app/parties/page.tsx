@@ -6,6 +6,7 @@ import { Layout } from '@/components/layout/Layout'
 import { useAuth } from '@/hooks/useAuth'
 import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
+import { PartyAvailabilityPreview } from '@/components/parties/PartyAvailabilityPreview'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
 import { motion } from 'framer-motion'
 import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
@@ -136,6 +137,18 @@ function PartiesContent() {
           </motion.div>
         </div>
       </section>
+
+      {/* Availability Calendar */}
+      <PartyAvailabilityPreview
+        onBookDate={(date) => {
+          if (authLoading) return
+          if (isAuthenticated) {
+            setShowBookingWizard(true)
+          } else {
+            router.push('/customer/signup?redirect=/parties')
+          }
+        }}
+      />
 
       {/* Party Packages with Hexagon Backdrop */}
       <div id="party-packages">

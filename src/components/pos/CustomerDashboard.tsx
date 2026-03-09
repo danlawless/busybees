@@ -381,6 +381,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [cardholderName, setCardholderName] = useState('');
 
   // Check for expired passes and auto-checkout sessions (runs once on mount)
+  // DB expiration is handled server-side by the /api/purchases GET endpoint (lazy expiration).
+  // This local check ensures the UI reflects expiration immediately without a refetch.
   const hasCheckedExpiry = useRef(false);
   useEffect(() => {
     if (hasCheckedExpiry.current) return;

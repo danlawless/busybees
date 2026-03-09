@@ -12,6 +12,7 @@ interface EventCardProps {
   eventTimeStart: string;
   eventTimeEnd: string | null;
   description?: string | null;
+  isFree?: boolean;
   variant?: 'default' | 'happening-now' | 'past';
 }
 
@@ -22,6 +23,7 @@ export function EventCard({
   eventTimeStart,
   eventTimeEnd,
   description,
+  isFree = false,
   variant = 'default',
 }: EventCardProps) {
   const formatDate = (dateStr: string) => {
@@ -67,13 +69,14 @@ export function EventCard({
         </div>
       )}
 
-      {/* Image - takes center stage for the Canva graphic */}
-      <div className="relative w-full aspect-[4/3]">
+      {/* Image - shows the full Canva graphic without cropping */}
+      <div className="relative w-full">
         <Image
           src={imageUrl}
           alt={title}
-          fill
-          className={`object-cover ${isPast ? 'grayscale' : ''}`}
+          width={800}
+          height={600}
+          className={`w-full h-auto ${isPast ? 'grayscale' : ''}`}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       </div>
@@ -94,17 +97,21 @@ export function EventCard({
           <p className="text-sm text-neutral-500 mb-4 line-clamp-2">{description}</p>
         )}
 
-        {!isPast ? (
+        {isPast ? (
+          <div className="text-center text-sm text-neutral-400 font-medium py-2">
+            This event has passed
+          </div>
+        ) : isFree ? (
+          <div className="inline-flex items-center justify-center w-full rounded-full font-semibold text-base px-6 py-3 bg-green-100 text-green-700 cursor-default">
+            Free with Admission
+          </div>
+        ) : (
           <Link
             href="/customer/dashboard"
             className="inline-flex items-center justify-center w-full rounded-full font-semibold text-base px-6 py-3 btn-pastel-primary text-charcoal-800 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
           >
             Get Tickets
           </Link>
-        ) : (
-          <div className="text-center text-sm text-neutral-400 font-medium py-2">
-            This event has passed
-          </div>
         )}
       </div>
     </motion.div>

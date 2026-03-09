@@ -102,8 +102,7 @@ export function PartyPackages() {
             Choose Your <span className="text-gradient bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">Perfect Package</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-4xl mx-auto leading-relaxed">
-            Now that you know about our party options, choose your package! Every package is available as both
-            semi-private and private - <strong>no hidden fees, no stress, just pure birthday magic!</strong>
+            Choose your package! All parties are private with exclusive access to the entire facility - <strong>no hidden fees, no stress, just pure birthday magic!</strong>
           </p>
         </motion.div>
 
@@ -157,15 +156,8 @@ export function PartyPackages() {
 
                     {/* Pricing Section */}
                     <div className="text-center mb-8">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-                          <span className="font-medium text-charcoal-700">Private:</span>
-                          <span className="text-2xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-                          <span className="font-medium text-charcoal-700">Semi-Private:</span>
-                          <span className="text-2xl font-bold text-charcoal-800">${pkg.semiPrivatePrice}</span>
-                        </div>
+                      <div className="p-3 bg-white/70 rounded-lg">
+                        <span className="text-3xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
                       </div>
                     </div>
 

@@ -26,7 +26,7 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
     customerName: '',
     customerPhone: '',
     customerEmail: '',
-    partyType: 'semi-private' as 'private' | 'semi-private',
+    partyType: 'private' as 'private' | 'semi-private',
     guestCount: 15,
     notes: ''
   });
@@ -268,22 +268,11 @@ export function PartyBookingForm({ selectedDate, selectedTimeSlot, onClose, onSu
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Party Type
                   </label>
-                  <select
-                    value={formData.partyType}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      partyType: e.target.value as 'private' | 'semi-private' 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  >
-                    <option value="semi-private">Semi-Private</option>
-                    <option value="private">Private</option>
-                  </select>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-charcoal-800">
+                    Private Party
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {formData.partyType === 'private' 
-                      ? 'Exclusive use of party room and play area'
-                      : 'Exclusive party room, shared play area'
-                    }
+                    Exclusive use of party room and play area
                   </p>
                 </div>
 

@@ -876,6 +876,13 @@ export function CheckIn({
         const now = new Date();
         const nowIso = now.toISOString();
 
+        // Block check-in if pass is expired
+        const purchase = customer.purchases.find(p => p.id === purchaseId);
+        if (purchase?.actualExpiryDate && new Date(purchase.actualExpiryDate) < now) {
+            alert('This pass has expired. Please purchase a new pass.');
+            return;
+        }
+
         // Calculate auto-checkout time based on configured closing time
         const autoCheckoutTime = getNextClosingTime(
             autoCheckoutSettings.timezone,
@@ -2635,11 +2642,13 @@ export function CheckIn({
 
                             {/* Available Passes (Not Checked In) - GROUPED */}
                             {(() => {
+                                const now = new Date();
                                 const availablePasses =
                                     displayCustomer.purchases.filter(
                                         (p) =>
                                             p.status === "active" &&
                                             p.type !== "party_package" &&
+                                            !(p.actualExpiryDate && new Date(p.actualExpiryDate) < now) &&
                                             !(
                                                 displayCustomer.activeSessions || []
                                             ).some(

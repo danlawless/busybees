@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { hasAvailableSlots } from '@/lib/validations/party-booking';
 import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
 import type { BookingFormData } from '../PartyBookingWizard';
 
@@ -215,10 +214,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
               const isSelected = dateString === formData.partyDate;
               const isPast = date < today;
               const isTooSoon = date < minBookingDate;
-              const hasSlots = formData.partyType
-                ? hasAvailableSlots(date, formData.partyType)
-                : false;
-              const isDisabled = isPast || isTooSoon || !hasSlots;
+              const isDisabled = isPast || isTooSoon;
 
               return (
                 <button
@@ -230,7 +226,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                     ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-honey-100 cursor-pointer'}
                     ${isToday ? 'bg-blue-100 text-blue-800 font-semibold' : ''}
                     ${isSelected ? 'bg-honey-400 text-white ring-2 ring-honey-500' : ''}
-                    ${hasSlots && !isSelected && !isDisabled ? 'bg-green-50 text-green-700' : ''}
+                    ${!isSelected && !isDisabled && !isToday ? 'bg-green-50 text-green-700' : ''}
                   `}
                 >
                   {date.getDate()}
@@ -322,9 +318,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No time slots available for this date.</p>
                 <p className="text-sm mt-2">
-                  {formData.partyType === 'private'
-                    ? 'Private parties are only available on weekends.'
-                    : 'Semi-private parties are available Friday afternoon and weekend mornings.'}
+                  Private parties are available on weekends.
                 </p>
               </div>
             )

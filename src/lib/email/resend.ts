@@ -1526,10 +1526,20 @@ ${siteUrl}
 }
 
 /**
- * Send a newsletter email to a single subscriber
- * Used by the bulk send endpoint to send to each active subscriber
+ * Payload for a single email in a batch send
  */
-export async function sendNewsletterEmail(data: {
+export interface BatchEmailPayload {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Build newsletter email payload without sending (for batch use)
+ */
+export function buildNewsletterEmailPayload(data: {
   to: string;
   subscriberName: string;
   subject: string;
@@ -1538,7 +1548,7 @@ export async function sendNewsletterEmail(data: {
   ctaText?: string;
   ctaUrl?: string;
   subscriberEmail: string;
-}): Promise<EmailResult> {
+}): BatchEmailPayload {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
   const unsubscribeUrl = `${siteUrl}/newsletter/unsubscribe?email=${encodeURIComponent(data.subscriberEmail)}`;
 
@@ -1680,7 +1690,7 @@ To unsubscribe from our newsletter: ${unsubscribeUrl}
 </html>
 `;
 
-  return sendEmail({
+  return {
     to: data.to,
     subject: data.subject,
     text,
@@ -1689,6 +1699,95 @@ To unsubscribe from our newsletter: ${unsubscribeUrl}
       'List-Unsubscribe': `<${unsubscribeUrl}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
+  };
+}
+
+/**
+ * Build a newsletter email payload from pre-built HTML (WYSIWYG editor)
+ * Wraps the HTML content with unsubscribe footer
+ */
+export function buildHtmlNewsletterPayload(data: {
+  to: string;
+  subject: string;
+  html: string;
+  subscriberEmail: string;
+}): BatchEmailPayload {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const unsubscribeUrl = `${siteUrl}/newsletter/unsubscribe?email=${encodeURIComponent(data.subscriberEmail)}`;
+
+  // Strip text from HTML for plain text fallback
+  const text = `${data.subject}\n\nView this email in your browser for the best experience.\n\n---\nBusy Bees Indoor Play Center\n${siteUrl}\n\nTo unsubscribe: ${unsubscribeUrl}`;
+
+  // Inject unsubscribe footer before closing body tag
+  const unsubscribeFooter = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+      <tr>
+        <td align="center" style="padding: 15px 30px;">
+          <p style="margin: 0 0 5px; font-size: 13px; color: #9ca3af; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            Busy Bees Indoor Play Center
+          </p>
+          <p style="margin: 0; font-size: 11px; color: #d1d5db; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <a href="${unsubscribeUrl}" style="color: #d1d5db; text-decoration: underline;">Unsubscribe</a> from our newsletter
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  const html = data.html.includes('</body>')
+    ? data.html.replace('</body>', `${unsubscribeFooter}</body>`)
+    : `${data.html}${unsubscribeFooter}`;
+
+  return {
+    to: data.to,
+    subject: data.subject,
+    text,
+    html,
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+  };
+}
+
+/**
+ * Send a newsletter email to a single subscriber
+ */
+export async function sendNewsletterEmail(data: {
+  to: string;
+  subscriberName: string;
+  subject: string;
+  heading: string;
+  body: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  subscriberEmail: string;
+}): Promise<EmailResult> {
+  const payload = buildNewsletterEmailPayload(data);
+  return sendEmail({
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html,
+    headers: payload.headers,
+  });
+}
+
+/**
+ * Send a newsletter email from pre-built HTML (WYSIWYG editor)
+ */
+export async function sendHtmlNewsletterEmail(data: {
+  to: string;
+  subject: string;
+  html: string;
+  subscriberEmail: string;
+}): Promise<EmailResult> {
+  const payload = buildHtmlNewsletterPayload(data);
+  return sendEmail({
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.text,
+    html: payload.html,
+    headers: payload.headers,
   });
 }
 
@@ -1821,4 +1920,89 @@ ${siteUrl}
     text,
     html,
   });
+}
+
+/**
+ * Send emails in batches using Resend's batch API
+ * Chunks into groups of 100 (Resend's max per batch call)
+ */
+export async function sendBatchEmails(
+  emails: BatchEmailPayload[]
+): Promise<{ sent: number; failed: number; errors: Array<{ email: string; error: string }> }> {
+  const resend = getResendClient();
+
+  if (!resend) {
+    logger.warn('RESEND_API_KEY not configured - batch send skipped');
+    return {
+      sent: 0,
+      failed: emails.length,
+      errors: emails.map(e => ({ email: e.to, error: 'Email service not configured' })),
+    };
+  }
+
+  const BATCH_SIZE = 100;
+  let sent = 0;
+  let failed = 0;
+  const errors: Array<{ email: string; error: string }> = [];
+
+  // Chunk emails into batches of 100
+  const chunks: BatchEmailPayload[][] = [];
+  for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+    chunks.push(emails.slice(i, i + BATCH_SIZE));
+  }
+
+  logger.info(
+    { totalEmails: emails.length, batchCount: chunks.length },
+    'Starting batch email send'
+  );
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+
+    try {
+      const { error } = await resend.batch.send(
+        chunk.map(email => ({
+          from: FROM_EMAIL,
+          to: email.to,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+          headers: email.headers,
+        }))
+      );
+
+      if (error) {
+        logger.error(
+          { error, batchIndex: i, batchSize: chunk.length },
+          'Batch email send failed'
+        );
+        failed += chunk.length;
+        chunk.forEach(email => errors.push({ email: email.to, error: error.message }));
+      } else {
+        sent += chunk.length;
+        logger.info(
+          { batchIndex: i, batchSize: chunk.length },
+          'Batch email send succeeded'
+        );
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error, batchIndex: i }, 'Exception during batch email send');
+      failed += chunk.length;
+      chunk.forEach(email => errors.push({ email: email.to, error: errorMessage }));
+      Sentry.captureException(error, {
+        tags: { service: 'email', action: 'batch-send' },
+        extra: { batchIndex: i, batchSize: chunk.length },
+      });
+    }
+
+    // Delay between batches to respect rate limits
+    if (i < chunks.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  logger.info({ sent, failed, total: emails.length }, 'Batch email send complete');
+
+  return { sent, failed, errors };
 }

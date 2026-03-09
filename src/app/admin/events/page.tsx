@@ -44,6 +44,7 @@ export default function AdminEventsPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTimeStart, setEventTimeStart] = useState('');
   const [eventTimeEnd, setEventTimeEnd] = useState('');
+  const [isFree, setIsFree] = useState(false);
   const [status, setStatus] = useState<EventStatus>('draft');
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState('');
@@ -141,6 +142,7 @@ export default function AdminEventsPage() {
     setEventDate('');
     setEventTimeStart('');
     setEventTimeEnd('');
+    setIsFree(false);
     setStatus('draft');
     setImageUrl('');
     setImagePreview('');
@@ -167,6 +169,7 @@ export default function AdminEventsPage() {
           event_date: eventDate,
           event_time_start: eventTimeStart,
           event_time_end: eventTimeEnd || null,
+          is_free: isFree,
           status,
         }),
       });
@@ -468,6 +471,7 @@ export default function AdminEventsPage() {
                         event_date: editingEvent.event_date,
                         event_time_start: editingEvent.event_time_start,
                         event_time_end: editingEvent.event_time_end,
+                        is_free: editingEvent.is_free,
                         status: editingEvent.status,
                       })}
                       onCancel={() => setEditingEvent(null)}
@@ -477,12 +481,13 @@ export default function AdminEventsPage() {
                     // Event display
                     <div className="flex gap-4">
                       {/* Thumbnail */}
-                      <div className="flex-shrink-0 w-32 h-32 relative rounded-xl overflow-hidden bg-neutral-100">
+                      <div className="flex-shrink-0 w-32 rounded-xl overflow-hidden bg-neutral-100">
                         <Image
                           src={event.image_url}
                           alt={event.title}
-                          fill
-                          className="object-cover"
+                          width={128}
+                          height={128}
+                          className="w-full h-auto"
                           sizes="128px"
                         />
                       </div>
@@ -502,13 +507,20 @@ export default function AdminEventsPage() {
                               </p>
                             )}
                           </div>
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${
-                              STATUS_COLORS[event.status]
-                            }`}
-                          >
-                            {event.status.toUpperCase()}
-                          </span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {event.is_free && (
+                              <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">
+                                FREE
+                              </span>
+                            )}
+                            <span
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
+                                STATUS_COLORS[event.status]
+                              }`}
+                            >
+                              {event.status.toUpperCase()}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Actions */}
@@ -625,12 +637,13 @@ export default function AdminEventsPage() {
                   </label>
                   {imagePreview || imageUrl ? (
                     <div className="space-y-3">
-                      <div className="relative w-full max-w-md aspect-[4/3] rounded-xl overflow-hidden border border-neutral-200">
+                      <div className="w-full max-w-md rounded-xl overflow-hidden border border-neutral-200">
                         <Image
                           src={imagePreview || imageUrl}
                           alt="Event preview"
-                          fill
-                          className="object-cover"
+                          width={800}
+                          height={600}
+                          className="w-full h-auto"
                           sizes="(max-width: 768px) 100vw, 448px"
                         />
                       </div>
@@ -677,6 +690,20 @@ export default function AdminEventsPage() {
                     onChange={handleFileSelect}
                     className="hidden"
                   />
+                </div>
+
+                {/* Free Event */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="is-free"
+                    checked={isFree}
+                    onChange={(e) => setIsFree(e.target.checked)}
+                    className="h-5 w-5 rounded border-neutral-300 text-honey-500 focus:ring-honey-500"
+                  />
+                  <label htmlFor="is-free" className="text-sm font-medium text-neutral-700">
+                    Free event (included with admission)
+                  </label>
                 </div>
 
                 {/* Status */}
@@ -795,6 +822,18 @@ function EditEventForm({
           rows={2}
           className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
         />
+      </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          id={`is-free-${event.id}`}
+          checked={event.is_free}
+          onChange={(e) => onChange({ ...event, is_free: e.target.checked })}
+          className="h-5 w-5 rounded border-neutral-300 text-honey-500 focus:ring-honey-500"
+        />
+        <label htmlFor={`is-free-${event.id}`} className="text-sm font-medium text-neutral-700">
+          Free event (included with admission)
+        </label>
       </div>
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={onCancel}>
