@@ -15,6 +15,7 @@ import { Database } from '@/lib/supabase/database.types';
 type DbUser = Database['public']['Tables']['users']['Row'];
 type DbChild = Database['public']['Tables']['children']['Row'];
 type DbSession = Database['public']['Tables']['sessions']['Row'];
+type DbPurchase = Database['public']['Tables']['purchases']['Row'];
 
 interface FormattedChild {
   id: string;
@@ -33,6 +34,21 @@ interface FormattedSession {
   endTime: string | null;
   duration: number | null;
   autoCheckoutTime: string;
+}
+
+interface FormattedPurchase {
+  id: string;
+  type: string;
+  name: string;
+  price: number;
+  purchaseDate: string;
+  expiryDate: string | null;
+  firstUseDate: string | null;
+  actualExpiryDate: string | null;
+  usedSessions: number;
+  totalSessions: number;
+  status: string;
+  autoRenew: boolean;
 }
 
 /**
@@ -126,6 +142,43 @@ export async function GET() {
 
     const allSessions = (sessionsData || []) as DbSession[];
 
+    // Fetch all purchases for these customers
+    const { data: purchasesData, error: purchasesError } = await supabase
+      .from('purchases')
+      .select('*')
+      .in('customer_id', customerIds)
+      .order('purchase_date', { ascending: false });
+
+    if (purchasesError) {
+      logger.warn({ error: purchasesError }, 'Failed to fetch purchases');
+      // Continue without purchases rather than failing
+    }
+
+    const allPurchases = (purchasesData || []) as DbPurchase[];
+
+    // Map purchases to their customers
+    const purchasesByCustomer = new Map<string, FormattedPurchase[]>();
+    for (const purchase of allPurchases) {
+      const customerId = purchase.customer_id;
+      if (!purchasesByCustomer.has(customerId)) {
+        purchasesByCustomer.set(customerId, []);
+      }
+      purchasesByCustomer.get(customerId)!.push({
+        id: purchase.id,
+        type: purchase.type,
+        name: purchase.name,
+        price: purchase.price,
+        purchaseDate: purchase.purchase_date,
+        expiryDate: purchase.expiry_date,
+        firstUseDate: purchase.first_use_date,
+        actualExpiryDate: purchase.actual_expiry_date,
+        usedSessions: purchase.used_sessions,
+        totalSessions: purchase.total_sessions,
+        status: purchase.status,
+        autoRenew: purchase.auto_renew,
+      });
+    }
+
     // Map sessions to their customers
     const sessionsByCustomer = new Map<string, FormattedSession[]>();
     for (const session of allSessions) {
@@ -162,7 +215,7 @@ export async function GET() {
           waiverSignedDate: child.waiver_signed_date,
           createdAt: child.created_at,
         })),
-        purchases: [], // Purchases would need a separate fetch if needed
+        purchases: purchasesByCustomer.get(user.id) || [],
         activeSessions: userSessions,
         savedCards: [], // Payment methods would need a separate fetch if needed
         createdAt: user.created_at,
