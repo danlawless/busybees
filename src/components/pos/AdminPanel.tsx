@@ -179,6 +179,10 @@ export function AdminPanel({
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
+  const [dashboardDate, setDashboardDate] = useState(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD in local time
+  });
   const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
   const [updatingPosMode, setUpdatingPosMode] = useState(false);
   const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
@@ -802,15 +806,16 @@ export function AdminPanel({
 
   const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
-  // Today's purchases for Dashboard and Sessions views (includes refunded for display)
-  const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
+  // Purchases for the selected dashboard date (includes refunded for display)
+  const selectedDateObj = new Date(dashboardDate + 'T00:00:00');
+  const isToday = selectedDateObj.toDateString() === new Date().toDateString();
+  const dashboardPurchases = customers.flatMap(c => c.purchases).filter(p => {
     const purchaseDate = new Date(p.purchaseDate);
-    const today = new Date();
-    return purchaseDate.toDateString() === today.toDateString();
+    return purchaseDate.toDateString() === selectedDateObj.toDateString();
   });
 
   // Revenue excludes refunded purchases
-  const todaysRevenue = todaysPurchases
+  const dashboardRevenue = dashboardPurchases
     .filter(p => p.status !== 'refunded')
     .reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
@@ -1012,8 +1017,8 @@ export function AdminPanel({
                 <span className="text-2xl">💰</span>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(todaysRevenue)}</p>
+                <p className="text-sm font-medium text-gray-600">{isToday ? "Today's Revenue" : `Revenue (${selectedDateObj.toLocaleDateString()})`}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardRevenue)}</p>
               </div>
             </div>
           </Card>
@@ -1115,12 +1120,23 @@ export function AdminPanel({
         )}
       </Card>
 
-      {/* Recent Purchases */}
+      {/* Purchases for Selected Date */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Today's Purchases ({todaysPurchases.length})</h3>
-        {todaysPurchases.length > 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">
+            {isToday ? "Today's" : selectedDateObj.toLocaleDateString()} Purchases ({dashboardPurchases.length})
+          </h3>
+          <input
+            type="date"
+            value={dashboardDate}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setDashboardDate(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {dashboardPurchases.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {todaysPurchases.map((purchase) => {
+            {dashboardPurchases.map((purchase) => {
               const customer = customers.find(c => c.purchases.some(p => p.id === purchase.id));
               return (
                 <div key={purchase.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1172,7 +1188,7 @@ export function AdminPanel({
             })}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No purchases today</p>
+          <p className="text-gray-500 text-center py-8">{isToday ? 'No purchases today' : `No purchases on ${selectedDateObj.toLocaleDateString()}`}</p>
         )}
       </Card>
     </div>
