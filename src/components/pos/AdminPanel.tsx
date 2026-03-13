@@ -241,6 +241,8 @@ export function AdminPanel({
   const [giftCardsStats, setGiftCardsStats] = useState({ total: 0, totalValue: 0, totalRemaining: 0, pending: 0, sent: 0, redeemed: 0 });
   const [giftCardSearch, setGiftCardSearch] = useState('');
   const [giftCardStatusFilter, setGiftCardStatusFilter] = useState<string>('all');
+  const [refundingGiftCard, setRefundingGiftCard] = useState<string | null>(null);
+  const [confirmingGiftCardRefund, setConfirmingGiftCardRefund] = useState<string | null>(null);
 
   // Staff management states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -523,6 +525,28 @@ export function AdminPanel({
       console.error('Error fetching gift cards:', error);
     } finally {
       setGiftCardsLoading(false);
+    }
+  };
+
+  const handleGiftCardRefund = async (cardId: string) => {
+    setRefundingGiftCard(cardId);
+    try {
+      const response = await fetch(`/api/admin/gift-cards/${cardId}/refund`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        // Update local state: zero remaining, mark as redeemed
+        setGiftCards(prev => prev.map(c =>
+          c.id === cardId ? { ...c, remaining_amount: 0, status: 'redeemed' as const } : c
+        ));
+        fetchGiftCards(); // Refresh stats
+      } else {
+        alert(data.error || 'Refund failed');
+      }
+    } catch {
+      alert('Network error — refund could not be processed');
+    } finally {
+      setRefundingGiftCard(null);
+      setConfirmingGiftCardRefund(null);
     }
   };
 
@@ -4233,7 +4257,41 @@ export function AdminPanel({
                           {formatCurrency(Number(card.amount))}
                         </td>
                         <td className="py-3 px-2 text-right">
-                          {formatCurrency(Number(card.remaining_amount))}
+                          <div className="flex items-center justify-end gap-2">
+                            <span>{formatCurrency(Number(card.remaining_amount))}</span>
+                            {Number(card.remaining_amount) > 0 && isAdmin && (
+                              confirmingGiftCardRefund === card.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    onClick={() => handleGiftCardRefund(card.id)}
+                                    disabled={refundingGiftCard === card.id}
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs text-red-600 border-red-300 hover:bg-red-50 animate-pulse"
+                                  >
+                                    {refundingGiftCard === card.id ? 'Processing...' : 'Confirm'}
+                                  </Button>
+                                  <Button
+                                    onClick={() => setConfirmingGiftCardRefund(null)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  onClick={() => setConfirmingGiftCardRefund(card.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs text-red-600 hover:bg-red-50"
+                                >
+                                  Refund
+                                </Button>
+                              )
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>

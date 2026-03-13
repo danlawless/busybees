@@ -170,10 +170,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      logger.error({ error: insertError }, 'Failed to insert group user record');
+      logger.error({ error: insertError, message: insertError.message, code: insertError.code }, 'Failed to insert group user record');
       // Clean up auth user
       await supabase.auth.admin.deleteUser(authData.user.id);
-      return NextResponse.json({ error: 'Failed to create group account' }, { status: 500 });
+      // Return specific error for debugging
+      const isColumnMissing = insertError.message?.includes('is_group') || insertError.message?.includes('group_name');
+      return NextResponse.json(
+        { error: isColumnMissing
+          ? 'Migration 036 has not been run yet. The is_group and group_name columns are missing from the database.'
+          : insertError.message || 'Failed to create group account'
+        },
+        { status: 500 }
+      );
     }
 
     logger.info({ groupId: newGroup.id, groupName: group_name }, 'Group account created');
