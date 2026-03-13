@@ -96,12 +96,14 @@ async function getPublishedEventsForDateRange(
 ): Promise<Event[]> {
   const supabase = createAdminClient();
 
+  // For multi-day events, an event overlaps the range if:
+  // - it starts before/during the range AND ends during/after the range start
   const { data, error } = await supabase
     .from('events')
     .select('*')
     .eq('status', 'published')
-    .gte('event_date', startDate)
     .lte('event_date', endDate)
+    .or(`event_date_end.gte.${startDate},event_date_end.is.null,event_date.gte.${startDate}`)
     .order('event_date', { ascending: true });
 
   if (error) {
@@ -371,7 +373,10 @@ export async function getMonthAvailability(
   while (currentDate <= endDate) {
     const dateStr = formatDateToYYYYMMDD(currentDate);
     const dayBookings = bookings.filter((b) => b.party_date === dateStr);
-    const dayEvents = events.filter((e) => e.event_date === dateStr);
+    const dayEvents = events.filter((e) => {
+      const eventEnd = e.event_date_end || e.event_date;
+      return e.event_date <= dateStr && eventEnd >= dateStr;
+    });
     const dayOfWeek = currentDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 

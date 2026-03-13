@@ -11,6 +11,7 @@ interface PublicEvent {
   description: string | null;
   image_url: string;
   event_date: string;
+  event_date_end: string | null;
   event_time_start: string;
   event_time_end: string | null;
   is_free: boolean;
@@ -59,10 +60,17 @@ export function EventsBoard() {
     const past: CategorizedEvent[] = [];
 
     for (const event of events) {
-      if (event.event_date < todayStr) {
+      const eventStart = event.event_date;
+      const eventEnd = event.event_date_end || event.event_date;
+
+      if (eventEnd < todayStr) {
+        // Event (or last day of multi-day event) is in the past
         past.push({ ...event, category: 'past' });
-      } else if (event.event_date === todayStr) {
-        // Check if happening right now
+      } else if (eventStart <= todayStr && eventEnd >= todayStr) {
+        // Today falls within the event date range
+        const isFirstDay = eventStart === todayStr;
+        const isLastDay = eventEnd === todayStr;
+
         const [startH, startM] = event.event_time_start.split(':').map(Number);
         const startMinutes = startH * 60 + startM;
 
@@ -72,14 +80,37 @@ export function EventsBoard() {
           endMinutes = endH * 60 + endM;
         }
 
-        if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
+        // Multi-day event: middle days are always "happening now" during business hours
+        const isMiddleDay = !isFirstDay && !isLastDay;
+
+        if (isMiddleDay) {
           happeningNow.push({ ...event, category: 'happening-now' });
-        } else if (currentTimeMinutes < startMinutes) {
-          upcoming.push({ ...event, category: 'upcoming' });
+        } else if (isFirstDay && isLastDay) {
+          // Single-day event or first==last day
+          if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
+            happeningNow.push({ ...event, category: 'happening-now' });
+          } else if (currentTimeMinutes < startMinutes) {
+            upcoming.push({ ...event, category: 'upcoming' });
+          } else {
+            past.push({ ...event, category: 'past' });
+          }
+        } else if (isFirstDay) {
+          // First day of multi-day: happening now once start time passes
+          if (currentTimeMinutes >= startMinutes) {
+            happeningNow.push({ ...event, category: 'happening-now' });
+          } else {
+            upcoming.push({ ...event, category: 'upcoming' });
+          }
         } else {
-          past.push({ ...event, category: 'past' });
+          // Last day of multi-day: happening now until end time
+          if (currentTimeMinutes <= endMinutes) {
+            happeningNow.push({ ...event, category: 'happening-now' });
+          } else {
+            past.push({ ...event, category: 'past' });
+          }
         }
       } else {
+        // Event starts in the future
         upcoming.push({ ...event, category: 'upcoming' });
       }
     }
@@ -168,6 +199,7 @@ function EventSection({
             title={event.title}
             imageUrl={event.image_url}
             eventDate={event.event_date}
+            eventDateEnd={event.event_date_end}
             eventTimeStart={event.event_time_start}
             eventTimeEnd={event.event_time_end}
             description={event.description}

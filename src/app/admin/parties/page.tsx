@@ -416,7 +416,10 @@ export default function AdminPartiesPage() {
 
   const getEventsForDate = (date: Date): Event[] => {
     const dateStr = formatDateToYYYYMMDD(date);
-    return events.filter((e) => e.event_date === dateStr && e.status === 'published');
+    return events.filter((e) => {
+      const eventEnd = e.event_date_end || e.event_date;
+      return e.event_date <= dateStr && eventEnd >= dateStr && e.status === 'published';
+    });
   };
 
   const formatTimeRange = (start: string, end: string) => {
@@ -1386,7 +1389,10 @@ export default function AdminPartiesPage() {
                         (b) => b.party_date === selectedCalendarDate
                       );
                       const selectedEvents = events.filter(
-                        (e) => e.event_date === selectedCalendarDate && e.status === 'published'
+                        (e) => {
+                          const eventEnd = e.event_date_end || e.event_date;
+                          return e.event_date <= selectedCalendarDate && eventEnd >= selectedCalendarDate && e.status === 'published';
+                        }
                       );
 
                       if (selectedBookings.length === 0 && selectedEvents.length === 0) {
