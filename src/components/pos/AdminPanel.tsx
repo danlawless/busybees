@@ -38,6 +38,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '@/lib/api/products';
+import { GroupsManager } from './GroupsManager';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -141,7 +142,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -4629,7 +4630,7 @@ export function AdminPanel({
     <div className="space-y-6">
       {/* Admin Navigation */}
       <Card className="p-4">
-        <nav className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <nav className="flex flex-wrap gap-3">
           <Button
             onClick={() => setCurrentView('dashboard')}
             variant={currentView === 'dashboard' ? 'default' : 'outline'}
@@ -4703,6 +4704,13 @@ export function AdminPanel({
             🎁 Gift Cards
           </Button>
           <Button
+            onClick={() => setCurrentView('groups')}
+            variant={currentView === 'groups' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🏫 Groups
+          </Button>
+          <Button
             onClick={() => setCurrentView('settings')}
             variant={currentView === 'settings' ? 'default' : 'outline'}
             size="sm"
@@ -4723,6 +4731,7 @@ export function AdminPanel({
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
       {currentView === 'gift-cards' && renderGiftCards()}
+      {currentView === 'groups' && <GroupsManager />}
       {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}

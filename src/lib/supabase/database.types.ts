@@ -32,6 +32,8 @@ export interface Database {
           last_visit: string | null;
           pin_hash: string | null;
           gift_card_balance: number;
+          is_group: boolean;
+          group_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -51,6 +53,8 @@ export interface Database {
           last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
+          is_group?: boolean;
+          group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +74,8 @@ export interface Database {
           last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
+          is_group?: boolean;
+          group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
