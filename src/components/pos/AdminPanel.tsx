@@ -1098,6 +1098,8 @@ export function AdminPanel({
     setCustomerDeleteError(null);
   };
 
+  const totalKidSessions = activeSessions.reduce((sum, c) => sum + (c.activeSessions || []).length, 0);
+
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -1105,11 +1107,23 @@ export function AdminPanel({
         <Card className="p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👥</span>
+              <span className="text-2xl">👨‍👩‍👧</span>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Sessions</p>
+              <p className="text-sm font-medium text-gray-600">Parents Checked In</p>
               <p className="text-2xl font-bold text-gray-900">{activeSessions.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+              <span className="text-2xl">🧒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Kid Sessions</p>
+              <p className="text-2xl font-bold text-gray-900">{totalKidSessions}</p>
             </div>
           </div>
         </Card>
