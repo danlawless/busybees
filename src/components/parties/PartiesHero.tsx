@@ -141,8 +141,8 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
               {/* Main Party Image */}
               <div className="aspect-[4/3] relative">
                 <Image
-                  src="/birthday-parties.png"
-                  alt="Happy kids celebrating birthday party at Busy Bees"
+                  src="/birthday-party-room.jpg"
+                  alt="Busy Bees birthday party room with colorful decorations"
                   fill
                   className="object-cover"
                   priority
@@ -172,29 +172,6 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
               </div>
             </div>
 
-            {/* Floating testimonial bubble */}
-            <motion.div
-              className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-soft border border-primary-200/30 p-4 max-w-xs"
-              animate={{
-                y: [0, -5, 0],
-                rotate: [0, 1, 0]
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center border border-primary-200/50">
-                  <Star className="w-5 h-5 text-honey-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-charcoal-800">"Best party ever!"</p>
-                  <p className="text-xs text-charcoal-600">- Happy Parent</p>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>
