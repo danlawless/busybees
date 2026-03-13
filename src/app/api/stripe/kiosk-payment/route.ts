@@ -22,7 +22,7 @@ import { getOrCreateStripeCustomer } from "@/lib/stripe/payment-methods";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
-import { resolvePurchaseDefaults } from "@/lib/utils/purchaseDefaults";
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
             productDescription,
             purchaseType,
             childId,
+            childrenIds, // For family passes: array of child IDs
             quantity = 1,
             paymentMethodId,
             metadata = {},
@@ -133,6 +134,14 @@ export async function POST(request: NextRequest) {
                         { status: 400 }
                     );
                 }
+            }
+        }
+
+        // Prevent duplicate monthly passes per child
+        if (childId) {
+            const duplicateError = await checkDuplicateMonthlyPass(childId, purchaseType, adminSupabase);
+            if (duplicateError) {
+                return NextResponse.json({ error: duplicateError }, { status: 400 });
             }
         }
 
@@ -291,6 +300,27 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 500 }
             );
+        }
+
+        // For family passes, link all selected children via purchase_children table
+        if (Array.isArray(childrenIds) && childrenIds.length > 0) {
+            const purchaseChildrenRows = childrenIds.map((cid: string) => ({
+                purchase_id: purchase.id,
+                child_id: cid,
+            }));
+
+            const { error: pcError } = await adminSupabase
+                .from("purchase_children")
+                .insert(purchaseChildrenRows);
+
+            if (pcError) {
+                logger.error({ error: pcError, purchaseId: purchase.id }, "Failed to link children to family pass");
+            } else {
+                logger.info(
+                    { purchaseId: purchase.id, childCount: childrenIds.length },
+                    "Family pass children linked successfully"
+                );
+            }
         }
 
         logger.info(

@@ -23,7 +23,7 @@ import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gif
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -146,6 +146,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+      }
+    }
+
+    // Prevent duplicate monthly passes per child
+    if (childId) {
+      const duplicateError = await checkDuplicateMonthlyPass(childId, purchaseType, adminSupabase);
+      if (duplicateError) {
+        return NextResponse.json({ error: duplicateError }, { status: 400 });
       }
     }
 

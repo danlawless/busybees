@@ -49,6 +49,7 @@ interface FormattedPurchase {
   totalSessions: number;
   status: string;
   autoRenew: boolean;
+  childIds: string[]; // For family passes: all children covered by this purchase
 }
 
 /**
@@ -156,6 +157,28 @@ export async function GET() {
 
     const allPurchases = (purchasesData || []) as DbPurchase[];
 
+    // Fetch purchase_children for family passes
+    const purchaseIds = allPurchases.map((p) => p.id);
+    const childIdsByPurchase = new Map<string, string[]>();
+
+    if (purchaseIds.length > 0) {
+      const { data: purchaseChildrenData, error: pcError } = await supabase
+        .from('purchase_children')
+        .select('purchase_id, child_id')
+        .in('purchase_id', purchaseIds);
+
+      if (pcError) {
+        logger.warn({ error: pcError }, 'Failed to fetch purchase_children');
+      }
+
+      for (const pc of purchaseChildrenData || []) {
+        if (!childIdsByPurchase.has(pc.purchase_id)) {
+          childIdsByPurchase.set(pc.purchase_id, []);
+        }
+        childIdsByPurchase.get(pc.purchase_id)!.push(pc.child_id);
+      }
+    }
+
     // Map purchases to their customers
     const purchasesByCustomer = new Map<string, FormattedPurchase[]>();
     for (const purchase of allPurchases) {
@@ -176,6 +199,7 @@ export async function GET() {
         totalSessions: purchase.total_sessions,
         status: purchase.status,
         autoRenew: purchase.auto_renew,
+        childIds: childIdsByPurchase.get(purchase.id) || [],
       });
     }
 
