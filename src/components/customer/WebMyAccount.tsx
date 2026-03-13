@@ -791,7 +791,7 @@ function WebMyAccountContent() {
 
   if (!user || !profile) {
     return (
-      <div className="py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+      <div className="py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         <Card className="p-8 text-center">
           <p className="text-gray-600">Please log in to view your account.</p>
         </Card>
@@ -800,7 +800,7 @@ function WebMyAccountContent() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
+    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-6 text-white">

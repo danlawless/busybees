@@ -37,15 +37,15 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    window.location.href = '/'
+    window.location.href = '/customer/login'
   }
 
   useEffect(() => {
     const supabase = createClient()
 
-    // Check initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session)
+    // Check initial auth state (use getUser for reliable server-validated check)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
       setIsLoading(false)
     })
 
