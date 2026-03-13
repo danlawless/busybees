@@ -121,7 +121,7 @@ export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting 
               <strong>Legal Notice:</strong> This waiver is binding upon the undersigned, their heirs,
               executors, administrators, and assigns. If any portion of this waiver is held invalid,
               the remaining portions shall continue to be valid and enforceable. This waiver is governed
-              by the laws of the State of Colorado.
+              by the laws of the State of Massachusetts.
             </p>
           </div>
         </div>
