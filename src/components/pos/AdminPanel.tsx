@@ -142,7 +142,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -243,6 +243,29 @@ export function AdminPanel({
   const [giftCardStatusFilter, setGiftCardStatusFilter] = useState<string>('all');
   const [refundingGiftCard, setRefundingGiftCard] = useState<string | null>(null);
   const [confirmingGiftCardRefund, setConfirmingGiftCardRefund] = useState<string | null>(null);
+
+  // Monthly members state
+  interface MonthlyMember {
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string | null;
+    childName: string | null;
+    passName: string;
+    price: number;
+    purchaseDate: string;
+    expiryDate: string | null;
+    status: string;
+    autoRenew: boolean;
+    nextRenewalDate: string | null;
+    usedSessions: number;
+    totalSessions: number;
+  }
+  const [monthlyMembers, setMonthlyMembers] = useState<MonthlyMember[]>([]);
+  const [monthlyMembersLoading, setMonthlyMembersLoading] = useState(false);
+  const [monthlyMembersStats, setMonthlyMembersStats] = useState({ total: 0, active: 0, expired: 0, autoRenewEnabled: 0 });
+  const [monthlyMemberSearch, setMonthlyMemberSearch] = useState('');
+  const [monthlyMemberStatusFilter, setMonthlyMemberStatusFilter] = useState<string>('all');
 
   // Staff management states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -553,6 +576,29 @@ export function AdminPanel({
   useEffect(() => {
     if (currentView === 'gift-cards') {
       fetchGiftCards();
+    }
+  }, [currentView]);
+
+  // Fetch monthly members when view is selected
+  const fetchMonthlyMembers = async () => {
+    setMonthlyMembersLoading(true);
+    try {
+      const response = await fetch('/api/admin/monthly-members');
+      if (response.ok) {
+        const data = await response.json();
+        setMonthlyMembers(data.members || []);
+        setMonthlyMembersStats(data.stats || { total: 0, active: 0, expired: 0, autoRenewEnabled: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching monthly members:', error);
+    } finally {
+      setMonthlyMembersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'monthly-members') {
+      fetchMonthlyMembers();
     }
   }, [currentView]);
 
@@ -4312,6 +4358,172 @@ export function AdminPanel({
     );
   };
 
+  const renderMonthlyMembers = () => {
+    const filtered = monthlyMembers.filter(m => {
+      const matchesSearch = monthlyMemberSearch === '' ||
+        m.customerName.toLowerCase().includes(monthlyMemberSearch.toLowerCase()) ||
+        m.customerPhone.includes(monthlyMemberSearch) ||
+        (m.customerEmail?.toLowerCase().includes(monthlyMemberSearch.toLowerCase())) ||
+        (m.childName?.toLowerCase().includes(monthlyMemberSearch.toLowerCase())) ||
+        m.passName.toLowerCase().includes(monthlyMemberSearch.toLowerCase());
+      const matchesStatus = monthlyMemberStatusFilter === 'all' || m.status === monthlyMemberStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎟️</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Passes</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.active}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">⏰</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Expired</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.expired}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🔄</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Auto-Renew</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.autoRenewEnabled}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, phone, email, or pass..."
+              value={monthlyMemberSearch}
+              onChange={(e) => setMonthlyMemberSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <select
+              value={monthlyMemberStatusFilter}
+              onChange={(e) => setMonthlyMemberStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="refunded">Refunded</option>
+            </select>
+            <Button onClick={fetchMonthlyMembers} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Members Table */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Pass Members ({filtered.length})</h3>
+          {monthlyMembersLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading members...</p>
+          ) : filtered.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Child</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Pass</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Price</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Expires</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Auto-Renew</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((member) => {
+                    const statusStyle = member.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : member.status === 'expired'
+                      ? 'bg-red-100 text-red-800'
+                      : member.status === 'refunded'
+                      ? 'bg-gray-100 text-gray-600'
+                      : 'bg-yellow-100 text-yellow-800';
+                    return (
+                      <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{member.customerName}</div>
+                          <div className="text-xs text-gray-500">{member.customerPhone}</div>
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {member.childName || '—'}
+                        </td>
+                        <td className="py-3 px-2 text-gray-900">{member.passName}</td>
+                        <td className="py-3 px-2 text-right font-semibold">
+                          {formatCurrency(member.price)}
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {new Date(member.purchaseDate).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {member.expiryDate
+                            ? new Date(member.expiryDate).toLocaleDateString()
+                            : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          {member.autoRenew ? (
+                            <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">No</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${statusStyle}`}>
+                            {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No monthly pass members found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
@@ -4769,6 +4981,13 @@ export function AdminPanel({
             🏫 Groups
           </Button>
           <Button
+            onClick={() => setCurrentView('monthly-members')}
+            variant={currentView === 'monthly-members' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎟️ Members
+          </Button>
+          <Button
             onClick={() => setCurrentView('settings')}
             variant={currentView === 'settings' ? 'default' : 'outline'}
             size="sm"
@@ -4790,6 +5009,7 @@ export function AdminPanel({
       {currentView === 'products' && renderProducts()}
       {currentView === 'gift-cards' && renderGiftCards()}
       {currentView === 'groups' && <GroupsManager />}
+      {currentView === 'monthly-members' && renderMonthlyMembers()}
       {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}
