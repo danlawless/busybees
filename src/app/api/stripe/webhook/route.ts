@@ -10,6 +10,7 @@ import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { createGiftCard, markGiftCardAsSent } from '@/lib/services/gift-cards';
 import {
   sendGiftCardEmail,
+  sendGiftCardPurchaseConfirmation,
   sendPurchaseConfirmationEmail,
   sendPartyBookingConfirmationEmail,
   sendRefundConfirmationEmail,
@@ -193,6 +194,23 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         console.log('🎁 [Webhook] Gift card email sent successfully to:', deliveryEmail);
       } else {
         console.error('🎁 [Webhook] Failed to send gift card email:', emailResult.error);
+      }
+
+      // Send purchase confirmation to the buyer
+      if (metadata.purchaser_email) {
+        const confirmResult = await sendGiftCardPurchaseConfirmation({
+          to: metadata.purchaser_email,
+          purchaserName: metadata.purchaser_name,
+          recipientName: metadata.recipient_name,
+          recipientEmail: metadata.recipient_email,
+          amount: parseFloat(metadata.amount),
+          deliveryMethod: metadata.delivery_method as 'email_recipient' | 'email_self',
+        });
+        if (confirmResult.success) {
+          console.log('🎁 [Webhook] Purchase confirmation sent to:', metadata.purchaser_email);
+        } else {
+          console.error('🎁 [Webhook] Failed to send purchase confirmation:', confirmResult.error);
+        }
       }
     } catch (error) {
       console.error('🎁 [Webhook] Error processing gift card purchase:', error);

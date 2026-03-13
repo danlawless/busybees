@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/server';
 import { createGiftCard, markGiftCardAsSent } from '@/lib/services/gift-cards';
-import { sendGiftCardEmail } from '@/lib/email/resend';
+import { sendGiftCardEmail, sendGiftCardPurchaseConfirmation } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -132,6 +132,23 @@ export async function GET(request: NextRequest) {
         logger.info({ giftCardId: giftCard.id, to: deliveryEmail }, 'Gift card email sent');
       } else {
         logger.error({ error: emailResult.error, giftCardId: giftCard.id }, 'Failed to send gift card email');
+      }
+
+      // Send purchase confirmation to the buyer
+      if (metadata.purchaser_email) {
+        const confirmResult = await sendGiftCardPurchaseConfirmation({
+          to: metadata.purchaser_email,
+          purchaserName: metadata.purchaser_name,
+          recipientName: metadata.recipient_name,
+          recipientEmail: metadata.recipient_email,
+          amount: parseFloat(metadata.amount),
+          deliveryMethod: metadata.delivery_method as 'email_recipient' | 'email_self',
+        });
+        if (confirmResult.success) {
+          logger.info({ to: metadata.purchaser_email }, 'Gift card purchase confirmation sent');
+        } else {
+          logger.error({ error: confirmResult.error }, 'Failed to send purchase confirmation');
+        }
       }
 
       return NextResponse.json({

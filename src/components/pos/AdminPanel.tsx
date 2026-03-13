@@ -141,7 +141,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -218,6 +218,28 @@ export function AdminPanel({
   const [confirmingCustomerDelete, setConfirmingCustomerDelete] = useState<string | null>(null);
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [customerDeleteError, setCustomerDeleteError] = useState<string | null>(null);
+
+  // Gift card dashboard states
+  interface GiftCardData {
+    id: string;
+    code: string;
+    amount: number;
+    remaining_amount: number;
+    purchaser_email: string;
+    purchaser_name: string;
+    recipient_email: string;
+    recipient_name: string;
+    delivery_method: 'email_recipient' | 'email_self';
+    status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+    email_sent_at: string | null;
+    redeemed_at: string | null;
+    created_at: string;
+  }
+  const [giftCards, setGiftCards] = useState<GiftCardData[]>([]);
+  const [giftCardsLoading, setGiftCardsLoading] = useState(false);
+  const [giftCardsStats, setGiftCardsStats] = useState({ total: 0, totalValue: 0, totalRemaining: 0, pending: 0, sent: 0, redeemed: 0 });
+  const [giftCardSearch, setGiftCardSearch] = useState('');
+  const [giftCardStatusFilter, setGiftCardStatusFilter] = useState<string>('all');
 
   // Staff management states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -485,6 +507,29 @@ export function AdminPanel({
       fetchStaffUsers();
     }
   }, [isAdmin, currentView]);
+
+  // Fetch gift cards when view is selected
+  const fetchGiftCards = async () => {
+    setGiftCardsLoading(true);
+    try {
+      const response = await fetch('/api/admin/gift-cards');
+      if (response.ok) {
+        const data = await response.json();
+        setGiftCards(data.giftCards || []);
+        setGiftCardsStats(data.stats || { total: 0, totalValue: 0, totalRemaining: 0, pending: 0, sent: 0, redeemed: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching gift cards:', error);
+    } finally {
+      setGiftCardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'gift-cards') {
+      fetchGiftCards();
+    }
+  }, [currentView]);
 
   const handleCreateStaffUser = async () => {
     setStaffFormError('');
@@ -4044,6 +4089,170 @@ export function AdminPanel({
     );
   };
 
+  const renderGiftCards = () => {
+    const filteredGiftCards = giftCards.filter(card => {
+      const matchesSearch = giftCardSearch === '' ||
+        card.purchaser_name.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.purchaser_email.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.recipient_name.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.recipient_email.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.code.toLowerCase().includes(giftCardSearch.toLowerCase());
+      const matchesStatus = giftCardStatusFilter === 'all' || card.status === giftCardStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    const statusLabel = (status: string) => {
+      switch (status) {
+        case 'pending': return { text: 'Pending', bg: 'bg-yellow-100', color: 'text-yellow-800' };
+        case 'sent': return { text: 'Sent', bg: 'bg-blue-100', color: 'text-blue-800' };
+        case 'redeemed': return { text: 'Redeemed', bg: 'bg-green-100', color: 'text-green-800' };
+        case 'partially_redeemed': return { text: 'Partial', bg: 'bg-orange-100', color: 'text-orange-800' };
+        default: return { text: status, bg: 'bg-gray-100', color: 'text-gray-800' };
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎁</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Gift Cards</p>
+                <p className="text-xl font-bold text-gray-900">{giftCardsStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">💰</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Value Sold</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(giftCardsStats.totalValue)}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">💳</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Remaining Balance</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(giftCardsStats.totalRemaining)}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Redeemed</p>
+                <p className="text-xl font-bold text-gray-900">{giftCardsStats.redeemed}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, email, or code..."
+              value={giftCardSearch}
+              onChange={(e) => setGiftCardSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <select
+              value={giftCardStatusFilter}
+              onChange={(e) => setGiftCardStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="sent">Sent</option>
+              <option value="partially_redeemed">Partially Redeemed</option>
+              <option value="redeemed">Redeemed</option>
+            </select>
+            <Button onClick={fetchGiftCards} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Gift Cards List */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            Gift Cards ({filteredGiftCards.length})
+          </h3>
+          {giftCardsLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading gift cards...</p>
+          ) : filteredGiftCards.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Date</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Code</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased By</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Recipient</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Amount</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Remaining</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGiftCards.map((card) => {
+                    const status = statusLabel(card.status);
+                    return (
+                      <tr key={card.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2 text-gray-600">
+                          {new Date(card.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-2">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{card.code}</code>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{card.purchaser_name}</div>
+                          <div className="text-xs text-gray-500">{card.purchaser_email}</div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{card.recipient_name}</div>
+                          <div className="text-xs text-gray-500">{card.recipient_email}</div>
+                        </td>
+                        <td className="py-3 px-2 text-right font-semibold">
+                          {formatCurrency(Number(card.amount))}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          {formatCurrency(Number(card.remaining_amount))}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                            {status.text}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No gift cards found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
@@ -4487,6 +4696,13 @@ export function AdminPanel({
             🍕 Products
           </Button>
           <Button
+            onClick={() => setCurrentView('gift-cards')}
+            variant={currentView === 'gift-cards' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎁 Gift Cards
+          </Button>
+          <Button
             onClick={() => setCurrentView('settings')}
             variant={currentView === 'settings' ? 'default' : 'outline'}
             size="sm"
@@ -4506,6 +4722,7 @@ export function AdminPanel({
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
+      {currentView === 'gift-cards' && renderGiftCards()}
       {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}

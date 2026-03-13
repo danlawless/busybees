@@ -158,10 +158,7 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
             Real-Time Availability
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
-            Check Available{' '}
-            <span className="text-gradient bg-gradient-to-r from-honey-500 to-honey-600 bg-clip-text text-transparent">
-              Party Dates
-            </span>
+            Check Availability
           </h2>
           <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
             Browse our calendar to find the perfect date for your party. Click any available date to

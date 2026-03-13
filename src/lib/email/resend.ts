@@ -458,6 +458,144 @@ export async function sendTestGiftCardEmail(data: {
 }
 
 /**
+ * Send purchase confirmation email to the gift card buyer
+ */
+export async function sendGiftCardPurchaseConfirmation(data: {
+  to: string;
+  purchaserName: string;
+  recipientName: string;
+  recipientEmail: string;
+  amount: number;
+  deliveryMethod: 'email_recipient' | 'email_self';
+}): Promise<EmailResult> {
+  const amount = Number(data.amount);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  const deliveredTo = data.deliveryMethod === 'email_self'
+    ? `yourself at ${data.to}`
+    : `${data.recipientName} at ${data.recipientEmail}`;
+
+  const subject = `Order Confirmation — $${amount.toFixed(2)} Busy Bees Gift Card`;
+
+  const text = `
+Gift Card Purchase Confirmation
+
+Hi ${data.purchaserName}!
+
+Thank you for your gift card purchase at Busy Bees Indoor Play Center!
+
+ORDER SUMMARY:
+Gift Card Amount: $${amount.toFixed(2)}
+Recipient: ${data.recipientName}
+Delivered to: ${deliveredTo}
+
+The gift card email has been sent and is ready to use. It never expires and is valid for all purchases at Busy Bees.
+
+Thank you for sharing the fun!
+
+Busy Bees Indoor Play Center
+${siteUrl}
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gift Card Purchase Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center;">
+              <div style="width: 60px; height: 60px; background-color: #d1fae5; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 30px;">✅</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                Purchase Confirmed!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="text-align: center; margin: 0 0 5px; font-size: 18px; font-weight: 600; color: #1f2937;">
+                Hi ${data.purchaserName}!
+              </p>
+              <p style="text-align: center; margin: 0 0 25px; font-size: 15px; color: #6b7280;">
+                Thank you for your gift card purchase!
+              </p>
+
+              <!-- Order Summary -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1f2937;">
+                      🧾 Order Summary
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Gift Card Amount</td>
+                        <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">$${amount.toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Recipient</td>
+                        <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">${data.recipientName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">Delivered to</td>
+                        <td align="right" style="padding: 8px 0; font-size: 14px; color: #1f2937;">${deliveredTo}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="text-align: center; margin: 0 0 25px; font-size: 14px; color: #6b7280;">
+                The gift card has been sent and is ready to use. It never expires and is valid for all purchases at Busy Bees.
+              </p>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">
+                      Thank you for sharing the fun! 🐝
+                    </p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
+                      🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+  });
+}
+
+/**
  * Send welcome email to new customer after signup
  */
 export async function sendWelcomeEmail(data: {
