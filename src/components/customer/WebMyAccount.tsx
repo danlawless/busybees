@@ -76,6 +76,7 @@ function WebMyAccountContent() {
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
+  const [selectedBirthdayChild, setSelectedBirthdayChild] = useState<string>('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
   const [selectedChildrenForFamily, setSelectedChildrenForFamily] = useState<string[]>([]);
@@ -613,7 +614,7 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? effectiveChildId : undefined,
+          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' ? selectedBirthdayChild || undefined : undefined),
           childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
           paymentMethodId: paymentMethod.id,
           quantity: 1,
@@ -1672,6 +1673,46 @@ function WebMyAccountContent() {
                 </Card>
               )}
 
+              {/* Birthday Child Selector */}
+              {children.length > 0 && (
+                <Card className="p-4 mb-4 border-purple-200 bg-purple-50">
+                  <label className="block text-sm font-semibold text-purple-800 mb-2">
+                    🎂 Who is the birthday party for? <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedBirthdayChild}
+                    onChange={(e) => setSelectedBirthdayChild(e.target.value)}
+                    className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                  >
+                    <option value="">Select a child...</option>
+                    {children.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!selectedBirthdayChild && (
+                    <p className="text-xs text-purple-600 mt-1">Please select which child the birthday party is for before purchasing.</p>
+                  )}
+                </Card>
+              )}
+
+              {children.length === 0 && (
+                <Card className="p-4 mb-4 border-yellow-200 bg-yellow-50">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-white">👶</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-yellow-800">Add a Child First</h4>
+                      <p className="text-yellow-600 text-sm">
+                        You need to add a child in the Children tab before booking a birthday party.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
                 <div className="grid gap-4 text-left">
                   {!productsLoaded ? (
@@ -1712,15 +1753,26 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
+                            if (!selectedBirthdayChild) {
+                              setSuccessDetails({
+                                title: 'Birthday Child Required',
+                                message: 'Please select which child the birthday party is for before purchasing.',
+                                variant: 'warning'
+                              });
+                              setShowSuccessModal(true);
+                              return;
+                            }
                             handleConfirmPurchase(product.id);
                           }}
                           size="lg"
-                          disabled={processingProduct === product.id}
+                          disabled={processingProduct === product.id || !selectedBirthdayChild}
                           className={`px-6 py-3 text-white transition-colors ${
                             processingProduct === product.id
                               ? 'bg-purple-500'
                               : savedCards.length === 0
                               ? 'bg-yellow-500 hover:bg-yellow-600'
+                              : !selectedBirthdayChild
+                              ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-purple-600 hover:bg-purple-700'
                           }`}
                         >
@@ -1728,6 +1780,8 @@ function WebMyAccountContent() {
                             ? 'Processing...'
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
+                            : !selectedBirthdayChild
+                            ? 'Select Birthday Child'
                             : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
                         </Button>

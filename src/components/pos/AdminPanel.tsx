@@ -180,6 +180,7 @@ export function AdminPanel({
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
+  const [salesDate, setSalesDate] = useState(new Date().toISOString().split('T')[0]);
   const [dashboardDate, setDashboardDate] = useState(() => {
     const now = new Date();
     return now.toISOString().split('T')[0]; // YYYY-MM-DD in local time
@@ -947,6 +948,10 @@ export function AdminPanel({
     switch (selectedDateRange) {
       case 'today':
         return purchaseDate.toDateString() === now.toDateString();
+      case 'date': {
+        const selected = new Date(salesDate + 'T00:00:00');
+        return purchaseDate.toDateString() === selected.toDateString();
+      }
       case 'week': {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -1581,7 +1586,7 @@ export function AdminPanel({
     <div className="space-y-6">
       {/* Date Filter */}
       <Card className="p-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Time Period:</label>
           <select
             value={selectedDateRange}
@@ -1589,10 +1594,19 @@ export function AdminPanel({
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
           >
             <option value="today">Today</option>
+            <option value="date">Select Date</option>
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="all">All Time</option>
           </select>
+          {selectedDateRange === 'date' && (
+            <input
+              type="date"
+              value={salesDate}
+              onChange={(e) => setSalesDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+            />
+          )}
         </div>
       </Card>
 
