@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { WaiverModal } from '@/components/ui/WaiverModal';
 
 interface GroupChild {
   id: string;
@@ -80,9 +81,14 @@ export function GroupsManager() {
 
   // Waiver state
   const [signingWaiver, setSigningWaiver] = useState<string | null>(null);
+  const [viewingWaiverChild, setViewingWaiverChild] = useState<GroupChild | null>(null);
 
   // Delete state
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  // Group delete state
+  const [confirmingGroupDelete, setConfirmingGroupDelete] = useState<string | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
 
   // Active children + payment state
   const [activeChildIds, setActiveChildIds] = useState<Set<string>>(new Set());
@@ -312,6 +318,25 @@ export function GroupsManager() {
     }
   };
 
+  const handleDeleteGroup = async (groupId: string) => {
+    setDeletingGroup(true);
+    try {
+      const response = await fetch(`/api/admin/groups/${groupId}`, { method: 'DELETE' });
+      if (response.ok) {
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        setConfirmingGroupDelete(null);
+        setSelectedGroup(null);
+      } else {
+        const data = await response.json();
+        console.error('Failed to delete group:', data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting group:', error);
+    } finally {
+      setDeletingGroup(false);
+    }
+  };
+
   const openGroupDetail = (group: GroupSummary) => {
     setSelectedGroup(group);
     fetchChildren(group.id);
@@ -449,18 +474,20 @@ export function GroupsManager() {
                         <td className="py-3 px-2 text-gray-600">{calculateAge(child.birthdate)}</td>
                         <td className="py-3 px-2 text-center">
                           {child.waiver_signed ? (
-                            <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                              Signed
-                            </span>
+                            <button
+                              onClick={() => setViewingWaiverChild(child)}
+                              className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full hover:bg-green-200 cursor-pointer transition-colors"
+                            >
+                              Signed ↗
+                            </button>
                           ) : (
                             <Button
-                              onClick={() => handleSignWaiver(child.id)}
-                              disabled={signingWaiver === child.id}
+                              onClick={() => setViewingWaiverChild(child)}
                               size="sm"
                               variant="outline"
                               className="text-xs"
                             >
-                              {signingWaiver === child.id ? 'Signing...' : 'Sign Waiver'}
+                              Sign Waiver
                             </Button>
                           )}
                         </td>
@@ -505,6 +532,18 @@ export function GroupsManager() {
             <p className="text-gray-500 text-center py-8">No children added yet</p>
           )}
         </Card>
+
+        {/* Waiver Modal */}
+        <WaiverModal
+          isOpen={viewingWaiverChild !== null}
+          onClose={() => setViewingWaiverChild(null)}
+          childName={viewingWaiverChild?.name}
+          onAgree={viewingWaiverChild && !viewingWaiverChild.waiver_signed ? () => {
+            handleSignWaiver(viewingWaiverChild.id);
+            setViewingWaiverChild(null);
+          } : undefined}
+          isSubmitting={signingWaiver !== null}
+        />
 
         {/* Payment Section */}
         {children.length > 0 && (
@@ -728,29 +767,67 @@ export function GroupsManager() {
         ) : filteredGroups.length > 0 ? (
           <div className="space-y-3">
             {filteredGroups.map((group) => (
-              <div
-                key={group.id}
-                onClick={() => openGroupDetail(group)}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-gray-900">{group.groupName}</p>
-                  <p className="text-sm text-gray-600">
-                    Contact: {group.contactName} • {group.phone}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{group.childCount} children</p>
-                  <div className="flex items-center gap-2 text-xs">
-                    {group.waiversPending > 0 ? (
-                      <span className="text-red-600">{group.waiversPending} waivers pending</span>
-                    ) : group.childCount > 0 ? (
-                      <span className="text-green-600">All waivers signed</span>
-                    ) : (
-                      <span className="text-gray-400">No children</span>
-                    )}
+              <div key={group.id} className="relative">
+                {confirmingGroupDelete === group.id ? (
+                  <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">
+                      Delete <strong>{group.groupName}</strong> and all {group.childCount} children?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setConfirmingGroupDelete(null)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteGroup(group.id)}
+                        size="sm"
+                        disabled={deletingGroup}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        {deletingGroup ? 'Deleting...' : 'Confirm Delete'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    onClick={() => openGroupDetail(group)}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900">{group.groupName}</p>
+                      <p className="text-sm text-gray-600">
+                        Contact: {group.contactName} • {group.phone}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{group.childCount} children</p>
+                        <div className="flex items-center gap-2 text-xs">
+                          {group.waiversPending > 0 ? (
+                            <span className="text-red-600">{group.waiversPending} waivers pending</span>
+                          ) : group.childCount > 0 ? (
+                            <span className="text-green-600">All waivers signed</span>
+                          ) : (
+                            <span className="text-gray-400">No children</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmingGroupDelete(group.id);
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete group"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
