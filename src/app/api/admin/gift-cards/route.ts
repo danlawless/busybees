@@ -17,6 +17,7 @@ export async function GET() {
     const { data: giftCards, error } = await supabase
       .from('gift_cards')
       .select('id, code, amount, remaining_amount, purchaser_email, purchaser_name, recipient_email, recipient_name, delivery_method, status, email_sent_at, redeemed_at, created_at')
+      .neq('status', 'expired')
       .order('created_at', { ascending: false });
 
     if (error) {
