@@ -460,6 +460,24 @@ function WebMyAccountContent() {
     setConfirmTimeout(timeout);
   };
 
+  // Children who already have an active day pass purchased today (prevents double-assigning)
+  const childrenWithDayPassToday = new Set(
+    purchases
+      .filter(p => {
+        if (p.type !== 'day_pass' || p.status === 'refunded') return false;
+        const today = new Date().toDateString();
+        return new Date(p.purchaseDate).toDateString() === today;
+      })
+      .map(p => p.childId)
+      .filter(Boolean)
+  );
+
+  const isSelectedProductDayPass = (() => {
+    const product = availablePasses.find(p => p.id === selectedProductForPurchase);
+    if (!product) return false;
+    return product.category === 'day' || product.name?.toLowerCase().includes('day');
+  })();
+
   const handleChildSelectionForPurchase = (childId: string) => {
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
@@ -1403,7 +1421,21 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            const eligibleChildren = children.filter(c => c.waiverSigned);
+                            const isDayPass = product.category === 'day' || product.name?.toLowerCase().includes('day');
+                            const eligibleChildren = children.filter(c =>
+                              c.waiverSigned && !(isDayPass && childrenWithDayPassToday.has(c.id))
+                            );
+                            if (eligibleChildren.length === 0) {
+                              setSuccessDetails({
+                                title: 'No Eligible Children',
+                                message: isDayPass
+                                  ? 'All children already have a day pass for today.'
+                                  : 'No children with signed waivers available.',
+                                variant: 'warning'
+                              });
+                              setShowSuccessModal(true);
+                              return;
+                            }
                             if (eligibleChildren.length === 1) {
                               handleConfirmPurchase(product.id, eligibleChildren[0].id);
                             } else {
@@ -1832,23 +1864,37 @@ function WebMyAccountContent() {
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {children
                   .filter(child => child.waiverSigned)
-                  .map(child => (
-                    <button
-                      key={child.id}
-                      onClick={() => handleChildSelectionForPurchase(child.id)}
-                      className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">{child.name}</p>
-                          <p className="text-sm text-gray-600">Age: {child.age}</p>
+                  .map(child => {
+                    const hasDayPassToday = isSelectedProductDayPass && childrenWithDayPassToday.has(child.id);
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => !hasDayPassToday && handleChildSelectionForPurchase(child.id)}
+                        disabled={hasDayPassToday}
+                        className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                          hasDayPassToday
+                            ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                            : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-medium ${hasDayPassToday ? 'text-gray-400' : 'text-gray-900'}`}>{child.name}</p>
+                            <p className="text-sm text-gray-600">Age: {child.age}</p>
+                          </div>
+                          {hasDayPassToday ? (
+                            <div className="text-gray-400 text-sm">
+                              Already has a day pass today
+                            </div>
+                          ) : (
+                            <div className="text-green-600">
+                              ✅ Waiver Signed
+                            </div>
+                          )}
                         </div>
-                        <div className="text-green-600">
-                          ✅ Waiver Signed
-                        </div>
-                      </div>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 }
               </div>
 
