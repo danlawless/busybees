@@ -50,7 +50,7 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Book your party online! We recommend booking at least a week in advance, especially for weekend slots. We offer three party packages (Basic Bee, Worker Bee and Queen Bee) in both Private and Semi-Private options. Semi-Private packages ($400 - $500) include an exclusive party room with shared play area. Private packages ($475 - $575) include exclusive use of the entire facility.'
+        answer: 'Once you log in to your account, parties can be purchased under the Parties section. We recommend booking at least a week in advance, especially for weekend slots. We offer three party packages: Basic Bee ($475), Worker Bee ($525), and Queen Bee ($575) — all include exclusive use of the entire facility.'
       },
       {
         question: 'What\'s included in party packages?',
@@ -75,7 +75,7 @@ const faqs = [
       },
       {
         question: 'How does the monthly membership work?',
-        answer: 'Our monthly membership is perfect for families who visit regularly! Toddler membership (ages 2+) is $100 for the first child, with discounts for additional children (10% off second child at $90, 20% off third child at $80). Infant membership (under 2) is $70. Memberships include unlimited visits and member-exclusive events. It pays for itself after just 6 visits!'
+        answer: 'Once your monthly membership is used or activated, it starts a 1-month calendar timer until its expiration. During that month you can enjoy unlimited visits for your child. Monthly memberships default to auto-renew upon expiration, however auto-renew can be turned off in the My Account section.'
       },
       {
         question: 'Do punch cards expire?',
@@ -88,31 +88,6 @@ const faqs = [
       {
         question: 'Can grandparents bring their grandchildren?',
         answer: 'Of course! Any responsible adult can supervise children at Busy Bees. We just require that children are actively supervised at all times during their visit.'
-      }
-    ]
-  },
-  {
-    category: 'Classes & Programs',
-    questions: [
-      {
-        question: 'What classes do you offer?',
-        answer: 'We offer a variety of structured programs including Mommy and Me, Story Time, Kids Yoga, Lego Build, Toddler Tunes, Zumbini, and New Parent Support Group. Each class is designed for specific age ranges and developmental goals.'
-      },
-      {
-        question: 'Do I need to register for classes in advance?',
-        answer: 'Yes, class registration is required as space is limited. Members receive a 10% discount on all classes. Contact us to register or check availability for upcoming sessions.'
-      },
-      {
-        question: 'What ages are the classes for?',
-        answer: 'Our classes range from infants (0-12 months) to preschoolers (up to 6 years). Each class listing includes the recommended age range. We also have programs for parents, like our New Parent Support Group.'
-      },
-      {
-        question: 'Can I try a class before committing?',
-        answer: 'Absolutely! We offer drop-in rates for most classes so you can try before signing up for a full session. Contact us to learn about trial options for specific programs.'
-      },
-      {
-        question: 'What should my child wear to classes?',
-        answer: 'Comfortable, play-friendly clothing is recommended. For Kids Yoga, loose-fitting clothes work best. For all classes, remember that socks are required in our play areas for safety and hygiene.'
       }
     ]
   }
