@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       productDescription,
       purchaseType,
       childId,
+      childrenIds = [] as string[],
       quantity = 1,
       paymentMethodId,
       useGiftCardBalance = true,
@@ -222,6 +223,12 @@ export async function POST(request: NextRequest) {
         throw dbError;
       }
 
+      // Link children for family passes via purchase_children table
+      if (childrenIds.length > 0) {
+        const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
+        await adminSupabase.from('purchase_children').insert(rows);
+      }
+
       // Deduct gift card and record amount used (separate update to avoid column-missing failures)
       await applyGiftCardBalance(user.id, giftCardAmountUsed);
       if (giftCardAmountUsed > 0) {
@@ -334,6 +341,12 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info({ ...logContext, purchaseId: purchase.id }, '✅ Purchase record saved');
+
+    // Link children for family passes via purchase_children table
+    if (childrenIds.length > 0) {
+      const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
+      await adminSupabase.from('purchase_children').insert(rows);
+    }
 
     // Deduct gift card balance and record amount used (separate operations)
     if (giftCardAmountUsed > 0) {

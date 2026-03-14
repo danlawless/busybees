@@ -77,6 +77,7 @@ function WebMyAccountContent() {
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+  const [selectedChildrenForFamily, setSelectedChildrenForFamily] = useState<string[]>([]);
 
   // Party scheduling state
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
@@ -460,6 +461,16 @@ function WebMyAccountContent() {
     setConfirmTimeout(timeout);
   };
 
+  // Helper to detect family passes
+  const isFamilyPass = (productName: string): boolean => {
+    return productName.toLowerCase().includes('family');
+  };
+
+  const isSelectedProductFamily = (() => {
+    const product = availablePasses.find(p => p.id === selectedProductForPurchase);
+    return product ? isFamilyPass(product.name) : false;
+  })();
+
   // Children who already have an active day pass purchased today (prevents double-assigning)
   const childrenWithDayPassToday = new Set(
     purchases
@@ -492,7 +503,23 @@ function WebMyAccountContent() {
     return defaultCard || savedCards[0] || null;
   };
 
-  const handleConfirmPurchase = async (productId: string, childId?: string) => {
+  const handleFamilyPassConfirm = () => {
+    if (selectedChildrenForFamily.length === 0) return;
+    setShowChildSelectionModal(false);
+    if (selectedProductForPurchase) {
+      handleConfirmPurchase(selectedProductForPurchase, selectedChildrenForFamily[0], selectedChildrenForFamily);
+    }
+  };
+
+  const toggleChildForFamily = (childId: string) => {
+    setSelectedChildrenForFamily(prev =>
+      prev.includes(childId)
+        ? prev.filter(id => id !== childId)
+        : [...prev, childId]
+    );
+  };
+
+  const handleConfirmPurchase = async (productId: string, childId?: string, familyChildIds?: string[]) => {
     setConfirmingProduct(null);
     if (confirmTimeout) {
       clearTimeout(confirmTimeout);
@@ -586,6 +613,7 @@ function WebMyAccountContent() {
           productDescription: product.description,
           purchaseType: purchaseType,
           childId: isPassPurchase ? effectiveChildId : undefined,
+          childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
           paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
@@ -1422,6 +1450,7 @@ function WebMyAccountContent() {
                               return;
                             }
                             const isDayPass = product.category === 'day' || product.name?.toLowerCase().includes('day');
+                            const isFamilyProduct = isFamilyPass(product.name);
                             const eligibleChildren = children.filter(c =>
                               c.waiverSigned && !(isDayPass && childrenWithDayPassToday.has(c.id))
                             );
@@ -1436,7 +1465,12 @@ function WebMyAccountContent() {
                               setShowSuccessModal(true);
                               return;
                             }
-                            if (eligibleChildren.length === 1) {
+                            if (isFamilyProduct) {
+                              // Family pass: always show multi-child selector
+                              setSelectedChildrenForFamily([]);
+                              setSelectedProductForPurchase(product.id);
+                              setShowChildSelectionModal(true);
+                            } else if (eligibleChildren.length === 1) {
                               handleConfirmPurchase(product.id, eligibleChildren[0].id);
                             } else {
                               setSelectedProductForPurchase(product.id);
@@ -1856,9 +1890,14 @@ function WebMyAccountContent() {
                 ✕
               </button>
 
-              <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                {isSelectedProductFamily ? 'Select Children for Family Pass' : 'Select Child for Pass'}
+              </h3>
               <p className="text-gray-600 mb-4">
-                Which child is this {availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?
+                {isSelectedProductFamily
+                  ? `Select which children this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} covers. All selected children can check in for the duration of the pass.`
+                  : `Which child is this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?`
+                }
               </p>
 
               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -1866,6 +1905,32 @@ function WebMyAccountContent() {
                   .filter(child => child.waiverSigned)
                   .map(child => {
                     const hasDayPassToday = isSelectedProductDayPass && childrenWithDayPassToday.has(child.id);
+
+                    if (isSelectedProductFamily) {
+                      const isSelected = selectedChildrenForFamily.includes(child.id);
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => toggleChildForFamily(child.id)}
+                          className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                            isSelected
+                              ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                              : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{child.name}</p>
+                              <p className="text-sm text-gray-600">Age: {child.age}</p>
+                            </div>
+                            <div className={isSelected ? 'text-green-600' : 'text-gray-300'}>
+                              {isSelected ? '✅ Selected' : '○ Tap to select'}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    }
+
                     return (
                       <button
                         key={child.id}
@@ -1920,11 +1985,20 @@ function WebMyAccountContent() {
                   onClick={() => {
                     setShowChildSelectionModal(false);
                     setSelectedProductForPurchase('');
+                    setSelectedChildrenForFamily([]);
                   }}
                   variant="secondary"
                 >
                   Cancel
                 </Button>
+                {isSelectedProductFamily && selectedChildrenForFamily.length > 0 && (
+                  <Button
+                    onClick={handleFamilyPassConfirm}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Confirm {selectedChildrenForFamily.length} Child{selectedChildrenForFamily.length > 1 ? 'ren' : ''}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
