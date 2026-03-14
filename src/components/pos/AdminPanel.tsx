@@ -142,7 +142,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -266,6 +266,27 @@ export function AdminPanel({
   const [monthlyMembersStats, setMonthlyMembersStats] = useState({ total: 0, active: 0, expired: 0, autoRenewEnabled: 0 });
   const [monthlyMemberSearch, setMonthlyMemberSearch] = useState('');
   const [monthlyMemberStatusFilter, setMonthlyMemberStatusFilter] = useState<string>('all');
+
+  // Punch cards state
+  interface PunchCardData {
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string | null;
+    childName: string | null;
+    passName: string;
+    price: number;
+    purchaseDate: string;
+    firstUseDate: string | null;
+    expiryDate: string | null;
+    usedSessions: number;
+    totalSessions: number;
+    remainingSessions: number;
+  }
+  const [punchCards, setPunchCards] = useState<PunchCardData[]>([]);
+  const [punchCardsLoading, setPunchCardsLoading] = useState(false);
+  const [punchCardsStats, setPunchCardsStats] = useState({ total: 0, totalRemaining: 0, totalUsed: 0 });
+  const [punchCardSearch, setPunchCardSearch] = useState('');
 
   // Staff management states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -599,6 +620,28 @@ export function AdminPanel({
   useEffect(() => {
     if (currentView === 'monthly-members') {
       fetchMonthlyMembers();
+    }
+  }, [currentView]);
+
+  const fetchPunchCards = async () => {
+    setPunchCardsLoading(true);
+    try {
+      const response = await fetch('/api/admin/punch-cards');
+      if (response.ok) {
+        const data = await response.json();
+        setPunchCards(data.cards || []);
+        setPunchCardsStats(data.stats || { total: 0, totalRemaining: 0, totalUsed: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching punch cards:', error);
+    } finally {
+      setPunchCardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'punch-cards') {
+      fetchPunchCards();
     }
   }, [currentView]);
 
@@ -1582,19 +1625,32 @@ export function AdminPanel({
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Sales by Product Type</h3>
         <div className="space-y-3">
-          {['day_pass', 'monthly_pass', 'party_package', 'food_beverage'].map(type => {
-            const purchases = filteredPurchases.filter(p => p.type === type);
-            const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
-            return (
-              <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium capitalize">{type.replace(/_/g, ' ')}</p>
-                  <p className="text-sm text-gray-600">{purchases.length} sold</p>
+          {(() => {
+            const punchCardFilter = (p: Purchase) => p.type === 'weekly_pass' || p.name.toLowerCase().includes('punch');
+            const dayPassFilter = (p: Purchase) => p.type === 'day_pass' && !p.name.toLowerCase().includes('punch');
+
+            const categories = [
+              { key: 'day_pass', label: 'Day Pass', filter: dayPassFilter },
+              { key: 'punch_card', label: 'Punch Card', filter: punchCardFilter },
+              { key: 'monthly_pass', label: 'Monthly Pass', filter: (p: Purchase) => p.type === 'monthly_pass' },
+              { key: 'party_package', label: 'Party Package', filter: (p: Purchase) => p.type === 'party_package' },
+              { key: 'food_beverage', label: 'Food & Beverage', filter: (p: Purchase) => p.type === 'food_beverage' },
+            ];
+
+            return categories.map(({ key, label, filter }) => {
+              const purchases = filteredPurchases.filter(filter);
+              const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
+              return (
+                <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium">{label}</p>
+                    <p className="text-sm text-gray-600">{purchases.length} sold</p>
+                  </div>
+                  <p className="font-semibold">{formatCurrency(revenue)}</p>
                 </div>
-                <p className="font-semibold">{formatCurrency(revenue)}</p>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </Card>
     </div>
@@ -4538,6 +4594,139 @@ export function AdminPanel({
     );
   };
 
+  const renderPunchCards = () => {
+    const filtered = punchCards.filter(c => {
+      if (punchCardSearch === '') return true;
+      const search = punchCardSearch.toLowerCase();
+      return (
+        c.customerName.toLowerCase().includes(search) ||
+        c.customerPhone.includes(search) ||
+        (c.customerEmail?.toLowerCase().includes(search)) ||
+        (c.childName?.toLowerCase().includes(search)) ||
+        c.passName.toLowerCase().includes(search)
+      );
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎫</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Active Punch Cards</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Visits Remaining</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.totalRemaining}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">📊</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Visits Used</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.totalUsed}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, phone, email, or child..."
+              value={punchCardSearch}
+              onChange={(e) => setPunchCardSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <Button onClick={fetchPunchCards} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Punch Cards Table */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Active Punch Cards ({filtered.length})</h3>
+          {punchCardsLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading punch cards...</p>
+          ) : filtered.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Child</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Pass</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Used</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Remaining</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">First Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((card) => (
+                    <tr key={card.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-2">
+                        <div className="font-medium text-gray-900">{card.customerName}</div>
+                        <div className="text-xs text-gray-500">{card.customerPhone}</div>
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {card.childName || '—'}
+                      </td>
+                      <td className="py-3 px-2 text-gray-900">{card.passName}</td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="text-gray-600">{card.usedSessions} / {card.totalSessions}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                          card.remainingSessions <= 2
+                            ? 'bg-red-100 text-red-800'
+                            : card.remainingSessions <= 5
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {card.remainingSessions} visits left
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {new Date(card.purchaseDate).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {card.firstUseDate
+                          ? new Date(card.firstUseDate).toLocaleDateString()
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No active punch cards found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
@@ -5002,6 +5191,13 @@ export function AdminPanel({
             🎟️ Members
           </Button>
           <Button
+            onClick={() => setCurrentView('punch-cards')}
+            variant={currentView === 'punch-cards' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎫 Punch Cards
+          </Button>
+          <Button
             onClick={() => setCurrentView('settings')}
             variant={currentView === 'settings' ? 'default' : 'outline'}
             size="sm"
@@ -5024,6 +5220,7 @@ export function AdminPanel({
       {currentView === 'gift-cards' && renderGiftCards()}
       {currentView === 'groups' && <GroupsManager />}
       {currentView === 'monthly-members' && renderMonthlyMembers()}
+      {currentView === 'punch-cards' && renderPunchCards()}
       {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}
