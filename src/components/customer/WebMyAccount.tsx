@@ -15,6 +15,7 @@ import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { WaiverModal } from '@/components/ui/WaiverModal';
+import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
 import { parseDateString } from '@/lib/utils';
@@ -1644,6 +1645,12 @@ function WebMyAccountContent() {
                 </div>
               </div>
             )}
+
+            {/* Check Availability Calendar */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">📅 Check Party Availability</h3>
+              <PartyAvailabilityCalendar />
+            </div>
 
             {/* Purchase New Party Packages */}
             <div>
