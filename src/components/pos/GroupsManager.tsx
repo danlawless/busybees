@@ -36,7 +36,7 @@ interface SavedCard {
   is_default: boolean;
 }
 
-const PRICE_PER_CHILD = 10;
+const PRICE_PER_CHILD = 15;
 
 interface GroupsStats {
   total: number;

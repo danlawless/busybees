@@ -11,7 +11,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const PRICE_PER_CHILD = 10;
+const PRICE_PER_CHILD = 15;
 
 const GroupPaymentSchema = z.object({
   payment_method_id: z.string().min(1, 'Payment method required'),
