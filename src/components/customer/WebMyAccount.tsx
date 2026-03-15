@@ -76,7 +76,7 @@ function WebMyAccountContent() {
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
-  const [selectedBirthdayChild, setSelectedBirthdayChild] = useState<string>('');
+  const [selectedBirthdayChildren, setSelectedBirthdayChildren] = useState<Set<string>>(new Set());
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
   const [selectedChildrenForFamily, setSelectedChildrenForFamily] = useState<string[]>([]);
@@ -614,7 +614,8 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' ? selectedBirthdayChild || undefined : undefined),
+          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
+          childrenIds: purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined,
           childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
           paymentMethodId: paymentMethod.id,
           quantity: 1,
@@ -1679,20 +1680,48 @@ function WebMyAccountContent() {
                   <label className="block text-sm font-semibold text-purple-800 mb-2">
                     🎂 Who is the birthday party for? <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={selectedBirthdayChild}
-                    onChange={(e) => setSelectedBirthdayChild(e.target.value)}
-                    className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                  >
-                    <option value="">Select a child...</option>
-                    {children.map((child) => (
-                      <option key={child.id} value={child.id}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!selectedBirthdayChild && (
-                    <p className="text-xs text-purple-600 mt-1">Please select which child the birthday party is for before purchasing.</p>
+                  <div className="space-y-2">
+                    {children.map((child) => {
+                      const isSelected = selectedBirthdayChildren.has(child.id);
+                      return (
+                        <label
+                          key={child.id}
+                          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'border-purple-500 bg-purple-100'
+                              : 'border-purple-200 bg-white hover:border-purple-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedBirthdayChildren(prev => {
+                                const next = new Set(prev);
+                                if (next.has(child.id)) {
+                                  next.delete(child.id);
+                                } else {
+                                  next.add(child.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                          />
+                          <span className={`text-sm font-medium ${isSelected ? 'text-purple-800' : 'text-gray-700'}`}>
+                            {child.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedBirthdayChildren.size === 0 && (
+                    <p className="text-xs text-purple-600 mt-2">Select which child(ren) the birthday party is for before purchasing.</p>
+                  )}
+                  {selectedBirthdayChildren.size > 0 && (
+                    <p className="text-xs text-purple-700 mt-2 font-medium">
+                      Party for: {children.filter(c => selectedBirthdayChildren.has(c.id)).map(c => c.name).join(', ')}
+                    </p>
                   )}
                 </Card>
               )}
@@ -1753,10 +1782,10 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            if (!selectedBirthdayChild) {
+                            if (selectedBirthdayChildren.size === 0) {
                               setSuccessDetails({
                                 title: 'Birthday Child Required',
-                                message: 'Please select which child the birthday party is for before purchasing.',
+                                message: 'Please select which child(ren) the birthday party is for before purchasing.',
                                 variant: 'warning'
                               });
                               setShowSuccessModal(true);
@@ -1765,13 +1794,13 @@ function WebMyAccountContent() {
                             handleConfirmPurchase(product.id);
                           }}
                           size="lg"
-                          disabled={processingProduct === product.id || !selectedBirthdayChild}
+                          disabled={processingProduct === product.id || selectedBirthdayChildren.size === 0}
                           className={`px-6 py-3 text-white transition-colors ${
                             processingProduct === product.id
                               ? 'bg-purple-500'
                               : savedCards.length === 0
                               ? 'bg-yellow-500 hover:bg-yellow-600'
-                              : !selectedBirthdayChild
+                              : selectedBirthdayChildren.size === 0
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-purple-600 hover:bg-purple-700'
                           }`}
@@ -1780,7 +1809,7 @@ function WebMyAccountContent() {
                             ? 'Processing...'
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
-                            : !selectedBirthdayChild
+                            : selectedBirthdayChildren.size === 0
                             ? 'Select Birthday Child'
                             : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
