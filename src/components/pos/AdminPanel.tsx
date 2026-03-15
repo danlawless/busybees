@@ -180,10 +180,13 @@ export function AdminPanel({
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
-  const [salesDate, setSalesDate] = useState(new Date().toISOString().split('T')[0]);
+  const [salesDate, setSalesDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [dashboardDate, setDashboardDate] = useState(() => {
     const now = new Date();
-    return now.toISOString().split('T')[0]; // YYYY-MM-DD in local time
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
   const [updatingPosMode, setUpdatingPosMode] = useState(false);
@@ -434,6 +437,10 @@ export function AdminPanel({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetail, setShowCustomerDetail] = useState(false);
 
+  // Top customers leaderboard
+  const [topCustomers, setTopCustomers] = useState<{ rank: number; customerId: string; name: string; email: string; phone: string; checkInCount: number; hasActiveMonthlyPass: boolean; hasActivePunchCard: boolean; totalSpend: number }[]>([]);
+  const [topCustomersLoading, setTopCustomersLoading] = useState(false);
+
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
@@ -484,6 +491,28 @@ export function AdminPanel({
     if (currentView === 'newsletter') {
       fetchNewsletterSubscribers();
       checkEmailConfig();
+    }
+  }, [currentView]);
+
+  // Fetch top customers leaderboard when sales view is selected
+  const fetchTopCustomers = async () => {
+    setTopCustomersLoading(true);
+    try {
+      const response = await fetch('/api/admin/top-customers');
+      if (response.ok) {
+        const data = await response.json();
+        setTopCustomers(data.topCustomers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch top customers:', error);
+    } finally {
+      setTopCustomersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'sales') {
+      fetchTopCustomers();
     }
   }, [currentView]);
 
@@ -1307,7 +1336,7 @@ export function AdminPanel({
           <input
             type="date"
             value={dashboardDate}
-            max={new Date().toISOString().split('T')[0]}
+            max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()}
             onChange={(e) => setDashboardDate(e.target.value)}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -1666,6 +1695,74 @@ export function AdminPanel({
             });
           })()}
         </div>
+      </Card>
+
+      {/* Top 10 Customers by Check-Ins */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Top 10 Customers by Check-Ins</h3>
+        {topCustomersLoading ? (
+          <p className="text-gray-500 text-center py-4">Loading...</p>
+        ) : topCustomers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Rank</th>
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Contact</th>
+                  <th className="text-center py-3 px-2 font-medium text-gray-600">Monthly Pass</th>
+                  <th className="text-center py-3 px-2 font-medium text-gray-600">Punch Card</th>
+                  <th className="text-right py-3 px-2 font-medium text-gray-600">Total Spend</th>
+                  <th className="text-right py-3 px-2 font-medium text-gray-600">Check-Ins</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topCustomers.map((customer) => (
+                  <tr key={customer.customerId} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-2">
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                        customer.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                        customer.rank === 2 ? 'bg-gray-100 text-gray-700' :
+                        customer.rank === 3 ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-50 text-gray-600'
+                      }`}>
+                        {customer.rank}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 font-medium text-gray-900">{customer.name}</td>
+                    <td className="py-3 px-2 text-gray-600">
+                      {customer.phone || customer.email || '—'}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      {customer.hasActiveMonthlyPass ? (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">No</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      {customer.hasActivePunchCard ? (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">No</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-2 text-right font-medium text-green-700">
+                      {formatCurrency(customer.totalSpend)}
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <span className="inline-flex items-center gap-1 font-semibold text-blue-700">
+                        {customer.checkInCount}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">No check-in data available</p>
+        )}
       </Card>
     </div>
   );
