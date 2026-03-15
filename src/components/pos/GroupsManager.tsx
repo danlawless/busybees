@@ -75,7 +75,7 @@ export function GroupsManager() {
 
   // Add child form state
   const [showAddChild, setShowAddChild] = useState(false);
-  const [childForm, setChildForm] = useState({ name: '', birthdate: '' });
+  const [childForm, setChildForm] = useState({ firstName: '', lastName: '', birthdate: '' });
   const [addChildError, setAddChildError] = useState('');
   const [addingChild, setAddingChild] = useState(false);
 
@@ -89,6 +89,11 @@ export function GroupsManager() {
   // Group delete state
   const [confirmingGroupDelete, setConfirmingGroupDelete] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
+
+  // Group edit state
+  const [editingGroup, setEditingGroup] = useState(false);
+  const [editForm, setEditForm] = useState({ group_name: '', contact_name: '', phone: '', email: '' });
+  const [savingGroup, setSavingGroup] = useState(false);
 
   // Active children + payment state
   const [activeChildIds, setActiveChildIds] = useState<Set<string>>(new Set());
@@ -241,7 +246,7 @@ export function GroupsManager() {
       const response = await fetch(`/api/admin/groups/${selectedGroup.id}/children`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(childForm),
+        body: JSON.stringify({ name: `${childForm.firstName.trim()} ${childForm.lastName.trim()}`, birthdate: childForm.birthdate }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -250,7 +255,7 @@ export function GroupsManager() {
       }
       setChildren(prev => [...prev, data.child]);
       setShowAddChild(false);
-      setChildForm({ name: '', birthdate: '' });
+      setChildForm({ firstName: '', lastName: '', birthdate: '' });
       // Update group summary
       setGroups(prev => prev.map(g =>
         g.id === selectedGroup.id
@@ -337,6 +342,37 @@ export function GroupsManager() {
     }
   };
 
+  const handleSaveGroup = async () => {
+    if (!selectedGroup) return;
+    setSavingGroup(true);
+    try {
+      const response = await fetch(`/api/admin/groups/${selectedGroup.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      if (response.ok) {
+        const updated = {
+          ...selectedGroup,
+          groupName: editForm.group_name,
+          contactName: editForm.contact_name,
+          phone: editForm.phone,
+          email: editForm.email || null,
+        };
+        setSelectedGroup(updated);
+        setGroups(prev => prev.map(g => g.id === updated.id ? updated : g));
+        setEditingGroup(false);
+      } else {
+        const data = await response.json();
+        console.error('Failed to update group:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating group:', error);
+    } finally {
+      setSavingGroup(false);
+    }
+  };
+
   const openGroupDetail = (group: GroupSummary) => {
     setSelectedGroup(group);
     fetchChildren(group.id);
@@ -366,45 +402,118 @@ export function GroupsManager() {
 
         {/* Group Header */}
         <Card className="p-6">
-          <div className="flex items-start justify-between">
+          {editingGroup ? (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{selectedGroup.groupName}</h2>
-              <p className="text-gray-600 mt-1">Contact: {selectedGroup.contactName}</p>
-              <p className="text-sm text-gray-500">{selectedGroup.phone} {selectedGroup.email ? `• ${selectedGroup.email}` : ''}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">{children.length} / 30 children</p>
-              <div className="w-32 h-2 bg-gray-200 rounded-full mt-1">
-                <div
-                  className="h-2 bg-amber-500 rounded-full transition-all"
-                  style={{ width: `${(children.length / 30) * 100}%` }}
-                />
+              <h3 className="text-lg font-semibold mb-4">Edit Group Info</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+                  <input
+                    type="text"
+                    value={editForm.group_name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, group_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    value={editForm.contact_name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, contact_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={handleSaveGroup}
+                  disabled={savingGroup || !editForm.group_name || !editForm.contact_name || !editForm.phone}
+                  size="sm"
+                >
+                  {savingGroup ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button onClick={() => setEditingGroup(false)} variant="outline" size="sm">
+                  Cancel
+                </Button>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedGroup.groupName}</h2>
+                <p className="text-gray-600 mt-1">Contact: {selectedGroup.contactName}</p>
+                <p className="text-sm text-gray-500">{selectedGroup.phone} {selectedGroup.email ? `• ${selectedGroup.email}` : ''}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-gray-600">{children.length} children</p>
+                <Button
+                  onClick={() => {
+                    setEditForm({
+                      group_name: selectedGroup.groupName,
+                      contact_name: selectedGroup.contactName,
+                      phone: selectedGroup.phone,
+                      email: selectedGroup.email || '',
+                    });
+                    setEditingGroup(true);
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  ✏️ Edit
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Add Child */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Children ({children.length})</h3>
-            {children.length < 30 && (
-              <Button onClick={() => setShowAddChild(!showAddChild)} size="sm">
-                {showAddChild ? 'Cancel' : '+ Add Child'}
-              </Button>
-            )}
+            <Button onClick={() => setShowAddChild(!showAddChild)} size="sm">
+              {showAddChild ? 'Cancel' : '+ Add Child'}
+            </Button>
           </div>
 
           {showAddChild && (
             <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Child Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                   <input
                     type="text"
-                    value={childForm.name}
-                    onChange={(e) => setChildForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Full name"
+                    value={childForm.firstName}
+                    onChange={(e) => setChildForm(prev => ({ ...prev, firstName: e.target.value }))}
+                    placeholder="First name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={childForm.lastName}
+                    onChange={(e) => setChildForm(prev => ({ ...prev, lastName: e.target.value }))}
+                    placeholder="Last name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
@@ -422,7 +531,7 @@ export function GroupsManager() {
               {addChildError && <p className="text-red-600 text-sm mt-2">{addChildError}</p>}
               <Button
                 onClick={handleAddChild}
-                disabled={addingChild || !childForm.name || !childForm.birthdate}
+                disabled={addingChild || !childForm.firstName || !childForm.lastName || !childForm.birthdate}
                 size="sm"
                 className="mt-3"
               >

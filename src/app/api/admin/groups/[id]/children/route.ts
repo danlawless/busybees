@@ -1,7 +1,7 @@
 /**
  * API Route: Group Children Management
  * GET - List all children in a group
- * POST - Add a child to the group (max 30)
+ * POST - Add a child to the group
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,6 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const MAX_GROUP_CHILDREN = 30;
 
 const AddChildSchema = z.object({
   name: z.string().min(1, 'Child name is required').max(200),
@@ -82,19 +81,6 @@ export async function POST(
 
     if (!group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
-    }
-
-    // Check child count limit
-    const { count } = await supabase
-      .from('children')
-      .select('id', { count: 'exact', head: true })
-      .eq('customer_id', groupId);
-
-    if ((count || 0) >= MAX_GROUP_CHILDREN) {
-      return NextResponse.json(
-        { error: `Maximum of ${MAX_GROUP_CHILDREN} children per group` },
-        { status: 400 }
-      );
     }
 
     const { data: child, error: insertError } = await supabase

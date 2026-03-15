@@ -1,5 +1,6 @@
 /**
  * API Route: Admin Group by ID
+ * PATCH - Update group contact info
  * DELETE - Delete a group account and all its children
  *
  * Uses admin client to bypass RLS since POS staff auth is PIN-based.
@@ -8,6 +9,67 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const UpdateGroupSchema = z.object({
+  group_name: z.string().min(1).max(200).optional(),
+  contact_name: z.string().min(1).max(200).optional(),
+  phone: z.string().min(1).max(30).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: groupId } = await params;
+
+  try {
+    const supabase = createAdminClient();
+    const body = await request.json();
+    const parsed = UpdateGroupSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 });
+    }
+
+    // Verify group exists
+    const { data: group, error: fetchError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', groupId)
+      .eq('is_group', true)
+      .single();
+
+    if (fetchError || !group) {
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    // Build update object
+    const updates: Record<string, string> = {};
+    if (parsed.data.group_name !== undefined) updates.group_name = parsed.data.group_name;
+    if (parsed.data.contact_name !== undefined) updates.name = parsed.data.contact_name;
+    if (parsed.data.phone !== undefined) updates.phone = parsed.data.phone;
+    if (parsed.data.email !== undefined) updates.email = parsed.data.email || null as unknown as string;
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', groupId);
+
+    if (updateError) {
+      logger.error({ error: updateError, groupId }, 'Failed to update group');
+      return NextResponse.json({ error: 'Failed to update group' }, { status: 500 });
+    }
+
+    logger.info({ groupId, updates }, 'Group updated');
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logger.error({ error, groupId }, 'Group update error');
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  }
+}
 
 export async function DELETE(
   _request: NextRequest,
