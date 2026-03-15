@@ -949,6 +949,32 @@ function WebMyAccountContent() {
           )}
         </Card>
 
+        {/* Review CTA */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">⭐</span>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">Enjoying Busy Bees?</p>
+                <p className="text-sm text-gray-600">We&apos;d love to hear about your experience!</p>
+              </div>
+            </div>
+            <a
+              href="https://g.page/r/CbjlkAgAnnOKEBM/review"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-charcoal-800 hover:bg-charcoal-900 text-honey-400 font-semibold text-sm rounded-full transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              Leave a Review
+            </a>
+          </div>
+        </Card>
+
         {/* Purchase Success Alert */}
         {purchaseSuccess && (
           <Card className="border-green-200 bg-green-50 p-4">
