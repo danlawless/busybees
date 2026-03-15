@@ -89,7 +89,7 @@ function PartiesContent() {
               Ready to Plan Your Perfect Party?
             </h2>
             <p className="text-lg text-charcoal-600 mb-8 max-w-2xl mx-auto">
-              Book your child&apos;s birthday party at Busy Bees Indoor Play Center!
+              Book your child&apos;s birthday party at Busy Bees!
               Our easy booking process takes just a few minutes.
             </p>
 

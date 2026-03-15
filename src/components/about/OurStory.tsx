@@ -31,9 +31,6 @@ export function OurStory() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <span className="inline-block px-4 py-2 bg-primary-100 text-honey-800 rounded-full text-sm font-medium mb-4">
-              Our Story
-            </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-charcoal-800 mb-4">
               Built By a Family For <span className="text-honey-500">Families</span>
             </h1>

@@ -66,9 +66,6 @@ export function RulesAndWaiver() {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <span className="inline-block px-4 py-2 bg-primary-100 text-honey-800 rounded-full text-sm font-medium mb-4">
-            Policies
-          </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
             Rules & <span className="text-honey-500">Regulations</span>
           </h2>
