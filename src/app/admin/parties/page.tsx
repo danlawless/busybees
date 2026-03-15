@@ -124,6 +124,26 @@ export default function AdminPartiesPage() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
+  // Booking detail / guest list state
+  const [selectedBooking, setSelectedBooking] = useState<PartyBooking | null>(null);
+  const [guests, setGuests] = useState<{ id: string; child_name: string; age: number | null; waiver_signed: boolean; waiver_signed_date: string | null; created_at: string }[]>([]);
+  const [guestsLoading, setGuestsLoading] = useState(false);
+  const [addGuestForm, setAddGuestForm] = useState({ firstName: '', lastName: '', age: '' });
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [signingGuestWaiver, setSigningGuestWaiver] = useState<string | null>(null);
+  const [removingGuest, setRemovingGuest] = useState<string | null>(null);
+
+  // Overage payment state
+  const [savedCards, setSavedCards] = useState<{ id: string; stripe_payment_method_id: string; last4: string; brand: string; is_default: boolean }[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'saved_card' | 'cash'>('saved_card');
+  const [selectedCardId, setSelectedCardId] = useState('');
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [overagePaid, setOveragePaid] = useState(false);
+
+  const INCLUDED_KIDS = 15;
+  const EXTRA_KID_PRICE = 15;
+
   // Only fetch data after PIN is entered
   useEffect(() => {
     if (isUnlocked) {
@@ -635,6 +655,146 @@ export default function AdminPartiesPage() {
     }
   };
 
+  // Guest list functions
+  const fetchGuests = async (bookingId: string) => {
+    setGuestsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${bookingId}/guests`);
+      if (response.ok) {
+        const data = await response.json();
+        setGuests(data.guests || []);
+      }
+    } catch (err) {
+      console.error('Error fetching guests:', err);
+    } finally {
+      setGuestsLoading(false);
+    }
+  };
+
+  const handleAddGuest = async () => {
+    if (!selectedBooking || !addGuestForm.firstName || !addGuestForm.lastName) return;
+    setAddingGuest(true);
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${selectedBooking.id}/guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          child_name: `${addGuestForm.firstName.trim()} ${addGuestForm.lastName.trim()}`,
+          age: addGuestForm.age ? parseInt(addGuestForm.age) : null,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGuests(prev => [...prev, data.guest]);
+        setAddGuestForm({ firstName: '', lastName: '', age: '' });
+      }
+    } catch (err) {
+      console.error('Error adding guest:', err);
+    } finally {
+      setAddingGuest(false);
+    }
+  };
+
+  const handleSignGuestWaiver = async (guestId: string) => {
+    if (!selectedBooking) return;
+    setSigningGuestWaiver(guestId);
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${selectedBooking.id}/guests/${guestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waiver_signed: true }),
+      });
+      if (response.ok) {
+        setGuests(prev => prev.map(g =>
+          g.id === guestId ? { ...g, waiver_signed: true, waiver_signed_date: new Date().toISOString() } : g
+        ));
+      }
+    } catch (err) {
+      console.error('Error signing waiver:', err);
+    } finally {
+      setSigningGuestWaiver(null);
+    }
+  };
+
+  const handleRemoveGuest = async (guestId: string) => {
+    if (!selectedBooking) return;
+    setRemovingGuest(guestId);
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${selectedBooking.id}/guests/${guestId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setGuests(prev => prev.filter(g => g.id !== guestId));
+      }
+    } catch (err) {
+      console.error('Error removing guest:', err);
+    } finally {
+      setRemovingGuest(null);
+    }
+  };
+
+  const fetchSavedCards = async (bookingId: string) => {
+    setLoadingCards(true);
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${bookingId}/overage-payment`);
+      if (response.ok) {
+        const data = await response.json();
+        setSavedCards(data.savedCards || []);
+        if (data.savedCards?.length > 0) {
+          const defaultCard = data.savedCards.find((c: { is_default: boolean }) => c.is_default) || data.savedCards[0];
+          setSelectedCardId(defaultCard.stripe_payment_method_id);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching saved cards:', err);
+    } finally {
+      setLoadingCards(false);
+    }
+  };
+
+  const handleOveragePayment = async () => {
+    if (!selectedBooking) return;
+    if (selectedPaymentMethod === 'saved_card' && !selectedCardId) {
+      setError('Please select a payment method');
+      return;
+    }
+
+    setProcessingPayment(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/admin/party-bookings/${selectedBooking.id}/overage-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method: selectedPaymentMethod,
+          payment_method_id: selectedPaymentMethod === 'saved_card' ? selectedCardId : undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setOveragePaid(true);
+        setSuccessMessage(`Overage payment of ${formatCurrency(data.payment.amount)} processed successfully!`);
+        setTimeout(() => setSuccessMessage(''), 5000);
+      } else {
+        setError(data.error || 'Payment failed');
+      }
+    } catch (err) {
+      console.error('Error processing overage payment:', err);
+      setError('Failed to process payment');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const openBookingDetail = (booking: PartyBooking) => {
+    setSelectedBooking(booking);
+    setOveragePaid(false);
+    fetchGuests(booking.id);
+    fetchSavedCards(booking.id);
+    setAddGuestForm({ firstName: '', lastName: '', age: '' });
+  };
+
   const formatDate = (dateStr: string) => {
     const date = parseDateString(dateStr);
     return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
@@ -963,7 +1123,280 @@ export default function AdminPartiesPage() {
               </div>
             </Card>
 
+            {/* Booking Detail View */}
+            {selectedBooking && (
+              <Card>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedBooking(null)}>
+                      ← Back to Bookings
+                    </Button>
+                    <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[selectedBooking.status]}`}>
+                      {selectedBooking.status.toUpperCase()}
+                    </div>
+                  </div>
+
+                  {/* Booking Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div>
+                      <h3 className="text-lg font-bold text-charcoal-800 mb-2">Party Details</h3>
+                      <div className="space-y-1 text-sm text-neutral-600">
+                        <p><strong>Date:</strong> {formatDate(selectedBooking.party_date)}</p>
+                        <p><strong>Time:</strong> {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}</p>
+                        <p><strong>Package:</strong> {PACKAGE_LABELS[selectedBooking.package_name] || selectedBooking.package_name}</p>
+                        <p><strong>Type:</strong> {PARTY_TYPE_LABELS[selectedBooking.party_type]}</p>
+                        <p><strong>Birthday Child:</strong> {selectedBooking.child_name}{selectedBooking.child_age ? ` (${selectedBooking.child_age} yrs)` : ''}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-charcoal-800 mb-2">Contact Info</h3>
+                      <div className="space-y-1 text-sm text-neutral-600">
+                        <p><strong>Name:</strong> {selectedBooking.customer_name}</p>
+                        <p><strong>Email:</strong> {selectedBooking.customer_email}</p>
+                        <p><strong>Phone:</strong> {selectedBooking.customer_phone}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-charcoal-800 mb-2">Payment</h3>
+                      <div className="space-y-1 text-sm text-neutral-600">
+                        <p><strong>Base Price:</strong> {formatCurrency(Number(selectedBooking.base_price))}</p>
+                        <p><strong>Total:</strong> <span className="text-lg font-bold text-honey-600">{formatCurrency(Number(selectedBooking.total_price))}</span></p>
+                        <p><strong>Status:</strong> <span className="capitalize">{selectedBooking.payment_status || 'pending'}</span></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedBooking.notes && (
+                    <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                      <strong>Notes:</strong> {selectedBooking.notes}
+                    </div>
+                  )}
+
+                  {/* Guest List */}
+                  <div className="border-t pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-charcoal-800">
+                        Guest List ({guests.length}/{INCLUDED_KIDS} included)
+                      </h3>
+                    </div>
+
+                    {/* Add Guest Form */}
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                          <input
+                            type="text"
+                            value={addGuestForm.firstName}
+                            onChange={(e) => setAddGuestForm(prev => ({ ...prev, firstName: e.target.value }))}
+                            placeholder="First name"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                          <input
+                            type="text"
+                            value={addGuestForm.lastName}
+                            onChange={(e) => setAddGuestForm(prev => ({ ...prev, lastName: e.target.value }))}
+                            placeholder="Last name"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Age</label>
+                          <input
+                            type="number"
+                            value={addGuestForm.age}
+                            onChange={(e) => setAddGuestForm(prev => ({ ...prev, age: e.target.value }))}
+                            placeholder="Age"
+                            min="0"
+                            max="18"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            onClick={handleAddGuest}
+                            disabled={addingGuest || !addGuestForm.firstName || !addGuestForm.lastName}
+                            size="sm"
+                            className="w-full"
+                          >
+                            {addingGuest ? 'Adding...' : '+ Add Guest'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Guests Table */}
+                    {guestsLoading ? (
+                      <p className="text-gray-500 text-center py-8">Loading guest list...</p>
+                    ) : guests.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-3 px-2 font-medium text-gray-600">#</th>
+                              <th className="text-left py-3 px-2 font-medium text-gray-600">Name</th>
+                              <th className="text-left py-3 px-2 font-medium text-gray-600">Age</th>
+                              <th className="text-center py-3 px-2 font-medium text-gray-600">Waiver</th>
+                              <th className="text-right py-3 px-2 font-medium text-gray-600">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {guests.map((guest, index) => (
+                              <tr key={guest.id} className={`border-b border-gray-100 ${index >= INCLUDED_KIDS ? 'bg-red-50' : ''}`}>
+                                <td className="py-3 px-2 text-gray-500">{index + 1}</td>
+                                <td className="py-3 px-2 font-medium text-gray-900">
+                                  {guest.child_name}
+                                  {index >= INCLUDED_KIDS && (
+                                    <span className="ml-2 text-xs text-red-600 font-medium">+${EXTRA_KID_PRICE}</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-2 text-gray-600">{guest.age ?? '—'}</td>
+                                <td className="py-3 px-2 text-center">
+                                  {guest.waiver_signed ? (
+                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                      Signed
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleSignGuestWaiver(guest.id)}
+                                      disabled={signingGuestWaiver === guest.id}
+                                      className="px-2 py-1 text-xs font-medium border border-amber-300 text-amber-700 rounded-full hover:bg-amber-50"
+                                    >
+                                      {signingGuestWaiver === guest.id ? 'Signing...' : 'Sign Waiver'}
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="py-3 px-2 text-right">
+                                  <button
+                                    onClick={() => handleRemoveGuest(guest.id)}
+                                    disabled={removingGuest === guest.id}
+                                    className="text-xs text-red-600 hover:text-red-800"
+                                  >
+                                    {removingGuest === guest.id ? 'Removing...' : 'Remove'}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No guests added yet. Add guests using the form above.</p>
+                    )}
+
+                    {/* Overage Summary & Payment */}
+                    {guests.length > INCLUDED_KIDS && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-red-800">Additional Children Overage</p>
+                            <p className="text-sm text-red-600">
+                              {guests.length - INCLUDED_KIDS} extra {guests.length - INCLUDED_KIDS === 1 ? 'child' : 'children'} beyond the included {INCLUDED_KIDS} @ ${EXTRA_KID_PRICE}/child
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-red-700">
+                              {formatCurrency((guests.length - INCLUDED_KIDS) * EXTRA_KID_PRICE)}
+                            </p>
+                            {overagePaid ? (
+                              <p className="text-xs text-green-600 mt-1 font-semibold">Paid</p>
+                            ) : (
+                              <p className="text-xs text-red-600 mt-1">Balance Due</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {!overagePaid && (
+                          <div className="border-t border-red-200 pt-4">
+                            <p className="text-sm font-medium text-gray-800 mb-3">Collect Overage Payment</p>
+                            <div className="flex items-center gap-4 mb-3">
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  name="paymentMethod"
+                                  value="saved_card"
+                                  checked={selectedPaymentMethod === 'saved_card'}
+                                  onChange={() => setSelectedPaymentMethod('saved_card')}
+                                  className="text-honey-500 focus:ring-honey-500"
+                                />
+                                Saved Card
+                              </label>
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  name="paymentMethod"
+                                  value="cash"
+                                  checked={selectedPaymentMethod === 'cash'}
+                                  onChange={() => setSelectedPaymentMethod('cash')}
+                                  className="text-honey-500 focus:ring-honey-500"
+                                />
+                                Cash
+                              </label>
+                            </div>
+
+                            {selectedPaymentMethod === 'saved_card' && (
+                              <div className="mb-3">
+                                {loadingCards ? (
+                                  <p className="text-sm text-gray-500">Loading payment methods...</p>
+                                ) : savedCards.length > 0 ? (
+                                  <select
+                                    value={selectedCardId}
+                                    onChange={(e) => setSelectedCardId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
+                                  >
+                                    {savedCards.map((card) => (
+                                      <option key={card.id} value={card.stripe_payment_method_id}>
+                                        {card.brand.toUpperCase()} ending in {card.last4} {card.is_default ? '(default)' : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <p className="text-sm text-amber-600">No saved cards on file. Use cash payment instead.</p>
+                                )}
+                              </div>
+                            )}
+
+                            <Button
+                              onClick={handleOveragePayment}
+                              disabled={processingPayment || (selectedPaymentMethod === 'saved_card' && (!selectedCardId || savedCards.length === 0))}
+                              size="sm"
+                              className="w-full"
+                            >
+                              {processingPayment
+                                ? 'Processing...'
+                                : `Charge ${formatCurrency((guests.length - INCLUDED_KIDS) * EXTRA_KID_PRICE)} ${selectedPaymentMethod === 'cash' ? '(Cash)' : ''}`
+                              }
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Guest Stats */}
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gray-50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-gray-900">{guests.length}</p>
+                        <p className="text-xs text-gray-600">Total Guests</p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-green-700">{guests.filter(g => g.waiver_signed).length}</p>
+                        <p className="text-xs text-green-600">Waivers Signed</p>
+                      </div>
+                      <div className="p-3 bg-amber-50 rounded-lg text-center">
+                        <p className="text-2xl font-bold text-amber-700">{guests.filter(g => !g.waiver_signed).length}</p>
+                        <p className="text-xs text-amber-600">Waivers Pending</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Bookings List */}
+            {!selectedBooking && (
             <div className="space-y-4">
               {filteredBookings.length === 0 ? (
                 <Card>
@@ -974,7 +1407,10 @@ export default function AdminPartiesPage() {
               ) : (
                 filteredBookings.map((booking) => (
                   <Card key={booking.id} hover={false} padding="sm">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    <div
+                      className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+                      onClick={() => openBookingDetail(booking)}
+                    >
                       {/* Date & Time */}
                       <div className="md:col-span-2">
                         <div className="font-semibold text-charcoal-800">{formatDate(booking.party_date)}</div>
@@ -1028,13 +1464,13 @@ export default function AdminPartiesPage() {
                           {booking.status === 'pending' && (
                             <>
                               <button
-                                onClick={() => updateBookingStatus(booking.id, 'confirmed')}
+                                onClick={(e) => { e.stopPropagation(); updateBookingStatus(booking.id, 'confirmed'); }}
                                 className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
                               >
                                 Confirm
                               </button>
                               <button
-                                onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                                onClick={(e) => { e.stopPropagation(); updateBookingStatus(booking.id, 'cancelled'); }}
                                 className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                               >
                                 Cancel
@@ -1043,14 +1479,14 @@ export default function AdminPartiesPage() {
                           )}
                           {booking.status === 'confirmed' && (
                             <button
-                              onClick={() => updateBookingStatus(booking.id, 'done')}
+                              onClick={(e) => { e.stopPropagation(); updateBookingStatus(booking.id, 'done'); }}
                               className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                             >
                               Mark Done
                             </button>
                           )}
                           <button
-                            onClick={() => deleteBooking(booking.id, booking.customer_name)}
+                            onClick={(e) => { e.stopPropagation(); deleteBooking(booking.id, booking.customer_name); }}
                             className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                           >
                             Delete
@@ -1085,6 +1521,7 @@ export default function AdminPartiesPage() {
                 ))
               )}
             </div>
+            )}
           </div>
         )}
 
