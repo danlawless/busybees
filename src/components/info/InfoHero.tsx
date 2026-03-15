@@ -34,31 +34,31 @@ export function InfoHero() {
   const status = getOpenStatus();
 
   return (
-    <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-20 sm:py-24">
+    <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-10 sm:py-14">
       <HoneycombPattern variant="medium" size="lg" />
 
       <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-4"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
           <motion.div variants={fadeInUp}>
-            <div className="flex justify-center mb-5">
-              <div className="p-3.5 bg-primary-100 rounded-2xl">
-                <Info className="w-8 h-8 text-primary-500" />
+            <div className="flex justify-center mb-3">
+              <div className="p-2.5 bg-primary-100 rounded-2xl">
+                <Info className="w-6 h-6 text-primary-500" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl mb-5">
+            <h1 className="text-3xl font-bold tracking-tight text-charcoal-800 sm:text-4xl mb-3">
               Everything You Need to Know
             </h1>
-            <p className="text-xl text-charcoal-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg text-charcoal-600 max-w-2xl mx-auto leading-relaxed">
               All the details about visiting Busy Bees Indoor Play Center
             </p>
 
             {/* Current Status */}
-            <div className="mt-10">
+            <div className="mt-6">
               <div className={`inline-flex items-center space-x-3 backdrop-blur-sm px-7 py-3.5 rounded-full border shadow-soft ${
                 status.isOpen
                   ? 'bg-white/80 border-green-300/40'
@@ -74,16 +74,6 @@ export function InfoHero() {
             </div>
           </motion.div>
 
-          {/* Photo strip */}
-          <motion.div variants={fadeInUp} className="mt-12 max-w-4xl mx-auto">
-            <div className="flex gap-2 sm:gap-3 justify-center">
-              {['/album/MH_12587.jpg', '/album/MH_12648.jpg', '/album/MH_12697.jpg', '/album/MH_12743.jpg', '/album/MH_12801.jpg'].map((src, i) => (
-                <div key={i} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shadow-soft border border-primary-200/40 flex-shrink-0">
-                  <Image src={src} alt="" fill className="object-cover" sizes="80px" loading="lazy" />
-                </div>
-              ))}
-            </div>
-          </motion.div>
         </motion.div>
       </div>
 

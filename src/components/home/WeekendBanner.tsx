@@ -17,7 +17,7 @@ export function WeekendBanner() {
   return (
     <div className="bg-amber-500 text-white px-4 py-3 text-center relative" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <p className="text-sm sm:text-base font-semibold pr-8">
-        🎂 We are open to the public from 9:00 AM to 12:30 PM for general play. Beginning at 1:00 PM through 5:30 PM, our space is reserved for scheduled birthday parties and private events.
+        🎂 On Saturday and Sunday, We are open to the public from 9:00 AM to 12:30 PM for general play. Beginning at 1:00 PM through 5:30 PM, our space is reserved for scheduled birthday parties and private events.
       </p>
       <button
         onClick={() => setDismissed(true)}
