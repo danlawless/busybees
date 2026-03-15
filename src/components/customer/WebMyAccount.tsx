@@ -69,6 +69,9 @@ function WebMyAccountContent() {
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [isSigningWaiver, setIsSigningWaiver] = useState(false);
 
+  // Auto-renew toggle state
+  const [togglingAutoRenew, setTogglingAutoRenew] = useState<string | null>(null);
+
   // Purchase state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProduct, setProcessingProduct] = useState<string>('');
@@ -245,6 +248,40 @@ function WebMyAccountContent() {
       fetchData();
     }
   }, [user, fetchData]);
+
+  const handleToggleAutoRenew = async (purchase: Purchase) => {
+    const newAutoRenew = !purchase.autoRenew;
+    const action = newAutoRenew ? 'enable' : 'disable';
+    if (!confirm(`Are you sure you want to ${action} auto-renew for "${purchase.name}"?`)) {
+      return;
+    }
+
+    setTogglingAutoRenew(purchase.id);
+    try {
+      const response = await fetch(`/api/purchases/${purchase.id}/auto-renew`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoRenew: newAutoRenew }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPurchases(prev => prev.map(p =>
+          p.id === purchase.id
+            ? { ...p, autoRenew: data.autoRenew, nextRenewalDate: data.nextRenewalDate }
+            : p
+        ));
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update auto-renew');
+      }
+    } catch (err) {
+      console.error('Error toggling auto-renew:', err);
+      alert('Failed to update auto-renew');
+    } finally {
+      setTogglingAutoRenew(null);
+    }
+  };
 
   // Helper functions
   const calculateAge = (birthdate: string): number => {
@@ -1297,10 +1334,26 @@ function WebMyAccountContent() {
                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
                               Active
                             </span>
-                            {purchase.autoRenew && (
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                                Auto-renew
-                              </span>
+                            {purchase.type === 'monthly_pass' && (
+                              <button
+                                onClick={() => handleToggleAutoRenew(purchase)}
+                                disabled={togglingAutoRenew === purchase.id}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                  purchase.autoRenew
+                                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                                title={purchase.autoRenew ? 'Click to disable auto-renew' : 'Click to enable auto-renew'}
+                              >
+                                <span className={`inline-block w-7 h-4 rounded-full relative transition-colors ${
+                                  purchase.autoRenew ? 'bg-blue-500' : 'bg-gray-300'
+                                }`}>
+                                  <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                                    purchase.autoRenew ? 'left-3.5' : 'left-0.5'
+                                  }`} />
+                                </span>
+                                {togglingAutoRenew === purchase.id ? 'Updating...' : 'Auto-renew'}
+                              </button>
                             )}
                           </div>
                           {purchase.firstUseDate && purchase.actualExpiryDate && (
@@ -1339,8 +1392,11 @@ function WebMyAccountContent() {
                           {purchase.actualExpiryDate && (
                             <p>Expires: {formatDate(purchase.actualExpiryDate)}</p>
                           )}
-                          {purchase.autoRenew && purchase.nextRenewalDate && (
+                          {purchase.type === 'monthly_pass' && purchase.autoRenew && purchase.nextRenewalDate && (
                             <p className="text-blue-600">Next renewal: {formatDate(purchase.nextRenewalDate)}</p>
+                          )}
+                          {purchase.type === 'monthly_pass' && !purchase.autoRenew && (
+                            <p className="text-gray-400">Auto-renew off</p>
                           )}
                         </div>
 
