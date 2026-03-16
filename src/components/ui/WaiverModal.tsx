@@ -89,7 +89,7 @@ export function WaiverModal({ isOpen, onClose, childName, signedDate, onAgree, i
           li { margin-bottom: 6px; }
           .legal { background: #f9fafb; padding: 12px; border-radius: 8px; font-size: 11px; color: #6b7280; }
           .signature { margin-top: 32px; border-top: 2px solid #e5e7eb; padding-top: 20px; }
-          .signature-line { border-bottom: 1px solid #1f2937; width: 300px; display: inline-block; margin-top: 40px; }
+          .signature-line { border-bottom: 1px solid #1f2937; width: 100%; max-width: 300px; display: inline-block; margin-top: 40px; }
           .signed-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
           @media print { body { padding: 20px; } }
         </style>

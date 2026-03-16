@@ -977,10 +977,10 @@ export default function AdminPartiesPage() {
         </div>
 
         {/* View Tabs */}
-        <div className="flex space-x-2 border-b border-neutral-200">
+        <div className="flex space-x-2 border-b border-neutral-200 overflow-x-auto">
           <button
             onClick={() => setActiveView('bookings')}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeView === 'bookings'
                 ? 'text-honey-600 border-b-2 border-honey-500'
                 : 'text-neutral-600 hover:text-neutral-800'
@@ -990,7 +990,7 @@ export default function AdminPartiesPage() {
           </button>
           <button
             onClick={() => setActiveView('calendar')}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeView === 'calendar'
                 ? 'text-honey-600 border-b-2 border-honey-500'
                 : 'text-neutral-600 hover:text-neutral-800'
@@ -1000,7 +1000,7 @@ export default function AdminPartiesPage() {
           </button>
           <button
             onClick={() => setActiveView('packages')}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeView === 'packages'
                 ? 'text-honey-600 border-b-2 border-honey-500'
                 : 'text-neutral-600 hover:text-neutral-800'
@@ -1010,7 +1010,7 @@ export default function AdminPartiesPage() {
           </button>
           <button
             onClick={() => setActiveView('time-slots')}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-3 font-medium transition-colors whitespace-nowrap ${
               activeView === 'time-slots'
                 ? 'text-honey-600 border-b-2 border-honey-500'
                 : 'text-neutral-600 hover:text-neutral-800'
@@ -1185,7 +1185,7 @@ export default function AdminPartiesPage() {
 
                     {/* Add Guest Form */}
                     <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
                           <input
@@ -1394,7 +1394,7 @@ export default function AdminPartiesPage() {
                     )}
 
                     {/* Guest Stats */}
-                    <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div className="p-3 bg-gray-50 rounded-lg text-center">
                         <p className="text-2xl font-bold text-gray-900">{guests.length}</p>
                         <p className="text-xs text-gray-600">Total Guests</p>
@@ -1777,7 +1777,7 @@ export default function AdminPartiesPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">Party Type</label>
                           <select
@@ -1804,7 +1804,7 @@ export default function AdminPartiesPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">Start Time *</label>
                           <input
@@ -1825,7 +1825,7 @@ export default function AdminPartiesPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
                           <input
@@ -1848,7 +1848,7 @@ export default function AdminPartiesPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium text-neutral-700 mb-1">Child Name</label>
                           <input
