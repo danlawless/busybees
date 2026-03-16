@@ -31,6 +31,7 @@ interface SendEmailOptions {
   subject: string;
   text: string;
   html?: string;
+  cc?: string | string[];
   replyTo?: string;
   headers?: Record<string, string>;
 }
@@ -52,7 +53,7 @@ export function isEmailServiceConfigured(): boolean {
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  const { to, subject, text, html, replyTo, headers } = options;
+  const { to, subject, text, html, cc, replyTo, headers } = options;
 
   // Get lazy-initialized client (returns null if API key is missing)
   const resend = getResendClient();
@@ -76,6 +77,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
       subject,
       text,
       html,
+      cc,
       replyTo,
       headers,
     });
@@ -1784,6 +1786,7 @@ ${packageContent.html}
 
   return sendEmail({
     to: data.to,
+    cc: BUSINESS_EMAIL,
     subject,
     text,
     html,
