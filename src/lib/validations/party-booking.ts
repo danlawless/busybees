@@ -154,11 +154,12 @@ export const PACKAGE_PRICING = {
     name: 'Queen Bee+',
     semiPrivatePrice: 500,
     privatePrice: 575,
-    maxGuests: 20,
+    maxGuests: 25,
+    includedKids: 20,
     duration: 2,
     description: 'Premium package with pizza, soda, cake and balloons',
     features: [
-      '15 kids included',
+      '20 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
       'Pizza for all guests',
@@ -173,6 +174,7 @@ export const PACKAGE_PRICING = {
     semiPrivatePrice: 450,
     privatePrice: 525,
     maxGuests: 20,
+    includedKids: 15,
     duration: 2,
     description: 'Essential package with pizza and soda',
     features: [
@@ -191,6 +193,7 @@ export const PACKAGE_PRICING = {
     semiPrivatePrice: 400,
     privatePrice: 475,
     maxGuests: 20,
+    includedKids: 15,
     duration: 2,
     description: 'Standard package with paper goods',
     features: [
@@ -256,7 +259,8 @@ export function calculateBookingPrice(
   const packageInfo = PACKAGE_PRICING[packageName];
   const basePrice = partyType === 'private' ? packageInfo.privatePrice : packageInfo.semiPrivatePrice;
 
-  const additionalKids = Math.max(0, guestCount - INCLUDED_KIDS);
+  const includedKids = packageInfo.includedKids;
+  const additionalKids = Math.max(0, guestCount - includedKids);
   const additionalKidsPrice = additionalKids * ADDITIONAL_KIDS_PRICE;
   const totalPrice = basePrice + additionalKidsPrice;
 

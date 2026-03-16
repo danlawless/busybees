@@ -1,7 +1,7 @@
 /**
  * API Route: Party Guest Overage Payment
  * GET - Fetch saved cards for the booking's customer
- * POST - Process one-time payment for extra kids beyond included 15
+ * POST - Process one-time payment for extra kids beyond package-included amount
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,7 +11,12 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const INCLUDED_KIDS = 15;
+const PACKAGE_INCLUDED_KIDS: Record<string, number> = {
+  queen_bee: 20,
+  worker_bee: 15,
+  basic_bee: 15,
+  group_rate: 0,
+};
 const EXTRA_KID_PRICE = 15;
 
 const OveragePaymentSchema = z.object({
@@ -85,7 +90,7 @@ export async function POST(
     // Get booking details
     const { data: booking, error: bookingError } = await supabase
       .from('party_bookings')
-      .select('id, customer_id, customer_name, customer_email, customer_phone')
+      .select('id, customer_id, customer_name, customer_email, customer_phone, package_name')
       .eq('id', bookingId)
       .single();
 
@@ -104,7 +109,8 @@ export async function POST(
     }
 
     const guestCount = count || 0;
-    const extraKids = Math.max(0, guestCount - INCLUDED_KIDS);
+    const includedKids = PACKAGE_INCLUDED_KIDS[booking.package_name] ?? 15;
+    const extraKids = Math.max(0, guestCount - includedKids);
 
     if (extraKids === 0) {
       return NextResponse.json({ error: 'No overage to charge — guest count is within included limit' }, { status: 400 });

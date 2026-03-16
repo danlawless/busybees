@@ -8,6 +8,7 @@ import {
   ADDITIONAL_KIDS_PRICE,
   INCLUDED_KIDS,
   MAX_CHILDREN,
+  PACKAGE_PRICING,
   calculateBookingPrice,
 } from '@/lib/validations/party-booking';
 import type { BookingFormData } from '../PartyBookingWizard';
@@ -46,6 +47,10 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
     formData.partyType && formData.packageName
       ? calculateBookingPrice(formData.packageName, formData.partyType, formData.guestCount)
       : null;
+
+  const includedKids = formData.packageName
+    ? PACKAGE_PRICING[formData.packageName].includedKids
+    : INCLUDED_KIDS;
 
   return (
     <div className="space-y-6">
@@ -131,7 +136,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
           <div className="mt-6 pt-6 border-t">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
-                <span>Included children (up to {INCLUDED_KIDS})</span>
+                <span>Included children (up to {includedKids})</span>
                 <span>Included</span>
               </div>
 
@@ -173,7 +178,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
 
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
-          <strong>{INCLUDED_KIDS} children are included</strong> with your package. Each
+          <strong>{includedKids} children are included</strong> with your package. Each
           additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {MAX_CHILDREN} children total).
           The birthday child counts toward your guest total.
         </p>
