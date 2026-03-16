@@ -2740,14 +2740,14 @@ ${siteUrl}
               </p>
 
               <!-- Gift Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; margin-bottom: 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f59e0b; background-image: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; margin-bottom: 20px;">
                 <tr>
                   <td style="padding: 20px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td>
-                          <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Gift Card</p>
-                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🎁 BUSY BEES</p>
+                          <p style="margin: 0 0 2px; font-size: 10px; color: #78350f; text-transform: uppercase; letter-spacing: 1px;">Gift Card</p>
+                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #78350f;">🎁 BUSY BEES</p>
                         </td>
                         <td align="right">
                           <span style="font-size: 24px;">🐝</span>
@@ -2757,20 +2757,20 @@ ${siteUrl}
 
                     <!-- Remaining Balance -->
                     <div style="margin: 20px 0 5px;">
-                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Remaining Balance</p>
-                      <p style="margin: 0; font-size: 42px; font-weight: 700; color: #ffffff;">$${giftCard.remainingAmount.toFixed(2)}</p>
+                      <p style="margin: 0 0 2px; font-size: 10px; color: #78350f; text-transform: uppercase; letter-spacing: 1px;">Remaining Balance</p>
+                      <p style="margin: 0; font-size: 42px; font-weight: 700; color: #78350f;">$${giftCard.remainingAmount.toFixed(2)}</p>
                     </div>
 
                     ${giftCard.remainingAmount < giftCard.amount ? `
                     <div style="margin: 0 0 15px;">
-                      <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.8);">Original value: $${giftCard.amount.toFixed(2)}</p>
+                      <p style="margin: 0; font-size: 13px; color: #92400e;">Original value: $${giftCard.amount.toFixed(2)}</p>
                     </div>
                     ` : ''}
 
                     <!-- Code -->
                     <div>
-                      <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Redemption Code</p>
-                      <p style="margin: 0; font-size: 18px; font-weight: 600; color: #ffffff; font-family: monospace; letter-spacing: 1px;">${giftCard.code}</p>
+                      <p style="margin: 0 0 2px; font-size: 10px; color: #78350f; text-transform: uppercase; letter-spacing: 1px;">Redemption Code</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 600; color: #78350f; font-family: monospace; letter-spacing: 1px;">${giftCard.code}</p>
                     </div>
                   </td>
                 </tr>
@@ -2818,7 +2818,7 @@ ${siteUrl}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom: 25px;">
-                    <a href="${siteUrl}/gift-cards" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                    <a href="${siteUrl}/gift-cards" style="display: inline-block; background-color: #f59e0b; background-image: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: #78350f; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
                       Redeem Your Gift Card
                     </a>
                   </td>
