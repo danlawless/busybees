@@ -982,6 +982,627 @@ ${siteUrl}
 /**
  * Send party booking confirmation email
  */
+/**
+ * Get package-specific email content sections based on the booked package.
+ * Returns both HTML sections and plain text for the confirmation email.
+ */
+function getPackageEmailContent(packageName: string): { html: string; text: string } {
+  const sectionStyle = 'width: 100%; background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; margin-bottom: 16px;';
+  const sectionPadding = 'padding: 20px;';
+  const headingStyle = 'margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #1f2937;';
+  const subheadingStyle = 'margin: 16px 0 8px; font-size: 14px; font-weight: 600; color: #374151;';
+  const textStyle = 'margin: 0 0 10px; font-size: 14px; color: #4b5563; line-height: 1.6;';
+  const bulletStyle = 'padding: 3px 0; font-size: 14px; color: #4b5563; line-height: 1.5;';
+  const importantStyle = 'width: 100%; background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 16px;';
+
+  if (packageName === 'basic_bee') {
+    const html = `
+              <!-- Thank You -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">Thank you for your Purchase!</p>
+                    <p style="${textStyle}">We're excited to host your Basic Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Party Schedule -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">⏰ Party Schedule &amp; Timely Departure (Important)</p>
+                    <p style="${textStyle}">To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.</p>
+                    <p style="${textStyle}">Your party will follow this timeline:</p>
+
+                    <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
+                    <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
+
+                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
+                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
+
+                    <p style="${subheadingStyle}">👋 Departure</p>
+                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+
+                    <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
+                    <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
+
+                    <p style="margin: 16px 0 0; font-size: 14px; color: #854d0e; font-weight: 600; line-height: 1.6;">Your cooperation with the schedule helps us ensure every family gets the same great party experience. Thank you for helping us keep the party flow organized and fun for everyone!</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Arrival & Set-Up -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
+                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Supplies & Customization -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🎨 Supplies &amp; Customization</p>
+                    <p style="${textStyle}">Your Basic Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).</p>
+                    <p style="${textStyle}">If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Food & Decorations -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🍽️ Food &amp; Decorations</p>
+
+                    <p style="${subheadingStyle}">Outside Food</p>
+                    <p style="${textStyle}">You are welcome to bring outside food to serve in the party room.</p>
+
+                    <p style="${subheadingStyle}">Decorations</p>
+                    <p style="${textStyle}">You may bring decorations with prior approval from management. Please note:</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr><td style="${bulletStyle}">&bull; Tape, nails, or adhesives may not be used on walls</td></tr>
+                      <tr><td style="${bulletStyle}">&bull; All decorations must be removed at the end of the party</td></tr>
+                    </table>
+
+                    <p style="${subheadingStyle}">Entertainment Vendors</p>
+                    <p style="${textStyle}">Magicians, characters, or other vendors must be approved by our staff in advance.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Safety & Facility Guidelines -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🛡️ Safety &amp; Facility Guidelines</p>
+
+                    <p style="${subheadingStyle}">Waivers</p>
+                    <p style="${textStyle}">All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party. We don't require each guest to create an account anymore. We simply collect the guest name, age, and add them to the master waiver of the host.</p>
+
+                    <p style="${subheadingStyle}">Play Rules</p>
+                    <p style="${textStyle}">All guests must follow standard Busy Bee play rules during the event.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Cancellation & Rescheduling Policy -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
+                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
+
+                    <p style="${subheadingStyle}">Notice Period</p>
+                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
+
+                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
+                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
+
+                    <p style="${subheadingStyle}">Rescheduling</p>
+                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+
+                    <p style="${subheadingStyle}">Weather or Emergencies</p>
+                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Closing -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${textStyle}">Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!</p>
+                    <p style="${textStyle}">If you have any questions before the weekend, please don't hesitate to reach out.</p>
+                    <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">Warm regards,<br><strong>Busy Bee's Party Team</strong></p>
+                  </td>
+                </tr>
+              </table>`;
+
+    const text = `Thank you for your Purchase!
+We're excited to host your Basic Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.
+
+PARTY SCHEDULE & TIMELY DEPARTURE (Important)
+To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
+
+Your party will follow this timeline:
+
+Play Time - 1 Hour 40 Minutes
+Children will enjoy full access to the play area, including the bounce house and music.
+
+Food & Cake - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
+To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
+
+Departure
+At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+
+Busy Bee Sticker Stop
+Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
+
+Your cooperation with the schedule helps us ensure every family gets the same great party experience!
+
+ARRIVAL & SET-UP
+You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
+
+SUPPLIES & CUSTOMIZATION
+Your Basic Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).
+If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
+
+FOOD & DECORATIONS
+Outside Food: You are welcome to bring outside food to serve in the party room.
+Decorations: You may bring decorations with prior approval from management.
+  - Tape, nails, or adhesives may not be used on walls
+  - All decorations must be removed at the end of the party
+Entertainment Vendors: Magicians, characters, or other vendors must be approved by our staff in advance.
+
+SAFETY & FACILITY GUIDELINES
+Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
+Play Rules: All guests must follow standard Busy Bee play rules during the event.
+
+BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
+Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
+Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+
+Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
+If you have any questions before the weekend, please don't hesitate to reach out.
+
+Warm regards,
+Busy Bee's Party Team`;
+
+    return { html, text };
+  }
+
+  if (packageName === 'worker_bee') {
+    const html = `
+              <!-- Thank You -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">Thank you for your Purchase!</p>
+                    <p style="${textStyle}">We're excited to host your Worker Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Party Schedule -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">⏰ Party Schedule &amp; Timely Departure (Important)</p>
+                    <p style="${textStyle}">To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.</p>
+                    <p style="${textStyle}">Your party will follow this timeline:</p>
+
+                    <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
+                    <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
+
+                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
+                    <p style="${textStyle}"><strong>Pizza and Drink:</strong> Your party package includes one large sheet pizza from Presto Pizza (24 slices) and drinks for kids (juice, water, or soda can be special requested &mdash; just inform us ahead of time). If you feel this will not be enough food for your guests you are welcome to bring in additional food and snacks. All food and drinks must be consumed in the party room.</p>
+                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
+
+                    <p style="${subheadingStyle}">👋 Departure</p>
+                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+
+                    <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
+                    <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
+
+                    <p style="margin: 16px 0 0; font-size: 14px; color: #854d0e; font-weight: 600; line-height: 1.6;">Your cooperation with the schedule helps us ensure every family gets the same great party experience. Thank you for helping us keep the party flow organized and fun for everyone!</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Arrival & Set-Up -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
+                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Supplies & Customization -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🎨 Supplies &amp; Customization</p>
+                    <p style="${textStyle}">Your Worker Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).</p>
+                    <p style="${textStyle}">If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Food & Decorations -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🍽️ Food &amp; Decorations</p>
+
+                    <p style="${subheadingStyle}">Outside Food</p>
+                    <p style="${textStyle}">You are welcome to bring outside food to serve in the party room.</p>
+
+                    <p style="${subheadingStyle}">Decorations</p>
+                    <p style="${textStyle}">You may bring decorations with prior approval from management. Please note:</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr><td style="${bulletStyle}">&bull; Tape, nails, or adhesives may not be used on walls</td></tr>
+                      <tr><td style="${bulletStyle}">&bull; All decorations must be removed at the end of the party</td></tr>
+                    </table>
+
+                    <p style="${subheadingStyle}">Entertainment Vendors</p>
+                    <p style="${textStyle}">Magicians, characters, or other vendors must be approved by our staff in advance.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Safety & Facility Guidelines -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🛡️ Safety &amp; Facility Guidelines</p>
+
+                    <p style="${subheadingStyle}">Waivers</p>
+                    <p style="${textStyle}">All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party. We don't require each guest to create an account anymore. We simply collect the guest name, age, and add them to the master waiver of the host.</p>
+
+                    <p style="${subheadingStyle}">Play Rules</p>
+                    <p style="${textStyle}">All guests must follow standard Busy Bee play rules during the event.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Cancellation & Rescheduling Policy -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
+                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
+
+                    <p style="${subheadingStyle}">Notice Period</p>
+                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
+
+                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
+                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
+
+                    <p style="${subheadingStyle}">Rescheduling</p>
+                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+
+                    <p style="${subheadingStyle}">Weather or Emergencies</p>
+                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Closing -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${textStyle}">Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!</p>
+                    <p style="${textStyle}">If you have any questions before the weekend, please don't hesitate to reach out.</p>
+                    <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">Warm regards,<br><strong>Busy Bee's Party Team</strong></p>
+                  </td>
+                </tr>
+              </table>`;
+
+    const text = `Thank you for your Purchase!
+We're excited to host your Worker Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.
+
+PARTY SCHEDULE & TIMELY DEPARTURE (Important)
+To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
+
+Your party will follow this timeline:
+
+Play Time - 1 Hour 40 Minutes
+Children will enjoy full access to the play area, including the bounce house and music.
+
+Food & Cake - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
+Pizza and Drink: Your party package includes one large sheet pizza from Presto Pizza (24 slices) and drinks for kids (juice, water, or soda can be special requested - just inform us ahead of time). If you feel this will not be enough food for your guests you are welcome to bring in additional food and snacks. All food and drinks must be consumed in the party room.
+To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
+
+Departure
+At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+
+Busy Bee Sticker Stop
+Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
+
+Your cooperation with the schedule helps us ensure every family gets the same great party experience!
+
+ARRIVAL & SET-UP
+You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
+
+SUPPLIES & CUSTOMIZATION
+Your Worker Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).
+If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
+
+FOOD & DECORATIONS
+Outside Food: You are welcome to bring outside food to serve in the party room.
+Decorations: You may bring decorations with prior approval from management.
+  - Tape, nails, or adhesives may not be used on walls
+  - All decorations must be removed at the end of the party
+Entertainment Vendors: Magicians, characters, or other vendors must be approved by our staff in advance.
+
+SAFETY & FACILITY GUIDELINES
+Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
+Play Rules: All guests must follow standard Busy Bee play rules during the event.
+
+BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
+Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
+Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+
+Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
+If you have any questions before the weekend, please don't hesitate to reach out.
+
+Warm regards,
+Busy Bee's Party Team`;
+
+    return { html, text };
+  }
+
+  if (packageName === 'queen_bee') {
+    const html = `
+              <!-- Thank You -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">Thank you for your Purchase!</p>
+                    <p style="${textStyle}">We're excited to host your Queen Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Party Schedule -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">⏰ Party Schedule &amp; Timely Departure (Important)</p>
+                    <p style="${textStyle}">To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.</p>
+                    <p style="${textStyle}">Your party will follow this timeline:</p>
+
+                    <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
+                    <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
+
+                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
+                    <p style="${textStyle}"><strong>Pizza and Drink:</strong> Your party package includes one large sheet pizza from Presto Pizza (24 slices to be delivered 1 hour before the end of your party, drinks for kids (juice, water, or soda can be special requested), and a sheet cake from Hannaford Lunenburg (please inform us of the flavor of cake &mdash; chocolate or vanilla &mdash; and if you would like anything written on the cake). If you would like to provide your own cake and get two pizza's instead, we can substitute another party pizza for the cake at no additional cost.</p>
+                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
+
+                    <p style="${subheadingStyle}">👋 Departure</p>
+                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+
+                    <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
+                    <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
+
+                    <p style="margin: 16px 0 0; font-size: 14px; color: #854d0e; font-weight: 600; line-height: 1.6;">Your cooperation with the schedule helps us ensure every family gets the same great party experience. Thank you for helping us keep the party flow organized and fun for everyone!</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Arrival & Set-Up -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
+                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Supplies & Customization -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🎨 Supplies &amp; Customization</p>
+                    <p style="${textStyle}">Your Queen Bee Party includes "Happy Birthday" themed paper goods (plates, napkins, and utensils).</p>
+                    <p style="${textStyle}">If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Food & Decorations -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🍽️ Food &amp; Decorations</p>
+
+                    <p style="${subheadingStyle}">Outside Food</p>
+                    <p style="${textStyle}">You are welcome to bring outside food to serve in the party room.</p>
+
+                    <p style="${subheadingStyle}">Decorations</p>
+                    <p style="${textStyle}">Your package includes decorations but you may also bring in additional decorations if you would like. All decorations must be approved by management. Please note that the use of tape or nails on walls is strictly prohibited. Please remove all decorations from the party room at the conclusion of your party.</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr><td style="${bulletStyle}">&bull; Tape, nails, or adhesives may not be used on walls</td></tr>
+                      <tr><td style="${bulletStyle}">&bull; All decorations must be removed at the end of the party</td></tr>
+                    </table>
+
+                    <p style="${subheadingStyle}">Entertainment Vendors</p>
+                    <p style="${textStyle}">Magicians, characters, or other vendors must be approved by our staff in advance.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Safety & Facility Guidelines -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🛡️ Safety &amp; Facility Guidelines</p>
+
+                    <p style="${subheadingStyle}">Waivers</p>
+                    <p style="${textStyle}">All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party. We don't require each guest to create an account anymore. We simply collect the guest name, age, and add them to the master waiver of the host.</p>
+
+                    <p style="${subheadingStyle}">Play Rules</p>
+                    <p style="${textStyle}">All guests must follow standard Busy Bee play rules during the event.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Cancellation & Rescheduling Policy -->
+              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
+                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
+
+                    <p style="${subheadingStyle}">Notice Period</p>
+                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
+
+                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
+                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
+
+                    <p style="${subheadingStyle}">Rescheduling</p>
+                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+
+                    <p style="${subheadingStyle}">Weather or Emergencies</p>
+                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Closing -->
+              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${textStyle}">Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!</p>
+                    <p style="${textStyle}">If you have any questions before the weekend, please don't hesitate to reach out.</p>
+                    <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">Warm regards,<br><strong>Busy Bee's Party Team</strong></p>
+                  </td>
+                </tr>
+              </table>`;
+
+    const text = `Thank you for your Purchase!
+We're excited to host your Queen Bee Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.
+
+PARTY SCHEDULE & TIMELY DEPARTURE (Important)
+To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
+
+Your party will follow this timeline:
+
+Play Time - 1 Hour 40 Minutes
+Children will enjoy full access to the play area, including the bounce house and music.
+
+Food & Cake - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
+Pizza and Drink: Your party package includes one large sheet pizza from Presto Pizza (24 slices to be delivered 1 hour before the end of your party, drinks for kids (juice, water, or soda can be special requested), and a sheet cake from Hannaford Lunenburg (please inform us of the flavor of cake - chocolate or vanilla - and if you would like anything written on the cake). If you would like to provide your own cake and get two pizza's instead, we can substitute another party pizza for the cake at no additional cost.
+To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
+
+Departure
+At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+
+Busy Bee Sticker Stop
+Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
+
+Your cooperation with the schedule helps us ensure every family gets the same great party experience!
+
+ARRIVAL & SET-UP
+You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
+
+SUPPLIES & CUSTOMIZATION
+Your Queen Bee Party includes "Happy Birthday" themed paper goods (plates, napkins, and utensils).
+If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
+
+FOOD & DECORATIONS
+Outside Food: You are welcome to bring outside food to serve in the party room.
+Decorations: Your package includes decorations but you may also bring in additional decorations if you would like. All decorations must be approved by management. Please note that the use of tape or nails on walls is strictly prohibited. Please remove all decorations from the party room at the conclusion of your party.
+  - Tape, nails, or adhesives may not be used on walls
+  - All decorations must be removed at the end of the party
+Entertainment Vendors: Magicians, characters, or other vendors must be approved by our staff in advance.
+
+SAFETY & FACILITY GUIDELINES
+Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
+Play Rules: All guests must follow standard Busy Bee play rules during the event.
+
+BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
+Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
+Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+
+Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
+If you have any questions before the weekend, please don't hesitate to reach out.
+
+Warm regards,
+Busy Bee's Party Team`;
+
+    return { html, text };
+  }
+
+  // Default content for group_rate (to be customized later)
+  const packageDisplayName = 'Group Rate';
+
+  const html = `
+              <!-- What to Bring -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="${sectionStyle}">
+                <tr>
+                  <td style="${sectionPadding}">
+                    <p style="${headingStyle}">🎁 What to Bring</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr><td style="${bulletStyle}">✓ Your party guests (we'll handle the rest!)</td></tr>
+                      <tr><td style="${bulletStyle}">✓ Any special decorations you'd like to add</td></tr>
+                      <tr><td style="${bulletStyle}">✓ A camera for memories! 📸</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Note -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="${importantStyle}">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #854d0e;">
+                      <strong>📞 We'll call you!</strong> Our team will contact you before the party to confirm final details and answer any questions.
+                    </p>
+                  </td>
+                </tr>
+              </table>`;
+
+  const text = `WHAT TO BRING:
+• Your party guests (we'll handle the rest!)
+• Any special decorations you'd like to add
+• A camera for memories!
+
+We'll have everything set up and ready for your ${packageDisplayName} party.
+Our team will contact you before the event to confirm details.`;
+
+  return { html, text };
+}
+
 export async function sendPartyBookingConfirmationEmail(data: {
   to: string;
   customerName: string;
@@ -1006,6 +1627,9 @@ export async function sendPartyBookingConfirmationEmail(data: {
     day: 'numeric',
   });
 
+  // Get package-specific content
+  const packageContent = getPackageEmailContent(data.packageName);
+
   // Plain text fallback
   const text = `
 Party Booking Confirmed!
@@ -1023,13 +1647,7 @@ Total: $${data.totalPrice.toFixed(2)}
 
 Booking Reference: ${data.bookingId}
 
-WHAT TO BRING:
-• Your party guests (we'll handle the rest!)
-• Any special decorations you'd like to add
-• A camera for memories!
-
-We'll have everything set up and ready for your party.
-Our team will contact you before the event to confirm details.
+${packageContent.text}
 
 View your booking: ${siteUrl}/customer/parties
 
@@ -1052,7 +1670,7 @@ ${siteUrl}
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 
           <!-- Header -->
           <tr>
@@ -1130,30 +1748,8 @@ ${siteUrl}
                 </tr>
               </table>
 
-              <!-- What to Bring -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <p style="margin: 0 0 12px; font-size: 16px; font-weight: 600; color: #1f2937;">🎁 What to Bring</p>
-                    <table cellpadding="0" cellspacing="0">
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">✓ Your party guests (we'll handle the rest!)</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">✓ Any special decorations you'd like to add</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">✓ A camera for memories! 📸</td></tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Note -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 16px 20px;">
-                    <p style="margin: 0; font-size: 14px; color: #854d0e;">
-                      <strong>📞 We'll call you!</strong> Our team will contact you before the party to confirm final details and answer any questions.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <!-- Package-specific content -->
+${packageContent.html}
 
               <!-- CTA -->
               <table width="100%" cellpadding="0" cellspacing="0">
