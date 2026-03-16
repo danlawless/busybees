@@ -41,6 +41,14 @@ const PACKAGE_LABELS = {
   queen_bee: 'Queen Bee',
   worker_bee: 'Worker Bee',
   basic_bee: 'Basic Bee',
+  group_rate: 'Group Rate',
+};
+
+const PACKAGE_BADGE_COLORS: Record<string, string> = {
+  queen_bee: 'bg-amber-100 text-amber-800 border-amber-300',
+  worker_bee: 'bg-orange-100 text-orange-800 border-orange-300',
+  basic_bee: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  group_rate: 'bg-gray-100 text-gray-800 border-gray-300',
 };
 
 export default function AdminPartiesPage() {
@@ -59,6 +67,7 @@ export default function AdminPartiesPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<BookingStatus>('all');
   const [partyTypeFilter, setPartyTypeFilter] = useState<PartyType>('all');
+  const [packageFilter, setPackageFilter] = useState<'all' | 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'upcoming' | 'past' | 'custom'>('all');
   const [showDoneBookings, setShowDoneBookings] = useState(false);
@@ -541,7 +550,7 @@ export default function AdminPartiesPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, statusFilter, partyTypeFilter, searchQuery, dateFilter, startDate, endDate]);
+  }, [bookings, statusFilter, partyTypeFilter, packageFilter, searchQuery, dateFilter, startDate, endDate]);
 
   const fetchBookings = async () => {
     try {
@@ -576,6 +585,11 @@ export default function AdminPartiesPage() {
     // Party type filter
     if (partyTypeFilter !== 'all') {
       filtered = filtered.filter((b) => b.party_type === partyTypeFilter);
+    }
+
+    // Package filter
+    if (packageFilter !== 'all') {
+      filtered = filtered.filter((b) => b.package_name === packageFilter);
     }
 
     // Search query
@@ -1026,7 +1040,7 @@ export default function AdminPartiesPage() {
             {/* Filters */}
             <Card padding="sm">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
                     <select
@@ -1052,6 +1066,21 @@ export default function AdminPartiesPage() {
                       <option value="all">All Types</option>
                       <option value="private">Private</option>
                       <option value="semi_private">Semi-Private</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Package</label>
+                    <select
+                      value={packageFilter}
+                      onChange={(e) => setPackageFilter(e.target.value as typeof packageFilter)}
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                    >
+                      <option value="all">All Packages</option>
+                      <option value="basic_bee">Basic Bee</option>
+                      <option value="worker_bee">Worker Bee</option>
+                      <option value="queen_bee">Queen Bee</option>
+                      <option value="group_rate">Group Rate</option>
                     </select>
                   </div>
 
@@ -1114,6 +1143,7 @@ export default function AdminPartiesPage() {
                     onClick={() => {
                       setStatusFilter('all');
                       setPartyTypeFilter('all');
+                      setPackageFilter('all');
                       setDateFilter('all');
                       setSearchQuery('');
                       setStartDate('');
@@ -1146,7 +1176,7 @@ export default function AdminPartiesPage() {
                       <div className="space-y-1 text-sm text-neutral-600">
                         <p><strong>Date:</strong> {formatDate(selectedBooking.party_date)}</p>
                         <p><strong>Time:</strong> {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}</p>
-                        <p><strong>Package:</strong> {PACKAGE_LABELS[selectedBooking.package_name] || selectedBooking.package_name}</p>
+                        <p><strong>Package:</strong> <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${PACKAGE_BADGE_COLORS[selectedBooking.package_name] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>{PACKAGE_LABELS[selectedBooking.package_name as keyof typeof PACKAGE_LABELS] || selectedBooking.package_name}</span></p>
                         <p><strong>Type:</strong> {PARTY_TYPE_LABELS[selectedBooking.party_type]}</p>
                         <p><strong>Birthday Child:</strong> {selectedBooking.child_name}{selectedBooking.child_age ? ` (${selectedBooking.child_age} yrs)` : ''}</p>
                       </div>
@@ -1471,7 +1501,9 @@ export default function AdminPartiesPage() {
                             {booking.child_name}
                             {booking.child_age && ` (${booking.child_age} yrs)`}
                           </div>
-                          <div className="text-neutral-600">{PACKAGE_LABELS[booking.package_name]}</div>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${PACKAGE_BADGE_COLORS[booking.package_name] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>
+                            {PACKAGE_LABELS[booking.package_name as keyof typeof PACKAGE_LABELS] || booking.package_name}
+                          </span>
                           <div className="text-neutral-600">{PARTY_TYPE_LABELS[booking.party_type]}</div>
                           <div className="text-neutral-600">{booking.guest_count} guests</div>
                         </div>
