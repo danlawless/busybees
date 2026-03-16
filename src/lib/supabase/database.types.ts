@@ -32,6 +32,8 @@ export interface Database {
           last_visit: string | null;
           pin_hash: string | null;
           gift_card_balance: number;
+          is_group: boolean;
+          group_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -51,6 +53,8 @@ export interface Database {
           last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
+          is_group?: boolean;
+          group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +74,8 @@ export interface Database {
           last_visit?: string | null;
           pin_hash?: string | null;
           gift_card_balance?: number;
+          is_group?: boolean;
+          group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -937,6 +943,7 @@ export interface Database {
           description: string | null;
           image_url: string;
           event_date: string;
+          event_date_end: string | null;
           event_time_start: string;
           event_time_end: string | null;
           is_free: boolean;
@@ -951,6 +958,7 @@ export interface Database {
           description?: string | null;
           image_url: string;
           event_date: string;
+          event_date_end?: string | null;
           event_time_start: string;
           event_time_end?: string | null;
           is_free?: boolean;
@@ -965,6 +973,7 @@ export interface Database {
           description?: string | null;
           image_url?: string;
           event_date?: string;
+          event_date_end?: string | null;
           event_time_start?: string;
           event_time_end?: string | null;
           is_free?: boolean;
@@ -972,6 +981,27 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      purchase_children: {
+        Row: {
+          id: string;
+          purchase_id: string;
+          child_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          purchase_id: string;
+          child_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          purchase_id?: string;
+          child_id?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

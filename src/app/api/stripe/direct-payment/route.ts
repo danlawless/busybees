@@ -23,7 +23,7 @@ import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gif
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       productDescription,
       purchaseType,
       childId,
+      childrenIds = [] as string[],
       quantity = 1,
       paymentMethodId,
       useGiftCardBalance = true,
@@ -149,6 +150,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prevent duplicate monthly passes per child
+    if (childId) {
+      const duplicateError = await checkDuplicateMonthlyPass(childId, purchaseType, adminSupabase);
+      if (duplicateError) {
+        return NextResponse.json({ error: duplicateError }, { status: 400 });
+      }
+    }
+
     // Calculate amounts
     const totalAmount = productPrice * quantity;
     let amountToCharge = totalAmount;
@@ -212,6 +221,12 @@ export async function POST(request: NextRequest) {
       if (dbError) {
         logger.error({ error: dbError, customerId: user.id }, 'Failed to save gift-card purchase to database');
         throw dbError;
+      }
+
+      // Link children for family passes via purchase_children table
+      if (childrenIds.length > 0) {
+        const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
+        await adminSupabase.from('purchase_children').insert(rows);
       }
 
       // Deduct gift card and record amount used (separate update to avoid column-missing failures)
@@ -326,6 +341,12 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info({ ...logContext, purchaseId: purchase.id }, '✅ Purchase record saved');
+
+    // Link children for family passes via purchase_children table
+    if (childrenIds.length > 0) {
+      const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
+      await adminSupabase.from('purchase_children').insert(rows);
+    }
 
     // Deduct gift card balance and record amount used (separate operations)
     if (giftCardAmountUsed > 0) {

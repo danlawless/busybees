@@ -11,10 +11,47 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { Database } from '@/lib/supabase/database.types';
 
+/**
+ * Fetch rows in chunks to avoid Supabase/PostgREST URL length limits.
+ */
+async function chunkedIn<T>(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: string,
+  column: string,
+  ids: string[],
+  options?: { select?: string; orderBy?: string; orderAsc?: boolean; isNull?: string },
+): Promise<T[]> {
+  const CHUNK_SIZE = 100;
+  const results: T[] = [];
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    let query = supabase.from(table).select(options?.select ?? '*').in(column, chunk);
+
+    if (options?.orderBy) {
+      query = query.order(options.orderBy, { ascending: options.orderAsc ?? false });
+    }
+    if (options?.isNull) {
+      query = query.is(options.isNull, null);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      logger.warn({ error, table, chunk: i / CHUNK_SIZE }, `Failed to fetch ${table} chunk`);
+    }
+    if (data) {
+      results.push(...(data as T[]));
+    }
+  }
+
+  return results;
+}
+
 // Use database types directly for consistency
 type DbUser = Database['public']['Tables']['users']['Row'];
 type DbChild = Database['public']['Tables']['children']['Row'];
 type DbSession = Database['public']['Tables']['sessions']['Row'];
+type DbPurchase = Database['public']['Tables']['purchases']['Row'];
 
 interface FormattedChild {
   id: string;
@@ -33,6 +70,22 @@ interface FormattedSession {
   endTime: string | null;
   duration: number | null;
   autoCheckoutTime: string;
+}
+
+interface FormattedPurchase {
+  id: string;
+  type: string;
+  name: string;
+  price: number;
+  purchaseDate: string;
+  expiryDate: string | null;
+  firstUseDate: string | null;
+  actualExpiryDate: string | null;
+  usedSessions: number;
+  totalSessions: number;
+  status: string;
+  autoRenew: boolean;
+  childIds: string[]; // For family passes: all children covered by this purchase
 }
 
 /**
@@ -80,20 +133,18 @@ export async function GET() {
       return NextResponse.json({ customers: [] });
     }
 
-    // Fetch all children for these customers
+    // Fetch related data in chunked batches to avoid URL length limits
     const customerIds = users.map((u) => u.id);
 
-    const { data: childrenData, error: childrenError } = await supabase
-      .from('children')
-      .select('*')
-      .in('customer_id', customerIds);
-
-    if (childrenError) {
-      logger.warn({ error: childrenError }, 'Failed to fetch children');
-      // Continue without children rather than failing
-    }
-
-    const allChildren = (childrenData || []) as DbChild[];
+    const [allChildren, allSessions, allPurchases] = await Promise.all([
+      chunkedIn<DbChild>(supabase, 'children', 'customer_id', customerIds),
+      chunkedIn<DbSession>(supabase, 'sessions', 'customer_id', customerIds, {
+        isNull: 'end_time',
+      }),
+      chunkedIn<DbPurchase>(supabase, 'purchases', 'customer_id', customerIds, {
+        orderBy: 'purchase_date', orderAsc: false,
+      }),
+    ]);
 
     // Map children to their customers
     const childrenByCustomer = new Map<string, FormattedChild[]>();
@@ -112,19 +163,47 @@ export async function GET() {
       });
     }
 
-    // Fetch active sessions for all customers (where end_time is null)
-    const { data: sessionsData, error: sessionsError } = await supabase
-      .from('sessions')
-      .select('*')
-      .in('customer_id', customerIds)
-      .is('end_time', null);
+    // Fetch purchase_children for family passes
+    const purchaseIds = allPurchases.map((p) => p.id);
+    const childIdsByPurchase = new Map<string, string[]>();
 
-    if (sessionsError) {
-      logger.warn({ error: sessionsError }, 'Failed to fetch sessions');
-      // Continue without sessions rather than failing
+    if (purchaseIds.length > 0) {
+      const purchaseChildrenData = await chunkedIn<{ purchase_id: string; child_id: string }>(
+        supabase, 'purchase_children', 'purchase_id', purchaseIds,
+        { select: 'purchase_id, child_id' },
+      );
+
+      for (const pc of purchaseChildrenData) {
+        if (!childIdsByPurchase.has(pc.purchase_id)) {
+          childIdsByPurchase.set(pc.purchase_id, []);
+        }
+        childIdsByPurchase.get(pc.purchase_id)!.push(pc.child_id);
+      }
     }
 
-    const allSessions = (sessionsData || []) as DbSession[];
+    // Map purchases to their customers
+    const purchasesByCustomer = new Map<string, FormattedPurchase[]>();
+    for (const purchase of allPurchases) {
+      const customerId = purchase.customer_id;
+      if (!purchasesByCustomer.has(customerId)) {
+        purchasesByCustomer.set(customerId, []);
+      }
+      purchasesByCustomer.get(customerId)!.push({
+        id: purchase.id,
+        type: purchase.type,
+        name: purchase.name,
+        price: purchase.price,
+        purchaseDate: purchase.purchase_date,
+        expiryDate: purchase.expiry_date,
+        firstUseDate: purchase.first_use_date,
+        actualExpiryDate: purchase.actual_expiry_date,
+        usedSessions: purchase.used_sessions,
+        totalSessions: purchase.total_sessions,
+        status: purchase.status,
+        autoRenew: purchase.auto_renew,
+        childIds: childIdsByPurchase.get(purchase.id) || [],
+      });
+    }
 
     // Map sessions to their customers
     const sessionsByCustomer = new Map<string, FormattedSession[]>();
@@ -162,7 +241,7 @@ export async function GET() {
           waiverSignedDate: child.waiver_signed_date,
           createdAt: child.created_at,
         })),
-        purchases: [], // Purchases would need a separate fetch if needed
+        purchases: purchasesByCustomer.get(user.id) || [],
         activeSessions: userSessions,
         savedCards: [], // Payment methods would need a separate fetch if needed
         createdAt: user.created_at,

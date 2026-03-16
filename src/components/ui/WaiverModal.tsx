@@ -5,13 +5,15 @@
  * Displays the full waiver text for parents/staff to review
  */
 
-import { FileText, X, AlertTriangle, Shield, Camera, Baby } from 'lucide-react';
+import { FileText, X, AlertTriangle, Shield, Camera, Baby, Printer } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 
 interface WaiverModalProps {
   isOpen: boolean;
   onClose: () => void;
   childName?: string;
+  signedDate?: string | null;
   onAgree?: () => void;
   isSubmitting?: boolean;
 }
@@ -47,8 +49,72 @@ const waiverAgreements = [
   'I have read, understand, and agree to all terms outlined in this waiver',
 ];
 
-export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting }: WaiverModalProps) {
+export function WaiverModal({ isOpen, onClose, childName, signedDate, onAgree, isSubmitting }: WaiverModalProps) {
+  const printRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen) return null;
+
+  const formattedSignedDate = signedDate
+    ? new Date(signedDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : null;
+
+  const handlePrint = () => {
+    const content = printRef.current;
+    if (!content) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Waiver - ${childName || 'Guest'}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 700px; margin: 0 auto; padding: 40px 20px; color: #1f2937; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          h3 { font-size: 15px; margin: 0 0 8px; }
+          p, li { font-size: 13px; line-height: 1.6; }
+          .header { text-align: center; border-bottom: 2px solid #f59e0b; padding-bottom: 16px; margin-bottom: 24px; }
+          .header p { color: #6b7280; margin: 4px 0; }
+          .section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+          .section-title { font-weight: 600; margin-bottom: 8px; }
+          ul { padding-left: 20px; }
+          li { margin-bottom: 6px; }
+          .legal { background: #f9fafb; padding: 12px; border-radius: 8px; font-size: 11px; color: #6b7280; }
+          .signature { margin-top: 32px; border-top: 2px solid #e5e7eb; padding-top: 20px; }
+          .signature-line { border-bottom: 1px solid #1f2937; width: 100%; max-width: 300px; display: inline-block; margin-top: 40px; }
+          .signed-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Busy Bees Indoor Play Center</h1>
+          <p><strong>Liability Waiver & Release Form</strong></p>
+          ${childName ? `<p>Child: <strong>${childName}</strong></p>` : ''}
+          ${formattedSignedDate ? `<p><span class="signed-badge">Signed: ${formattedSignedDate}</span></p>` : ''}
+        </div>
+        ${content.innerHTML}
+        <div class="signature">
+          <p><strong>Parent/Guardian Signature:</strong></p>
+          ${formattedSignedDate
+            ? `<p>Electronically signed on <strong>${formattedSignedDate}</strong></p>`
+            : `<p class="signature-line"></p><br/><p>Date: _______________</p>`
+          }
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
@@ -64,6 +130,9 @@ export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting 
               {childName && (
                 <p className="text-sm text-gray-600">For: {childName}</p>
               )}
+              {formattedSignedDate && (
+                <p className="text-xs text-green-700">Signed: {formattedSignedDate}</p>
+              )}
             </div>
           </div>
           <button
@@ -76,7 +145,7 @@ export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting 
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6" ref={printRef}>
           {/* Introduction */}
           <div className="bg-honey-50 border border-honey-200 rounded-lg p-4">
             <p className="text-sm text-charcoal-700">
@@ -121,7 +190,7 @@ export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting 
               <strong>Legal Notice:</strong> This waiver is binding upon the undersigned, their heirs,
               executors, administrators, and assigns. If any portion of this waiver is held invalid,
               the remaining portions shall continue to be valid and enforceable. This waiver is governed
-              by the laws of the State of Colorado.
+              by the laws of the State of Massachusetts.
             </p>
           </div>
         </div>
@@ -145,9 +214,18 @@ export function WaiverModal({ isOpen, onClose, childName, onAgree, isSubmitting 
               </Button>
             </div>
           ) : (
-            <Button onClick={onClose} className="w-full">
-              Close
-            </Button>
+            <div className="flex space-x-3">
+              <Button onClick={onClose} className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300">
+                Close
+              </Button>
+              <Button
+                onClick={handlePrint}
+                className="flex-1 bg-charcoal-800 text-white hover:bg-charcoal-700 flex items-center justify-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Print Waiver
+              </Button>
+            </div>
           )}
         </div>
       </div>

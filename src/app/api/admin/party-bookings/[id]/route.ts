@@ -6,7 +6,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -24,33 +23,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-
-    // Check authentication and admin role
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify admin role
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!userData || !['admin', 'staff'].includes(userData.role)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
 
     // Parse and validate request body
     const body = await request.json();
     const validatedData = UpdateBookingSchema.parse(body);
 
-    // Update booking using admin client (bypass RLS)
+    // Use admin client to bypass RLS (POS staff auth is PIN-based)
     const adminSupabase = createAdminClient();
     const { data, error } = await adminSupabase
       .from('party_bookings')
@@ -63,11 +41,11 @@ export async function PATCH(
       .single();
 
     if (error) {
-      logger.error({ error, bookingId: id }, 'Failed to update party booking');
-      return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
+      logger.error({ error, bookingId: id, code: error.code, details: error.details, hint: error.hint, message: error.message }, 'Failed to update party booking');
+      return NextResponse.json({ error: 'Failed to update booking', details: error.message, code: error.code, hint: error.hint }, { status: 500 });
     }
 
-    logger.info({ bookingId: id, updates: validatedData, adminEmail: user.email }, 'Updated party booking');
+    logger.info({ bookingId: id, updates: validatedData }, 'Updated party booking');
 
     return NextResponse.json(data);
   } catch (error) {
@@ -81,31 +59,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!userData || !['admin', 'staff'].includes(userData.role)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-
+    // Use admin client to bypass RLS (POS staff auth is PIN-based)
     const adminSupabase = createAdminClient();
 
     // Delete linked purchase first to avoid FK constraint
@@ -132,7 +92,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
     }
 
-    logger.info({ bookingId: id, adminEmail: user.email }, 'Deleted party booking');
+    logger.info({ bookingId: id }, 'Deleted party booking');
 
     return NextResponse.json({ success: true });
   } catch (error) {

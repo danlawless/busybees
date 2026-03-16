@@ -18,7 +18,7 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       product_description,
       purchase_type,
       child_id,
+      children_ids, // For family passes: array of child IDs
       quantity = 1,
       metadata = {},
       // Payment method options
@@ -101,6 +102,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+      }
+    }
+
+    // Prevent duplicate monthly passes per child
+    if (child_id) {
+      const duplicateError = await checkDuplicateMonthlyPass(child_id, purchase_type, adminSupabase);
+      if (duplicateError) {
+        return NextResponse.json({ error: duplicateError }, { status: 400 });
       }
     }
 
@@ -285,6 +294,28 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       logger.error({ error: dbError, customer_id }, 'Failed to save purchase to database');
       throw dbError;
+    }
+
+    // For family passes, link all selected children via purchase_children table
+    if (Array.isArray(children_ids) && children_ids.length > 0) {
+      const purchaseChildrenRows = children_ids.map((cid: string) => ({
+        purchase_id: purchase.id,
+        child_id: cid,
+      }));
+
+      const { error: pcError } = await adminSupabase
+        .from('purchase_children')
+        .insert(purchaseChildrenRows);
+
+      if (pcError) {
+        logger.error({ error: pcError, purchaseId: purchase.id }, 'Failed to link children to family pass');
+        // Don't fail the purchase, just log the error
+      } else {
+        logger.info(
+          { purchaseId: purchase.id, childCount: children_ids.length },
+          'Family pass children linked successfully'
+        );
+      }
     }
 
     logger.info(

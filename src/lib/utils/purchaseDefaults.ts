@@ -13,6 +13,60 @@ interface PurchaseDefaults {
 }
 
 /**
+ * Check if a child already has an active monthly pass.
+ * Prevents purchasing duplicate monthly passes for the same child.
+ * Returns an error message if a duplicate is found, or null if OK.
+ */
+export async function checkDuplicateMonthlyPass(
+  childId: string,
+  purchaseType: string,
+  supabase?: ReturnType<typeof createAdminClient>,
+): Promise<string | null> {
+  if (purchaseType !== 'monthly_pass' || !childId) return null;
+
+  const db = supabase ?? createAdminClient();
+
+  // Check for direct child_id assignment (single-child passes)
+  const { data: existingPasses, error } = await db
+    .from('purchases')
+    .select('id, name')
+    .eq('child_id', childId)
+    .eq('type', 'monthly_pass')
+    .eq('status', 'active')
+    .limit(1);
+
+  if (error) {
+    logger.error({ childId, error }, 'Failed to check for existing monthly passes');
+    return null;
+  }
+
+  if (existingPasses && existingPasses.length > 0) {
+    return `This child already has an active monthly pass (${existingPasses[0].name}). Only one monthly pass per child is allowed.`;
+  }
+
+  // Also check for family passes via purchase_children table
+  const { data: familyLinks, error: familyError } = await db
+    .from('purchase_children')
+    .select('purchase_id, purchases!inner(id, name, type, status)')
+    .eq('child_id', childId)
+    .eq('purchases.type', 'monthly_pass')
+    .eq('purchases.status', 'active')
+    .limit(1);
+
+  if (familyError) {
+    logger.error({ childId, error: familyError }, 'Failed to check family pass links');
+    return null;
+  }
+
+  if (familyLinks && familyLinks.length > 0) {
+    const linkedPurchase = (familyLinks[0] as any).purchases;
+    return `This child is already covered by an active family pass (${linkedPurchase.name}). Only one monthly pass per child is allowed.`;
+  }
+
+  return null;
+}
+
+/**
  * Resolves purchase defaults (totalSessions, expiryDate) from the passes table.
  *
  * For pass types (day_pass, weekly_pass, monthly_pass): REQUIRES a successful

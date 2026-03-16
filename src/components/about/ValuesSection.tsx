@@ -87,30 +87,6 @@ export function ValuesSection() {
           ))}
         </motion.div>
 
-        {/* Mission Statement */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
-          className="mt-20"
-        >
-          <Card className="max-w-4xl mx-auto border-2 border-primary-200/50 shadow-soft">
-            <CardContent className="p-8 md:p-12 text-center">
-              <h3 className="text-2xl font-bold text-charcoal-800 mb-6">
-                Our <span className="text-honey-500">Mission</span>
-              </h3>
-              <p className="text-lg text-charcoal-600 leading-relaxed mb-8">
-                &ldquo;To create a magical world where children can explore, learn, and grow through
-                the power of play, while providing families with a safe, clean, and welcoming
-                environment that fosters connection and joy.&rdquo;
-              </p>
-              <p className="text-base text-charcoal-500 italic">
-                Happily providing kids with fun and joy every single day.
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </section>
   )

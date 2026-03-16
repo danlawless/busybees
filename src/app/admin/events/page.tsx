@@ -42,6 +42,7 @@ export default function AdminEventsPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [eventDateEnd, setEventDateEnd] = useState('');
   const [eventTimeStart, setEventTimeStart] = useState('');
   const [eventTimeEnd, setEventTimeEnd] = useState('');
   const [isFree, setIsFree] = useState(false);
@@ -140,6 +141,7 @@ export default function AdminEventsPage() {
     setTitle('');
     setDescription('');
     setEventDate('');
+    setEventDateEnd('');
     setEventTimeStart('');
     setEventTimeEnd('');
     setIsFree(false);
@@ -167,6 +169,7 @@ export default function AdminEventsPage() {
           description: description || null,
           image_url: imageUrl,
           event_date: eventDate,
+          event_date_end: eventDateEnd || null,
           event_time_start: eventTimeStart,
           event_time_end: eventTimeEnd || null,
           is_free: isFree,
@@ -469,6 +472,7 @@ export default function AdminEventsPage() {
                         title: editingEvent.title,
                         description: editingEvent.description,
                         event_date: editingEvent.event_date,
+                        event_date_end: editingEvent.event_date_end,
                         event_time_start: editingEvent.event_time_start,
                         event_time_end: editingEvent.event_time_end,
                         is_free: editingEvent.is_free,
@@ -498,7 +502,9 @@ export default function AdminEventsPage() {
                           <div>
                             <h3 className="text-lg font-bold text-charcoal-800">{event.title}</h3>
                             <p className="text-sm text-neutral-600 mt-1">
-                              {formatDate(event.event_date)} at {formatTime(event.event_time_start)}
+                              {formatDate(event.event_date)}
+                              {event.event_date_end && event.event_date_end !== event.event_date && ` - ${formatDate(event.event_date_end)}`}
+                              {' '}at {formatTime(event.event_time_start)}
                               {event.event_time_end && ` - ${formatTime(event.event_time_end)}`}
                             </p>
                             {event.description && (
@@ -579,11 +585,11 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
-                {/* Date and Time */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      Event Date *
+                      Start Date *
                     </label>
                     <input
                       type="date"
@@ -592,6 +598,22 @@ export default function AdminEventsPage() {
                       className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      End Date (optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={eventDateEnd}
+                      onChange={(e) => setEventDateEnd(e.target.value)}
+                      min={eventDate}
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Times */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">
                       Start Time *
@@ -785,7 +807,7 @@ function EditEventForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Start Date</label>
           <input
             type="date"
             value={event.event_date}
@@ -793,25 +815,33 @@ function EditEventForm({
             className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
-            <input
-              type="time"
-              value={event.event_time_start}
-              onChange={(e) => onChange({ ...event, event_time_start: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
-            <input
-              type="time"
-              value={event.event_time_end || ''}
-              onChange={(e) => onChange({ ...event, event_time_end: e.target.value || null })}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">End Date</label>
+          <input
+            type="date"
+            value={event.event_date_end || ''}
+            onChange={(e) => onChange({ ...event, event_date_end: e.target.value || null })}
+            min={event.event_date}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">Start Time</label>
+          <input
+            type="time"
+            value={event.event_time_start}
+            onChange={(e) => onChange({ ...event, event_time_start: e.target.value })}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1">End Time</label>
+          <input
+            type="time"
+            value={event.event_time_end || ''}
+            onChange={(e) => onChange({ ...event, event_time_end: e.target.value || null })}
+            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
+          />
         </div>
       </div>
       <div>

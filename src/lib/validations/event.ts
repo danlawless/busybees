@@ -23,12 +23,17 @@ export const CreateEventSchema = z.object({
   event_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  event_date_end: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format')
+    .optional()
+    .nullable(),
   event_time_start: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Start time must be in HH:MM format'),
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Start time must be in HH:MM or HH:MM:SS format'),
   event_time_end: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:MM format')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'End time must be in HH:MM or HH:MM:SS format')
     .optional()
     .nullable(),
   is_free: z.boolean().optional().default(false),
@@ -54,13 +59,18 @@ export const UpdateEventSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
     .optional(),
+  event_date_end: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format')
+    .optional()
+    .nullable(),
   event_time_start: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Start time must be in HH:MM format')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Start time must be in HH:MM or HH:MM:SS format')
     .optional(),
   event_time_end: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:MM format')
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'End time must be in HH:MM or HH:MM:SS format')
     .optional()
     .nullable(),
   is_free: z.boolean().optional(),

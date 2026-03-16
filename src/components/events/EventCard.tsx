@@ -9,6 +9,7 @@ interface EventCardProps {
   title: string;
   imageUrl: string;
   eventDate: string;
+  eventDateEnd?: string | null;
   eventTimeStart: string;
   eventTimeEnd: string | null;
   description?: string | null;
@@ -20,6 +21,7 @@ export function EventCard({
   title,
   imageUrl,
   eventDate,
+  eventDateEnd,
   eventTimeStart,
   eventTimeEnd,
   description,
@@ -87,6 +89,7 @@ export function EventCard({
 
         <p className="text-sm text-neutral-600 mb-1">
           {formatDate(eventDate)}
+          {eventDateEnd && eventDateEnd !== eventDate && ` - ${formatDate(eventDateEnd)}`}
         </p>
         <p className="text-sm text-neutral-600 mb-3">
           {formatTime(eventTimeStart)}

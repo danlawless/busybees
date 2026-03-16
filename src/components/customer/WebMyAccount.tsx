@@ -15,6 +15,7 @@ import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { WaiverModal } from '@/components/ui/WaiverModal';
+import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
 import { parseDateString } from '@/lib/utils';
@@ -68,6 +69,9 @@ function WebMyAccountContent() {
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [isSigningWaiver, setIsSigningWaiver] = useState(false);
 
+  // Auto-renew toggle state
+  const [togglingAutoRenew, setTogglingAutoRenew] = useState<string | null>(null);
+
   // Purchase state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProduct, setProcessingProduct] = useState<string>('');
@@ -75,8 +79,10 @@ function WebMyAccountContent() {
   const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
   const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
+  const [selectedBirthdayChildren, setSelectedBirthdayChildren] = useState<Set<string>>(new Set());
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+  const [selectedChildrenForFamily, setSelectedChildrenForFamily] = useState<string[]>([]);
 
   // Party scheduling state
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
@@ -242,6 +248,40 @@ function WebMyAccountContent() {
       fetchData();
     }
   }, [user, fetchData]);
+
+  const handleToggleAutoRenew = async (purchase: Purchase) => {
+    const newAutoRenew = !purchase.autoRenew;
+    const action = newAutoRenew ? 'enable' : 'disable';
+    if (!confirm(`Are you sure you want to ${action} auto-renew for "${purchase.name}"?`)) {
+      return;
+    }
+
+    setTogglingAutoRenew(purchase.id);
+    try {
+      const response = await fetch(`/api/purchases/${purchase.id}/auto-renew`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoRenew: newAutoRenew }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPurchases(prev => prev.map(p =>
+          p.id === purchase.id
+            ? { ...p, autoRenew: data.autoRenew, nextRenewalDate: data.nextRenewalDate }
+            : p
+        ));
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update auto-renew');
+      }
+    } catch (err) {
+      console.error('Error toggling auto-renew:', err);
+      alert('Failed to update auto-renew');
+    } finally {
+      setTogglingAutoRenew(null);
+    }
+  };
 
   // Helper functions
   const calculateAge = (birthdate: string): number => {
@@ -460,6 +500,34 @@ function WebMyAccountContent() {
     setConfirmTimeout(timeout);
   };
 
+  // Helper to detect family passes
+  const isFamilyPass = (productName: string): boolean => {
+    return productName.toLowerCase().includes('family');
+  };
+
+  const isSelectedProductFamily = (() => {
+    const product = availablePasses.find(p => p.id === selectedProductForPurchase);
+    return product ? isFamilyPass(product.name) : false;
+  })();
+
+  // Children who already have an active day pass purchased today (prevents double-assigning)
+  const childrenWithDayPassToday = new Set(
+    purchases
+      .filter(p => {
+        if (p.type !== 'day_pass' || p.status === 'refunded') return false;
+        const today = new Date().toDateString();
+        return new Date(p.purchaseDate).toDateString() === today;
+      })
+      .map(p => p.childId)
+      .filter(Boolean)
+  );
+
+  const isSelectedProductDayPass = (() => {
+    const product = availablePasses.find(p => p.id === selectedProductForPurchase);
+    if (!product) return false;
+    return product.category === 'day' || product.name?.toLowerCase().includes('day');
+  })();
+
   const handleChildSelectionForPurchase = (childId: string) => {
     setSelectedChildForPurchase(childId);
     setShowChildSelectionModal(false);
@@ -474,7 +542,23 @@ function WebMyAccountContent() {
     return defaultCard || savedCards[0] || null;
   };
 
-  const handleConfirmPurchase = async (productId: string, childId?: string) => {
+  const handleFamilyPassConfirm = () => {
+    if (selectedChildrenForFamily.length === 0) return;
+    setShowChildSelectionModal(false);
+    if (selectedProductForPurchase) {
+      handleConfirmPurchase(selectedProductForPurchase, selectedChildrenForFamily[0], selectedChildrenForFamily);
+    }
+  };
+
+  const toggleChildForFamily = (childId: string) => {
+    setSelectedChildrenForFamily(prev =>
+      prev.includes(childId)
+        ? prev.filter(id => id !== childId)
+        : [...prev, childId]
+    );
+  };
+
+  const handleConfirmPurchase = async (productId: string, childId?: string, familyChildIds?: string[]) => {
     setConfirmingProduct(null);
     if (confirmTimeout) {
       clearTimeout(confirmTimeout);
@@ -567,7 +651,9 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? effectiveChildId : undefined,
+          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
+          childrenIds: purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined,
+          childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
           paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
@@ -791,7 +877,7 @@ function WebMyAccountContent() {
 
   if (!user || !profile) {
     return (
-      <div className="py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center">
+      <div className="py-24 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 flex items-center justify-center" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         <Card className="p-8 text-center">
           <p className="text-gray-600">Please log in to view your account.</p>
         </Card>
@@ -800,7 +886,7 @@ function WebMyAccountContent() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8">
+    <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 py-8" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-6 text-white">
@@ -861,6 +947,32 @@ function WebMyAccountContent() {
           {giftCardSuccess && (
             <p className="mt-2 text-green-600 text-sm font-semibold">✓ {giftCardSuccess}</p>
           )}
+        </Card>
+
+        {/* Review CTA */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">⭐</span>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">Enjoying Busy Bees?</p>
+                <p className="text-sm text-gray-600">We&apos;d love to hear about your experience!</p>
+              </div>
+            </div>
+            <a
+              href="https://g.page/r/CbjlkAgAnnOKEBM/review"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-charcoal-800 hover:bg-charcoal-900 text-honey-400 font-semibold text-sm rounded-full transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              Leave a Review
+            </a>
+          </div>
         </Card>
 
         {/* Purchase Success Alert */}
@@ -1248,10 +1360,26 @@ function WebMyAccountContent() {
                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
                               Active
                             </span>
-                            {purchase.autoRenew && (
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                                Auto-renew
-                              </span>
+                            {purchase.type === 'monthly_pass' && (
+                              <button
+                                onClick={() => handleToggleAutoRenew(purchase)}
+                                disabled={togglingAutoRenew === purchase.id}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                  purchase.autoRenew
+                                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                                title={purchase.autoRenew ? 'Click to disable auto-renew' : 'Click to enable auto-renew'}
+                              >
+                                <span className={`inline-block w-7 h-4 rounded-full relative transition-colors ${
+                                  purchase.autoRenew ? 'bg-blue-500' : 'bg-gray-300'
+                                }`}>
+                                  <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                                    purchase.autoRenew ? 'left-3.5' : 'left-0.5'
+                                  }`} />
+                                </span>
+                                {togglingAutoRenew === purchase.id ? 'Updating...' : 'Auto-renew'}
+                              </button>
                             )}
                           </div>
                           {purchase.firstUseDate && purchase.actualExpiryDate && (
@@ -1290,8 +1418,11 @@ function WebMyAccountContent() {
                           {purchase.actualExpiryDate && (
                             <p>Expires: {formatDate(purchase.actualExpiryDate)}</p>
                           )}
-                          {purchase.autoRenew && purchase.nextRenewalDate && (
+                          {purchase.type === 'monthly_pass' && purchase.autoRenew && purchase.nextRenewalDate && (
                             <p className="text-blue-600">Next renewal: {formatDate(purchase.nextRenewalDate)}</p>
+                          )}
+                          {purchase.type === 'monthly_pass' && !purchase.autoRenew && (
+                            <p className="text-gray-400">Auto-renew off</p>
                           )}
                         </div>
 
@@ -1403,8 +1534,28 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            const eligibleChildren = children.filter(c => c.waiverSigned);
-                            if (eligibleChildren.length === 1) {
+                            const isDayPass = product.category === 'day' || product.name?.toLowerCase().includes('day');
+                            const isFamilyProduct = isFamilyPass(product.name);
+                            const eligibleChildren = children.filter(c =>
+                              c.waiverSigned && !(isDayPass && childrenWithDayPassToday.has(c.id))
+                            );
+                            if (eligibleChildren.length === 0) {
+                              setSuccessDetails({
+                                title: 'No Eligible Children',
+                                message: isDayPass
+                                  ? 'All children already have a day pass for today.'
+                                  : 'No children with signed waivers available.',
+                                variant: 'warning'
+                              });
+                              setShowSuccessModal(true);
+                              return;
+                            }
+                            if (isFamilyProduct) {
+                              // Family pass: always show multi-child selector
+                              setSelectedChildrenForFamily([]);
+                              setSelectedProductForPurchase(product.id);
+                              setShowChildSelectionModal(true);
+                            } else if (eligibleChildren.length === 1) {
                               handleConfirmPurchase(product.id, eligibleChildren[0].id);
                             } else {
                               setSelectedProductForPurchase(product.id);
@@ -1579,6 +1730,12 @@ function WebMyAccountContent() {
               </div>
             )}
 
+            {/* Check Availability Calendar */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">📅 Check Party Availability</h3>
+              <PartyAvailabilityCalendar />
+            </div>
+
             {/* Purchase New Party Packages */}
             <div>
               <h3 className="text-xl font-semibold mb-4">🛒 Purchase Party Packages</h3>
@@ -1593,6 +1750,74 @@ function WebMyAccountContent() {
                       <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
                       <p className="text-yellow-600 text-sm">
                         You'll need to add a payment method in the Payments tab before you can purchase party packages.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Birthday Child Selector */}
+              {children.length > 0 && (
+                <Card className="p-4 mb-4 border-purple-200 bg-purple-50">
+                  <label className="block text-sm font-semibold text-purple-800 mb-2">
+                    🎂 Who is the birthday party for? <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    {children.map((child) => {
+                      const isSelected = selectedBirthdayChildren.has(child.id);
+                      return (
+                        <label
+                          key={child.id}
+                          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'border-purple-500 bg-purple-100'
+                              : 'border-purple-200 bg-white hover:border-purple-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedBirthdayChildren(prev => {
+                                const next = new Set(prev);
+                                if (next.has(child.id)) {
+                                  next.delete(child.id);
+                                } else {
+                                  next.add(child.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                          />
+                          <span className={`text-sm font-medium ${isSelected ? 'text-purple-800' : 'text-gray-700'}`}>
+                            {child.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedBirthdayChildren.size === 0 && (
+                    <p className="text-xs text-purple-600 mt-2">Select which child(ren) the birthday party is for before purchasing.</p>
+                  )}
+                  {selectedBirthdayChildren.size > 0 && (
+                    <p className="text-xs text-purple-700 mt-2 font-medium">
+                      Party for: {children.filter(c => selectedBirthdayChildren.has(c.id)).map(c => c.name).join(', ')}
+                    </p>
+                  )}
+                </Card>
+              )}
+
+              {children.length === 0 && (
+                <Card className="p-4 mb-4 border-yellow-200 bg-yellow-50">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-white">👶</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-yellow-800">Add a Child First</h4>
+                      <p className="text-yellow-600 text-sm">
+                        You need to add a child in the Children tab before booking a birthday party.
                       </p>
                     </div>
                   </div>
@@ -1639,15 +1864,26 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
+                            if (selectedBirthdayChildren.size === 0) {
+                              setSuccessDetails({
+                                title: 'Birthday Child Required',
+                                message: 'Please select which child(ren) the birthday party is for before purchasing.',
+                                variant: 'warning'
+                              });
+                              setShowSuccessModal(true);
+                              return;
+                            }
                             handleConfirmPurchase(product.id);
                           }}
                           size="lg"
-                          disabled={processingProduct === product.id}
+                          disabled={processingProduct === product.id || selectedBirthdayChildren.size === 0}
                           className={`px-6 py-3 text-white transition-colors ${
                             processingProduct === product.id
                               ? 'bg-purple-500'
                               : savedCards.length === 0
                               ? 'bg-yellow-500 hover:bg-yellow-600'
+                              : selectedBirthdayChildren.size === 0
+                              ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-purple-600 hover:bg-purple-700'
                           }`}
                         >
@@ -1655,6 +1891,8 @@ function WebMyAccountContent() {
                             ? 'Processing...'
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
+                            : selectedBirthdayChildren.size === 0
+                            ? 'Select Birthday Child'
                             : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
                         </Button>
@@ -1824,31 +2062,76 @@ function WebMyAccountContent() {
                 ✕
               </button>
 
-              <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                {isSelectedProductFamily ? 'Select Children for Family Pass' : 'Select Child for Pass'}
+              </h3>
               <p className="text-gray-600 mb-4">
-                Which child is this {availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?
+                {isSelectedProductFamily
+                  ? `Select which children this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} covers. All selected children can check in for the duration of the pass.`
+                  : `Which child is this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?`
+                }
               </p>
 
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {children
                   .filter(child => child.waiverSigned)
-                  .map(child => (
-                    <button
-                      key={child.id}
-                      onClick={() => handleChildSelectionForPurchase(child.id)}
-                      className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">{child.name}</p>
-                          <p className="text-sm text-gray-600">Age: {child.age}</p>
+                  .map(child => {
+                    const hasDayPassToday = isSelectedProductDayPass && childrenWithDayPassToday.has(child.id);
+
+                    if (isSelectedProductFamily) {
+                      const isSelected = selectedChildrenForFamily.includes(child.id);
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => toggleChildForFamily(child.id)}
+                          className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                            isSelected
+                              ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                              : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{child.name}</p>
+                              <p className="text-sm text-gray-600">Age: {child.age}</p>
+                            </div>
+                            <div className={isSelected ? 'text-green-600' : 'text-gray-300'}>
+                              {isSelected ? '✅ Selected' : '○ Tap to select'}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => !hasDayPassToday && handleChildSelectionForPurchase(child.id)}
+                        disabled={hasDayPassToday}
+                        className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                          hasDayPassToday
+                            ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                            : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-medium ${hasDayPassToday ? 'text-gray-400' : 'text-gray-900'}`}>{child.name}</p>
+                            <p className="text-sm text-gray-600">Age: {child.age}</p>
+                          </div>
+                          {hasDayPassToday ? (
+                            <div className="text-gray-400 text-sm">
+                              Already has a day pass today
+                            </div>
+                          ) : (
+                            <div className="text-green-600">
+                              ✅ Waiver Signed
+                            </div>
+                          )}
                         </div>
-                        <div className="text-green-600">
-                          ✅ Waiver Signed
-                        </div>
-                      </div>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 }
               </div>
 
@@ -1874,11 +2157,20 @@ function WebMyAccountContent() {
                   onClick={() => {
                     setShowChildSelectionModal(false);
                     setSelectedProductForPurchase('');
+                    setSelectedChildrenForFamily([]);
                   }}
                   variant="secondary"
                 >
                   Cancel
                 </Button>
+                {isSelectedProductFamily && selectedChildrenForFamily.length > 0 && (
+                  <Button
+                    onClick={handleFamilyPassConfirm}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Confirm {selectedChildrenForFamily.length} Child{selectedChildrenForFamily.length > 1 ? 'ren' : ''}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

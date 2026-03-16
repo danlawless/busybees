@@ -18,8 +18,8 @@ export default function InfoPage() {
   return (
     <Layout>
       <InfoHero />
-      <ImportantInfo />
       <DetailedHours />
+      <ImportantInfo />
       {/* Temporarily hidden - PricingDetails content already on home page */}
       {/* <PricingDetails /> */}
 

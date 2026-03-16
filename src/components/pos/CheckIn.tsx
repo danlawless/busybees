@@ -64,6 +64,7 @@ interface Purchase {
     autoRenew?: boolean;
     nextRenewalDate?: string;
     childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+    childIds?: string[]; // For family passes: all children covered by this purchase
     // Party scheduling fields
     partyDate?: string;
     partyStartTime?: string;
@@ -164,6 +165,8 @@ export function CheckIn({
     // Children-related state
     const [selectedChildForPurchase, setSelectedChildForPurchase] =
         useState<string>("");
+    const [selectedChildrenForFamilyPass, setSelectedChildrenForFamilyPass] =
+        useState<string[]>([]);
     const [showAddChild, setShowAddChild] = useState(false);
     const [showWaiverModal, setShowWaiverModal] = useState(false);
     const [waiverChild, setWaiverChild] = useState<Child | null>(null);
@@ -598,6 +601,25 @@ export function CheckIn({
         }
     };
 
+    const toggleChildForFamilyPass = (childId: string) => {
+        setSelectedChildrenForFamilyPass((prev) =>
+            prev.includes(childId)
+                ? prev.filter((id) => id !== childId)
+                : [...prev, childId]
+        );
+    };
+
+    const handleFamilyPassChildrenConfirm = () => {
+        if (selectedChildrenForFamilyPass.length === 0) return;
+        // Use the first child as the "primary" for the purchase record's child_id
+        setSelectedChildForPurchase(selectedChildrenForFamilyPass[0]);
+        setShowChildSelectionModal(false);
+
+        if (selectedProductForPurchase) {
+            handleQuickPurchase(selectedProductForPurchase);
+        }
+    };
+
     // Handle escape key for modals
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -822,6 +844,12 @@ export function CheckIn({
 
     const getCleanPhoneNumber = (phone: string) => {
         return phone.replace(/[^\d]/g, "");
+    };
+
+    // Helper to detect family passes by product name
+    const isFamilyPass = (productName: string): boolean => {
+        const lowerName = productName.toLowerCase();
+        return lowerName.includes('family');
     };
 
     const handlePhoneSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1361,45 +1389,72 @@ export function CheckIn({
         const isPassPurchase = availablePasses.some((p) => p.id === productId);
 
         if (isPassPurchase) {
-            // For pass purchases, require child selection
-            if (!selectedChildForPurchase) {
-                setSuccessDetails({
-                    title: "Child Selection Required",
-                    message:
-                        "Please select which child this pass is for before purchasing.",
-                });
-                setShowSuccessModal(true);
-                return;
-            }
+            const isFamilyProduct = isFamilyPass(product.name);
 
-            // Check if the selected child has a signed waiver
-            const selectedChild = customer.children.find(
-                (c) => c.id === selectedChildForPurchase
-            );
-            if (!selectedChild || !selectedChild.waiverSigned) {
-                setSuccessDetails({
-                    title: "Waiver Required",
-                    message:
-                        "The selected child must have a signed waiver before purchasing a pass.",
-                });
-                setShowSuccessModal(true);
-                return;
-            }
-
-            // Age gate validation - check if child's age matches the pass type
-            if (selectedChild && hasAgeRestriction(product.name)) {
-                const ageValidation = validateAgeForProduct(selectedChild.age, product.name);
-                if (!ageValidation.valid) {
-                    const productAgeGroup = getProductAgeGroup(product.name);
-                    const childAgeGroup = getAgeGroup(selectedChild.age);
-                    const suggestedPassType = childAgeGroup === 'infant' ? 'infant' : 'toddler';
-
+            if (isFamilyProduct) {
+                // Family pass: require at least one child selected
+                if (selectedChildrenForFamilyPass.length === 0) {
                     setSuccessDetails({
-                        title: "Age Restriction",
-                        message: ageValidation.error || `This pass is not appropriate for ${selectedChild.name}'s age. Please select a ${suggestedPassType} pass instead.`,
+                        title: "Child Selection Required",
+                        message: "Please select which children this family pass covers before purchasing.",
                     });
                     setShowSuccessModal(true);
                     return;
+                }
+
+                // Validate all selected children have signed waivers
+                for (const childId of selectedChildrenForFamilyPass) {
+                    const child = customer.children.find((c) => c.id === childId);
+                    if (!child || !child.waiverSigned) {
+                        setSuccessDetails({
+                            title: "Waiver Required",
+                            message: `${child?.name || 'Selected child'} must have a signed waiver before purchasing a pass.`,
+                        });
+                        setShowSuccessModal(true);
+                        return;
+                    }
+                }
+            } else {
+                // Single-child pass: require child selection
+                if (!selectedChildForPurchase) {
+                    setSuccessDetails({
+                        title: "Child Selection Required",
+                        message:
+                            "Please select which child this pass is for before purchasing.",
+                    });
+                    setShowSuccessModal(true);
+                    return;
+                }
+
+                // Check if the selected child has a signed waiver
+                const selectedChild = customer.children.find(
+                    (c) => c.id === selectedChildForPurchase
+                );
+                if (!selectedChild || !selectedChild.waiverSigned) {
+                    setSuccessDetails({
+                        title: "Waiver Required",
+                        message:
+                            "The selected child must have a signed waiver before purchasing a pass.",
+                    });
+                    setShowSuccessModal(true);
+                    return;
+                }
+
+                // Age gate validation - check if child's age matches the pass type
+                if (selectedChild && hasAgeRestriction(product.name)) {
+                    const ageValidation = validateAgeForProduct(selectedChild.age, product.name);
+                    if (!ageValidation.valid) {
+                        const productAgeGroup = getProductAgeGroup(product.name);
+                        const childAgeGroup = getAgeGroup(selectedChild.age);
+                        const suggestedPassType = childAgeGroup === 'infant' ? 'infant' : 'toddler';
+
+                        setSuccessDetails({
+                            title: "Age Restriction",
+                            message: ageValidation.error || `This pass is not appropriate for ${selectedChild.name}'s age. Please select a ${suggestedPassType} pass instead.`,
+                        });
+                        setShowSuccessModal(true);
+                        return;
+                    }
                 }
             }
         }
@@ -1477,6 +1532,7 @@ export function CheckIn({
                         productDescription: product.description || "",
                         purchaseType: purchaseType,
                         childId: isPassPurchase ? selectedChildForPurchase : undefined,
+                        childrenIds: (isPassPurchase && isFamilyPass(product.name)) ? selectedChildrenForFamilyPass : undefined,
                         paymentMethodId: defaultCard.id,
                         quantity: quantity,
                     }),
@@ -1491,6 +1547,9 @@ export function CheckIn({
                     }
                     throw new Error(data.error || data.details || "Payment failed. Please try again.");
                 }
+
+                // Clear family pass selection
+                setSelectedChildrenForFamilyPass([]);
 
                 // Payment successful - refresh purchases and show success
                 const purchasesResponse = await fetch(
@@ -1565,6 +1624,7 @@ export function CheckIn({
                     product_description: product.description || "",
                     purchase_type: purchaseType,
                     child_id: isPassPurchase ? selectedChildForPurchase : undefined,
+                    children_ids: (isPassPurchase && isFamilyPass(product.name)) ? selectedChildrenForFamilyPass : undefined,
                     quantity: 1,
                     metadata: {},
                 }),
@@ -1576,6 +1636,9 @@ export function CheckIn({
             }
 
             const { purchase } = await response.json();
+
+            // Clear family pass selection
+            setSelectedChildrenForFamilyPass([]);
 
             // Fetch updated purchases from database
             const purchasesResponse = await fetch(
@@ -2172,7 +2235,7 @@ export function CheckIn({
                                                     <div className="flex items-center space-x-2">
                                                         {child.waiverSigned ? (
                                                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                ✅ Signed
+                                                                ✅ Signed{child.waiverSignedDate ? ` ${new Date(child.waiverSignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
                                                             </span>
                                                         ) : (
                                                             <>
@@ -2679,26 +2742,53 @@ export function CheckIn({
 
                                 const groupedPasses = availablePasses.reduce((acc, purchase) => {
                                     const normalizedType = inferPassType(purchase.name, purchase.type);
-                                    // Group by type + childId
-                                    const key = `${normalizedType}-${purchase.childId || 'no-child'}`;
-                                    if (!acc[key]) {
-                                        acc[key] = {
-                                            type: normalizedType,
-                                            typeName: getPassTypeName(normalizedType),
-                                            childId: purchase.childId,
-                                            childName: purchase.childId ? getChildName(purchase.childId, displayCustomer) : null,
-                                            totalVisits: 0,
-                                            isUnlimited: false,
-                                            purchases: [] as typeof availablePasses,
-                                            firstPurchase: purchase, // Keep reference for check-in
-                                        };
+                                    const isFamilyPurchase = (purchase.childIds?.length || 0) > 0;
+
+                                    if (isFamilyPurchase) {
+                                        // Family pass: create a group entry for each child on the pass
+                                        for (const cId of purchase.childIds!) {
+                                            const key = `${normalizedType}-${cId}-family-${purchase.id}`;
+                                            if (!acc[key]) {
+                                                acc[key] = {
+                                                    type: normalizedType,
+                                                    typeName: getPassTypeName(normalizedType) + ' (Family)',
+                                                    childId: cId,
+                                                    childName: getChildName(cId, displayCustomer),
+                                                    totalVisits: 0,
+                                                    isUnlimited: false,
+                                                    purchases: [] as typeof availablePasses,
+                                                    firstPurchase: purchase,
+                                                };
+                                            }
+                                            const remaining = (purchase.totalSessions || 1) - (purchase.usedSessions || 0);
+                                            if (purchase.totalSessions === 999) {
+                                                acc[key].isUnlimited = true;
+                                            }
+                                            acc[key].totalVisits += remaining;
+                                            acc[key].purchases.push(purchase);
+                                        }
+                                    } else {
+                                        // Single-child pass: group by type + childId
+                                        const key = `${normalizedType}-${purchase.childId || 'no-child'}`;
+                                        if (!acc[key]) {
+                                            acc[key] = {
+                                                type: normalizedType,
+                                                typeName: getPassTypeName(normalizedType),
+                                                childId: purchase.childId,
+                                                childName: purchase.childId ? getChildName(purchase.childId, displayCustomer) : null,
+                                                totalVisits: 0,
+                                                isUnlimited: false,
+                                                purchases: [] as typeof availablePasses,
+                                                firstPurchase: purchase,
+                                            };
+                                        }
+                                        const remaining = (purchase.totalSessions || 1) - (purchase.usedSessions || 0);
+                                        if (purchase.totalSessions === 999) {
+                                            acc[key].isUnlimited = true;
+                                        }
+                                        acc[key].totalVisits += remaining;
+                                        acc[key].purchases.push(purchase);
                                     }
-                                    const remaining = (purchase.totalSessions || 1) - (purchase.usedSessions || 0);
-                                    if (purchase.totalSessions === 999) {
-                                        acc[key].isUnlimited = true;
-                                    }
-                                    acc[key].totalVisits += remaining;
-                                    acc[key].purchases.push(purchase);
                                     return acc;
                                 }, {} as Record<string, { type: string; typeName: string; childId: string | null; childName: string | null; totalVisits: number; isUnlimited: boolean; purchases: typeof availablePasses; firstPurchase: typeof availablePasses[0] }>);
 
@@ -3311,6 +3401,7 @@ export function CheckIn({
                                                             setSelectedProductForPurchase(
                                                                 product.id
                                                             );
+                                                            setSelectedChildrenForFamilyPass([]);
                                                             setShowChildSelectionModal(
                                                                 true
                                                             );
@@ -4780,54 +4871,101 @@ export function CheckIn({
                             ✕
                         </button>
 
-                        <h3 className="text-lg font-semibold mb-4">
-                            Select Child for Pass
-                        </h3>
-                        <p className="text-gray-600 mb-4">
-                            Which child is this{" "}
-                            {
-                                [
-                                    ...AVAILABLE_PASS_PRODUCTS,
-                                    ...AVAILABLE_PARTY_PRODUCTS,
-                                ].find((p) => p.id === selectedProductForPurchase)?.name
-                            }{" "}
-                            for?
-                        </p>
+                        {(() => {
+                            const selectedProduct = [
+                                ...AVAILABLE_PASS_PRODUCTS,
+                                ...AVAILABLE_PARTY_PRODUCTS,
+                            ].find((p) => p.id === selectedProductForPurchase);
+                            const isFamilyProduct = selectedProduct ? isFamilyPass(selectedProduct.name) : false;
 
-                        <div className="space-y-3 max-h-64 overflow-y-auto">
-                            {(() => {
-                                const customer = selectedCustomer || currentCustomer;
-                                if (!customer) return null;
+                            return (
+                                <>
+                                    <h3 className="text-lg font-semibold mb-4">
+                                        {isFamilyProduct ? 'Select Children for Family Pass' : 'Select Child for Pass'}
+                                    </h3>
+                                    <p className="text-gray-600 mb-4">
+                                        {isFamilyProduct
+                                            ? `Select all children this ${selectedProduct?.name} will cover:`
+                                            : `Which child is this ${selectedProduct?.name} for?`}
+                                    </p>
 
-                                return customer.children
-                                    .filter((child) => child.waiverSigned)
-                                    .map((child) => (
-                                        <button
-                                            key={child.id}
-                                            onClick={() =>
-                                                handleChildSelectionForPurchase(
-                                                    child.id
-                                                )
-                                            }
-                                            className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="font-medium text-gray-900">
-                                                        {child.name}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">
-                                                        Age: {child.age}
-                                                    </p>
-                                                </div>
-                                                <div className="text-green-600">
-                                                    ✅ Waiver Signed
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ));
-                            })()}
-                        </div>
+                                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                                        {(() => {
+                                            const customer = selectedCustomer || currentCustomer;
+                                            if (!customer) return null;
+
+                                            return customer.children
+                                                .filter((child) => child.waiverSigned)
+                                                .map((child) => {
+                                                    if (isFamilyProduct) {
+                                                        const isSelected = selectedChildrenForFamilyPass.includes(child.id);
+                                                        return (
+                                                            <button
+                                                                key={child.id}
+                                                                onClick={() => toggleChildForFamilyPass(child.id)}
+                                                                className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                                                                    isSelected
+                                                                        ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                                                                        : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <div>
+                                                                        <p className="font-medium text-gray-900">
+                                                                            {child.name}
+                                                                        </p>
+                                                                        <p className="text-sm text-gray-600">
+                                                                            Age: {child.age}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className={`text-xl ${isSelected ? 'text-green-600' : 'text-gray-300'}`}>
+                                                                        {isSelected ? '✅' : '⬜'}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <button
+                                                            key={child.id}
+                                                            onClick={() =>
+                                                                handleChildSelectionForPurchase(child.id)
+                                                            }
+                                                            className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="font-medium text-gray-900">
+                                                                        {child.name}
+                                                                    </p>
+                                                                    <p className="text-sm text-gray-600">
+                                                                        Age: {child.age}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-green-600">
+                                                                    ✅ Waiver Signed
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                });
+                                        })()}
+                                    </div>
+
+                                    {isFamilyProduct && selectedChildrenForFamilyPass.length > 0 && (
+                                        <div className="mt-4">
+                                            <Button
+                                                onClick={handleFamilyPassChildrenConfirm}
+                                                className="w-full"
+                                            >
+                                                Confirm {selectedChildrenForFamilyPass.length} Child{selectedChildrenForFamilyPass.length > 1 ? 'ren' : ''} Selected
+                                            </Button>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
 
                         {(() => {
                             const customer = selectedCustomer || currentCustomer;

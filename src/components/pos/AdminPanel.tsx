@@ -38,6 +38,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '@/lib/api/products';
+import { GroupsManager } from './GroupsManager';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -141,7 +142,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -179,6 +180,14 @@ export function AdminPanel({
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
+  const [salesDate, setSalesDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
+  const [dashboardDate, setDashboardDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [posMode, setPosMode] = useState<'kiosk' | 'staff'>('kiosk');
   const [updatingPosMode, setUpdatingPosMode] = useState(false);
   const [confirmingRefund, setConfirmingRefund] = useState<string | null>(null);
@@ -214,6 +223,74 @@ export function AdminPanel({
   const [confirmingCustomerDelete, setConfirmingCustomerDelete] = useState<string | null>(null);
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [customerDeleteError, setCustomerDeleteError] = useState<string | null>(null);
+
+  // Gift card dashboard states
+  interface GiftCardData {
+    id: string;
+    code: string;
+    amount: number;
+    remaining_amount: number;
+    purchaser_email: string;
+    purchaser_name: string;
+    recipient_email: string;
+    recipient_name: string;
+    delivery_method: 'email_recipient' | 'email_self';
+    status: 'pending' | 'sent' | 'redeemed' | 'partially_redeemed';
+    email_sent_at: string | null;
+    redeemed_at: string | null;
+    created_at: string;
+  }
+  const [giftCards, setGiftCards] = useState<GiftCardData[]>([]);
+  const [giftCardsLoading, setGiftCardsLoading] = useState(false);
+  const [giftCardsStats, setGiftCardsStats] = useState({ total: 0, totalValue: 0, totalRemaining: 0, pending: 0, sent: 0, redeemed: 0 });
+  const [giftCardSearch, setGiftCardSearch] = useState('');
+  const [giftCardStatusFilter, setGiftCardStatusFilter] = useState<string>('all');
+  const [refundingGiftCard, setRefundingGiftCard] = useState<string | null>(null);
+  const [confirmingGiftCardRefund, setConfirmingGiftCardRefund] = useState<string | null>(null);
+
+  // Monthly members state
+  interface MonthlyMember {
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string | null;
+    childName: string | null;
+    passName: string;
+    price: number;
+    purchaseDate: string;
+    expiryDate: string | null;
+    status: string;
+    autoRenew: boolean;
+    nextRenewalDate: string | null;
+    usedSessions: number;
+    totalSessions: number;
+  }
+  const [monthlyMembers, setMonthlyMembers] = useState<MonthlyMember[]>([]);
+  const [monthlyMembersLoading, setMonthlyMembersLoading] = useState(false);
+  const [monthlyMembersStats, setMonthlyMembersStats] = useState({ total: 0, active: 0, expired: 0, autoRenewEnabled: 0 });
+  const [monthlyMemberSearch, setMonthlyMemberSearch] = useState('');
+  const [monthlyMemberStatusFilter, setMonthlyMemberStatusFilter] = useState<string>('all');
+
+  // Punch cards state
+  interface PunchCardData {
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string | null;
+    childName: string | null;
+    passName: string;
+    price: number;
+    purchaseDate: string;
+    firstUseDate: string | null;
+    expiryDate: string | null;
+    usedSessions: number;
+    totalSessions: number;
+    remainingSessions: number;
+  }
+  const [punchCards, setPunchCards] = useState<PunchCardData[]>([]);
+  const [punchCardsLoading, setPunchCardsLoading] = useState(false);
+  const [punchCardsStats, setPunchCardsStats] = useState({ total: 0, totalRemaining: 0, totalUsed: 0 });
+  const [punchCardSearch, setPunchCardSearch] = useState('');
 
   // Staff management states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
@@ -360,6 +437,10 @@ export function AdminPanel({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetail, setShowCustomerDetail] = useState(false);
 
+  // Top customers leaderboard
+  const [topCustomers, setTopCustomers] = useState<{ rank: number; customerId: string; name: string; email: string; phone: string; checkInCount: number; hasActiveMonthlyPass: boolean; hasActivePunchCard: boolean; totalSpend: number }[]>([]);
+  const [topCustomersLoading, setTopCustomersLoading] = useState(false);
+
   const [discountFormData, setDiscountFormData] = useState({
     productId: '',
     productType: 'pass' as 'pass' | 'party' | 'product',
@@ -410,6 +491,28 @@ export function AdminPanel({
     if (currentView === 'newsletter') {
       fetchNewsletterSubscribers();
       checkEmailConfig();
+    }
+  }, [currentView]);
+
+  // Fetch top customers leaderboard when sales view is selected
+  const fetchTopCustomers = async () => {
+    setTopCustomersLoading(true);
+    try {
+      const response = await fetch('/api/admin/top-customers');
+      if (response.ok) {
+        const data = await response.json();
+        setTopCustomers(data.topCustomers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch top customers:', error);
+    } finally {
+      setTopCustomersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'sales') {
+      fetchTopCustomers();
     }
   }, [currentView]);
 
@@ -481,6 +584,96 @@ export function AdminPanel({
       fetchStaffUsers();
     }
   }, [isAdmin, currentView]);
+
+  // Fetch gift cards when view is selected
+  const fetchGiftCards = async () => {
+    setGiftCardsLoading(true);
+    try {
+      const response = await fetch('/api/admin/gift-cards');
+      if (response.ok) {
+        const data = await response.json();
+        setGiftCards(data.giftCards || []);
+        setGiftCardsStats(data.stats || { total: 0, totalValue: 0, totalRemaining: 0, pending: 0, sent: 0, redeemed: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching gift cards:', error);
+    } finally {
+      setGiftCardsLoading(false);
+    }
+  };
+
+  const handleGiftCardRefund = async (cardId: string) => {
+    setRefundingGiftCard(cardId);
+    try {
+      const response = await fetch(`/api/admin/gift-cards/${cardId}/refund`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        // Update local state: zero remaining, mark as redeemed
+        setGiftCards(prev => prev.map(c =>
+          c.id === cardId ? { ...c, remaining_amount: 0, status: 'redeemed' as const } : c
+        ));
+        fetchGiftCards(); // Refresh stats
+      } else {
+        alert(data.error || 'Refund failed');
+      }
+    } catch {
+      alert('Network error — refund could not be processed');
+    } finally {
+      setRefundingGiftCard(null);
+      setConfirmingGiftCardRefund(null);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'gift-cards') {
+      fetchGiftCards();
+    }
+  }, [currentView]);
+
+  // Fetch monthly members when view is selected
+  const fetchMonthlyMembers = async () => {
+    setMonthlyMembersLoading(true);
+    try {
+      const response = await fetch('/api/admin/monthly-members');
+      if (response.ok) {
+        const data = await response.json();
+        setMonthlyMembers(data.members || []);
+        setMonthlyMembersStats(data.stats || { total: 0, active: 0, expired: 0, autoRenewEnabled: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching monthly members:', error);
+    } finally {
+      setMonthlyMembersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'monthly-members') {
+      fetchMonthlyMembers();
+    }
+  }, [currentView]);
+
+  const fetchPunchCards = async () => {
+    setPunchCardsLoading(true);
+    try {
+      const response = await fetch('/api/admin/punch-cards');
+      if (response.ok) {
+        const data = await response.json();
+        setPunchCards(data.cards || []);
+        setPunchCardsStats(data.stats || { total: 0, totalRemaining: 0, totalUsed: 0 });
+      }
+    } catch (error) {
+      console.error('Error fetching punch cards:', error);
+    } finally {
+      setPunchCardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'punch-cards') {
+      fetchPunchCards();
+    }
+  }, [currentView]);
 
   const handleCreateStaffUser = async () => {
     setStaffFormError('');
@@ -784,6 +977,10 @@ export function AdminPanel({
     switch (selectedDateRange) {
       case 'today':
         return purchaseDate.toDateString() === now.toDateString();
+      case 'date': {
+        const selected = new Date(salesDate + 'T00:00:00');
+        return purchaseDate.toDateString() === selected.toDateString();
+      }
       case 'week': {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -802,15 +999,16 @@ export function AdminPanel({
 
   const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
-  // Today's purchases for Dashboard and Sessions views (includes refunded for display)
-  const todaysPurchases = customers.flatMap(c => c.purchases).filter(p => {
+  // Purchases for the selected dashboard date (includes refunded for display)
+  const selectedDateObj = new Date(dashboardDate + 'T00:00:00');
+  const isToday = selectedDateObj.toDateString() === new Date().toDateString();
+  const dashboardPurchases = customers.flatMap(c => c.purchases).filter(p => {
     const purchaseDate = new Date(p.purchaseDate);
-    const today = new Date();
-    return purchaseDate.toDateString() === today.toDateString();
+    return purchaseDate.toDateString() === selectedDateObj.toDateString();
   });
 
   // Revenue excludes refunded purchases
-  const todaysRevenue = todaysPurchases
+  const dashboardRevenue = dashboardPurchases
     .filter(p => p.status !== 'refunded')
     .reduce((sum, purchase) => sum + Number(purchase.price), 0);
 
@@ -977,6 +1175,8 @@ export function AdminPanel({
     setCustomerDeleteError(null);
   };
 
+  const totalKidSessions = activeSessions.reduce((sum, c) => sum + (c.activeSessions || []).length, 0);
+
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -984,11 +1184,23 @@ export function AdminPanel({
         <Card className="p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👥</span>
+              <span className="text-2xl">👨‍👩‍👧</span>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Sessions</p>
+              <p className="text-sm font-medium text-gray-600">Parents Checked In</p>
               <p className="text-2xl font-bold text-gray-900">{activeSessions.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+              <span className="text-2xl">🧒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Kid Sessions</p>
+              <p className="text-2xl font-bold text-gray-900">{totalKidSessions}</p>
             </div>
           </div>
         </Card>
@@ -1012,8 +1224,8 @@ export function AdminPanel({
                 <span className="text-2xl">💰</span>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(todaysRevenue)}</p>
+                <p className="text-sm font-medium text-gray-600">{isToday ? "Today's Revenue" : `Revenue (${selectedDateObj.toLocaleDateString()})`}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardRevenue)}</p>
               </div>
             </div>
           </Card>
@@ -1115,12 +1327,23 @@ export function AdminPanel({
         )}
       </Card>
 
-      {/* Recent Purchases */}
+      {/* Purchases for Selected Date */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Today's Purchases ({todaysPurchases.length})</h3>
-        {todaysPurchases.length > 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">
+            {isToday ? "Today's" : selectedDateObj.toLocaleDateString()} Purchases ({dashboardPurchases.length})
+          </h3>
+          <input
+            type="date"
+            value={dashboardDate}
+            max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()}
+            onChange={(e) => setDashboardDate(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {dashboardPurchases.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {todaysPurchases.map((purchase) => {
+            {dashboardPurchases.map((purchase) => {
               const customer = customers.find(c => c.purchases.some(p => p.id === purchase.id));
               return (
                 <div key={purchase.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1172,7 +1395,7 @@ export function AdminPanel({
             })}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No purchases today</p>
+          <p className="text-gray-500 text-center py-8">{isToday ? 'No purchases today' : `No purchases on ${selectedDateObj.toLocaleDateString()}`}</p>
         )}
       </Card>
     </div>
@@ -1392,7 +1615,7 @@ export function AdminPanel({
     <div className="space-y-6">
       {/* Date Filter */}
       <Card className="p-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Time Period:</label>
           <select
             value={selectedDateRange}
@@ -1400,10 +1623,19 @@ export function AdminPanel({
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
           >
             <option value="today">Today</option>
+            <option value="date">Select Date</option>
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="all">All Time</option>
           </select>
+          {selectedDateRange === 'date' && (
+            <input
+              type="date"
+              value={salesDate}
+              onChange={(e) => setSalesDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+            />
+          )}
         </div>
       </Card>
 
@@ -1436,20 +1668,101 @@ export function AdminPanel({
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Sales by Product Type</h3>
         <div className="space-y-3">
-          {['day_pass', 'monthly_pass', 'party_package', 'food_beverage'].map(type => {
-            const purchases = filteredPurchases.filter(p => p.type === type);
-            const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
-            return (
-              <div key={type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium capitalize">{type.replace(/_/g, ' ')}</p>
-                  <p className="text-sm text-gray-600">{purchases.length} sold</p>
+          {(() => {
+            const punchCardFilter = (p: Purchase) => p.type === 'weekly_pass' || p.name.toLowerCase().includes('punch');
+            const dayPassFilter = (p: Purchase) => p.type === 'day_pass' && !p.name.toLowerCase().includes('punch');
+
+            const categories = [
+              { key: 'day_pass', label: 'Day Pass', filter: dayPassFilter },
+              { key: 'punch_card', label: 'Punch Card', filter: punchCardFilter },
+              { key: 'monthly_pass', label: 'Monthly Pass', filter: (p: Purchase) => p.type === 'monthly_pass' },
+              { key: 'party_package', label: 'Party Package', filter: (p: Purchase) => p.type === 'party_package' },
+              { key: 'food_beverage', label: 'Food & Beverage', filter: (p: Purchase) => p.type === 'food_beverage' },
+            ];
+
+            return categories.map(({ key, label, filter }) => {
+              const purchases = filteredPurchases.filter(filter);
+              const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
+              return (
+                <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium">{label}</p>
+                    <p className="text-sm text-gray-600">{purchases.length} sold</p>
+                  </div>
+                  <p className="font-semibold">{formatCurrency(revenue)}</p>
                 </div>
-                <p className="font-semibold">{formatCurrency(revenue)}</p>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
+      </Card>
+
+      {/* Top 10 Customers by Check-Ins */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Top 10 Customers by Check-Ins</h3>
+        {topCustomersLoading ? (
+          <p className="text-gray-500 text-center py-4">Loading...</p>
+        ) : topCustomers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Rank</th>
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                  <th className="text-left py-3 px-2 font-medium text-gray-600">Contact</th>
+                  <th className="text-center py-3 px-2 font-medium text-gray-600">Monthly Pass</th>
+                  <th className="text-center py-3 px-2 font-medium text-gray-600">Punch Card</th>
+                  <th className="text-right py-3 px-2 font-medium text-gray-600">Total Spend</th>
+                  <th className="text-right py-3 px-2 font-medium text-gray-600">Check-Ins</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topCustomers.map((customer) => (
+                  <tr key={customer.customerId} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-2">
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                        customer.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                        customer.rank === 2 ? 'bg-gray-100 text-gray-700' :
+                        customer.rank === 3 ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-50 text-gray-600'
+                      }`}>
+                        {customer.rank}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 font-medium text-gray-900">{customer.name}</td>
+                    <td className="py-3 px-2 text-gray-600">
+                      {customer.phone || customer.email || '—'}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      {customer.hasActiveMonthlyPass ? (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">No</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      {customer.hasActivePunchCard ? (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">No</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-2 text-right font-medium text-green-700">
+                      {formatCurrency(customer.totalSpend)}
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <span className="inline-flex items-center gap-1 font-semibold text-blue-700">
+                        {customer.checkInCount}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">No check-in data available</p>
+        )}
       </Card>
     </div>
   );
@@ -4028,6 +4341,503 @@ export function AdminPanel({
     );
   };
 
+  const renderGiftCards = () => {
+    const filteredGiftCards = giftCards.filter(card => {
+      const matchesSearch = giftCardSearch === '' ||
+        card.purchaser_name.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.purchaser_email.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.recipient_name.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.recipient_email.toLowerCase().includes(giftCardSearch.toLowerCase()) ||
+        card.code.toLowerCase().includes(giftCardSearch.toLowerCase());
+      const matchesStatus = giftCardStatusFilter === 'all' || card.status === giftCardStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    const statusLabel = (status: string) => {
+      switch (status) {
+        case 'pending': return { text: 'Pending', bg: 'bg-yellow-100', color: 'text-yellow-800' };
+        case 'sent': return { text: 'Sent', bg: 'bg-blue-100', color: 'text-blue-800' };
+        case 'redeemed': return { text: 'Redeemed', bg: 'bg-green-100', color: 'text-green-800' };
+        case 'partially_redeemed': return { text: 'Partial', bg: 'bg-orange-100', color: 'text-orange-800' };
+        default: return { text: status, bg: 'bg-gray-100', color: 'text-gray-800' };
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎁</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Gift Cards</p>
+                <p className="text-xl font-bold text-gray-900">{giftCardsStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">💰</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Value Sold</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(giftCardsStats.totalValue)}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">💳</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Remaining Balance</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(giftCardsStats.totalRemaining)}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Redeemed</p>
+                <p className="text-xl font-bold text-gray-900">{giftCardsStats.redeemed}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, email, or code..."
+              value={giftCardSearch}
+              onChange={(e) => setGiftCardSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <select
+              value={giftCardStatusFilter}
+              onChange={(e) => setGiftCardStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="sent">Sent</option>
+              <option value="partially_redeemed">Partially Redeemed</option>
+              <option value="redeemed">Redeemed</option>
+            </select>
+            <Button onClick={fetchGiftCards} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Gift Cards List */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            Gift Cards ({filteredGiftCards.length})
+          </h3>
+          {giftCardsLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading gift cards...</p>
+          ) : filteredGiftCards.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Date</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Code</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased By</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Recipient</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Amount</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Remaining</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGiftCards.map((card) => {
+                    const status = statusLabel(card.status);
+                    return (
+                      <tr key={card.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2 text-gray-600">
+                          {new Date(card.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-2">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{card.code}</code>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{card.purchaser_name}</div>
+                          <div className="text-xs text-gray-500">{card.purchaser_email}</div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{card.recipient_name}</div>
+                          <div className="text-xs text-gray-500">{card.recipient_email}</div>
+                        </td>
+                        <td className="py-3 px-2 text-right font-semibold">
+                          {formatCurrency(Number(card.amount))}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span>{formatCurrency(Number(card.remaining_amount))}</span>
+                            {Number(card.remaining_amount) > 0 && isAdmin && (
+                              confirmingGiftCardRefund === card.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    onClick={() => handleGiftCardRefund(card.id)}
+                                    disabled={refundingGiftCard === card.id}
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs text-red-600 border-red-300 hover:bg-red-50 animate-pulse"
+                                  >
+                                    {refundingGiftCard === card.id ? 'Processing...' : 'Confirm'}
+                                  </Button>
+                                  <Button
+                                    onClick={() => setConfirmingGiftCardRefund(null)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  onClick={() => setConfirmingGiftCardRefund(card.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs text-red-600 hover:bg-red-50"
+                                >
+                                  Refund
+                                </Button>
+                              )
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                            {status.text}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No gift cards found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
+  const renderMonthlyMembers = () => {
+    const filtered = monthlyMembers.filter(m => {
+      const matchesSearch = monthlyMemberSearch === '' ||
+        m.customerName.toLowerCase().includes(monthlyMemberSearch.toLowerCase()) ||
+        m.customerPhone.includes(monthlyMemberSearch) ||
+        (m.customerEmail?.toLowerCase().includes(monthlyMemberSearch.toLowerCase())) ||
+        (m.childName?.toLowerCase().includes(monthlyMemberSearch.toLowerCase())) ||
+        m.passName.toLowerCase().includes(monthlyMemberSearch.toLowerCase());
+      const matchesStatus = monthlyMemberStatusFilter === 'all' || m.status === monthlyMemberStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎟️</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Passes</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.active}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">⏰</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Expired</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.expired}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🔄</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Auto-Renew</p>
+                <p className="text-xl font-bold text-gray-900">{monthlyMembersStats.autoRenewEnabled}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, phone, email, or pass..."
+              value={monthlyMemberSearch}
+              onChange={(e) => setMonthlyMemberSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <select
+              value={monthlyMemberStatusFilter}
+              onChange={(e) => setMonthlyMemberStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="refunded">Refunded</option>
+            </select>
+            <Button onClick={fetchMonthlyMembers} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Members Table */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Monthly Pass Members ({filtered.length})</h3>
+          {monthlyMembersLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading members...</p>
+          ) : filtered.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Child</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Pass</th>
+                    <th className="text-right py-3 px-2 font-medium text-gray-600">Price</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Expires</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Auto-Renew</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((member) => {
+                    const statusStyle = member.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : member.status === 'expired'
+                      ? 'bg-red-100 text-red-800'
+                      : member.status === 'refunded'
+                      ? 'bg-gray-100 text-gray-600'
+                      : 'bg-yellow-100 text-yellow-800';
+                    return (
+                      <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-2">
+                          <div className="font-medium text-gray-900">{member.customerName}</div>
+                          <div className="text-xs text-gray-500">{member.customerPhone}</div>
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {member.childName || '—'}
+                        </td>
+                        <td className="py-3 px-2 text-gray-900">{member.passName}</td>
+                        <td className="py-3 px-2 text-right font-semibold">
+                          {formatCurrency(member.price)}
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {new Date(member.purchaseDate).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-2 text-gray-600">
+                          {member.expiryDate
+                            ? new Date(member.expiryDate).toLocaleDateString()
+                            : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          {member.autoRenew ? (
+                            <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">No</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${statusStyle}`}>
+                            {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No monthly pass members found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
+  const renderPunchCards = () => {
+    const filtered = punchCards.filter(c => {
+      if (punchCardSearch === '') return true;
+      const search = punchCardSearch.toLowerCase();
+      return (
+        c.customerName.toLowerCase().includes(search) ||
+        c.customerPhone.includes(search) ||
+        (c.customerEmail?.toLowerCase().includes(search)) ||
+        (c.childName?.toLowerCase().includes(search)) ||
+        c.passName.toLowerCase().includes(search)
+      );
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎫</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Active Punch Cards</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">✅</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Visits Remaining</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.totalRemaining}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">📊</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Visits Used</p>
+                <p className="text-xl font-bold text-gray-900">{punchCardsStats.totalUsed}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search by name, phone, email, or child..."
+              value={punchCardSearch}
+              onChange={(e) => setPunchCardSearch(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <Button onClick={fetchPunchCards} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+        </Card>
+
+        {/* Punch Cards Table */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Active Punch Cards ({filtered.length})</h3>
+          {punchCardsLoading ? (
+            <p className="text-gray-500 text-center py-8">Loading punch cards...</p>
+          ) : filtered.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Customer</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Child</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Pass</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Used</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Remaining</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Purchased</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">First Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((card) => (
+                    <tr key={card.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-2">
+                        <div className="font-medium text-gray-900">{card.customerName}</div>
+                        <div className="text-xs text-gray-500">{card.customerPhone}</div>
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {card.childName || '—'}
+                      </td>
+                      <td className="py-3 px-2 text-gray-900">{card.passName}</td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="text-gray-600">{card.usedSessions} / {card.totalSessions}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                          card.remainingSessions <= 2
+                            ? 'bg-red-100 text-red-800'
+                            : card.remainingSessions <= 5
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {card.remainingSessions} visits left
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {new Date(card.purchaseDate).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-2 text-gray-600">
+                        {card.firstUseDate
+                          ? new Date(card.firstUseDate).toLocaleDateString()
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No active punch cards found</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
@@ -4404,7 +5214,7 @@ export function AdminPanel({
     <div className="space-y-6">
       {/* Admin Navigation */}
       <Card className="p-4">
-        <nav className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <nav className="flex flex-wrap gap-3">
           <Button
             onClick={() => setCurrentView('dashboard')}
             variant={currentView === 'dashboard' ? 'default' : 'outline'}
@@ -4471,6 +5281,34 @@ export function AdminPanel({
             🍕 Products
           </Button>
           <Button
+            onClick={() => setCurrentView('gift-cards')}
+            variant={currentView === 'gift-cards' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎁 Gift Cards
+          </Button>
+          <Button
+            onClick={() => setCurrentView('groups')}
+            variant={currentView === 'groups' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🏫 Groups
+          </Button>
+          <Button
+            onClick={() => setCurrentView('monthly-members')}
+            variant={currentView === 'monthly-members' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎟️ Members
+          </Button>
+          <Button
+            onClick={() => setCurrentView('punch-cards')}
+            variant={currentView === 'punch-cards' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎫 Punch Cards
+          </Button>
+          <Button
             onClick={() => setCurrentView('settings')}
             variant={currentView === 'settings' ? 'default' : 'outline'}
             size="sm"
@@ -4490,6 +5328,10 @@ export function AdminPanel({
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
+      {currentView === 'gift-cards' && renderGiftCards()}
+      {currentView === 'groups' && <GroupsManager />}
+      {currentView === 'monthly-members' && renderMonthlyMembers()}
+      {currentView === 'punch-cards' && renderPunchCards()}
       {currentView === 'settings' && renderSettings()}
 
       {/* Customer Detail Modal */}

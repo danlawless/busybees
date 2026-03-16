@@ -86,6 +86,44 @@ function calculateAge(birthdate: string): number {
   return age;
 }
 
+/**
+ * Fetch rows in chunks to avoid Supabase/PostgREST URL length limits.
+ * The .in() filter with hundreds of UUIDs can exceed the max URL size,
+ * causing silent failures that return empty results.
+ */
+async function chunkedIn<T>(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: string,
+  column: string,
+  ids: string[],
+  options?: { select?: string; orderBy?: string; orderAsc?: boolean; isNull?: string },
+): Promise<T[]> {
+  const CHUNK_SIZE = 100;
+  const results: T[] = [];
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    let query = supabase.from(table).select(options?.select ?? '*').in(column, chunk);
+
+    if (options?.orderBy) {
+      query = query.order(options.orderBy, { ascending: options.orderAsc ?? false });
+    }
+    if (options?.isNull) {
+      query = query.is(options.isNull, null);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      logger.warn({ error, table, chunk: i / CHUNK_SIZE }, `Failed to fetch ${table} chunk`);
+    }
+    if (data) {
+      results.push(...(data as T[]));
+    }
+  }
+
+  return results;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
   try {
@@ -127,51 +165,17 @@ export async function GET(_request: NextRequest) {
     // Get all customer IDs for batch queries
     const customerIds = users.map(u => u.id);
 
-    // Batch fetch children for all customers
-    const { data: childrenData, error: childrenError } = await supabase
-      .from('children')
-      .select('*')
-      .in('customer_id', customerIds);
-
-    if (childrenError) {
-      logger.warn({ error: childrenError }, 'Failed to fetch children');
-    }
-    const allChildren = (childrenData || []) as DbChild[];
-
-    // Batch fetch purchases for all customers
-    const { data: purchasesData, error: purchasesError } = await supabase
-      .from('purchases')
-      .select('*')
-      .in('customer_id', customerIds)
-      .order('purchase_date', { ascending: false });
-
-    if (purchasesError) {
-      logger.warn({ error: purchasesError }, 'Failed to fetch purchases');
-    }
-    const allPurchases = (purchasesData || []) as DbPurchase[];
-
-    // Batch fetch active sessions (no end_time means still active)
-    const { data: sessionsData, error: sessionsError } = await supabase
-      .from('sessions')
-      .select('*')
-      .in('customer_id', customerIds)
-      .is('end_time', null);
-
-    if (sessionsError) {
-      logger.warn({ error: sessionsError }, 'Failed to fetch sessions');
-    }
-    const allSessions = (sessionsData || []) as DbSession[];
-
-    // Batch fetch saved cards
-    const { data: cardsData, error: cardsError } = await supabase
-      .from('saved_cards')
-      .select('*')
-      .in('customer_id', customerIds);
-
-    if (cardsError) {
-      logger.warn({ error: cardsError }, 'Failed to fetch saved cards');
-    }
-    const allCards = (cardsData || []) as DbSavedCard[];
+    // Fetch related data in chunked batches to avoid URL length limits
+    const [allChildren, allPurchases, allSessions, allCards] = await Promise.all([
+      chunkedIn<DbChild>(supabase, 'children', 'customer_id', customerIds),
+      chunkedIn<DbPurchase>(supabase, 'purchases', 'customer_id', customerIds, {
+        orderBy: 'purchase_date', orderAsc: false,
+      }),
+      chunkedIn<DbSession>(supabase, 'sessions', 'customer_id', customerIds, {
+        isNull: 'end_time',
+      }),
+      chunkedIn<DbSavedCard>(supabase, 'saved_cards', 'customer_id', customerIds),
+    ]);
 
     // Group data by customer ID with proper types
     const childrenByCustomer = new Map<string, DbChild[]>();
