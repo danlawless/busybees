@@ -67,6 +67,7 @@ export default function AdminPartiesPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<BookingStatus>('all');
   const [partyTypeFilter, setPartyTypeFilter] = useState<PartyType>('all');
+  const [packageFilter, setPackageFilter] = useState<'all' | 'queen_bee' | 'worker_bee' | 'basic_bee' | 'group_rate'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'upcoming' | 'past' | 'custom'>('all');
   const [showDoneBookings, setShowDoneBookings] = useState(false);
@@ -549,7 +550,7 @@ export default function AdminPartiesPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, statusFilter, partyTypeFilter, searchQuery, dateFilter, startDate, endDate]);
+  }, [bookings, statusFilter, partyTypeFilter, packageFilter, searchQuery, dateFilter, startDate, endDate]);
 
   const fetchBookings = async () => {
     try {
@@ -584,6 +585,11 @@ export default function AdminPartiesPage() {
     // Party type filter
     if (partyTypeFilter !== 'all') {
       filtered = filtered.filter((b) => b.party_type === partyTypeFilter);
+    }
+
+    // Package filter
+    if (packageFilter !== 'all') {
+      filtered = filtered.filter((b) => b.package_name === packageFilter);
     }
 
     // Search query
@@ -1034,7 +1040,7 @@ export default function AdminPartiesPage() {
             {/* Filters */}
             <Card padding="sm">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
                     <select
@@ -1060,6 +1066,21 @@ export default function AdminPartiesPage() {
                       <option value="all">All Types</option>
                       <option value="private">Private</option>
                       <option value="semi_private">Semi-Private</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Package</label>
+                    <select
+                      value={packageFilter}
+                      onChange={(e) => setPackageFilter(e.target.value as typeof packageFilter)}
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                    >
+                      <option value="all">All Packages</option>
+                      <option value="basic_bee">Basic Bee</option>
+                      <option value="worker_bee">Worker Bee</option>
+                      <option value="queen_bee">Queen Bee</option>
+                      <option value="group_rate">Group Rate</option>
                     </select>
                   </div>
 
@@ -1122,6 +1143,7 @@ export default function AdminPartiesPage() {
                     onClick={() => {
                       setStatusFilter('all');
                       setPartyTypeFilter('all');
+                      setPackageFilter('all');
                       setDateFilter('all');
                       setSearchQuery('');
                       setStartDate('');
