@@ -41,6 +41,14 @@ const PACKAGE_LABELS = {
   queen_bee: 'Queen Bee',
   worker_bee: 'Worker Bee',
   basic_bee: 'Basic Bee',
+  group_rate: 'Group Rate',
+};
+
+const PACKAGE_BADGE_COLORS: Record<string, string> = {
+  queen_bee: 'bg-amber-100 text-amber-800 border-amber-300',
+  worker_bee: 'bg-orange-100 text-orange-800 border-orange-300',
+  basic_bee: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  group_rate: 'bg-gray-100 text-gray-800 border-gray-300',
 };
 
 export default function AdminPartiesPage() {
@@ -1146,7 +1154,7 @@ export default function AdminPartiesPage() {
                       <div className="space-y-1 text-sm text-neutral-600">
                         <p><strong>Date:</strong> {formatDate(selectedBooking.party_date)}</p>
                         <p><strong>Time:</strong> {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}</p>
-                        <p><strong>Package:</strong> {PACKAGE_LABELS[selectedBooking.package_name] || selectedBooking.package_name}</p>
+                        <p><strong>Package:</strong> <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${PACKAGE_BADGE_COLORS[selectedBooking.package_name] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>{PACKAGE_LABELS[selectedBooking.package_name as keyof typeof PACKAGE_LABELS] || selectedBooking.package_name}</span></p>
                         <p><strong>Type:</strong> {PARTY_TYPE_LABELS[selectedBooking.party_type]}</p>
                         <p><strong>Birthday Child:</strong> {selectedBooking.child_name}{selectedBooking.child_age ? ` (${selectedBooking.child_age} yrs)` : ''}</p>
                       </div>
@@ -1471,7 +1479,9 @@ export default function AdminPartiesPage() {
                             {booking.child_name}
                             {booking.child_age && ` (${booking.child_age} yrs)`}
                           </div>
-                          <div className="text-neutral-600">{PACKAGE_LABELS[booking.package_name]}</div>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${PACKAGE_BADGE_COLORS[booking.package_name] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>
+                            {PACKAGE_LABELS[booking.package_name as keyof typeof PACKAGE_LABELS] || booking.package_name}
+                          </span>
                           <div className="text-neutral-600">{PARTY_TYPE_LABELS[booking.party_type]}</div>
                           <div className="text-neutral-600">{booking.guest_count} guests</div>
                         </div>
