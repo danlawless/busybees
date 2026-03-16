@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('party_bookings')
       .select('*')
-      .order('party_date', { ascending: false })
-      .order('start_time', { ascending: false });
+      .order('party_date', { ascending: true })
+      .order('start_time', { ascending: true });
 
     // Apply filters
     if (status && status !== 'all') {
@@ -90,6 +90,27 @@ export async function GET(request: NextRequest) {
       query = query.or(
         `customer_name.ilike.%${searchQuery}%,customer_email.ilike.%${searchQuery}%,customer_phone.ilike.%${searchQuery}%,child_name.ilike.%${searchQuery}%`
       );
+    }
+
+    // Auto-mark confirmed bookings as done if party_date is more than 1 day ago
+    const adminSupabase = createAdminClient();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    const { data: staleBookings, error: staleError } = await adminSupabase
+      .from('party_bookings')
+      .select('id')
+      .eq('status', 'confirmed')
+      .lt('party_date', yesterdayStr);
+
+    if (!staleError && staleBookings && staleBookings.length > 0) {
+      const staleIds = staleBookings.map(b => b.id);
+      await adminSupabase
+        .from('party_bookings')
+        .update({ status: 'done', updated_at: new Date().toISOString() })
+        .in('id', staleIds);
+      logger.info({ count: staleIds.length }, 'Auto-marked past bookings as done');
     }
 
     const { data, error } = await query;

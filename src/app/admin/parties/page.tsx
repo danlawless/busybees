@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { WaiverModal } from '@/components/ui/WaiverModal';
 import { StaffDiscountApplicator } from '@/components/admin/StaffDiscountApplicator';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
@@ -60,6 +61,7 @@ export default function AdminPartiesPage() {
   const [partyTypeFilter, setPartyTypeFilter] = useState<PartyType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'upcoming' | 'past' | 'custom'>('all');
+  const [showDoneBookings, setShowDoneBookings] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -132,6 +134,7 @@ export default function AdminPartiesPage() {
   const [addingGuest, setAddingGuest] = useState(false);
   const [signingGuestWaiver, setSigningGuestWaiver] = useState<string | null>(null);
   const [removingGuest, setRemovingGuest] = useState<string | null>(null);
+  const [viewingWaiverGuest, setViewingWaiverGuest] = useState<{ name: string; signedDate: string | null } | null>(null);
 
   // Overage payment state
   const [savedCards, setSavedCards] = useState<{ id: string; stripe_payment_method_id: string; last4: string; brand: string; is_default: boolean }[]>([]);
@@ -1256,9 +1259,24 @@ export default function AdminPartiesPage() {
                                 <td className="py-3 px-2 text-gray-600">{guest.age ?? '—'}</td>
                                 <td className="py-3 px-2 text-center">
                                   {guest.waiver_signed ? (
-                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                      Signed
-                                    </span>
+                                    <div className="flex flex-col items-center gap-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Signed
+                                        </span>
+                                        <button
+                                          onClick={() => setViewingWaiverGuest({ name: guest.child_name, signedDate: guest.waiver_signed_date })}
+                                          className="px-2 py-1 text-xs font-medium border border-blue-300 text-blue-700 rounded-full hover:bg-blue-50"
+                                        >
+                                          View
+                                        </button>
+                                      </div>
+                                      {guest.waiver_signed_date && (
+                                        <span className="text-[10px] text-gray-500">
+                                          {new Date(guest.waiver_signed_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <button
                                       onClick={() => handleSignGuestWaiver(guest.id)}
@@ -1398,17 +1416,37 @@ export default function AdminPartiesPage() {
             {/* Bookings List */}
             {!selectedBooking && (
             <div className="space-y-4">
-              {filteredBookings.length === 0 ? (
-                <Card>
-                  <div className="text-center py-12">
-                    <p className="text-neutral-600">No bookings found matching your filters.</p>
-                  </div>
-                </Card>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <Card key={booking.id} hover={false} padding="sm">
+              {(() => {
+                const activeBookings = filteredBookings.filter(b => b.status !== 'done');
+                const doneBookings = filteredBookings.filter(b => b.status === 'done');
+
+                // Assign colors to dates that have multiple bookings
+                const DATE_COLORS = [
+                  'bg-amber-50 border-l-4 border-l-amber-400',
+                  'bg-blue-50 border-l-4 border-l-blue-400',
+                  'bg-green-50 border-l-4 border-l-green-400',
+                  'bg-purple-50 border-l-4 border-l-purple-400',
+                  'bg-pink-50 border-l-4 border-l-pink-400',
+                  'bg-teal-50 border-l-4 border-l-teal-400',
+                  'bg-orange-50 border-l-4 border-l-orange-400',
+                ];
+                const dateCounts = new Map<string, number>();
+                activeBookings.forEach(b => dateCounts.set(b.party_date, (dateCounts.get(b.party_date) || 0) + 1));
+                const dateColorMap = new Map<string, string>();
+                let colorIndex = 0;
+                dateCounts.forEach((count, date) => {
+                  if (count > 1) {
+                    dateColorMap.set(date, DATE_COLORS[colorIndex % DATE_COLORS.length]);
+                    colorIndex++;
+                  }
+                });
+
+                const renderBookingCard = (booking: PartyBooking, useColors = true) => {
+                  const dateColor = useColors ? dateColorMap.get(booking.party_date) : undefined;
+                  return (
+                  <Card key={booking.id} hover={false} padding="sm" className={dateColor}>
                     <div
-                      className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+                      className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start cursor-pointer hover:bg-gray-50/50 rounded-lg p-2 -m-2 transition-colors"
                       onClick={() => openBookingDetail(booking)}
                     >
                       {/* Date & Time */}
@@ -1518,8 +1556,48 @@ export default function AdminPartiesPage() {
                       </div>
                     )}
                   </Card>
-                ))
-              )}
+                  );
+                };
+
+                if (filteredBookings.length === 0) {
+                  return (
+                    <Card>
+                      <div className="text-center py-12">
+                        <p className="text-neutral-600">No bookings found matching your filters.</p>
+                      </div>
+                    </Card>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* Active Bookings */}
+                    {activeBookings.map(b => renderBookingCard(b))}
+
+                    {/* Done Bookings - Collapsible */}
+                    {doneBookings.length > 0 && (
+                      <div className="mt-6">
+                        <button
+                          onClick={() => setShowDoneBookings(!showDoneBookings)}
+                          className="w-full flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 hover:bg-blue-100 transition-colors"
+                        >
+                          <span className="font-semibold text-blue-800">
+                            Completed Parties ({doneBookings.length})
+                          </span>
+                          <span className="text-blue-600 text-sm">
+                            {showDoneBookings ? '▲ Collapse' : '▼ Expand'}
+                          </span>
+                        </button>
+                        {showDoneBookings && (
+                          <div className="space-y-4 mt-4">
+                            {doneBookings.map(b => renderBookingCard(b, false))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             )}
           </div>
@@ -2436,6 +2514,14 @@ export default function AdminPartiesPage() {
           </div>
         )}
       </div>
+
+      {/* View Waiver Modal (read-only) */}
+      <WaiverModal
+        isOpen={viewingWaiverGuest !== null}
+        onClose={() => setViewingWaiverGuest(null)}
+        childName={viewingWaiverGuest?.name}
+        signedDate={viewingWaiverGuest?.signedDate}
+      />
     </div>
   );
 }

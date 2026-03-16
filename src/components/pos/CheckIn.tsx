@@ -2235,7 +2235,7 @@ export function CheckIn({
                                                     <div className="flex items-center space-x-2">
                                                         {child.waiverSigned ? (
                                                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                ✅ Signed
+                                                                ✅ Signed{child.waiverSignedDate ? ` ${new Date(child.waiverSignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
                                                             </span>
                                                         ) : (
                                                             <>

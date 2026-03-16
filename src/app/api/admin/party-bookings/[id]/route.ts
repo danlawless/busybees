@@ -41,8 +41,8 @@ export async function PATCH(
       .single();
 
     if (error) {
-      logger.error({ error, bookingId: id }, 'Failed to update party booking');
-      return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
+      logger.error({ error, bookingId: id, code: error.code, details: error.details, hint: error.hint, message: error.message }, 'Failed to update party booking');
+      return NextResponse.json({ error: 'Failed to update booking', details: error.message, code: error.code, hint: error.hint }, { status: 500 });
     }
 
     logger.info({ bookingId: id, updates: validatedData }, 'Updated party booking');

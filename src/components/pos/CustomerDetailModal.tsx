@@ -108,6 +108,7 @@ export function CustomerDetailModal({
   // Waiver modal state
   const [showWaiverModal, setShowWaiverModal] = useState(false);
   const [waiverChildName, setWaiverChildName] = useState<string | undefined>(undefined);
+  const [waiverSignedDate, setWaiverSignedDate] = useState<string | null>(null);
 
   // Customer edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -739,7 +740,7 @@ export function CustomerDetailModal({
                                 <span className="text-sm text-gray-500">Age {child.age}</span>
                                 {child.waiverSigned ? (
                                   <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs">
-                                    ✓ Waiver Signed
+                                    ✓ Signed{child.waiverSignedDate ? ` ${new Date(child.waiverSignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
                                   </span>
                                 ) : (
                                   <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full text-xs">
@@ -764,6 +765,7 @@ export function CustomerDetailModal({
                               <Button
                                 onClick={() => {
                                   setWaiverChildName(child.name);
+                                  setWaiverSignedDate(child.waiverSignedDate || null);
                                   setShowWaiverModal(true);
                                 }}
                                 size="sm"
@@ -1078,8 +1080,10 @@ export function CustomerDetailModal({
         onClose={() => {
           setShowWaiverModal(false);
           setWaiverChildName(undefined);
+          setWaiverSignedDate(null);
         }}
         childName={waiverChildName}
+        signedDate={waiverSignedDate}
       />
     </>
   );
