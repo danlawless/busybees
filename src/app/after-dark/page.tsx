@@ -13,12 +13,12 @@ export default function AfterDarkPage() {
     { icon: '🍕', title: 'Pizza Dinner', desc: 'Kids enjoy pizza and drinks — dinner is on us!' },
     { icon: '🎬', title: 'Movie Night', desc: 'A fun movie on the big screen in the play area' },
     { icon: '🎪', title: 'Supervised Play', desc: 'Staff-supervised activities the entire evening' },
-    { icon: '🕕', title: 'Drop-Off & Go', desc: 'Drop off at 6 PM, pick up at 9 PM — enjoy your evening!' },
+    { icon: '🕕', title: 'Drop-Off & Go', desc: 'Drop off at 5 PM, pick up at 7:30 PM — enjoy your evening!' },
   ];
 
   const details = [
     { label: 'Ages', value: '3-6 years old' },
-    { label: 'Time', value: '6:00 PM - 9:00 PM' },
+    { label: 'Time', value: 'Fridays, 5:00 PM - 7:30 PM' },
     { label: 'Includes', value: 'Pizza, drinks, movie & supervised play' },
     { label: 'Capacity', value: 'Limited spots — book early!' },
   ];
@@ -96,7 +96,7 @@ export default function AfterDarkPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
           >
-            Drop off the kids for an evening of pizza, movies, and supervised play —
+            Every Friday night — drop off the kids for an evening of pizza, movies, and supervised play
             while you enjoy a well-deserved night out!
           </motion.p>
 
@@ -193,8 +193,8 @@ export default function AfterDarkPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { step: '1', title: 'Book Online', desc: 'Reserve your spot — capacity is limited to ensure every child gets personal attention.', icon: '📱' },
-              { step: '2', title: 'Drop Off at 6 PM', desc: 'Sign the waiver, say goodbye, and head out for your evening! Kids start with supervised play time.', icon: '👋' },
-              { step: '3', title: 'Pick Up at 9 PM', desc: 'Return to happy, tired kids who had the time of their lives. Pizza consumed, movie watched, fun had!', icon: '🌙' },
+              { step: '2', title: 'Drop Off at 5 PM', desc: 'Sign the waiver, say goodbye, and head out for your Friday evening! Kids start with supervised play time.', icon: '👋' },
+              { step: '3', title: 'Pick Up at 7:30 PM', desc: 'Return to happy, tired kids who had the time of their lives. Pizza consumed, movie watched, fun had!', icon: '🌙' },
             ].map((item, i) => (
               <motion.div
                 key={i}
