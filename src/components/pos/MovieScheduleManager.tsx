@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -61,6 +62,61 @@ export function MovieScheduleManager() {
     poster_url: '',
     rating: 'G',
   });
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be under 10MB');
+      return;
+    }
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setForm(prev => ({ ...prev, poster_url: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to Supabase Storage
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/after-dark-movies/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setForm(prev => ({ ...prev, poster_url: data.url }));
+      } else {
+        alert('Failed to upload image. Please try again.');
+        setForm(prev => ({ ...prev, poster_url: '' }));
+      }
+    } catch {
+      alert('Failed to upload image.');
+      setForm(prev => ({ ...prev, poster_url: '' }));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
 
   const fetchMovies = useCallback(async () => {
     setIsLoading(true);
@@ -216,14 +272,47 @@ export function MovieScheduleManager() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Poster Image URL (optional)</label>
-                  <input
-                    type="url"
-                    value={form.poster_url}
-                    onChange={(e) => setForm(prev => ({ ...prev, poster_url: e.target.value }))}
-                    placeholder="https://..."
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 text-sm"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Movie Poster (optional)</label>
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                      dragOver ? 'border-honey-500 bg-honey-50' : 'border-neutral-300 hover:border-neutral-400'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    {uploading ? (
+                      <div className="py-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-honey-500 mx-auto" />
+                        <p className="text-xs text-neutral-500 mt-2">Uploading...</p>
+                      </div>
+                    ) : form.poster_url ? (
+                      <div className="relative inline-block">
+                        <Image
+                          src={form.poster_url}
+                          alt="Movie poster preview"
+                          width={80}
+                          height={100}
+                          className="rounded-lg object-cover mx-auto"
+                          unoptimized
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">Click or drop to replace</p>
+                      </div>
+                    ) : (
+                      <div className="py-2">
+                        <span className="text-2xl">🎬</span>
+                        <p className="text-xs text-neutral-500 mt-1">Drag & drop poster or click to browse</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -275,17 +364,30 @@ export function MovieScheduleManager() {
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-start gap-4 flex-1 min-w-0">
-                              {/* Movie icon / poster placeholder */}
-                              <div
-                                className="w-16 h-20 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl"
-                                style={{
-                                  background: isThisWeek
-                                    ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
-                                    : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                                }}
-                              >
-                                🎬
-                              </div>
+                              {/* Movie poster or placeholder */}
+                              {movie.poster_url ? (
+                                <div className="w-16 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={movie.poster_url}
+                                    alt={movie.title}
+                                    width={64}
+                                    height={80}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="w-16 h-20 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl"
+                                  style={{
+                                    background: isThisWeek
+                                      ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
+                                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                                  }}
+                                >
+                                  🎬
+                                </div>
+                              )}
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   {isThisWeek && (

@@ -286,16 +286,29 @@ export default function AfterDarkPage() {
                       </div>
                     )}
                     <div className="p-6 text-center">
-                      <div
-                        className="w-20 h-24 rounded-xl mx-auto mb-4 flex items-center justify-center text-4xl"
-                        style={{
-                          background: isNext
-                            ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)'
-                            : 'rgba(255, 255, 255, 0.05)',
-                        }}
-                      >
-                        🎬
-                      </div>
+                      {movie.poster_url ? (
+                        <div className="w-24 h-32 rounded-xl mx-auto mb-4 overflow-hidden">
+                          <Image
+                            src={movie.poster_url}
+                            alt={movie.title}
+                            width={96}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-20 h-24 rounded-xl mx-auto mb-4 flex items-center justify-center text-4xl"
+                          style={{
+                            background: isNext
+                              ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                          }}
+                        >
+                          🎬
+                        </div>
+                      )}
                       <h3 className="text-xl font-bold mb-1" style={{ color: '#e9d5ff' }}>{movie.title}</h3>
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <span
