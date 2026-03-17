@@ -9,6 +9,7 @@ import { PassSection } from './PassSection';
 import { PartySection } from './PartySection';
 import { SessionSection } from './SessionSection';
 import { MarketingSection } from './MarketingSection';
+import { ForecastSection } from './ForecastSection';
 
 type TabKey =
   | 'overview'
@@ -17,9 +18,10 @@ type TabKey =
   | 'passes'
   | 'parties'
   | 'sessions'
-  | 'marketing';
+  | 'marketing'
+  | 'forecast';
 
-const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
+const TABS: Array<{ key: TabKey; label: string; icon: string; adminOnly?: boolean }> = [
   { key: 'overview', label: 'Overview', icon: '📊' },
   { key: 'revenue', label: 'Revenue', icon: '💰' },
   { key: 'customers', label: 'Customers', icon: '👥' },
@@ -27,16 +29,23 @@ const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'parties', label: 'Parties', icon: '🎂' },
   { key: 'sessions', label: 'Sessions', icon: '🎮' },
   { key: 'marketing', label: 'Marketing', icon: '📣' },
+  { key: 'forecast', label: 'Forecast', icon: '🔮', adminOnly: true },
 ];
 
-export function ReportsDashboard() {
+interface ReportsDashboardProps {
+  isAdmin?: boolean;
+}
+
+export function ReportsDashboard({ isAdmin = false }: ReportsDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+
+  const visibleTabs = TABS.filter(tab => !tab.adminOnly || isAdmin);
 
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
       <div className="flex overflow-x-auto gap-1 border-b border-neutral-200 pb-px -mb-px scrollbar-hide">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -66,6 +75,7 @@ export function ReportsDashboard() {
         {activeTab === 'parties' && <PartySection />}
         {activeTab === 'sessions' && <SessionSection />}
         {activeTab === 'marketing' && <MarketingSection />}
+        {activeTab === 'forecast' && <ForecastSection />}
       </motion.div>
     </div>
   );

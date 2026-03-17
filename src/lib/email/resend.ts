@@ -2862,6 +2862,165 @@ ${siteUrl}
 }
 
 /**
+ * Send post-party thank you email with Google review CTA
+ * Sent ~24 hours after the party ends
+ */
+export async function sendPostPartyThankYouEmail(data: {
+  to: string;
+  customerName: string;
+  childName: string;
+  packageName: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const googleReviewUrl = 'https://g.page/r/CbjlkAgAnnOKEBM/review';
+
+  const packageDisplayName = data.packageName === 'queen_bee' ? 'Queen Bee'
+    : data.packageName === 'worker_bee' ? 'Worker Bee'
+    : data.packageName === 'basic_bee' ? 'Basic Bee'
+    : 'Birthday';
+
+  const subject = `🎉 Thanks for celebrating ${data.childName}'s birthday with us!`;
+
+  const text = `
+Hi ${data.customerName}!
+
+Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
+
+It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
+
+If you have a moment, we'd really appreciate it if you could leave us a quick Google review. Your feedback helps other families discover Busy Bee's and means the world to our small team!
+
+Leave a review: ${googleReviewUrl}
+
+We'd love to see you again — whether it's for open play, a membership, or another birthday celebration!
+
+Warm regards,
+Busy Bee's Party Team
+
+Visit us: ${siteUrl}
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You from Busy Bee's!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #d97706; background-image: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
+                <span style="font-size: 36px;">🎉</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+                Thank You!
+              </h1>
+              <p style="margin: 10px 0 0; color: #fef3c7; font-size: 16px;">
+                We loved celebrating with ${data.childName}!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="margin: 0 0 20px; font-size: 16px; color: #374151; line-height: 1.6;">
+                Hi ${data.customerName}!
+              </p>
+              <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
+              </p>
+              <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
+              </p>
+
+              <!-- Google Review CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 25px; text-align: center;">
+                    <div style="width: 50px; height: 50px; margin: 0 auto 12px; line-height: 50px;">
+                      <span style="font-size: 28px;">⭐</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: #92400e;">
+                      Loved your experience?
+                    </p>
+                    <p style="margin: 0 0 20px; font-size: 14px; color: #78350f; line-height: 1.5;">
+                      If you have a moment, we'd really appreciate a quick Google review. Your feedback helps other families discover Busy Bee's and means the world to our small team!
+                    </p>
+                    <a href="${googleReviewUrl}" style="display: inline-block; background-color: #d97706; background-image: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);">
+                      ⭐ Leave a Google Review
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Come Back -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px; text-align: center;">
+                    <p style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #1f2937;">
+                      🐝 We'd love to see you again!
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">
+                      Whether it's for open play, a membership, or another birthday celebration — we're always here for your family!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 25px;">
+                    <a href="${siteUrl}" style="display: inline-block; background-color: #ec4899; background-image: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);">
+                      Visit Busy Bee's
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #4b5563;">
+                      Warm regards,
+                    </p>
+                    <p style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #374151;">
+                      Busy Bee's Party Team
+                    </p>
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">📍 Busy Bees Indoor Play Center</p>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    text,
+    html,
+  });
+}
+
+/**
  * Send emails in batches using Resend's batch API
  * Chunks into groups of 100 (Resend's max per batch call)
  */

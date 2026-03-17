@@ -141,6 +141,44 @@ export interface SessionData {
   dayOfWeekPattern: Array<{ day: string; avgCount: number }>;
 }
 
+export interface ForecastData {
+  monthlyFixedExpenses: number;
+  expenseBreakdown: Array<{ category: string; name: string; amount: number }>;
+  expenseByCategory: Record<string, number>;
+  projections: Array<{
+    window: '30d' | '60d' | '90d';
+    confirmedRevenue: number;
+    projectedSubscriptionRevenue: number;
+    totalProjectedRevenue: number;
+    totalFixedExpenses: number;
+    netProjection: number;
+  }>;
+  monthlyHistory: Array<{
+    month: string;
+    revenue: number;
+    expenses: number;
+    net: number;
+    partyRevenue: number;
+    passRevenue: number;
+    foodRevenue: number;
+    giftCardRevenue: number;
+  }>;
+  seasonalComparison: Array<{
+    month: string;
+    currentYear: number;
+    previousYear: number;
+    change: number;
+  }>;
+  breakEven: {
+    monthlyExpenses: number;
+    avgMonthlyRevenue: number;
+    revenuePerParty: number;
+    partiesNeededForBreakEven: number;
+    activeSubscriptions: number;
+    monthlySubscriptionRevenue: number;
+  };
+}
+
 export interface MarketingData {
   giftCardSales: Array<{ date: string; sales: number; redemptions: number }>;
   outstandingBalance: number;
