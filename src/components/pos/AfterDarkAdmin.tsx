@@ -17,6 +17,7 @@ interface Booking {
   status: string;
   amount_paid: number | null;
   stripe_payment_intent_id: string | null;
+  waiver_signed: boolean;
   created_at: string;
 }
 
@@ -251,6 +252,7 @@ export function AfterDarkAdmin() {
                                 <th className="text-left py-2 px-3 font-semibold text-neutral-600">Parent</th>
                                 <th className="text-left py-2 px-3 font-semibold text-neutral-600">Contact</th>
                                 <th className="text-left py-2 px-3 font-semibold text-neutral-600">Kids</th>
+                                <th className="text-left py-2 px-3 font-semibold text-neutral-600">Waiver</th>
                                 <th className="text-left py-2 px-3 font-semibold text-neutral-600">Details</th>
                                 <th className="text-right py-2 px-3 font-semibold text-neutral-600">Actions</th>
                               </tr>
@@ -267,6 +269,13 @@ export function AfterDarkAdmin() {
                                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-sm">
                                       {booking.num_kids}
                                     </span>
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    {booking.waiver_signed ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">✅ Signed</span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">❌ Missing</span>
+                                    )}
                                   </td>
                                   <td className="py-3 px-3">
                                     {booking.kid_details && (
@@ -310,7 +319,7 @@ export function AfterDarkAdmin() {
                                   Total: {selectedBookings.length} booking{selectedBookings.length !== 1 ? 's' : ''}
                                 </td>
                                 <td className="py-2 px-3 font-bold text-purple-700">{totalKids} kids</td>
-                                <td colSpan={2} />
+                                <td colSpan={3} />
                               </tr>
                             </tfoot>
                           </table>

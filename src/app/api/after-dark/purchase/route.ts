@@ -22,6 +22,7 @@ const PurchaseSchema = z.object({
   notes: z.string().max(500).optional(),
   paymentMethodId: z.string().min(1),
   useGiftCardBalance: z.boolean().optional().default(true),
+  booking_id: z.string().uuid().optional(),
 });
 
 function getReturnUrl(): string {
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { event_date, num_kids, kid_details, notes, paymentMethodId, useGiftCardBalance } = parsed.data;
+    const { event_date, num_kids, kid_details, notes, paymentMethodId, useGiftCardBalance, booking_id } = parsed.data;
     const adminSupabase = createAdminClient();
 
     // Get customer profile
@@ -155,27 +156,51 @@ export async function POST(request: NextRequest) {
       stripePaymentIntentId = `giftcard_${Date.now()}`;
     }
 
-    // Create booking
-    const { data: booking, error: bookingError } = await adminSupabase
-      .from('after_dark_bookings')
-      .insert({
-        event_date,
-        parent_name: profile.name || 'Customer',
-        parent_email: profile.email || user.email || '',
-        parent_phone: profile.phone || '',
-        num_kids,
-        kid_details: kid_details || null,
-        notes: notes || null,
-        status: 'confirmed',
-        amount_paid: totalAmount,
-        stripe_payment_intent_id: stripePaymentIntentId,
-      })
-      .select()
-      .single();
+    // Create or update booking
+    let booking;
+    if (booking_id) {
+      // Update existing booking with payment info
+      const { data, error: updateError } = await adminSupabase
+        .from('after_dark_bookings')
+        .update({
+          amount_paid: totalAmount,
+          stripe_payment_intent_id: stripePaymentIntentId,
+          status: 'confirmed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', booking_id)
+        .select()
+        .single();
 
-    if (bookingError) {
-      logger.error({ error: bookingError }, 'Failed to create After Dark booking after payment');
-      return NextResponse.json({ error: 'Payment processed but booking failed. Please contact us.' }, { status: 500 });
+      if (updateError) {
+        logger.error({ error: updateError }, 'Failed to update After Dark booking with payment');
+        return NextResponse.json({ error: 'Payment processed but booking update failed. Please contact us.' }, { status: 500 });
+      }
+      booking = data;
+    } else {
+      // Create new booking
+      const { data, error: bookingError } = await adminSupabase
+        .from('after_dark_bookings')
+        .insert({
+          event_date,
+          parent_name: profile.name || 'Customer',
+          parent_email: profile.email || user.email || '',
+          parent_phone: profile.phone || '',
+          num_kids,
+          kid_details: kid_details || null,
+          notes: notes || null,
+          status: 'confirmed',
+          amount_paid: totalAmount,
+          stripe_payment_intent_id: stripePaymentIntentId,
+        })
+        .select()
+        .single();
+
+      if (bookingError) {
+        logger.error({ error: bookingError }, 'Failed to create After Dark booking after payment');
+        return NextResponse.json({ error: 'Payment processed but booking failed. Please contact us.' }, { status: 500 });
+      }
+      booking = data;
     }
 
     // Deduct gift card if used

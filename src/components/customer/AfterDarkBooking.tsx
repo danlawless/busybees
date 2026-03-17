@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AfterDarkWaiver } from './AfterDarkWaiver';
 
 interface Child {
   id: string;
@@ -42,7 +43,10 @@ interface SavedCard {
   is_default: boolean;
 }
 
+type BookingStep = 'select' | 'waiver' | 'payment' | 'success';
+
 export function AfterDarkBooking({ customerName, customerEmail, customerPhone, children }: AfterDarkBookingProps) {
+  const [step, setStep] = useState<BookingStep>('select');
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
@@ -55,6 +59,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [selectedCard, setSelectedCard] = useState('');
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
+  const [pendingBookingId, setPendingBookingId] = useState('');
 
   const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 6);
 
@@ -105,18 +110,60 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     ? selectedChildren.length * 40
     : selectedChildren.length === 1 ? 45 : 0;
 
-  const handleSubmit = async () => {
-    if (!selectedDate || selectedChildren.length === 0 || !selectedCard) return;
+  const kidDetails = selectedChildren
+    .map(id => {
+      const child = children.find(c => c.id === id);
+      return child ? `${child.name} (${child.age})` : '';
+    })
+    .filter(Boolean)
+    .join(', ');
+
+  // Step 1 → Step 2: Create unpaid booking, then go to waiver
+  const handleProceedToWaiver = async () => {
+    if (!selectedDate || selectedChildren.length === 0) return;
     setSubmitting(true);
     setError('');
 
-    const kidDetails = selectedChildren
-      .map(id => {
-        const child = children.find(c => c.id === id);
-        return child ? `${child.name} (${child.age})` : '';
-      })
-      .filter(Boolean)
-      .join(', ');
+    try {
+      const res = await fetch('/api/after-dark/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_date: selectedDate,
+          parent_name: customerName,
+          parent_email: customerEmail,
+          parent_phone: customerPhone,
+          num_kids: selectedChildren.length,
+          kid_details: kidDetails,
+          notes: notes || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setPendingBookingId(data.booking.id);
+        setStep('waiver');
+      } else {
+        setError(data.error || 'Booking failed. Please try again.');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Step 2 → Step 3: Waiver signed, go to payment
+  const handleWaiverComplete = () => {
+    setStep('payment');
+  };
+
+  // Step 3 → Success: Process payment
+  const handlePayment = async () => {
+    if (!selectedCard || !pendingBookingId) return;
+    setSubmitting(true);
+    setError('');
 
     try {
       const res = await fetch('/api/after-dark/purchase', {
@@ -129,6 +176,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           notes: notes || undefined,
           paymentMethodId: selectedCard,
           useGiftCardBalance: true,
+          booking_id: pendingBookingId,
         }),
       });
 
@@ -136,6 +184,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
 
       if (res.ok) {
         setSuccess(true);
+        setStep('success');
         setAmountPaid(data.amountPaid || totalPrice);
         setSelectedChildren([]);
         setNotes('');
@@ -149,7 +198,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         setAvailability(avData.availability || []);
         setBookings(bookData.bookings || []);
       } else {
-        setError(data.error || 'Booking failed. Please try again.');
+        setError(data.error || 'Payment failed. Please try again.');
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -198,22 +247,118 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         </Card>
       )}
 
-      {/* Booking Form */}
-      {success ? (
+      {/* Step Progress */}
+      {!success && step !== 'select' && (
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+          <span className={step === 'select' ? 'text-purple-700 font-bold' : 'text-green-600'}>1. Select</span>
+          <span>→</span>
+          <span className={step === 'waiver' ? 'text-purple-700 font-bold' : step === 'payment' || step === 'success' ? 'text-green-600' : ''}>2. Waiver</span>
+          <span>→</span>
+          <span className={step === 'payment' ? 'text-purple-700 font-bold' : step === 'success' ? 'text-green-600' : ''}>3. Payment</span>
+        </div>
+      )}
+
+      {/* Step: Waiver */}
+      {step === 'waiver' && pendingBookingId && (
+        <AfterDarkWaiver
+          parentName={customerName}
+          parentEmail={customerEmail}
+          parentPhone={customerPhone}
+          childNames={kidDetails}
+          bookingId={pendingBookingId}
+          onComplete={handleWaiverComplete}
+          onCancel={() => setStep('select')}
+        />
+      )}
+
+      {/* Step: Payment */}
+      {step === 'payment' && (
+        <Card className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-2">Complete Payment</h4>
+          <p className="text-sm text-gray-500 mb-4">Waiver signed! Select your payment method to confirm your reservation.</p>
+
+          <div className="mb-4 p-3 rounded-xl bg-purple-50 border border-purple-200">
+            <p className="text-sm text-purple-700"><strong>Date:</strong> {formatDate(selectedDate)}</p>
+            <p className="text-sm text-purple-700"><strong>Children:</strong> {kidDetails}</p>
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-purple-200">
+              <span className="text-sm text-purple-700">
+                {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; {selectedChildren.length >= 2 ? '$40' : '$45'}
+              </span>
+              <span className="text-lg font-bold text-purple-800">${totalPrice}</span>
+            </div>
+          </div>
+
+          {savedCards.length === 0 ? (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center mb-4">
+              <p className="text-sm text-amber-800">
+                No saved payment methods. Please add a card in the Payments tab first.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 mb-4">
+              {savedCards.map(card => (
+                <button
+                  key={card.id}
+                  onClick={() => setSelectedCard(card.id)}
+                  className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
+                    selectedCard === card.id
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300 bg-white'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                    selectedCard === card.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {selectedCard === card.id ? '✓' : '💳'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{card.brand} •••• {card.last4}</p>
+                    <p className="text-xs text-gray-500">Expires {card.exp_month}/{card.exp_year}{card.is_default && ' — Default'}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-center">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button onClick={() => setStep('waiver')} variant="outline" className="flex-1">Back</Button>
+            <Button
+              onClick={handlePayment}
+              disabled={submitting || !selectedCard}
+              className="flex-1"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+            >
+              {submitting ? 'Processing...' : `Pay $${totalPrice}`}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Step: Success */}
+      {step === 'success' && (
         <Card className="p-8 text-center">
           <span className="text-5xl mb-4 block">🎉</span>
           <h4 className="text-2xl font-bold text-gray-800 mb-2">You&apos;re All Set!</h4>
           <p className="text-gray-600 mb-2">
-            Your spot has been reserved. We&apos;ll see your little ones on Friday!
+            Waiver signed and payment complete. We&apos;ll see your little ones on Friday!
           </p>
           {amountPaid != null && (
             <p className="text-lg font-bold text-purple-700 mb-4">
               Amount charged: ${amountPaid.toFixed(2)}
             </p>
           )}
-          <Button onClick={() => { setSuccess(false); setAmountPaid(null); }}>Book Another Date</Button>
+          <Button onClick={() => { setSuccess(false); setAmountPaid(null); setStep('select'); setPendingBookingId(''); }}>Book Another Date</Button>
         </Card>
-      ) : (
+      )}
+
+      {/* Step: Select Date & Children */}
+      {step === 'select' && (
         <Card className="p-6">
           <h4 className="font-semibold text-gray-800 mb-4">Reserve a Spot</h4>
 
@@ -353,63 +498,20 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             </div>
           )}
 
-          {/* Payment Method */}
-          {selectedChildren.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-              {savedCards.length === 0 ? (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
-                  <p className="text-sm text-amber-800">
-                    No saved payment methods. Please add a card in the Payments tab first.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {savedCards.map(card => (
-                    <button
-                      key={card.id}
-                      onClick={() => setSelectedCard(card.id)}
-                      className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
-                        selectedCard === card.id
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-purple-300 bg-white'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                        selectedCard === card.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {selectedCard === card.id ? '✓' : '💳'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {card.brand} •••• {card.last4}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Expires {card.exp_month}/{card.exp_year}
-                          {card.is_default && ' — Default'}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-center">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
-          {/* Submit */}
+          {/* Continue to Waiver */}
           <Button
-            onClick={handleSubmit}
-            disabled={submitting || !selectedDate || selectedChildren.length === 0 || !selectedCard}
+            onClick={handleProceedToWaiver}
+            disabled={submitting || !selectedDate || selectedChildren.length === 0}
             className="w-full py-4 text-lg"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
           >
-            {submitting ? 'Processing Payment...' : `Pay $${totalPrice} & Reserve ${selectedChildren.length} Spot${selectedChildren.length > 1 ? 's' : ''}`}
+            {submitting ? 'Reserving...' : `Continue — $${totalPrice}`}
           </Button>
         </Card>
       )}
