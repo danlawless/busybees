@@ -1,0 +1,205 @@
+/**
+ * API: Purchase After Dark booking with saved payment method
+ * Creates booking + processes Stripe payment in one step
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
+import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
+import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const MAX_KIDS = 40;
+const PRICE_SINGLE = 45;
+const PRICE_MULTI = 40;
+
+const PurchaseSchema = z.object({
+  event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  num_kids: z.number().int().min(1).max(10),
+  kid_details: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  paymentMethodId: z.string().min(1),
+  useGiftCardBalance: z.boolean().optional().default(true),
+});
+
+function getReturnUrl(): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    if (siteUrl.startsWith('http://') || siteUrl.startsWith('https://')) {
+      return `${siteUrl}/customer/dashboard?tab=after-dark`;
+    }
+    return `https://${siteUrl}/customer/dashboard?tab=after-dark`;
+  }
+  return 'https://busybeesipc.com/customer/dashboard?tab=after-dark';
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = PurchaseSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { event_date, num_kids, kid_details, notes, paymentMethodId, useGiftCardBalance } = parsed.data;
+    const adminSupabase = createAdminClient();
+
+    // Get customer profile
+    const { data: profile } = await adminSupabase
+      .from('users')
+      .select('name, email, phone')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 400 });
+    }
+
+    // Check capacity
+    const { data: existing } = await adminSupabase
+      .from('after_dark_bookings')
+      .select('num_kids')
+      .eq('event_date', event_date)
+      .neq('status', 'cancelled');
+
+    const currentBooked = (existing || []).reduce((sum, b) => sum + b.num_kids, 0);
+    const remaining = MAX_KIDS - currentBooked;
+
+    if (num_kids > remaining) {
+      return NextResponse.json({
+        error: remaining === 0
+          ? 'Sorry, this event is fully booked!'
+          : `Only ${remaining} spot${remaining === 1 ? '' : 's'} remaining.`,
+      }, { status: 400 });
+    }
+
+    // Calculate price
+    const pricePerKid = num_kids >= 2 ? PRICE_MULTI : PRICE_SINGLE;
+    const totalAmount = num_kids * pricePerKid;
+    let amountToCharge = totalAmount;
+    let giftCardAmountUsed = 0;
+
+    // Check gift card balance
+    if (useGiftCardBalance) {
+      const giftCardBalance = await getUserGiftCardBalance(user.id);
+      if (giftCardBalance > 0) {
+        giftCardAmountUsed = Math.min(giftCardBalance, totalAmount);
+        amountToCharge = totalAmount - giftCardAmountUsed;
+      }
+    }
+
+    // Validate payment method belongs to customer
+    const stripeMode = getStripeMode();
+    const customerIdColumn = getStripeCustomerIdColumn();
+    const { data: customerData } = await adminSupabase
+      .from('users')
+      .select(`${customerIdColumn}`)
+      .eq('id', user.id)
+      .single();
+
+    const stripeCustomerId = customerData?.[customerIdColumn] ||
+      await getOrCreateStripeCustomer(user.id, adminSupabase);
+
+    let stripePaymentIntentId: string | null = null;
+
+    if (amountToCharge > 0) {
+      const stripe = getStripeClient();
+      const amountInCents = Math.round(amountToCharge * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+        customer: stripeCustomerId,
+        payment_method: paymentMethodId,
+        metadata: {
+          customer_id: user.id,
+          type: 'after_dark',
+          event_date,
+          num_kids: String(num_kids),
+          gift_card_amount: String(giftCardAmountUsed),
+          original_amount: String(totalAmount),
+          direct_payment: 'true',
+        },
+        confirm: true,
+        off_session: false,
+        return_url: getReturnUrl(),
+      });
+
+      if (paymentIntent.status === 'requires_action') {
+        return NextResponse.json({
+          requiresAction: true,
+          clientSecret: paymentIntent.client_secret,
+        });
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        return NextResponse.json({ error: 'Payment failed. Please try again.' }, { status: 400 });
+      }
+
+      stripePaymentIntentId = paymentIntent.id;
+    } else {
+      stripePaymentIntentId = `giftcard_${Date.now()}`;
+    }
+
+    // Create booking
+    const { data: booking, error: bookingError } = await adminSupabase
+      .from('after_dark_bookings')
+      .insert({
+        event_date,
+        parent_name: profile.name || 'Customer',
+        parent_email: profile.email || user.email || '',
+        parent_phone: profile.phone || '',
+        num_kids,
+        kid_details: kid_details || null,
+        notes: notes || null,
+        status: 'confirmed',
+        amount_paid: totalAmount,
+        stripe_payment_intent_id: stripePaymentIntentId,
+      })
+      .select()
+      .single();
+
+    if (bookingError) {
+      logger.error({ error: bookingError }, 'Failed to create After Dark booking after payment');
+      return NextResponse.json({ error: 'Payment processed but booking failed. Please contact us.' }, { status: 500 });
+    }
+
+    // Deduct gift card if used
+    if (giftCardAmountUsed > 0) {
+      await applyGiftCardBalance(user.id, giftCardAmountUsed);
+    }
+
+    logger.info({
+      bookingId: booking.id,
+      event_date,
+      num_kids,
+      totalAmount,
+      amountCharged: amountToCharge,
+      giftCardUsed: giftCardAmountUsed,
+    }, 'After Dark booking purchased');
+
+    return NextResponse.json({
+      booking,
+      amountPaid: totalAmount,
+      giftCardAmountUsed,
+      remaining: remaining - num_kids,
+    }, { status: 201 });
+  } catch (error) {
+    logger.error({ error }, 'After Dark purchase error');
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

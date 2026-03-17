@@ -33,6 +33,15 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+interface SavedCard {
+  id: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
+
 export function AfterDarkBooking({ customerName, customerEmail, customerPhone, children }: AfterDarkBookingProps) {
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
@@ -41,8 +50,11 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [bookings, setBookings] = useState<Array<{ id: string; event_date: string; num_kids: number; kid_details: string | null; status: string }>>([]);
+  const [bookings, setBookings] = useState<Array<{ id: string; event_date: string; num_kids: number; kid_details: string | null; status: string; amount_paid: number | null }>>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [selectedCard, setSelectedCard] = useState('');
+  const [amountPaid, setAmountPaid] = useState<number | null>(null);
 
   const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 6);
 
@@ -63,6 +75,17 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
       .then(data => setBookings(data.bookings || []))
       .catch(() => {})
       .finally(() => setLoadingBookings(false));
+
+    // Fetch saved payment methods
+    fetch('/api/stripe/payment-methods')
+      .then(res => res.json())
+      .then(data => {
+        const cards = data.paymentMethods || [];
+        setSavedCards(cards);
+        const defaultCard = cards.find((c: SavedCard) => c.is_default) || cards[0];
+        if (defaultCard) setSelectedCard(defaultCard.id);
+      })
+      .catch(() => {});
   }, []);
 
   const selectedAvailability = availability.find(a => a.date === selectedDate);
@@ -78,8 +101,12 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     });
   };
 
+  const totalPrice = selectedChildren.length >= 2
+    ? selectedChildren.length * 40
+    : selectedChildren.length === 1 ? 45 : 0;
+
   const handleSubmit = async () => {
-    if (!selectedDate || selectedChildren.length === 0) return;
+    if (!selectedDate || selectedChildren.length === 0 || !selectedCard) return;
     setSubmitting(true);
     setError('');
 
@@ -92,17 +119,16 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
       .join(', ');
 
     try {
-      const res = await fetch('/api/after-dark/book', {
+      const res = await fetch('/api/after-dark/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event_date: selectedDate,
-          parent_name: customerName,
-          parent_email: customerEmail,
-          parent_phone: customerPhone,
           num_kids: selectedChildren.length,
           kid_details: kidDetails,
           notes: notes || undefined,
+          paymentMethodId: selectedCard,
+          useGiftCardBalance: true,
         }),
       });
 
@@ -110,6 +136,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
 
       if (res.ok) {
         setSuccess(true);
+        setAmountPaid(data.amountPaid || totalPrice);
         setSelectedChildren([]);
         setNotes('');
         // Refresh availability and bookings
@@ -159,6 +186,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
                   <p className="text-sm text-purple-600">
                     {booking.num_kids} kid{booking.num_kids > 1 ? 's' : ''}
                     {booking.kid_details && ` — ${booking.kid_details}`}
+                    {booking.amount_paid != null && ` — $${booking.amount_paid.toFixed(2)}`}
                   </p>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -175,10 +203,15 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         <Card className="p-8 text-center">
           <span className="text-5xl mb-4 block">🎉</span>
           <h4 className="text-2xl font-bold text-gray-800 mb-2">You&apos;re All Set!</h4>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-2">
             Your spot has been reserved. We&apos;ll see your little ones on Friday!
           </p>
-          <Button onClick={() => setSuccess(false)}>Book Another Date</Button>
+          {amountPaid != null && (
+            <p className="text-lg font-bold text-purple-700 mb-4">
+              Amount charged: ${amountPaid.toFixed(2)}
+            </p>
+          )}
+          <Button onClick={() => { setSuccess(false); setAmountPaid(null); }}>Book Another Date</Button>
         </Card>
       ) : (
         <Card className="p-6">
@@ -320,6 +353,49 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             </div>
           )}
 
+          {/* Payment Method */}
+          {selectedChildren.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+              {savedCards.length === 0 ? (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                  <p className="text-sm text-amber-800">
+                    No saved payment methods. Please add a card in the Payments tab first.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedCards.map(card => (
+                    <button
+                      key={card.id}
+                      onClick={() => setSelectedCard(card.id)}
+                      className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
+                        selectedCard === card.id
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-purple-300 bg-white'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                        selectedCard === card.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {selectedCard === card.id ? '✓' : '💳'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">
+                          {card.brand} •••• {card.last4}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Expires {card.exp_month}/{card.exp_year}
+                          {card.is_default && ' — Default'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-center">
               <p className="text-sm text-red-700">{error}</p>
@@ -329,11 +405,11 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           {/* Submit */}
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !selectedDate || selectedChildren.length === 0}
+            disabled={submitting || !selectedDate || selectedChildren.length === 0 || !selectedCard}
             className="w-full py-4 text-lg"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
           >
-            {submitting ? 'Booking...' : `Reserve ${selectedChildren.length} Spot${selectedChildren.length > 1 ? 's' : ''}`}
+            {submitting ? 'Processing Payment...' : `Pay $${totalPrice} & Reserve ${selectedChildren.length} Spot${selectedChildren.length > 1 ? 's' : ''}`}
           </Button>
         </Card>
       )}
