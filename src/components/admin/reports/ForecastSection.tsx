@@ -9,6 +9,7 @@ import { useReportData, ForecastData } from '@/hooks/useReportData';
 import { ReportKpiCard } from './ReportKpiCard';
 import { ReportChartCard } from './ReportChartCard';
 import { CHART_COLORS, TOOLTIP_STYLE, CHART_MARGIN, formatCurrency, formatCompactCurrency } from './chartTheme';
+import { RevenueBeehive } from './RevenueBeehive';
 
 interface FixedExpense {
   id: string;
@@ -131,6 +132,11 @@ export function ForecastSection() {
     .filter(e => !e.effective_to)
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
+  // Current month revenue (last entry in monthlyHistory is current month)
+  const currentMonthRevenue = data?.monthlyHistory?.length
+    ? data.monthlyHistory[data.monthlyHistory.length - 1].revenue
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -164,6 +170,13 @@ export function ForecastSection() {
           } : undefined}
         />
       </div>
+
+      {/* Revenue Beehive */}
+      <RevenueBeehive
+        currentRevenue={currentMonthRevenue}
+        expenses={data?.expenseBreakdown || []}
+        loading={isLoading}
+      />
 
       {/* Break-Even Insights */}
       {data?.breakEven && (
