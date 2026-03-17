@@ -39,6 +39,7 @@ import {
   deleteProduct,
 } from '@/lib/api/products';
 import { GroupsManager } from './GroupsManager';
+import { AnnouncementManager } from './AnnouncementManager';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -142,7 +143,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -5253,6 +5254,13 @@ export function AdminPanel({
             📢 Marketing
           </Button>
           <Button
+            onClick={() => setCurrentView('announcements')}
+            variant={currentView === 'announcements' ? 'default' : 'outline'}
+            size="sm"
+          >
+            📣 Announcements
+          </Button>
+          <Button
             onClick={() => setCurrentView('newsletter')}
             variant={currentView === 'newsletter' ? 'default' : 'outline'}
             size="sm"
@@ -5324,6 +5332,7 @@ export function AdminPanel({
       {currentView === 'sales' && renderSales()}
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
       {currentView === 'marketing' && renderMarketing()}
+      {currentView === 'announcements' && <AnnouncementManager />}
       {currentView === 'newsletter' && renderNewsletter()}
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
