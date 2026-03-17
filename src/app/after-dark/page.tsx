@@ -255,7 +255,7 @@ export default function AfterDarkPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              Coming Soon
+              What&apos;s on Tap?
             </motion.h2>
             <p className="text-center mb-12" style={{ color: '#a78bfa' }}>
               See what&apos;s playing at upcoming After Dark nights
