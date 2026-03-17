@@ -40,7 +40,7 @@ import {
 } from '@/lib/api/products';
 import { GroupsManager } from './GroupsManager';
 import { AnnouncementManager } from './AnnouncementManager';
-import { MovieScheduleManager } from './MovieScheduleManager';
+import { AfterDarkAdmin } from './AfterDarkAdmin';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -5341,7 +5341,7 @@ export function AdminPanel({
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
       {currentView === 'marketing' && renderMarketing()}
       {currentView === 'announcements' && <AnnouncementManager />}
-      {currentView === 'after-dark' && <MovieScheduleManager />}
+      {currentView === 'after-dark' && <AfterDarkAdmin />}
       {currentView === 'newsletter' && renderNewsletter()}
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
