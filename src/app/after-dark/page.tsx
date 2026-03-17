@@ -25,78 +25,12 @@ export default function AfterDarkPage() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
 
-  // Booking state
-  interface Availability {
-    date: string;
-    maxKids: number;
-    booked: number;
-    remaining: number;
-    isFull: boolean;
-  }
-  const [availability, setAvailability] = useState<Availability[]>([]);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [bookingForm, setBookingForm] = useState({
-    parent_name: '',
-    parent_email: '',
-    parent_phone: '',
-    num_kids: 1,
-    kid_details: '',
-    notes: '',
-  });
-  const [bookingSubmitting, setBookingSubmitting] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingError, setBookingError] = useState('');
-
   useEffect(() => {
     fetch('/api/after-dark/movies')
       .then(res => res.json())
       .then(data => setMovies(data.movies || []))
       .catch(() => {});
-
-    fetch('/api/after-dark/availability')
-      .then(res => res.json())
-      .then(data => {
-        setAvailability(data.availability || []);
-        const firstAvailable = (data.availability || []).find((a: Availability) => !a.isFull);
-        if (firstAvailable) setSelectedDate(firstAvailable.date);
-      })
-      .catch(() => {});
   }, []);
-
-  const selectedAvailability = availability.find(a => a.date === selectedDate);
-
-  const handleBookingSubmit = async () => {
-    if (!selectedDate || !bookingForm.parent_name || !bookingForm.parent_email || !bookingForm.parent_phone) return;
-    setBookingSubmitting(true);
-    setBookingError('');
-
-    try {
-      const res = await fetch('/api/after-dark/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_date: selectedDate,
-          ...bookingForm,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setBookingSuccess(true);
-        // Refresh availability
-        const avRes = await fetch('/api/after-dark/availability');
-        const avData = await avRes.json();
-        setAvailability(avData.availability || []);
-      } else {
-        setBookingError(data.error || 'Booking failed. Please try again.');
-      }
-    } catch {
-      setBookingError('Something went wrong. Please try again.');
-    } finally {
-      setBookingSubmitting(false);
-    }
-  };
 
   const features = [
     { icon: '🍕', title: 'Pizza Dinner', desc: 'Kids enjoy pizza and drinks — dinner is on us!' },
@@ -201,7 +135,7 @@ export default function AfterDarkPage() {
             transition={{ delay: 0.8 }}
           >
             <Link
-              href="#book"
+              href="/customer/dashboard?tab=after-dark"
               className="after-dark-btn-primary inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-full transition-all"
             >
               Book a Spot
@@ -473,210 +407,25 @@ export default function AfterDarkPage() {
             </p>
           </motion.div>
 
-          {/* Booking Form */}
+          {/* Book CTA */}
           <motion.div
-            className="rounded-2xl p-8"
-            style={{
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-            }}
+            className="text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            {bookingSuccess ? (
-              <div className="text-center py-8">
-                <span className="text-5xl mb-4 block">🎉</span>
-                <h3 className="text-2xl font-bold mb-2" style={{ color: '#e9d5ff' }}>You&apos;re All Set!</h3>
-                <p className="text-sm mb-4" style={{ color: '#a5b4fc' }}>
-                  Your spot has been reserved. We&apos;ll see you on Friday!
-                </p>
-                <button
-                  onClick={() => {
-                    setBookingSuccess(false);
-                    setBookingForm({ parent_name: '', parent_email: '', parent_phone: '', num_kids: 1, kid_details: '', notes: '' });
-                  }}
-                  className="after-dark-btn-primary px-6 py-3 rounded-full text-sm font-semibold"
-                >
-                  Book Another Date
-                </button>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold text-center mb-6" style={{ color: '#e9d5ff' }}>
-                  Reserve Your Spot
-                </h3>
-
-                {/* Date Selection with Availability */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-3" style={{ color: '#a78bfa' }}>Select a Friday</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {availability.map((a) => {
-                      const [year, month, day] = a.date.split('-').map(Number);
-                      const date = new Date(year, month - 1, day);
-                      const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      const isSelected = selectedDate === a.date;
-
-                      return (
-                        <button
-                          key={a.date}
-                          onClick={() => !a.isFull && setSelectedDate(a.date)}
-                          disabled={a.isFull}
-                          className={`p-3 rounded-xl text-center transition-all ${
-                            a.isFull
-                              ? 'opacity-50 cursor-not-allowed'
-                              : isSelected
-                                ? 'ring-2 ring-purple-400'
-                                : 'hover:ring-1 hover:ring-purple-400/50'
-                          }`}
-                          style={{
-                            background: isSelected
-                              ? 'rgba(139, 92, 246, 0.25)'
-                              : 'rgba(255, 255, 255, 0.03)',
-                            border: '1px solid',
-                            borderColor: isSelected ? 'rgba(139, 92, 246, 0.5)' : 'rgba(255, 255, 255, 0.06)',
-                          }}
-                        >
-                          <p className="text-sm font-bold" style={{ color: a.isFull ? '#6b7280' : '#e9d5ff' }}>{label}</p>
-                          <p className="text-xs mt-1" style={{ color: a.isFull ? '#ef4444' : a.remaining <= 10 ? '#fbbf24' : '#86efac' }}>
-                            {a.isFull ? 'FULL' : `${a.remaining} spots left`}
-                          </p>
-                          {/* Capacity bar */}
-                          <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${(a.booked / a.maxKids) * 100}%`,
-                                background: a.isFull ? '#ef4444' : a.remaining <= 10 ? '#fbbf24' : '#22c55e',
-                              }}
-                            />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Spots remaining indicator */}
-                {selectedAvailability && (
-                  <div className="mb-6 text-center p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <p className="text-sm" style={{ color: '#a5b4fc' }}>
-                      <span className="font-bold" style={{ color: selectedAvailability.remaining <= 10 ? '#fbbf24' : '#86efac' }}>
-                        {selectedAvailability.remaining}
-                      </span>
-                      {' '}of {selectedAvailability.maxKids} spots remaining &bull;{' '}
-                      <span style={{ color: '#a78bfa' }}>{selectedAvailability.booked} kids signed up</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Form Fields */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Parent Name *</label>
-                      <input
-                        type="text"
-                        value={bookingForm.parent_name}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, parent_name: e.target.value }))}
-                        placeholder="Your full name"
-                        className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none"
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Email *</label>
-                      <input
-                        type="email"
-                        value={bookingForm.parent_email}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, parent_email: e.target.value }))}
-                        placeholder="your@email.com"
-                        className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none"
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Phone *</label>
-                      <input
-                        type="tel"
-                        value={bookingForm.parent_phone}
-                        onChange={(e) => setBookingForm(prev => ({ ...prev, parent_phone: e.target.value }))}
-                        placeholder="(555) 555-5555"
-                        className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none"
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Number of Kids *</label>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setBookingForm(prev => ({ ...prev, num_kids: Math.max(1, prev.num_kids - 1) }))}
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
-                          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#c4b5fd' }}
-                        >
-                          -
-                        </button>
-                        <span className="text-2xl font-bold min-w-[2rem] text-center" style={{ color: '#e9d5ff' }}>
-                          {bookingForm.num_kids}
-                        </span>
-                        <button
-                          onClick={() => setBookingForm(prev => ({ ...prev, num_kids: Math.min(selectedAvailability?.remaining || 10, prev.num_kids + 1) }))}
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
-                          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#c4b5fd' }}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Kid Names & Ages (optional)</label>
-                    <input
-                      type="text"
-                      value={bookingForm.kid_details}
-                      onChange={(e) => setBookingForm(prev => ({ ...prev, kid_details: e.target.value }))}
-                      placeholder="e.g., Emma (4), Jack (5)"
-                      className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#a78bfa' }}>Special Notes (optional)</label>
-                    <textarea
-                      value={bookingForm.notes}
-                      onChange={(e) => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Allergies, special needs, etc."
-                      rows={2}
-                      className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none resize-none"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    />
-                  </div>
-
-                  {bookingError && (
-                    <div className="p-3 rounded-xl text-center" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                      <p className="text-sm" style={{ color: '#fca5a5' }}>{bookingError}</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleBookingSubmit}
-                    disabled={bookingSubmitting || !selectedDate || !bookingForm.parent_name || !bookingForm.parent_email || !bookingForm.parent_phone}
-                    className="after-dark-btn-primary w-full py-4 text-lg font-bold rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {bookingSubmitting ? 'Booking...' : `Reserve ${bookingForm.num_kids} Spot${bookingForm.num_kids > 1 ? 's' : ''}`}
-                  </button>
-
-                  <p className="text-center text-xs" style={{ color: '#6d28d9' }}>
-                    Questions? Call us at (978) 785-0015
-                  </p>
-                </div>
-              </>
-            )}
+            <p className="mb-6 text-sm" style={{ color: '#a5b4fc' }}>
+              Spots fill up fast! Log in to your account to reserve your child&apos;s spot.
+            </p>
+            <Link
+              href="/customer/dashboard?tab=after-dark"
+              className="after-dark-btn-primary inline-flex items-center justify-center px-10 py-4 text-lg font-bold rounded-full transition-all"
+            >
+              Reserve a Spot
+            </Link>
+            <p className="mt-4 text-xs" style={{ color: '#6d28d9' }}>
+              Questions? Call us at (978) 785-0015
+            </p>
           </motion.div>
         </div>
       </section>
