@@ -88,14 +88,17 @@ export default function AfterDarkPage() {
             transition={{ duration: 0.8 }}
             className="mb-4"
           >
-            <Image
-              src="/busy-bees-logo.png"
-              alt="Busy Bees"
-              width={180}
-              height={180}
-              className="mx-auto drop-shadow-2xl"
-              priority
-            />
+            <div className="relative inline-block">
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.85) 30%, rgba(255,255,255,0.3) 60%, transparent 75%)', filter: 'blur(8px)' }} />
+              <Image
+                src="/busy-bees-logo.png"
+                alt="Busy Bees"
+                width={180}
+                height={180}
+                className="relative mx-auto"
+                priority
+              />
+            </div>
           </motion.div>
 
           {/* Neon "After Dark" Text */}
