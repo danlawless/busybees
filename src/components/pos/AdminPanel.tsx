@@ -5404,6 +5404,28 @@ export function AdminPanel({
         </div>
       </Card>
 
+      {/* Quick Access: After Dark Dashboard */}
+      <Card className="p-4 mt-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🌙</span>
+            <div>
+              <h3 className="font-semibold text-indigo-900">After Dark Management</h3>
+              <p className="text-sm text-indigo-600">Attendees, movies, waivers, and refunds</p>
+            </div>
+          </div>
+          <a
+            href="https://www.busybeesipc.com/admin/after-dark"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"
+          >
+            <span>Open Dashboard</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </Card>
+
       {/* Quick Access: Reports Dashboard */}
       <Card className="p-4 mt-4 bg-gradient-to-r from-teal-50 to-cyan-50 border-teal-200">
         <div className="flex items-center justify-between">
