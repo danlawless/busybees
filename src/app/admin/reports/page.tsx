@@ -13,6 +13,7 @@ import { logger } from '@/lib/client-logger';
 
 export default function AdminReportsPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -24,18 +25,20 @@ export default function AdminReportsPage() {
     setPinError('');
 
     try {
-      const response = await fetch('/api/auth/staff-login', {
+      // Only admin PIN grants access to reports
+      const adminCheckRes = await fetch('/api/admin/check-admin-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pinInput }),
       });
+      const adminCheck = await adminCheckRes.json();
 
-      if (response.ok) {
+      if (adminCheck.isAdmin === true) {
         setIsUnlocked(true);
+        setIsAdmin(true);
         setPinError('');
       } else {
-        const data = await response.json();
-        setPinError(data.error || 'Invalid PIN. Please try again.');
+        setPinError('Invalid PIN. Admin access required.');
         setPinInput('');
       }
     } catch (err) {
@@ -109,7 +112,7 @@ export default function AdminReportsPage() {
           </p>
         </div>
 
-        <ReportsDashboard />
+        <ReportsDashboard isAdmin={isAdmin} />
       </div>
     </div>
   );
