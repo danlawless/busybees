@@ -36,6 +36,7 @@ export default function AfterDarkPage() {
     { icon: '🍕', title: 'Pizza Dinner', desc: 'Kids enjoy pizza and drinks — dinner is on us!' },
     { icon: '🎬', title: 'Movie Night', desc: 'A fun movie on the big screen in the play area' },
     { icon: '🎪', title: 'Supervised Play', desc: 'Staff-supervised activities the entire evening' },
+    { icon: '👕', title: 'PJ\'s Welcome!', desc: 'Kids are welcome to arrive in their pajamas for a cozy movie night vibe' },
     { icon: '🕕', title: 'Drop-Off & Go', desc: 'Drop off at 5 PM, pick up at 7:30 PM — enjoy your evening!' },
   ];
 
