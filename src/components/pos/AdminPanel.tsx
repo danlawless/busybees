@@ -40,6 +40,7 @@ import {
 } from '@/lib/api/products';
 import { GroupsManager } from './GroupsManager';
 import { AnnouncementManager } from './AnnouncementManager';
+import { MovieScheduleManager } from './MovieScheduleManager';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -143,7 +144,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -5261,6 +5262,13 @@ export function AdminPanel({
             📣 Announcements
           </Button>
           <Button
+            onClick={() => setCurrentView('after-dark')}
+            variant={currentView === 'after-dark' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🌙 After Dark
+          </Button>
+          <Button
             onClick={() => setCurrentView('newsletter')}
             variant={currentView === 'newsletter' ? 'default' : 'outline'}
             size="sm"
@@ -5333,6 +5341,7 @@ export function AdminPanel({
       {currentView === 'sessions' && renderDashboard()} {/* Reuse dashboard for now */}
       {currentView === 'marketing' && renderMarketing()}
       {currentView === 'announcements' && <AnnouncementManager />}
+      {currentView === 'after-dark' && <MovieScheduleManager />}
       {currentView === 'newsletter' && renderNewsletter()}
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
