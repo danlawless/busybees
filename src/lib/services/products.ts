@@ -3,11 +3,12 @@
  * CRUD operations for food/beverage/retail products with automatic Stripe sync
  */
 
-import { createClient } from '../supabase/server';
+import { createClient, createAdminClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 import { getStripeClient } from '../stripe/client';
 import { createProductWithPrice, updateStripeProduct, deleteStripeProduct } from '../stripe/products';
 import { logger } from '../logger';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
@@ -236,5 +237,55 @@ export async function deleteProduct(id: string): Promise<void> {
     } catch (stripeError) {
       logger.warn({ error: stripeError, productId: id }, '⚠️ Product deleted but Stripe archive failed');
     }
+  }
+}
+
+/**
+ * Decrement inventory for a product after a purchase.
+ * Safe to call for any purchase type — only decrements for tracked products.
+ * Fires a low-stock email alert if stock falls to or below threshold.
+ *
+ * @param supabase - Admin Supabase client (must have RPC access)
+ * @param productId - The product UUID
+ * @param productName - Product name (for alert emails)
+ * @param quantity - Number of units sold (default 1)
+ * @param purchaseType - The purchase type (only 'food_beverage' triggers decrement)
+ */
+export async function decrementInventoryAfterPurchase(
+  supabase: SupabaseClient,
+  productId: string,
+  productName: string,
+  quantity: number = 1,
+  purchaseType: string = 'food_beverage',
+): Promise<void> {
+  if (purchaseType !== 'food_beverage') return;
+
+  try {
+    const { data: updatedProduct, error: inventoryError } = await supabase
+      .rpc('decrement_inventory', { p_product_id: productId, p_quantity: quantity });
+
+    if (inventoryError) {
+      logger.warn({ productId, error: inventoryError }, 'Inventory decrement failed (stock may be depleted)');
+      return;
+    }
+
+    if (updatedProduct?.quantity_on_hand !== null && updatedProduct?.quantity_on_hand !== undefined) {
+      logger.info({ productId, remaining: updatedProduct.quantity_on_hand }, 'Inventory decremented');
+
+      if (updatedProduct.quantity_on_hand <= (updatedProduct.low_stock_threshold ?? 5)) {
+        fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/inventory/low-stock-alert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId,
+            productName,
+            currentStock: updatedProduct.quantity_on_hand,
+            threshold: updatedProduct.low_stock_threshold ?? 5,
+          }),
+        }).catch(() => {}); // Non-blocking
+      }
+    }
+  } catch (err) {
+    logger.warn({ productId, error: err }, 'Inventory decrement exception');
   }
 }

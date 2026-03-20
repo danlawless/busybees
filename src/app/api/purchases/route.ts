@@ -8,7 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllPurchases, getCustomerPurchases, getCustomerPurchasesByType, getTodayPurchases, createPurchase, updatePurchase } from '@/lib/services/purchases';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 /**
  * Auto-expire passes that are past their actual_expiry_date.
@@ -176,6 +177,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const purchase = await createPurchase(body);
+
+    // Decrement inventory for food/beverage purchases
+    const adminSupabase = createAdminClient();
+    await decrementInventoryAfterPurchase(
+      adminSupabase,
+      body.product_id,
+      body.name || 'Product',
+      body.quantity || 1,
+      body.type,
+    );
 
     return NextResponse.json({ purchase }, { status: 201 });
   } catch (error) {

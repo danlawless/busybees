@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
+import { decrementInventoryAfterPurchase } from "@/lib/services/products";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -322,6 +323,9 @@ export async function POST(request: NextRequest) {
                 );
             }
         }
+
+        // Decrement inventory for food/beverage purchases
+        await decrementInventoryAfterPurchase(adminSupabase, productId, productName, quantity, purchaseType);
 
         logger.info(
             {
