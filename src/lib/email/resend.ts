@@ -3104,3 +3104,64 @@ export async function sendBatchEmails(
 
   return { sent, failed, errors };
 }
+
+/**
+ * Send low stock alert email to business
+ */
+export async function sendLowStockAlertEmail(data: {
+  productName: string;
+  currentStock: number;
+  threshold: number;
+  category?: string;
+}): Promise<EmailResult> {
+  const { productName, currentStock, threshold, category } = data;
+
+  const stockLabel = currentStock === 0 ? 'OUT OF STOCK' : `${currentStock} remaining`;
+  const subject = currentStock === 0
+    ? `Out of Stock: ${productName}`
+    : `Low Stock Alert: ${productName} (${currentStock} remaining)`;
+
+  const text = [
+    `Low Stock Alert for Busy Bees Indoor Play Center`,
+    ``,
+    `Product: ${productName}`,
+    category ? `Category: ${category}` : '',
+    `Current Stock: ${stockLabel}`,
+    `Alert Threshold: ${threshold}`,
+    ``,
+    currentStock === 0
+      ? `This product is now OUT OF STOCK and has been automatically marked as unavailable.`
+      : `Please restock this item soon.`,
+    ``,
+    `— Busy Bees Inventory System`,
+  ].filter(Boolean).join('\n');
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+      <div style="background: ${currentStock === 0 ? '#FEE2E2' : '#FEF3C7'}; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin: 0 0 8px; color: ${currentStock === 0 ? '#991B1B' : '#92400E'}; font-size: 18px;">
+          ${currentStock === 0 ? '🚨 Out of Stock' : '⚠️ Low Stock Alert'}
+        </h2>
+        <p style="margin: 0; color: #374151; font-size: 24px; font-weight: bold;">${productName}</p>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Current Stock</td>
+          <td style="padding: 8px 0; text-align: right; font-weight: bold; color: ${currentStock === 0 ? '#DC2626' : '#D97706'}; font-size: 14px;">${stockLabel}</td>
+        </tr>
+        ${category ? `<tr><td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Category</td><td style="padding: 8px 0; text-align: right; font-size: 14px;">${category}</td></tr>` : ''}
+        <tr>
+          <td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Alert Threshold</td>
+          <td style="padding: 8px 0; text-align: right; font-size: 14px;">${threshold} units</td>
+        </tr>
+      </table>
+      <p style="color: #6B7280; font-size: 13px; margin: 0;">
+        ${currentStock === 0
+          ? 'This product has been automatically marked as unavailable in the POS system.'
+          : 'Please restock this item at your earliest convenience.'}
+      </p>
+    </div>
+  `;
+
+  return sendEmail({ to: BUSINESS_EMAIL, subject, text, html });
+}

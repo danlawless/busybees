@@ -318,6 +318,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Decrement inventory for food/beverage purchases
+    if (purchase_type === 'food_beverage') {
+      try {
+        const { data: updatedProduct, error: inventoryError } = await adminSupabase
+          .rpc('decrement_inventory', { p_product_id: product_id, p_quantity: quantity });
+
+        if (inventoryError) {
+          // Don't fail the purchase — the item is already in the customer's hands at POS
+          logger.warn({ product_id, error: inventoryError }, 'Inventory decrement failed (stock may be depleted)');
+        } else if (updatedProduct?.quantity_on_hand !== null && updatedProduct?.quantity_on_hand !== undefined) {
+          logger.info(
+            { product_id, remaining: updatedProduct.quantity_on_hand },
+            'Inventory decremented'
+          );
+
+          // Fire low-stock alert if below threshold
+          if (updatedProduct.quantity_on_hand <= (updatedProduct.low_stock_threshold ?? 5)) {
+            fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/inventory/low-stock-alert`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId: product_id,
+                productName: product_name,
+                currentStock: updatedProduct.quantity_on_hand,
+                threshold: updatedProduct.low_stock_threshold ?? 5,
+              }),
+            }).catch(() => {}); // Non-blocking, fire and forget
+          }
+        }
+      } catch (inventoryErr) {
+        logger.warn({ product_id, error: inventoryErr }, 'Inventory decrement exception');
+      }
+    }
+
     logger.info(
       { purchaseId: purchase.id, customer_id, payment_method },
       'Purchase saved successfully'

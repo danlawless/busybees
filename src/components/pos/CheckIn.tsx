@@ -4012,15 +4012,24 @@ export function CheckIn({
                                 </h3>
                                 <Card className="p-6 border-l-8 border-l-orange-300 bg-orange-50">
                                     <div className="grid gap-4 text-left">
-                                        {AVAILABLE_SNACKS.map((snack) => (
+                                        {AVAILABLE_SNACKS.map((snack) => {
+                                            const isSoldOut = snack.quantityOnHand !== null && snack.quantityOnHand !== undefined && snack.quantityOnHand <= 0;
+                                            const isLowStock = snack.quantityOnHand !== null && snack.quantityOnHand !== undefined && snack.quantityOnHand > 0 && snack.quantityOnHand <= (snack.lowStockThreshold ?? 5);
+                                            return (
                                             <div
                                                 key={snack.id}
-                                                className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                                                className={`flex justify-between items-center p-4 bg-white rounded-lg border transition-shadow ${isSoldOut ? 'opacity-60' : 'hover:shadow-md'}`}
                                             >
                                                 <div className="flex-1">
                                                     <span className="font-medium text-gray-900 text-lg">
                                                         {snack.emoji} {snack.name}
                                                     </span>
+                                                    {isSoldOut && (
+                                                        <span className="ml-2 bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-bold">SOLD OUT</span>
+                                                    )}
+                                                    {isLowStock && (
+                                                        <span className="ml-2 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">Only {snack.quantityOnHand} left</span>
+                                                    )}
                                                     <p className="text-sm text-gray-600">
                                                         {snack.description}
                                                     </p>
@@ -4037,6 +4046,7 @@ export function CheckIn({
                                                         }
                                                         className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         disabled={
+                                                            isSoldOut ||
                                                             (quantities[snack.id] ||
                                                                 0) <= 0
                                                         }
@@ -4052,6 +4062,7 @@ export function CheckIn({
                                                         }
                                                         className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         disabled={
+                                                            isSoldOut ||
                                                             (quantities[snack.id] ||
                                                                 0) >= 10
                                                         }
@@ -4090,6 +4101,7 @@ export function CheckIn({
                                                     }}
                                                     size="lg"
                                                     disabled={
+                                                        isSoldOut ||
                                                         purchasingProduct ===
                                                             snack.id ||
                                                         (quantities[snack.id] || 0) <= 0
@@ -4135,7 +4147,8 @@ export function CheckIn({
                                                     })()}
                                                 </Button>
                                             </div>
-                                        ))}
+                                        );
+                                        })}
                                     </div>
 
                                     <div className="mt-6 p-4 bg-white border border-orange-200 rounded-lg">

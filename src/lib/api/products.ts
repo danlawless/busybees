@@ -79,6 +79,8 @@ function transformProduct(dbProduct: Record<string, unknown>): FoodProduct {
     stripePurchaseLink: (dbProduct.stripe_purchase_link as string) || '',
     isActive: dbProduct.is_active as boolean,
     available: dbProduct.available as boolean,
+    quantityOnHand: dbProduct.quantity_on_hand as number | null,
+    lowStockThreshold: (dbProduct.low_stock_threshold as number) ?? 5,
     createdAt: dbProduct.created_at as string,
     updatedAt: dbProduct.updated_at as string,
   };

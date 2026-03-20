@@ -396,6 +396,9 @@ export function AdminPanel({
     stripePurchaseLink: '',
     isActive: true,
     available: true,
+    trackInventory: false,
+    quantityOnHand: '',
+    lowStockThreshold: '5',
   });
   const [productFormErrors, setProductFormErrors] = useState<Record<string, string>>({});
 
@@ -3291,6 +3294,9 @@ export function AdminPanel({
       stripePurchaseLink: '',
       isActive: true,
       available: true,
+      trackInventory: false,
+      quantityOnHand: '',
+      lowStockThreshold: '5',
     });
     setProductFormErrors({});
     setShowProductForm(true);
@@ -3307,6 +3313,9 @@ export function AdminPanel({
       stripePurchaseLink: product.stripePurchaseLink || '',
       isActive: product.isActive,
       available: product.available,
+      trackInventory: product.quantityOnHand !== null,
+      quantityOnHand: product.quantityOnHand !== null ? product.quantityOnHand.toString() : '',
+      lowStockThreshold: (product.lowStockThreshold ?? 5).toString(),
     });
     setProductFormErrors({});
     setShowProductForm(true);
@@ -3345,6 +3354,12 @@ export function AdminPanel({
         stripePurchaseLink: productFormData.stripePurchaseLink.trim(),
         isActive: productFormData.isActive,
         available: productFormData.available,
+        quantityOnHand: productFormData.trackInventory && productFormData.quantityOnHand !== ''
+          ? parseInt(productFormData.quantityOnHand)
+          : null,
+        lowStockThreshold: productFormData.trackInventory
+          ? parseInt(productFormData.lowStockThreshold) || 5
+          : 5,
       };
 
       if (editingProduct) {
@@ -3415,6 +3430,10 @@ export function AdminPanel({
   const renderProducts = () => {
     const allergenOptions: Allergen[] = ['peanuts', 'tree_nuts', 'dairy', 'gluten', 'eggs', 'soy', 'fish', 'shellfish'];
 
+    const trackedProducts = products.filter(p => p.quantityOnHand !== null && p.quantityOnHand !== undefined);
+    const lowStockProducts = trackedProducts.filter(p => p.quantityOnHand! > 0 && p.quantityOnHand! <= (p.lowStockThreshold ?? 5));
+    const soldOutProducts = trackedProducts.filter(p => p.quantityOnHand === 0);
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -3423,6 +3442,28 @@ export function AdminPanel({
             ➕ Create New Product
           </Button>
         </div>
+
+        {/* Inventory Summary */}
+        {trackedProducts.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="p-4 text-center">
+              <p className="text-2xl font-bold text-blue-600">{trackedProducts.length}</p>
+              <p className="text-sm text-gray-600">Tracked Products</p>
+            </Card>
+            <Card className={`p-4 text-center ${lowStockProducts.length > 0 ? 'ring-2 ring-orange-300' : ''}`}>
+              <p className={`text-2xl font-bold ${lowStockProducts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                {lowStockProducts.length}
+              </p>
+              <p className="text-sm text-gray-600">Low Stock</p>
+            </Card>
+            <Card className={`p-4 text-center ${soldOutProducts.length > 0 ? 'ring-2 ring-red-300' : ''}`}>
+              <p className={`text-2xl font-bold ${soldOutProducts.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {soldOutProducts.length}
+              </p>
+              <p className="text-sm text-gray-600">Sold Out</p>
+            </Card>
+          </div>
+        )}
 
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">All Products ({products.length})</h3>
@@ -3442,6 +3483,25 @@ export function AdminPanel({
                         <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
                           {formatCurrency(product.price)}
                         </span>
+                        {product.quantityOnHand !== null && product.quantityOnHand !== undefined ? (
+                          product.quantityOnHand === 0 ? (
+                            <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">
+                              SOLD OUT
+                            </span>
+                          ) : product.quantityOnHand <= (product.lowStockThreshold ?? 5) ? (
+                            <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium">
+                              Low Stock: {product.quantityOnHand}
+                            </span>
+                          ) : (
+                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                              Stock: {product.quantityOnHand}
+                            </span>
+                          )
+                        ) : (
+                          <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-medium">
+                            Untracked
+                          </span>
+                        )}
                         {!product.available && (
                           <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
                             Unavailable
@@ -3649,6 +3709,57 @@ export function AdminPanel({
                     </div>
                   </div>
                 )}
+
+                {/* Inventory Tracking */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="trackInventory"
+                      checked={productFormData.trackInventory}
+                      onChange={(e) => setProductFormData({
+                        ...productFormData,
+                        trackInventory: e.target.checked,
+                        quantityOnHand: e.target.checked ? productFormData.quantityOnHand : '',
+                      })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="trackInventory" className="text-sm text-gray-700 font-medium">
+                      Track inventory for this product
+                    </label>
+                  </div>
+                  {productFormData.trackInventory && (
+                    <div className="grid grid-cols-2 gap-4 pl-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Quantity on Hand
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={productFormData.quantityOnHand}
+                          onChange={(e) => setProductFormData({ ...productFormData, quantityOnHand: e.target.value })}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Low Stock Alert Threshold
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={productFormData.lowStockThreshold}
+                          onChange={(e) => setProductFormData({ ...productFormData, lowStockThreshold: e.target.value })}
+                          placeholder="5"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Email alert sent when stock falls to this level</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Active and Available Toggles */}
                 <div className="space-y-3">
