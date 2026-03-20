@@ -326,6 +326,8 @@ export function CheckIn({
                                 : product.category === "beverage"
                                 ? "🥤"
                                 : "🛍️",
+                        quantityOnHand: product.quantity_on_hand ?? null,
+                        lowStockThreshold: product.low_stock_threshold ?? 5,
                     }));
                 }
 
@@ -1584,6 +1586,15 @@ export function CheckIn({
                     onUpdateCustomer(updatedCustomer);
                 }
 
+                // Decrement local inventory count for snacks
+                if (isSnackPurchase) {
+                    setAvailableSnacks(prev => prev.map(s =>
+                        s.id === productId && s.quantityOnHand !== null && s.quantityOnHand !== undefined
+                            ? { ...s, quantityOnHand: Math.max(0, s.quantityOnHand - quantity) }
+                            : s
+                    ));
+                }
+
                 // Reset quantities after successful purchase
                 setQuantities((prev) => ({
                     ...prev,
@@ -1675,6 +1686,16 @@ export function CheckIn({
                 };
 
                 onUpdateCustomer(updatedCustomer);
+            }
+
+            // Decrement local inventory count for snacks
+            if (isSnackPurchase) {
+                const qty = quantities[productId] || 1;
+                setAvailableSnacks(prev => prev.map(s =>
+                    s.id === productId && s.quantityOnHand !== null && s.quantityOnHand !== undefined
+                        ? { ...s, quantityOnHand: Math.max(0, s.quantityOnHand - qty) }
+                        : s
+                ));
             }
 
             // Clear selected child for next purchase
