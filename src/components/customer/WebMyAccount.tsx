@@ -1035,19 +1035,7 @@ function WebMyAccountContent() {
                 <span>Parties<span className="sm:hidden"><br />({activePartyPurchases.length})</span><span className="hidden sm:inline"> ({activePartyPurchases.length})</span></span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('after-dark')}
-              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
-                activeTab === 'after-dark'
-                  ? 'bg-indigo-600 text-white shadow-lg transform scale-105 border-2 border-indigo-700'
-                  : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
-                <span className="text-lg sm:text-2xl">🌙</span>
-                <span>After Dark</span>
-              </div>
-            </button>
+            {/* After Dark tab hidden until ready for release */}
             <button
               onClick={() => setActiveTab('payments')}
               className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
@@ -1963,15 +1951,7 @@ function WebMyAccountContent() {
           </div>
         )}
 
-        {/* After Dark Tab */}
-        {activeTab === 'after-dark' && (
-          <AfterDarkBooking
-            customerName={profile?.name || ''}
-            customerEmail={profile?.email || user?.email || ''}
-            customerPhone={profile?.phone || ''}
-            children={children}
-          />
-        )}
+        {/* After Dark Tab - hidden until ready for release */}
 
         {/* Payments Tab */}
         {activeTab === 'payments' && (
