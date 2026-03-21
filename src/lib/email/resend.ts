@@ -1020,12 +1020,12 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
                     <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
                     <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
 
-                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
-                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
+                    <p style="${subheadingStyle}">🎉 Celebration Time &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
                     <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
 
                     <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+                    <p style="${textStyle}">At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
 
                     <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
                     <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
@@ -1139,12 +1139,12 @@ Your party will follow this timeline:
 Play Time - 1 Hour 40 Minutes
 Children will enjoy full access to the play area, including the bounce house and music.
 
-Food & Cake - Final 20 Minutes
-The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
+Celebration Time - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
 To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
 
 Departure
-At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
 
 Busy Bee Sticker Stop
 Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
@@ -1208,13 +1208,12 @@ Busy Bee's Party Team`;
                     <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
                     <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
 
-                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
-                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
-                    <p style="${textStyle}"><strong>Pizza and Drink:</strong> Your party package includes one large sheet pizza from Presto Pizza (24 slices) and drinks for kids (juice, water, or soda can be special requested &mdash; just inform us ahead of time). If you feel this will not be enough food for your guests you are welcome to bring in additional food and snacks. All food and drinks must be consumed in the party room.</p>
+                    <p style="${subheadingStyle}">🎉 Celebration Time &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
                     <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
 
                     <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+                    <p style="${textStyle}">At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
 
                     <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
                     <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
@@ -1328,13 +1327,12 @@ Your party will follow this timeline:
 Play Time - 1 Hour 40 Minutes
 Children will enjoy full access to the play area, including the bounce house and music.
 
-Food & Cake - Final 20 Minutes
-The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
-Pizza and Drink: Your party package includes one large sheet pizza from Presto Pizza (24 slices) and drinks for kids (juice, water, or soda can be special requested - just inform us ahead of time). If you feel this will not be enough food for your guests you are welcome to bring in additional food and snacks. All food and drinks must be consumed in the party room.
+Celebration Time - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
 To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
 
 Departure
-At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
 
 Busy Bee Sticker Stop
 Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
@@ -1398,13 +1396,12 @@ Busy Bee's Party Team`;
                     <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour 40 Minutes</p>
                     <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
 
-                    <p style="${subheadingStyle}">🍕 Food &amp; Cake &ndash; Final 20 Minutes</p>
-                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.</p>
-                    <p style="${textStyle}"><strong>Pizza and Drink:</strong> Your party package includes one large sheet pizza from Presto Pizza (24 slices to be delivered 1 hour before the end of your party, drinks for kids (juice, water, or soda can be special requested), and a sheet cake from Hannaford Lunenburg (please inform us of the flavor of cake &mdash; chocolate or vanilla &mdash; and if you would like anything written on the cake). If you would like to provide your own cake and get two pizza's instead, we can substitute another party pizza for the cake at no additional cost.</p>
+                    <p style="${subheadingStyle}">🎉 Celebration Time &ndash; Final 20 Minutes</p>
+                    <p style="${textStyle}">The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
                     <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room. This helps shift everyone toward the celebration portion of the party and ensures we can prepare the play area for the next group.</p>
 
                     <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+                    <p style="${textStyle}">At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
 
                     <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
                     <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
@@ -1518,13 +1515,12 @@ Your party will follow this timeline:
 Play Time - 1 Hour 40 Minutes
 Children will enjoy full access to the play area, including the bounce house and music.
 
-Food & Cake - Final 20 Minutes
-The last 20 minutes of your reservation will take place in the private party room for pizza, cake, and celebration time.
-Pizza and Drink: Your party package includes one large sheet pizza from Presto Pizza (24 slices to be delivered 1 hour before the end of your party, drinks for kids (juice, water, or soda can be special requested), and a sheet cake from Hannaford Lunenburg (please inform us of the flavor of cake - chocolate or vanilla - and if you would like anything written on the cake). If you would like to provide your own cake and get two pizza's instead, we can substitute another party pizza for the cake at no additional cost.
+Celebration Time - Final 20 Minutes
+The last 20 minutes of your reservation will take place in the private party room for celebration time. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
 To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 20 minutes while the kids are in the party room.
 
 Departure
-At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+At the conclusion of celebration time, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
 
 Busy Bee Sticker Stop
 Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
