@@ -24,6 +24,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { parseDateString } from '@/lib/utils';
+import {
+  GROUP_RATE_PRICE_AGE_2_PLUS,
+  GROUP_RATE_PRICE_UNDER_2,
+} from '@/lib/validations/party-booking';
 
 interface SearchResultChild {
   id: string;
@@ -50,7 +54,7 @@ interface GroupChildrenManagerProps {
   isOpen: boolean;
   onClose: () => void;
   guestCount: number;
-  onComplete: (children: AssignedChild[]) => void;
+  onComplete: (children: AssignedChild[], totalPrice: number) => void;
 }
 
 function calculateAge(birthdate: string): number {
@@ -316,6 +320,16 @@ export function GroupChildrenManager({
       setIsCreatingChild(false);
     }
   };
+
+  const getChildPrice = (birthdate: string): number => {
+    const age = calculateAge(birthdate);
+    return age >= 2 ? GROUP_RATE_PRICE_AGE_2_PLUS : GROUP_RATE_PRICE_UNDER_2;
+  };
+
+  const groupTotal = assignedChildren.reduce(
+    (sum, child) => sum + getChildPrice(child.birthdate),
+    0
+  );
 
   const allWaiversSigned = assignedChildren.every((c) => c.waiver_signed);
   const canProceed =
@@ -586,6 +600,7 @@ export function GroupChildrenManager({
                 <div className="space-y-2">
                   {assignedChildren.map((child, index) => {
                     const age = calculateAge(child.birthdate);
+                    const childPrice = getChildPrice(child.birthdate);
 
                     return (
                       <motion.div
@@ -606,6 +621,9 @@ export function GroupChildrenManager({
                               </span>
                               <span className="text-sm text-gray-500">
                                 (age {age})
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${age >= 2 ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'}`}>
+                                ${childPrice}
                               </span>
                               {child.is_new_child && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -649,6 +667,21 @@ export function GroupChildrenManager({
             )}
           </div>
 
+          {/* Pricing Summary */}
+          {assignedChildren.length > 0 && (
+            <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  <span>{assignedChildren.filter(c => calculateAge(c.birthdate) >= 2).length} x ${GROUP_RATE_PRICE_AGE_2_PLUS} (ages 2+)</span>
+                  {assignedChildren.some(c => calculateAge(c.birthdate) < 2) && (
+                    <span className="ml-3">{assignedChildren.filter(c => calculateAge(c.birthdate) < 2).length} x ${GROUP_RATE_PRICE_UNDER_2} (under 2)</span>
+                  )}
+                </div>
+                <span className="text-lg font-bold text-gray-900">${groupTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="p-6 border-t border-gray-200 flex items-center justify-between">
             <Button
@@ -660,7 +693,7 @@ export function GroupChildrenManager({
             </Button>
 
             <Button
-              onClick={() => onComplete(assignedChildren)}
+              onClick={() => onComplete(assignedChildren, groupTotal)}
               disabled={!canProceed}
               className={`${
                 canProceed

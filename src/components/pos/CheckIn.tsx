@@ -207,6 +207,7 @@ export function CheckIn({
     const [showGroupChildrenManager, setShowGroupChildrenManager] = useState(false);
     const [groupRateGuestCount, setGroupRateGuestCount] = useState(10);
     const [groupRateProductId, setGroupRateProductId] = useState<string | null>(null);
+    const [groupRateTotalPrice, setGroupRateTotalPrice] = useState<number | null>(null);
     const [pendingGroupChildren, setPendingGroupChildren] = useState<Array<{
         id: string;
         name: string;
@@ -1364,8 +1365,9 @@ export function CheckIn({
     };
 
     // Callback when group children assignment is complete
-    const handleGroupChildrenComplete = (children: typeof pendingGroupChildren) => {
+    const handleGroupChildrenComplete = (children: typeof pendingGroupChildren, totalPrice: number) => {
         setPendingGroupChildren(children);
+        setGroupRateTotalPrice(totalPrice);
         setShowGroupChildrenManager(false);
 
         // Proceed with purchase now that children are assigned
@@ -1624,6 +1626,12 @@ export function CheckIn({
             }
 
             // In staff mode, use the existing POS endpoint (requires staff role)
+            // For group rate, use the age-based total from GroupChildrenManager
+            const isGroupRate = isGroupRateProduct(product);
+            const purchasePrice = isGroupRate && groupRateTotalPrice !== null
+                ? groupRateTotalPrice
+                : product.price;
+
             const response = await fetch("/api/purchases/pos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1631,12 +1639,12 @@ export function CheckIn({
                     customer_id: customer.id,
                     product_id: productId,
                     product_name: product.name,
-                    product_price: product.price,
+                    product_price: purchasePrice,
                     product_description: product.description || "",
                     purchase_type: purchaseType,
                     child_id: isPassPurchase ? selectedChildForPurchase : undefined,
                     children_ids: (isPassPurchase && isFamilyPass(product.name)) ? selectedChildrenForFamilyPass : undefined,
-                    quantity: 1,
+                    quantity: isGroupRate ? 1 : 1, // Group rate total already includes all children
                     metadata: {},
                 }),
             });
@@ -1723,6 +1731,7 @@ export function CheckIn({
                 }
                 setPendingGroupChildren([]);
                 setGroupRateProductId(null);
+                setGroupRateTotalPrice(null);
             }
 
             setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
@@ -3883,7 +3892,7 @@ export function CheckIn({
                                                         >
                                                             {Array.from({ length: 21 }, (_, i) => i + 10).map((n) => (
                                                                 <option key={n} value={n}>
-                                                                    {n} (${(n * 12).toFixed(0)})
+                                                                    {n} kids
                                                                 </option>
                                                             ))}
                                                         </select>
