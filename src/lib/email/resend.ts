@@ -3161,3 +3161,131 @@ export async function sendLowStockAlertEmail(data: {
 
   return sendEmail({ to: BUSINESS_EMAIL, subject, text, html });
 }
+
+/**
+ * Send party reminder email 1 week before the party
+ */
+export async function sendPartyReminderEmail(data: {
+  to: string;
+  customerName: string;
+  childName: string;
+  partyDate: string;
+  startTime: string;
+  endTime: string;
+  packageName: string;
+  guestCount: number;
+}): Promise<EmailResult> {
+  const formattedDate = parseDateString(data.partyDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const packageLabels: Record<string, string> = {
+    queen_bee: 'Queen Bee',
+    worker_bee: 'Worker Bee',
+    basic_bee: 'Basic Bee',
+  };
+  const packageDisplay = packageLabels[data.packageName] || data.packageName;
+
+  const subject = `🎉 ${data.childName}'s Birthday Party is 1 Week Away!`;
+
+  const text = `
+Party Reminder - 1 Week Away!
+
+Hi ${data.customerName}!
+
+Just a friendly reminder that ${data.childName}'s ${packageDisplay} birthday party is coming up in 1 week!
+
+Party Details:
+- Date: ${formattedDate}
+- Time: ${data.startTime} - ${data.endTime}
+- Package: ${packageDisplay}
+- Guests: ${data.guestCount}
+
+Quick Reminders:
+- You may arrive up to 30 minutes before your start time to set up the party room
+- Each guest will need to sign a quick waiver upon arrival — it takes less than 10 seconds and then they're all set!
+- Socks are required for all children and adults in the play area
+- Outside decorations are welcome but must be approved (no confetti, glitter, or loose small items)
+
+If you need to make any changes, please contact us as soon as possible at info@busybeesipc.com or call us directly.
+
+We can't wait to celebrate with you!
+
+- The Busy Bees Team
+Busy Bees Indoor Play Center
+busybeesipc.com
+`.trim();
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
+        <p style="font-size: 48px; margin: 0;">🎂</p>
+        <h1 style="color: #ffffff; font-size: 24px; margin: 8px 0 4px; font-weight: 700;">1 Week to Go!</h1>
+        <p style="color: #fef3c7; font-size: 16px; margin: 0;">${data.childName}'s birthday party is almost here!</p>
+      </div>
+
+      <!-- Greeting -->
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #374151; line-height: 1.6; margin: 0 0 16px;">
+          Hi ${data.customerName}! Just a friendly reminder that your ${packageDisplay} party is coming up in <strong>1 week</strong>. Here are your party details:
+        </p>
+      </div>
+
+      <!-- Party Details Card -->
+      <div style="margin: 0 24px 24px; background: #fffbeb; border: 2px solid #fbbf24; border-radius: 12px; padding: 20px;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%;">
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">📅 Date</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🕐 Time</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${data.startTime} - ${data.endTime}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🐝 Package</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${packageDisplay}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">👧 Birthday Child</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${data.childName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">👫 Expected Guests</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${data.guestCount}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Quick Reminders -->
+      <div style="margin: 0 24px 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
+        <p style="font-size: 16px; font-weight: 600; color: #166534; margin: 0 0 12px;">📋 Quick Reminders</p>
+        <ul style="margin: 0; padding: 0 0 0 20px; color: #374151; font-size: 14px; line-height: 1.8;">
+          <li>You may arrive <strong>30 minutes early</strong> to set up the party room</li>
+          <li>Each guest will need to sign a quick <strong>waiver upon arrival</strong> — it takes less than 10 seconds and then they're all set!</li>
+          <li><strong>Socks are required</strong> for all children and adults in the play area</li>
+          <li>Outside decorations are welcome but must be approved (no confetti, glitter, or loose small items)</li>
+          <li>You are welcome to bring your own food, snacks, and drinks for the party room</li>
+        </ul>
+      </div>
+
+      <!-- Contact CTA -->
+      <div style="margin: 0 24px 24px; text-align: center;">
+        <p style="font-size: 14px; color: #6b7280; margin: 0 0 12px;">Need to make changes? Contact us as soon as possible.</p>
+        <a href="mailto:info@busybeesipc.com" style="display: inline-block; background: #f59e0b; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Contact Us</a>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 20px 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 14px; color: #9ca3af; margin: 0;">We can't wait to celebrate with you! 🎉</p>
+        <p style="font-size: 12px; color: #d1d5db; margin: 8px 0 0;">Busy Bees Indoor Play Center</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({ to: data.to, subject, text, html, cc: BUSINESS_EMAIL });
+}
