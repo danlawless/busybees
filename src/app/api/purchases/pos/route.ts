@@ -19,6 +19,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -317,6 +318,9 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Decrement inventory for food/beverage purchases
+    await decrementInventoryAfterPurchase(adminSupabase, product_id, product_name, quantity, purchase_type);
 
     logger.info(
       { purchaseId: purchase.id, customer_id, payment_method },

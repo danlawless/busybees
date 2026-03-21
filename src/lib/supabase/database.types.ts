@@ -223,6 +223,8 @@ export interface Database {
           stripe_purchase_link: string;
           is_active: boolean;
           available: boolean;
+          quantity_on_hand: number | null;
+          low_stock_threshold: number;
           created_at: string;
           updated_at: string;
         };
@@ -238,6 +240,8 @@ export interface Database {
           stripe_purchase_link: string;
           is_active?: boolean;
           available?: boolean;
+          quantity_on_hand?: number | null;
+          low_stock_threshold?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -253,6 +257,8 @@ export interface Database {
           stripe_purchase_link?: string;
           is_active?: boolean;
           available?: boolean;
+          quantity_on_hand?: number | null;
+          low_stock_threshold?: number;
           created_at?: string;
           updated_at?: string;
         };

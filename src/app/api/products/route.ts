@@ -109,6 +109,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Parse inventory fields
+    const quantityOnHand = body.quantityOnHand !== undefined && body.quantityOnHand !== null && body.quantityOnHand !== ''
+      ? parseInt(body.quantityOnHand)
+      : null;
+    const lowStockThreshold = body.lowStockThreshold !== undefined && body.lowStockThreshold !== ''
+      ? parseInt(body.lowStockThreshold)
+      : 5;
+
     // Create product using admin client (bypasses RLS for POS staff operations)
     const supabase = createAdminClient();
     const { data: newProduct, error } = await supabase
@@ -122,6 +130,8 @@ export async function POST(request: NextRequest) {
         stripe_purchase_link: stripePurchaseLink.trim(),
         is_active: body.isActive ?? true,
         available: body.available ?? true,
+        quantity_on_hand: quantityOnHand,
+        low_stock_threshold: lowStockThreshold,
       })
       .select()
       .single();
@@ -220,20 +230,33 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Parse inventory fields
+    const updateData: Record<string, unknown> = {
+      name: name.trim(),
+      category: category as ProductCategory,
+      price: parseFloat(price),
+      description: (body.description || '').trim(),
+      allergens: JSON.stringify(allergens),
+      stripe_purchase_link: stripePurchaseLink.trim(),
+      is_active: body.isActive,
+      available: body.available,
+    };
+
+    // Only include inventory fields if explicitly provided
+    if (body.quantityOnHand !== undefined) {
+      updateData.quantity_on_hand = body.quantityOnHand !== null && body.quantityOnHand !== ''
+        ? parseInt(body.quantityOnHand)
+        : null;
+    }
+    if (body.lowStockThreshold !== undefined) {
+      updateData.low_stock_threshold = parseInt(body.lowStockThreshold) || 5;
+    }
+
     // Update product using admin client (bypasses RLS for POS staff operations)
     const supabase = createAdminClient();
     const { data: updatedProduct, error } = await supabase
       .from('products')
-      .update({
-        name: name.trim(),
-        category: category as ProductCategory,
-        price: parseFloat(price),
-        description: (body.description || '').trim(),
-        allergens: JSON.stringify(allergens),
-        stripe_purchase_link: stripePurchaseLink.trim(),
-        is_active: body.isActive,
-        available: body.available,
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

@@ -55,6 +55,8 @@ export interface FoodProduct {
   stripePurchaseLink: string;
   isActive: boolean;
   available: boolean; // separate from active - can be temporarily unavailable
+  quantityOnHand: number | null; // null = not tracked (unlimited)
+  lowStockThreshold: number;
   createdAt: string;
   updatedAt: string;
 }

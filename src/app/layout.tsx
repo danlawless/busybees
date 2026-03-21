@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Gloria_Hallelujah } from "next/font/google";
 import "./globals.css";
+import { AnnouncementMarquee } from "@/components/AnnouncementMarquee";
 
 const gloriaHallelujah = Gloria_Hallelujah({ 
   subsets: ['latin'],
@@ -54,6 +55,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${gloriaHallelujah.className} font-body antialiased`}>
+        <AnnouncementMarquee />
         {children}
       </body>
     </html>

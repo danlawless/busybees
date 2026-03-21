@@ -24,6 +24,7 @@ import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -356,6 +357,9 @@ export async function POST(request: NextRequest) {
         .update({ gift_card_amount_used: giftCardAmountUsed })
         .eq('id', purchase.id);
     }
+
+    // Decrement inventory for food/beverage purchases
+    await decrementInventoryAfterPurchase(adminSupabase, productId, productName, quantity, purchaseType);
 
     logger.info(
       {

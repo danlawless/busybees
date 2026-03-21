@@ -17,6 +17,7 @@ import {
 } from '@/lib/email/resend';
 import Stripe from 'stripe';
 import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 // This is important for Next.js to treat this as raw body
 export const runtime = 'nodejs';
@@ -325,6 +326,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error('Error creating purchase:', error);
   } else {
     console.log('Purchase created successfully for customer:', customer_id);
+
+    // Decrement inventory for food/beverage purchases
+    await decrementInventoryAfterPurchase(
+      supabase,
+      product_id,
+      session.line_items?.data[0]?.description || 'Product',
+      1,
+      purchase_type,
+    );
 
     // Send purchase confirmation email
     try {
