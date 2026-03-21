@@ -11,7 +11,19 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const PRICE_PER_CHILD = 15;
+const PRICE_AGE_2_PLUS = 12;
+const PRICE_UNDER_2 = 5;
+
+function calculateAge(birthdate: string): number {
+  const birth = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 const GroupPaymentSchema = z.object({
   payment_method_id: z.string().min(1, 'Payment method required'),
@@ -79,10 +91,10 @@ export async function POST(
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    // Verify children belong to this group
+    // Verify children belong to this group (include birthdate for age-based pricing)
     const { data: children, error: childError } = await supabase
       .from('children')
-      .select('id, name')
+      .select('id, name, birthdate')
       .eq('customer_id', groupId)
       .in('id', active_child_ids);
 
@@ -104,9 +116,11 @@ export async function POST(
       return NextResponse.json({ error: 'Payment method not found' }, { status: 400 });
     }
 
-    // Calculate amount
+    // Calculate age-based amount
     const childCount = active_child_ids.length;
-    const totalAmount = childCount * PRICE_PER_CHILD;
+    const over2Count = children.filter(c => calculateAge(c.birthdate) >= 2).length;
+    const under2Count = children.filter(c => calculateAge(c.birthdate) < 2).length;
+    const totalAmount = (over2Count * PRICE_AGE_2_PLUS) + (under2Count * PRICE_UNDER_2);
     const amountInCents = totalAmount * 100;
 
     // Get or create Stripe customer
@@ -131,7 +145,8 @@ export async function POST(
         customer_id: groupId,
         group_name: group.group_name || group.name,
         child_count: childCount.toString(),
-        price_per_child: PRICE_PER_CHILD.toString(),
+        over_2_count: over2Count.toString(),
+        under_2_count: under2Count.toString(),
         group_payment: 'true',
       },
       confirm: true,
@@ -153,7 +168,7 @@ export async function POST(
         customer_id: groupId,
         type: 'day_pass',
         product_id: null,
-        name: `Group Visit — ${childCount} children @ $${PRICE_PER_CHILD}/each`,
+        name: `Group Visit — ${over2Count > 0 ? `${over2Count} x $${PRICE_AGE_2_PLUS}` : ''}${over2Count > 0 && under2Count > 0 ? ', ' : ''}${under2Count > 0 ? `${under2Count} x $${PRICE_UNDER_2} (under 2)` : ''}`,
         price: totalAmount,
         purchase_date: now.toISOString(),
         expiry_date: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
