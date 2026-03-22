@@ -312,6 +312,8 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   const [selectedChildForPurchase, setSelectedChildForPurchase] = useState<string>('');
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
+  const [comboChildId, setComboChildId] = useState<string | null>(null);
+  const [comboInfantId, setComboInfantId] = useState<string | null>(null);
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [isSigningWaiver, setIsSigningWaiver] = useState(false);
   const [isDeletingChild, setIsDeletingChild] = useState(false);
@@ -329,6 +331,11 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     }
 
     return age;
+  };
+
+  const isChildInfantComboPass = (productName: string): boolean => {
+    const lowerName = productName.toLowerCase();
+    return lowerName.includes('child') && lowerName.includes('infant');
   };
 
   // Helper function to get child name by ID
@@ -728,6 +735,64 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     // Proceed directly to purchase (no second confirmation needed)
     if (selectedProductForPurchase) {
       handleConfirmPurchaseWithChild(selectedProductForPurchase, childId);
+    }
+  };
+
+  const handleComboPassPurchase = async (productId: string, childId: string, infantId: string) => {
+    setConfirmingProduct(null);
+    if (confirmTimeout) {
+      clearTimeout(confirmTimeout);
+      setConfirmTimeout(null);
+    }
+
+    const product = AVAILABLE_PRODUCTS.find(p => p.id === productId);
+    if (!product) return;
+
+    if (isProcessing || processingProduct) return;
+    setIsProcessing(true);
+    setProcessingProduct(productId);
+
+    try {
+      const purchaseType: Purchase['type'] = 'day_pass';
+
+      const response = await fetch('/api/purchases/pos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          product_id: productId,
+          product_name: product.name,
+          product_price: product.price,
+          product_description: product.description,
+          purchase_type: purchaseType,
+          child_id: childId,
+          children_ids: [childId, infantId],
+          quantity: 1,
+          metadata: {},
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Purchase failed');
+      }
+
+      await onRefreshPurchases();
+
+      setSuccessDetails({
+        title: 'Purchase Successful!',
+        message: `${product.name} purchased successfully!`,
+      });
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessDetails({
+        title: 'Purchase Failed',
+        message: error instanceof Error ? error.message : 'Unable to process purchase.',
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setIsProcessing(false);
+      setProcessingProduct(null);
     }
   };
 
@@ -2020,9 +2085,16 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                           return;
                         }
 
-                        // Step 3: If only one child with signed waiver, purchase immediately
+                        // Step 3: Show child selection
                         const eligibleChildren = customer.children.filter(c => c.waiverSigned);
-                        if (eligibleChildren.length === 1) {
+
+                        // Combo pass always needs the modal for dual selection
+                        if (isChildInfantComboPass(product.name)) {
+                          setSelectedProductForPurchase(product.id);
+                          setComboChildId(null);
+                          setComboInfantId(null);
+                          setShowChildSelectionModal(true);
+                        } else if (eligibleChildren.length === 1) {
                           handleConfirmPurchaseWithChild(product.id, eligibleChildren[0].id);
                         } else {
                           // Multiple children — show selection modal
@@ -2553,62 +2625,169 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
               ✕
             </button>
 
-            <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
-            <p className="text-gray-600 mb-4">
-              Which child is this {AVAILABLE_PRODUCTS.find(p => p.id === selectedProductForPurchase)?.name} for?
-            </p>
+            {(() => {
+              const comboProduct = AVAILABLE_PRODUCTS.find(p => p.id === selectedProductForPurchase);
+              const isCombo = comboProduct ? isChildInfantComboPass(comboProduct.name) : false;
 
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {customer.children
-                .filter(child => child.waiverSigned)
-                .map(child => (
-                  <button
-                    key={child.id}
-                    onClick={() => handleChildSelectionForPurchase(child.id)}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
+              if (isCombo) {
+                const signedChildren = customer.children.filter(c => c.waiverSigned);
+                const eligibleChildren = signedChildren.filter(c => c.age >= 2);
+                const eligibleInfants = signedChildren.filter(c => c.age < 2);
+
+                return (
+                  <>
+                    <h3 className="text-lg font-semibold mb-4">Select Child & Infant for Combo Pass</h3>
+                    <p className="text-gray-600 mb-4">Select one child (age 2+) and one infant (under 2):</p>
+
+                    <div className="space-y-4">
                       <div>
-                        <p className="font-medium text-gray-900">{child.name}</p>
-                        <p className="text-sm text-gray-600">Age: {child.age}</p>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">👧 Child (age 2+)</label>
+                        {eligibleChildren.length > 0 ? (
+                          <div className="space-y-2">
+                            {eligibleChildren.map(child => (
+                              <button
+                                key={child.id}
+                                onClick={() => setComboChildId(comboChildId === child.id ? null : child.id)}
+                                className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                  comboChildId === child.id
+                                    ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                                    : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-900">{child.name}</p>
+                                    <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                  </div>
+                                  <div className={`text-xl ${comboChildId === child.id ? 'text-green-600' : 'text-gray-300'}`}>
+                                    {comboChildId === child.id ? '✅' : '⬜'}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">No children age 2+ with signed waivers found.</p>
+                        )}
                       </div>
-                      <div className="text-green-600">
-                        ✅ Waiver Signed
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">👶 Infant (under 2)</label>
+                        {eligibleInfants.length > 0 ? (
+                          <div className="space-y-2">
+                            {eligibleInfants.map(child => (
+                              <button
+                                key={child.id}
+                                onClick={() => setComboInfantId(comboInfantId === child.id ? null : child.id)}
+                                className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                  comboInfantId === child.id
+                                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                    : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-900">{child.name}</p>
+                                    <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                  </div>
+                                  <div className={`text-xl ${comboInfantId === child.id ? 'text-blue-600' : 'text-gray-300'}`}>
+                                    {comboInfantId === child.id ? '✅' : '⬜'}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">No infants under 2 with signed waivers found.</p>
+                        )}
                       </div>
+
+                      <Button
+                        onClick={() => {
+                          if (comboChildId && comboInfantId) {
+                            setSelectedChildForPurchase(comboChildId);
+                            setShowChildSelectionModal(false);
+                            // Proceed with purchase, passing both children
+                            handleComboPassPurchase(selectedProductForPurchase, comboChildId, comboInfantId);
+                          }
+                        }}
+                        disabled={!comboChildId || !comboInfantId}
+                        className="w-full"
+                      >
+                        {!comboChildId && !comboInfantId
+                          ? 'Select a child and an infant'
+                          : !comboChildId
+                          ? 'Select a child (age 2+)'
+                          : !comboInfantId
+                          ? 'Select an infant (under 2)'
+                          : 'Confirm Selection'}
+                      </Button>
                     </div>
-                  </button>
-                ))
+
+                    <div className="flex justify-end space-x-3 mt-4">
+                      <Button onClick={() => { setShowChildSelectionModal(false); setSelectedProductForPurchase(''); }} variant="secondary">
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                );
               }
-            </div>
 
-            {customer.children.some(child => !child.waiverSigned) && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ Some children don't have signed waivers and can't be selected.
-                  <button
-                    onClick={() => {
-                      setShowChildSelectionModal(false);
-                      setActiveTab('children');
-                    }}
-                    className="text-yellow-700 underline ml-1"
-                  >
-                    Sign waivers in Children tab
-                  </button>
-                </p>
-              </div>
-            )}
+              return (
+                <>
+                  <h3 className="text-lg font-semibold mb-4">Select Child for Pass</h3>
+                  <p className="text-gray-600 mb-4">
+                    Which child is this {comboProduct?.name} for?
+                  </p>
 
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button
-                onClick={() => {
-                  setShowChildSelectionModal(false);
-                  setSelectedProductForPurchase('');
-                }}
-                variant="secondary"
-              >
-                Cancel
-              </Button>
-            </div>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {customer.children
+                      .filter(child => child.waiverSigned)
+                      .map(child => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildSelectionForPurchase(child.id)}
+                          className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{child.name}</p>
+                              <p className="text-sm text-gray-600">Age: {child.age}</p>
+                            </div>
+                            <div className="text-green-600">
+                              ✅ Waiver Signed
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    }
+                  </div>
+
+                  {customer.children.some(child => !child.waiverSigned) && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        ⚠️ Some children don&apos;t have signed waivers and can&apos;t be selected.
+                        <button
+                          onClick={() => {
+                            setShowChildSelectionModal(false);
+                            setActiveTab('children');
+                          }}
+                          className="text-yellow-700 underline ml-1"
+                        >
+                          Sign waivers in Children tab
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <Button onClick={() => { setShowChildSelectionModal(false); setSelectedProductForPurchase(''); }} variant="secondary">
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
