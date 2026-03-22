@@ -734,6 +734,7 @@ function WebMyAccountContent() {
     partyEndTime: string;
     partyGuests: number;
     partyNotes: string;
+    birthdayChildName: string;
   }) => {
     if (!schedulingParty) return;
 
@@ -746,6 +747,7 @@ function WebMyAccountContent() {
         party_end_time: partyData.partyEndTime,
         party_guests: partyData.partyGuests,
         party_notes: partyData.partyNotes,
+        child_name: partyData.birthdayChildName,
       }),
     });
 

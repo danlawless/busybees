@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { X, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
+import { X, Calendar, Clock, Users, MessageSquare, Baby } from 'lucide-react';
 import { PartyCalendar, type PartyBooking } from '@/components/parties/PartyCalendar';
 import { parseDateString } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ interface PartySchedulingModalProps {
     partyEndTime: string;
     partyGuests: number;
     partyNotes: string;
+    birthdayChildName: string;
   }) => void | Promise<void>;
   partyPackageName: string;
   customerName: string;
@@ -60,6 +61,7 @@ export function PartySchedulingModal({
   );
   const [partyGuests, setPartyGuests] = useState(existingPartyData?.partyGuests || 15);
   const [partyNotes, setPartyNotes] = useState(existingPartyData?.partyNotes || '');
+  const [birthdayChildName, setBirthdayChildName] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
   const [existingBookings, setExistingBookings] = useState<PartyBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -118,26 +120,26 @@ export function PartySchedulingModal({
 
   const handleScheduleParty = async () => {
     if (!selectedTimeSlot) return;
+    if (!birthdayChildName.trim()) return;
 
     setIsScheduling(true);
 
     try {
-      // Call the parent's onSchedule handler and await it
-      // This ensures we wait for the API call to complete
       await onSchedule({
         partyDate: selectedDate,
         partyStartTime: selectedTimeSlot.startTime,
         partyEndTime: selectedTimeSlot.endTime,
         partyGuests,
-        partyNotes
+        partyNotes,
+        birthdayChildName: birthdayChildName.trim(),
       });
 
-      // Only reset form after successful API call
       setStep('calendar');
       setSelectedDate('');
       setSelectedTimeSlot(null);
       setPartyGuests(15);
       setPartyNotes('');
+      setBirthdayChildName('');
     } catch (error) {
       // Error is handled by parent component which shows the message
       console.error('Party scheduling failed:', error);
@@ -285,6 +287,26 @@ export function PartySchedulingModal({
                 </div>
               </Card>
 
+              {/* Birthday Child Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Baby className="w-4 h-4 inline mr-1" />
+                  Birthday Child&apos;s Name *
+                </label>
+                <input
+                  type="text"
+                  value={birthdayChildName}
+                  onChange={(e) => setBirthdayChildName(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !birthdayChildName.trim() ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter birthday child's name"
+                />
+                {!birthdayChildName.trim() && (
+                  <p className="text-red-500 text-xs mt-1">Required</p>
+                )}
+              </div>
+
               {/* Party Details Form */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -363,7 +385,7 @@ export function PartySchedulingModal({
                 <Button
                   onClick={handleScheduleParty}
                   className="flex-1 bg-green-600 hover:bg-green-700"
-                  disabled={isScheduling}
+                  disabled={isScheduling || !birthdayChildName.trim()}
                 >
                   {isScheduling 
                     ? (isRescheduling ? 'Rescheduling...' : 'Scheduling...') 

@@ -1257,6 +1257,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
     partyEndTime: string;
     partyGuests: number;
     partyNotes: string;
+    birthdayChildName: string;
   }) => {
     if (!schedulingParty) return;
 
@@ -1271,6 +1272,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           party_end_time: partyData.partyEndTime,
           party_guests: partyData.partyGuests,
           party_notes: partyData.partyNotes,
+          child_name: partyData.birthdayChildName,
         }),
       });
 
