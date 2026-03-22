@@ -200,12 +200,6 @@ export function PartyAvailabilityCalendar() {
                 `}
               >
                 {date.getDate()}
-                {status === 'partial' && !isSelected && (
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-400 rounded-full" />
-                )}
-                {status === 'full' && !isSelected && (
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
-                )}
               </button>
             );
           })}
