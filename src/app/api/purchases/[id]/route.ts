@@ -21,6 +21,7 @@ const partyScheduleSchema = z.object({
   party_end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format (expected HH:MM or HH:MM:SS)'),
   party_guests: z.number().int().min(1).max(100),
   party_notes: z.string().max(500).optional().nullable(),
+  child_name: z.string().min(1, 'Birthday child\'s name is required').max(50),
 });
 
 export async function GET(
@@ -181,6 +182,7 @@ async function handleUpdate(
         endTime: partyData.party_end_time,
         guestCount: partyData.party_guests,
         notes: partyData.party_notes || undefined,
+        childName: partyData.child_name,
       });
     } catch (syncError) {
       const errorMessage = syncError instanceof Error
