@@ -84,6 +84,8 @@ function WebMyAccountContent() {
   const [showChildSelectionModal, setShowChildSelectionModal] = useState(false);
   const [selectedProductForPurchase, setSelectedProductForPurchase] = useState<string>('');
   const [selectedChildrenForFamily, setSelectedChildrenForFamily] = useState<string[]>([]);
+  const [comboChildId, setComboChildId] = useState<string | null>(null);
+  const [comboInfantId, setComboInfantId] = useState<string | null>(null);
 
   // Party scheduling state
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
@@ -506,9 +508,19 @@ function WebMyAccountContent() {
     return productName.toLowerCase().includes('family');
   };
 
+  const isChildInfantComboPass = (productName: string): boolean => {
+    const lowerName = productName.toLowerCase();
+    return lowerName.includes('child') && lowerName.includes('infant');
+  };
+
   const isSelectedProductFamily = (() => {
     const product = availablePasses.find(p => p.id === selectedProductForPurchase);
     return product ? isFamilyPass(product.name) : false;
+  })();
+
+  const isSelectedProductCombo = (() => {
+    const product = availablePasses.find(p => p.id === selectedProductForPurchase);
+    return product ? isChildInfantComboPass(product.name) : false;
   })();
 
   // Children who already have an active day pass purchased today (prevents double-assigning)
@@ -1538,6 +1550,7 @@ function WebMyAccountContent() {
                             }
                             const isDayPass = product.category === 'day' || product.name?.toLowerCase().includes('day');
                             const isFamilyProduct = isFamilyPass(product.name);
+                            const isComboProduct = isChildInfantComboPass(product.name);
                             const eligibleChildren = children.filter(c =>
                               c.waiverSigned && !(isDayPass && childrenWithDayPassToday.has(c.id))
                             );
@@ -1552,7 +1565,13 @@ function WebMyAccountContent() {
                               setShowSuccessModal(true);
                               return;
                             }
-                            if (isFamilyProduct) {
+                            if (isComboProduct) {
+                              // Combo pass: always show dual child/infant selector
+                              setComboChildId(null);
+                              setComboInfantId(null);
+                              setSelectedProductForPurchase(product.id);
+                              setShowChildSelectionModal(true);
+                            } else if (isFamilyProduct) {
                               // Family pass: always show multi-child selector
                               setSelectedChildrenForFamily([]);
                               setSelectedProductForPurchase(product.id);
@@ -2066,116 +2085,216 @@ function WebMyAccountContent() {
                 ✕
               </button>
 
-              <h3 className="text-lg font-semibold mb-4">
-                {isSelectedProductFamily ? 'Select Children for Family Pass' : 'Select Child for Pass'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {isSelectedProductFamily
-                  ? `Select which children this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} covers. All selected children can check in for the duration of the pass.`
-                  : `Which child is this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?`
-                }
-              </p>
+              {isSelectedProductCombo ? (
+                <>
+                  <h3 className="text-lg font-semibold mb-4">Select Child & Infant for Combo Pass</h3>
+                  <p className="text-gray-600 mb-4">Select one child (age 2+) and one infant (under 2):</p>
 
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {children
-                  .filter(child => child.waiverSigned)
-                  .map(child => {
-                    const hasDayPassToday = isSelectedProductDayPass && childrenWithDayPassToday.has(child.id);
-
-                    if (isSelectedProductFamily) {
-                      const isSelected = selectedChildrenForFamily.includes(child.id);
-                      return (
-                        <button
-                          key={child.id}
-                          onClick={() => toggleChildForFamily(child.id)}
-                          className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                            isSelected
-                              ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
-                              : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{child.name}</p>
-                              <p className="text-sm text-gray-600">Age: {child.age}</p>
-                            </div>
-                            <div className={isSelected ? 'text-green-600' : 'text-gray-300'}>
-                              {isSelected ? '✅ Selected' : '○ Tap to select'}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    }
-
-                    return (
-                      <button
-                        key={child.id}
-                        onClick={() => !hasDayPassToday && handleChildSelectionForPurchase(child.id)}
-                        disabled={hasDayPassToday}
-                        className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                          hasDayPassToday
-                            ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
-                            : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className={`font-medium ${hasDayPassToday ? 'text-gray-400' : 'text-gray-900'}`}>{child.name}</p>
-                            <p className="text-sm text-gray-600">Age: {child.age}</p>
-                          </div>
-                          {hasDayPassToday ? (
-                            <div className="text-gray-400 text-sm">
-                              Already has a day pass today
-                            </div>
-                          ) : (
-                            <div className="text-green-600">
-                              ✅ Waiver Signed
-                            </div>
-                          )}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">👧 Child (age 2+)</label>
+                      {children.filter(c => c.waiverSigned && c.age >= 2).length > 0 ? (
+                        <div className="space-y-2">
+                          {children.filter(c => c.waiverSigned && c.age >= 2).map(child => (
+                            <button
+                              key={child.id}
+                              onClick={() => setComboChildId(comboChildId === child.id ? null : child.id)}
+                              className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                comboChildId === child.id
+                                  ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                                  : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-gray-900">{child.name}</p>
+                                  <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                </div>
+                                <div className={`text-xl ${comboChildId === child.id ? 'text-green-600' : 'text-gray-300'}`}>
+                                  {comboChildId === child.id ? '✅' : '⬜'}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                      </button>
-                    );
-                  })
-                }
-              </div>
+                      ) : (
+                        <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">No children age 2+ with signed waivers found.</p>
+                      )}
+                    </div>
 
-              {children.some(child => !child.waiverSigned) && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ Some children don't have signed waivers and can't be selected.
-                    <button
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">👶 Infant (under 2)</label>
+                      {children.filter(c => c.waiverSigned && c.age < 2).length > 0 ? (
+                        <div className="space-y-2">
+                          {children.filter(c => c.waiverSigned && c.age < 2).map(child => (
+                            <button
+                              key={child.id}
+                              onClick={() => setComboInfantId(comboInfantId === child.id ? null : child.id)}
+                              className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                comboInfantId === child.id
+                                  ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                  : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-gray-900">{child.name}</p>
+                                  <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                </div>
+                                <div className={`text-xl ${comboInfantId === child.id ? 'text-blue-600' : 'text-gray-300'}`}>
+                                  {comboInfantId === child.id ? '✅' : '⬜'}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">No infants under 2 with signed waivers found.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <Button
+                      onClick={() => { setShowChildSelectionModal(false); setSelectedProductForPurchase(''); }}
+                      variant="secondary"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (comboChildId && comboInfantId && selectedProductForPurchase) {
+                          setShowChildSelectionModal(false);
+                          handleConfirmPurchase(selectedProductForPurchase, comboChildId, [comboChildId, comboInfantId]);
+                        }
+                      }}
+                      disabled={!comboChildId || !comboInfantId}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {!comboChildId && !comboInfantId
+                        ? 'Select a child and an infant'
+                        : !comboChildId
+                        ? 'Select a child (age 2+)'
+                        : !comboInfantId
+                        ? 'Select an infant (under 2)'
+                        : 'Confirm Selection'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold mb-4">
+                    {isSelectedProductFamily ? 'Select Children for Family Pass' : 'Select Child for Pass'}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {isSelectedProductFamily
+                      ? `Select which children this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} covers. All selected children can check in for the duration of the pass.`
+                      : `Which child is this ${availablePasses.find(p => p.id === selectedProductForPurchase)?.name} for?`
+                    }
+                  </p>
+
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {children
+                      .filter(child => child.waiverSigned)
+                      .map(child => {
+                        const hasDayPassToday = isSelectedProductDayPass && childrenWithDayPassToday.has(child.id);
+
+                        if (isSelectedProductFamily) {
+                          const isSelected = selectedChildrenForFamily.includes(child.id);
+                          return (
+                            <button
+                              key={child.id}
+                              onClick={() => toggleChildForFamily(child.id)}
+                              className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                                isSelected
+                                  ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                                  : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-gray-900">{child.name}</p>
+                                  <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                </div>
+                                <div className={isSelected ? 'text-green-600' : 'text-gray-300'}>
+                                  {isSelected ? '✅ Selected' : '○ Tap to select'}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => !hasDayPassToday && handleChildSelectionForPurchase(child.id)}
+                            disabled={hasDayPassToday}
+                            className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                              hasDayPassToday
+                                ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                                : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className={`font-medium ${hasDayPassToday ? 'text-gray-400' : 'text-gray-900'}`}>{child.name}</p>
+                                <p className="text-sm text-gray-600">Age: {child.age}</p>
+                              </div>
+                              {hasDayPassToday ? (
+                                <div className="text-gray-400 text-sm">
+                                  Already has a day pass today
+                                </div>
+                              ) : (
+                                <div className="text-green-600">
+                                  ✅ Waiver Signed
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    }
+                  </div>
+
+                  {children.some(child => !child.waiverSigned) && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        ⚠️ Some children don&apos;t have signed waivers and can&apos;t be selected.
+                        <button
+                          onClick={() => {
+                            setShowChildSelectionModal(false);
+                            setActiveTab('children');
+                          }}
+                          className="text-yellow-700 underline ml-1"
+                        >
+                          Sign waivers in Children tab
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <Button
                       onClick={() => {
                         setShowChildSelectionModal(false);
-                        setActiveTab('children');
+                        setSelectedProductForPurchase('');
+                        setSelectedChildrenForFamily([]);
                       }}
-                      className="text-yellow-700 underline ml-1"
+                      variant="secondary"
                     >
-                      Sign waivers in Children tab
-                    </button>
-                  </p>
-                </div>
+                      Cancel
+                    </Button>
+                    {isSelectedProductFamily && selectedChildrenForFamily.length > 0 && (
+                      <Button
+                        onClick={handleFamilyPassConfirm}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Confirm {selectedChildrenForFamily.length} Child{selectedChildrenForFamily.length > 1 ? 'ren' : ''}
+                      </Button>
+                    )}
+                  </div>
+                </>
               )}
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <Button
-                  onClick={() => {
-                    setShowChildSelectionModal(false);
-                    setSelectedProductForPurchase('');
-                    setSelectedChildrenForFamily([]);
-                  }}
-                  variant="secondary"
-                >
-                  Cancel
-                </Button>
-                {isSelectedProductFamily && selectedChildrenForFamily.length > 0 && (
-                  <Button
-                    onClick={handleFamilyPassConfirm}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Confirm {selectedChildrenForFamily.length} Child{selectedChildrenForFamily.length > 1 ? 'ren' : ''}
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
         )}
