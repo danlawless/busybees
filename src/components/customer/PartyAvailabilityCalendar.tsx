@@ -15,6 +15,7 @@ interface TimeSlot {
 export function PartyAvailabilityCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState<Map<string, string[]>>(new Map());
+  const [totalSlots, setTotalSlots] = useState<{ weekend: number; weekday: number }>({ weekend: 0, weekday: 0 });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingMonth, setLoadingMonth] = useState(false);
@@ -39,6 +40,9 @@ export function PartyAvailabilityCalendar() {
             slotsMap.set(slot.date, slot.times);
           });
           setBookedSlots(slotsMap);
+          if (data.totalSlots) {
+            setTotalSlots(data.totalSlots);
+          }
         }
       } catch (error) {
         console.error('Error fetching availability:', error);
@@ -120,12 +124,15 @@ export function PartyAvailabilityCalendar() {
 
   const days = getDaysInMonth();
 
-  const getDateStatus = (date: Date): 'available' | 'partial' | 'past' => {
+  const getDateStatus = (date: Date): 'available' | 'partial' | 'full' | 'past' => {
     const dateString = formatDateToYYYYMMDD(date);
     if (date < today || date < minBookingDate) return 'past';
     const bookedTimes = bookedSlots.get(dateString);
-    if (bookedTimes && bookedTimes.length > 0) return 'partial';
-    return 'available';
+    if (!bookedTimes || bookedTimes.length === 0) return 'available';
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const maxSlots = isWeekend ? totalSlots.weekend : totalSlots.weekday;
+    if (maxSlots > 0 && bookedTimes.length >= maxSlots) return 'full';
+    return 'partial';
   };
 
   const isSlotBooked = (startTime: string): boolean => {
@@ -186,14 +193,18 @@ export function PartyAvailabilityCalendar() {
                   ${!isClickable ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
                   ${isToday && !isSelected ? 'ring-2 ring-blue-300' : ''}
                   ${isSelected ? 'bg-purple-500 text-white font-bold ring-2 ring-purple-600' : ''}
-                  ${status === 'available' && !isSelected ? 'bg-green-50 text-green-700 hover:bg-green-100 font-medium' : ''}
-                  ${status === 'partial' && !isSelected ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium' : ''}
+                  ${status === 'available' && !isSelected ? 'bg-green-100 text-green-800 hover:bg-green-200 font-medium' : ''}
+                  ${status === 'partial' && !isSelected ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 font-medium' : ''}
+                  ${status === 'full' && !isSelected ? 'bg-red-100 text-red-800 hover:bg-red-200 font-medium' : ''}
                   ${isWeekend && isClickable && !isSelected ? 'font-semibold' : ''}
                 `}
               >
                 {date.getDate()}
                 {status === 'partial' && !isSelected && (
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-400 rounded-full" />
+                )}
+                {status === 'full' && !isSelected && (
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
                 )}
               </button>
             );
@@ -202,16 +213,16 @@ export function PartyAvailabilityCalendar() {
 
         <div className="flex flex-wrap gap-3 text-xs text-gray-600 pt-2 border-t">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-green-50 border border-green-200 rounded" />
+            <div className="w-3 h-3 bg-green-100 border border-green-300 rounded" />
             <span>Available</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-amber-50 border border-amber-200 rounded" />
+            <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded" />
             <span>Some slots taken</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded" />
-            <span>Unavailable</span>
+            <div className="w-3 h-3 bg-red-100 border border-red-300 rounded" />
+            <span>Fully booked</span>
           </div>
         </div>
       </Card>
