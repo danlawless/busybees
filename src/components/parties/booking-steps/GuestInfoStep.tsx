@@ -26,7 +26,9 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
   useEffect(() => {
     const newErrors: Record<string, string> = {};
 
-    // Child name is optional - waivers signed when party arrives
+    if (!formData.childName || formData.childName.trim().length === 0) {
+      newErrors.childName = 'Birthday child\'s name is required';
+    }
 
     if (formData.guestCount < 1) {
       newErrors.guestCount = 'At least 1 guest is required';
@@ -66,15 +68,20 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Baby className="w-4 h-4 inline mr-2" />
-            Birthday Child&apos;s Name (Optional)
+            Birthday Child&apos;s Name *
           </label>
           <input
             type="text"
             value={formData.childName}
             onChange={(e) => onUpdate({ childName: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-honey-500"
-            placeholder="Enter child's name (can provide later)"
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-honey-500 ${
+              errors.childName ? 'border-red-400' : 'border-gray-300'
+            }`}
+            placeholder="Enter birthday child's name"
           />
+          {errors.childName && (
+            <p className="text-red-500 text-sm mt-1">{errors.childName}</p>
+          )}
         </div>
 
         {/* Child's Age */}

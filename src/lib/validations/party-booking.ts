@@ -73,9 +73,9 @@ export const DateTimeSelectionSchema = z.object({
 export const GuestCountSchema = z.object({
   childName: z
     .string()
+    .min(1, 'Birthday child\'s name is required')
     .max(50, 'Child name must be less than 50 characters')
-    .optional()
-    .transform((val) => val?.trim() || undefined),
+    .transform((val) => val.trim()),
   childAge: z
     .number()
     .min(0, 'Age must be 0 or greater')
@@ -123,12 +123,11 @@ export const CompleteBookingSchema = z.object({
   endTime: z.string().min(1, 'End time is required'),
 
   // Guest Info - Max 20 children per issue #101 (30 for group rate)
-  // Child info is optional - waivers signed when party arrives
   childName: z
     .string()
+    .min(1, 'Birthday child\'s name is required')
     .max(50, 'Child name must be less than 50 characters')
-    .optional()
-    .transform((val) => val?.trim() || undefined),
+    .transform((val) => val.trim()),
   childAge: z.number().min(0).max(12).optional(),
   guestCount: z
     .number()
