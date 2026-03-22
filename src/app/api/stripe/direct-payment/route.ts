@@ -312,41 +312,89 @@ export async function POST(request: NextRequest) {
 
     logger.info({ ...logContext, paymentIntentId: paymentIntent.id }, '✅ Stripe charge succeeded, saving purchase record');
 
-    // Create purchase record — direct insert matching POS pattern exactly
-    // Deliberately omits gift_card_amount_used from the insert to avoid column-missing failures
-    const { data: purchase, error: dbError } = await adminSupabase
-      .from('purchases')
-      .insert({
-        customer_id: user.id,
-        child_id: childId || null,
-        type: purchaseType,
-        product_id: productId,
-        name: productName,
-        price: totalAmount,
-        purchase_date: now.toISOString(),
-        expiry_date: purchaseDefaults.expiryDate?.toISOString() || null,
-        used_sessions: 0,
-        total_sessions: purchaseDefaults.totalSessions,
-        status: 'active',
-        stripe_payment_intent_id: paymentIntent.id,
-      })
-      .select()
-      .single();
+    // Child + Infant combo pass: create individual purchases per child
+    const isComboPass = productName.toLowerCase().includes('child') && productName.toLowerCase().includes('infant');
+    const comboChildrenIds = isComboPass && childrenIds.length === 2 ? childrenIds : null;
 
-    if (dbError) {
-      logger.error(
-        { error: dbError, customerId: user.id, paymentIntentId: paymentIntent.id },
-        '❌ CRITICAL: Stripe charged but DB insert failed — purchase not recorded'
+    let purchase;
+
+    if (comboChildrenIds) {
+      // Create separate purchase for each child in the combo
+      const pricePerChild = totalAmount / comboChildrenIds.length;
+      const purchases = [];
+
+      for (const comboChildId of comboChildrenIds) {
+        const { data: childPurchase, error: childDbError } = await adminSupabase
+          .from('purchases')
+          .insert({
+            customer_id: user.id,
+            child_id: comboChildId,
+            type: purchaseType,
+            product_id: productId,
+            name: productName,
+            price: pricePerChild,
+            purchase_date: now.toISOString(),
+            expiry_date: purchaseDefaults.expiryDate?.toISOString() || null,
+            used_sessions: 0,
+            total_sessions: 1,
+            status: 'active',
+            stripe_payment_intent_id: paymentIntent.id,
+          })
+          .select()
+          .single();
+
+        if (childDbError) {
+          logger.error(
+            { error: childDbError, customerId: user.id, comboChildId },
+            '❌ CRITICAL: Stripe charged but combo purchase DB insert failed'
+          );
+          throw childDbError;
+        }
+        purchases.push(childPurchase);
+      }
+
+      purchase = purchases[0];
+      logger.info(
+        { purchaseIds: purchases.map(p => p.id), customerId: user.id },
+        '✅ Combo pass: created individual purchases for each child'
       );
-      throw dbError;
-    }
+    } else {
+      // Standard single purchase
+      const { data: singlePurchase, error: dbError } = await adminSupabase
+        .from('purchases')
+        .insert({
+          customer_id: user.id,
+          child_id: childId || null,
+          type: purchaseType,
+          product_id: productId,
+          name: productName,
+          price: totalAmount,
+          purchase_date: now.toISOString(),
+          expiry_date: purchaseDefaults.expiryDate?.toISOString() || null,
+          used_sessions: 0,
+          total_sessions: purchaseDefaults.totalSessions,
+          status: 'active',
+          stripe_payment_intent_id: paymentIntent.id,
+        })
+        .select()
+        .single();
 
-    logger.info({ ...logContext, purchaseId: purchase.id }, '✅ Purchase record saved');
+      if (dbError) {
+        logger.error(
+          { error: dbError, customerId: user.id, paymentIntentId: paymentIntent.id },
+          '❌ CRITICAL: Stripe charged but DB insert failed — purchase not recorded'
+        );
+        throw dbError;
+      }
 
-    // Link children for family passes via purchase_children table
-    if (childrenIds.length > 0) {
-      const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
-      await adminSupabase.from('purchase_children').insert(rows);
+      purchase = singlePurchase;
+      logger.info({ ...logContext, purchaseId: purchase.id }, '✅ Purchase record saved');
+
+      // Link children for family passes via purchase_children table
+      if (childrenIds.length > 0) {
+        const rows = childrenIds.map((cId: string) => ({ purchase_id: purchase.id, child_id: cId }));
+        await adminSupabase.from('purchase_children').insert(rows);
+      }
     }
 
     // Deduct gift card balance and record amount used (separate operations)
