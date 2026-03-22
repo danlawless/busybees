@@ -165,6 +165,8 @@ export function CheckIn({
     // Children-related state
     const [selectedChildForPurchase, setSelectedChildForPurchase] =
         useState<string>("");
+    const [comboChildId, setComboChildId] = useState<string | null>(null); // child 2+ for combo pass
+    const [comboInfantId, setComboInfantId] = useState<string | null>(null); // infant under 2 for combo pass
     const [selectedChildrenForFamilyPass, setSelectedChildrenForFamilyPass] =
         useState<string[]>([]);
     const [showAddChild, setShowAddChild] = useState(false);
@@ -855,6 +857,11 @@ export function CheckIn({
         return lowerName.includes('family');
     };
 
+    const isChildInfantComboPass = (productName: string): boolean => {
+        const lowerName = productName.toLowerCase();
+        return lowerName.includes('child') && lowerName.includes('infant');
+    };
+
     const handlePhoneSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatPhoneNumber(e.target.value);
         setSearchPhone(formatted);
@@ -1394,8 +1401,19 @@ export function CheckIn({
 
         if (isPassPurchase) {
             const isFamilyProduct = isFamilyPass(product.name);
+            const isComboProduct = isChildInfantComboPass(product.name);
 
-            if (isFamilyProduct) {
+            if (isComboProduct) {
+                // Combo pass: require both a child (2+) and infant (under 2)
+                if (selectedChildrenForFamilyPass.length < 2) {
+                    setSuccessDetails({
+                        title: "Child & Infant Selection Required",
+                        message: "Please select one child (age 2+) and one infant (under 2) for this combo pass.",
+                    });
+                    setShowSuccessModal(true);
+                    return;
+                }
+            } else if (isFamilyProduct) {
                 // Family pass: require at least one child selected
                 if (selectedChildrenForFamilyPass.length === 0) {
                     setSuccessDetails({
@@ -1536,7 +1554,7 @@ export function CheckIn({
                         productDescription: product.description || "",
                         purchaseType: purchaseType,
                         childId: isPassPurchase ? selectedChildForPurchase : undefined,
-                        childrenIds: (isPassPurchase && isFamilyPass(product.name)) ? selectedChildrenForFamilyPass : undefined,
+                        childrenIds: (isPassPurchase && (isFamilyPass(product.name) || isChildInfantComboPass(product.name))) ? selectedChildrenForFamilyPass : undefined,
                         paymentMethodId: defaultCard.id,
                         quantity: quantity,
                     }),
@@ -1643,7 +1661,7 @@ export function CheckIn({
                     product_description: product.description || "",
                     purchase_type: purchaseType,
                     child_id: isPassPurchase ? selectedChildForPurchase : undefined,
-                    children_ids: (isPassPurchase && isFamilyPass(product.name)) ? selectedChildrenForFamilyPass : undefined,
+                    children_ids: (isPassPurchase && (isFamilyPass(product.name) || isChildInfantComboPass(product.name))) ? selectedChildrenForFamilyPass : undefined,
                     quantity: isGroupRate ? 1 : 1, // Group rate total already includes all children
                     metadata: {},
                 }),
@@ -3432,6 +3450,8 @@ export function CheckIn({
                                                                 product.id
                                                             );
                                                             setSelectedChildrenForFamilyPass([]);
+                                                            setComboChildId(null);
+                                                            setComboInfantId(null);
                                                             setShowChildSelectionModal(
                                                                 true
                                                             );
@@ -4920,18 +4940,133 @@ export function CheckIn({
                                 ...AVAILABLE_PARTY_PRODUCTS,
                             ].find((p) => p.id === selectedProductForPurchase);
                             const isFamilyProduct = selectedProduct ? isFamilyPass(selectedProduct.name) : false;
+                            const isComboProduct = selectedProduct ? isChildInfantComboPass(selectedProduct.name) : false;
 
                             return (
                                 <>
                                     <h3 className="text-lg font-semibold mb-4">
-                                        {isFamilyProduct ? 'Select Children for Family Pass' : 'Select Child for Pass'}
+                                        {isComboProduct ? 'Select Child & Infant for Combo Pass' : isFamilyProduct ? 'Select Children for Family Pass' : 'Select Child for Pass'}
                                     </h3>
                                     <p className="text-gray-600 mb-4">
-                                        {isFamilyProduct
+                                        {isComboProduct
+                                            ? 'Select one child (age 2+) and one infant (under 2):'
+                                            : isFamilyProduct
                                             ? `Select all children this ${selectedProduct?.name} will cover:`
                                             : `Which child is this ${selectedProduct?.name} for?`}
                                     </p>
 
+                                    {isComboProduct ? (
+                                        /* Child + Infant Combo Pass Selection */
+                                        <div className="space-y-4">
+                                            {(() => {
+                                                const customer = selectedCustomer || currentCustomer;
+                                                if (!customer) return null;
+                                                const signedChildren = customer.children.filter((c) => c.waiverSigned);
+                                                const eligibleChildren = signedChildren.filter((c) => c.age >= 2);
+                                                const eligibleInfants = signedChildren.filter((c) => c.age < 2);
+
+                                                return (
+                                                    <>
+                                                        {/* Child (2+) selection */}
+                                                        <div>
+                                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                                👧 Child (age 2+)
+                                                            </label>
+                                                            {eligibleChildren.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                    {eligibleChildren.map((child) => (
+                                                                        <button
+                                                                            key={child.id}
+                                                                            onClick={() => setComboChildId(comboChildId === child.id ? null : child.id)}
+                                                                            className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                                                                comboChildId === child.id
+                                                                                    ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                                                                                    : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-center justify-between">
+                                                                                <div>
+                                                                                    <p className="font-medium text-gray-900">{child.name}</p>
+                                                                                    <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                                                                </div>
+                                                                                <div className={`text-xl ${comboChildId === child.id ? 'text-green-600' : 'text-gray-300'}`}>
+                                                                                    {comboChildId === child.id ? '✅' : '⬜'}
+                                                                                </div>
+                                                                            </div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">
+                                                                    No children age 2 or older with signed waivers found on this account.
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Infant (under 2) selection */}
+                                                        <div>
+                                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                                👶 Infant (under 2)
+                                                            </label>
+                                                            {eligibleInfants.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                    {eligibleInfants.map((child) => (
+                                                                        <button
+                                                                            key={child.id}
+                                                                            onClick={() => setComboInfantId(comboInfantId === child.id ? null : child.id)}
+                                                                            className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                                                                                comboInfantId === child.id
+                                                                                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                                                                    : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-center justify-between">
+                                                                                <div>
+                                                                                    <p className="font-medium text-gray-900">{child.name}</p>
+                                                                                    <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                                                                </div>
+                                                                                <div className={`text-xl ${comboInfantId === child.id ? 'text-blue-600' : 'text-gray-300'}`}>
+                                                                                    {comboInfantId === child.id ? '✅' : '⬜'}
+                                                                                </div>
+                                                                            </div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">
+                                                                    No infants under 2 with signed waivers found on this account.
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Confirm button */}
+                                                        <Button
+                                                            onClick={() => {
+                                                                if (comboChildId && comboInfantId) {
+                                                                    setSelectedChildForPurchase(comboChildId);
+                                                                    setSelectedChildrenForFamilyPass([comboChildId, comboInfantId]);
+                                                                    setShowChildSelectionModal(false);
+                                                                    if (selectedProductForPurchase) {
+                                                                        handleQuickPurchase(selectedProductForPurchase);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            disabled={!comboChildId || !comboInfantId}
+                                                            className="w-full"
+                                                        >
+                                                            {!comboChildId && !comboInfantId
+                                                                ? 'Select a child and an infant'
+                                                                : !comboChildId
+                                                                ? 'Select a child (age 2+)'
+                                                                : !comboInfantId
+                                                                ? 'Select an infant (under 2)'
+                                                                : 'Confirm Selection'}
+                                                        </Button>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    ) : (
                                     <div className="space-y-3 max-h-64 overflow-y-auto">
                                         {(() => {
                                             const customer = selectedCustomer || currentCustomer;
@@ -4995,6 +5130,7 @@ export function CheckIn({
                                                 });
                                         })()}
                                     </div>
+                                    )}
 
                                     {isFamilyProduct && selectedChildrenForFamilyPass.length > 0 && (
                                         <div className="mt-4">
