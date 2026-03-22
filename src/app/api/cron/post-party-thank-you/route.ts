@@ -50,8 +50,27 @@ export async function GET(request: NextRequest) {
         success: true,
         message: 'No parties from yesterday',
         sent: 0,
+        markedDone: 0,
         date: yesterday,
       });
+    }
+
+    // Auto-mark confirmed parties from yesterday as done
+    const confirmedIds = bookings.filter(b => b.status === 'confirmed').map(b => b.id);
+    let markedDone = 0;
+
+    if (confirmedIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from('party_bookings')
+        .update({ status: 'done' })
+        .in('id', confirmedIds);
+
+      if (updateError) {
+        logger.error({ error: updateError }, 'Failed to auto-mark parties as done');
+      } else {
+        markedDone = confirmedIds.length;
+        logger.info({ count: markedDone, date: yesterday }, 'Auto-marked parties as done');
+      }
     }
 
     let sent = 0;
@@ -93,9 +112,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Sent ${sent} thank you email${sent !== 1 ? 's' : ''}`,
+      message: `Sent ${sent} thank you email${sent !== 1 ? 's' : ''}, marked ${markedDone} as done`,
       sent,
       failed,
+      markedDone,
       total: bookings.length,
       date: yesterday,
       errors: errors.length > 0 ? errors : undefined,
