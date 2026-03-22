@@ -74,6 +74,12 @@ export function getProductAgeGroup(productName: string): AgeGroup | null {
  * @returns true if the product has an age restriction
  */
 export function hasAgeRestriction(productName: string): boolean {
+  // Combo passes (e.g. "Child + Infant Discount") handle age validation
+  // via their own selection flow — skip the standard age gate
+  const lowerName = productName.toLowerCase();
+  if (lowerName.includes('child') && lowerName.includes('infant')) {
+    return false;
+  }
   return getProductAgeGroup(productName) !== null;
 }
 
