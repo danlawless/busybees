@@ -708,7 +708,7 @@ export async function createOrUpdateBookingFromPurchase(
     party_date: data.partyDate,
     start_time: data.startTime,
     end_time: data.endTime,
-    child_name: 'TBD', // Customer will provide on party day
+    child_name: 'TBD', // POS/dashboard bookings — child name set via customer booking flow
     child_age: null, // Will be updated when customer provides details
     guest_count: data.guestCount,
     additional_kids: additionalKidsCount,

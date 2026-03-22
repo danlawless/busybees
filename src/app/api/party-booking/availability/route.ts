@@ -69,6 +69,26 @@ export async function GET(request: NextRequest) {
       bookedSlotsByDate.set(date, times);
     });
 
+    // Fetch total slot counts per day type (weekend vs weekday) for private parties
+    const { data: weekendSlots } = await supabase
+      .from('party_time_slots')
+      .select('id')
+      .eq('party_type', 'private')
+      .eq('day_type', 'weekend')
+      .eq('is_active', true);
+
+    const { data: weekdaySlots } = await supabase
+      .from('party_time_slots')
+      .select('id')
+      .eq('party_type', 'private')
+      .eq('day_type', 'weekday')
+      .eq('is_active', true);
+
+    const totalSlots = {
+      weekend: weekendSlots?.length || 0,
+      weekday: weekdaySlots?.length || 0,
+    };
+
     // Convert to array format for response
     const groupedSlots = Array.from(bookedSlotsByDate.entries()).map(([date, times]) => ({
       date,
@@ -79,6 +99,7 @@ export async function GET(request: NextRequest) {
       success: true,
       bookedSlots: groupedSlots,
       totalBookings: bookedSlots?.length || 0,
+      totalSlots,
     });
   } catch (error) {
     console.error('Availability check error:', error);

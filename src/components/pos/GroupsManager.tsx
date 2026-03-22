@@ -36,7 +36,8 @@ interface SavedCard {
   is_default: boolean;
 }
 
-const PRICE_PER_CHILD = 15;
+const PRICE_AGE_2_PLUS = 12;
+const PRICE_UNDER_2 = 5;
 
 interface GroupsStats {
   total: number;
@@ -53,6 +54,10 @@ function calculateAge(birthdate: string): number {
     age--;
   }
   return age;
+}
+
+function getChildPrice(birthdate: string): number {
+  return calculateAge(birthdate) >= 2 ? PRICE_AGE_2_PLUS : PRICE_UNDER_2;
 }
 
 export function GroupsManager() {
@@ -660,22 +665,35 @@ export function GroupsManager() {
             <h3 className="text-lg font-semibold mb-4">Payment</h3>
 
             {/* Tally */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600">Active children</span>
-                <span className="font-semibold">{activeChildIds.size}</span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600">Price per child</span>
-                <span className="font-semibold">${PRICE_PER_CHILD}.00</span>
-              </div>
-              <div className="border-t border-gray-300 pt-2 mt-2 flex items-center justify-between">
-                <span className="text-lg font-bold text-gray-900">Total</span>
-                <span className="text-lg font-bold text-gray-900">
-                  ${(activeChildIds.size * PRICE_PER_CHILD).toFixed(2)}
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const activeChildren = children.filter(c => activeChildIds.has(c.id));
+              const over2Count = activeChildren.filter(c => calculateAge(c.birthdate) >= 2).length;
+              const under2Count = activeChildren.filter(c => calculateAge(c.birthdate) < 2).length;
+              const groupTotal = activeChildren.reduce((sum, c) => sum + getChildPrice(c.birthdate), 0);
+
+              return (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  {over2Count > 0 && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-600">Ages 2+ ({over2Count} x ${PRICE_AGE_2_PLUS})</span>
+                      <span className="font-semibold">${(over2Count * PRICE_AGE_2_PLUS).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {under2Count > 0 && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-600">Under 2 ({under2Count} x ${PRICE_UNDER_2})</span>
+                      <span className="font-semibold">${(under2Count * PRICE_UNDER_2).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-gray-300 pt-2 mt-2 flex items-center justify-between">
+                    <span className="text-lg font-bold text-gray-900">Total</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      ${groupTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Card Selection */}
             {cardsLoading ? (
@@ -742,7 +760,7 @@ export function GroupsManager() {
                   ? 'Processing...'
                   : activeChildIds.size === 0
                   ? 'Select children to pay'
-                  : `Charge $${(activeChildIds.size * PRICE_PER_CHILD).toFixed(2)} to Card`
+                  : `Charge $${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)} to Card`
                 }
               </Button>
             )}

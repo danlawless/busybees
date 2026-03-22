@@ -73,9 +73,9 @@ export const DateTimeSelectionSchema = z.object({
 export const GuestCountSchema = z.object({
   childName: z
     .string()
+    .min(1, 'Birthday child\'s name is required')
     .max(50, 'Child name must be less than 50 characters')
-    .optional()
-    .transform((val) => val?.trim() || undefined),
+    .transform((val) => val.trim()),
   childAge: z
     .number()
     .min(0, 'Age must be 0 or greater')
@@ -123,12 +123,11 @@ export const CompleteBookingSchema = z.object({
   endTime: z.string().min(1, 'End time is required'),
 
   // Guest Info - Max 20 children per issue #101 (30 for group rate)
-  // Child info is optional - waivers signed when party arrives
   childName: z
     .string()
+    .min(1, 'Birthday child\'s name is required')
     .max(50, 'Child name must be less than 50 characters')
-    .optional()
-    .transform((val) => val?.trim() || undefined),
+    .transform((val) => val.trim()),
   childAge: z.number().min(0).max(12).optional(),
   guestCount: z
     .number()
@@ -213,9 +212,10 @@ export const PACKAGE_PRICING = {
     privatePrice: 0, // Not applicable - uses per-child pricing
     maxGuests: 30,
     duration: 2,
-    description: 'Group rate: $12 per child (min 10, max 30)',
+    description: 'Group rate: $12 per child (2+), $5 per child (under 2), min 10, max 30',
     features: [
-      '$12 per child',
+      '$12 per child (ages 2 and up)',
+      '$5 per child (under 2)',
       'Minimum 10 children',
       'Maximum 30 children',
       'Access to play area',
@@ -232,8 +232,9 @@ export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
 export const INCLUDED_KIDS = 15; // 15 kids included with each package
 export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
-// Group rate pricing
-export const GROUP_RATE_PRICE_PER_CHILD = 12; // $12 per child
+// Group rate pricing (age-based)
+export const GROUP_RATE_PRICE_AGE_2_PLUS = 12; // $12 for children 2 years and older
+export const GROUP_RATE_PRICE_UNDER_2 = 5;     // $5 for children under 2 years old
 export const GROUP_RATE_MIN_CHILDREN = 10;
 export const GROUP_RATE_MAX_CHILDREN = 30;
 
@@ -245,9 +246,10 @@ export function calculateBookingPrice(
   partyType: PartyType,
   guestCount: number
 ): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
-  // Group rate uses per-child pricing instead of base + additional
+  // Group rate uses age-based per-child pricing
+  // Without individual ages, estimate using the 2+ rate ($12) as the default
   if (packageName === 'group_rate') {
-    const totalPrice = guestCount * GROUP_RATE_PRICE_PER_CHILD;
+    const totalPrice = guestCount * GROUP_RATE_PRICE_AGE_2_PLUS;
     return {
       basePrice: 0,
       additionalKidsPrice: 0,
