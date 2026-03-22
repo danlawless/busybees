@@ -268,54 +268,103 @@ export async function POST(request: NextRequest) {
       adminSupabase,
     );
 
-    // Save purchase to database
-    const { data: purchase, error: dbError } = await adminSupabase
-      .from('purchases')
-      .insert({
-        customer_id,
-        child_id: child_id || null,
-        type: purchase_type,
-        product_id,
-        name: product_name,
-        price: payment_method === 'complimentary' ? 0 : (product_price * quantity),
-        purchase_date: now.toISOString(),
-        expiry_date: expiryDate?.toISOString() || null,
-        used_sessions: 0,
-        total_sessions: totalSessions,
-        status: purchase_type === 'food_beverage' ? 'used' : 'active',
-        stripe_payment_intent_id: paymentIntentId,
-        party_date: metadata.party_date || null,
-        party_start_time: metadata.party_time || null,
-        party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
-        party_notes: metadata.party_notes || null,
-      })
-      .select()
-      .single();
+    // Child + Infant combo pass: create individual purchases per child
+    const isComboPass = product_name.toLowerCase().includes('child') && product_name.toLowerCase().includes('infant');
+    const comboChildrenIds = isComboPass && Array.isArray(children_ids) && children_ids.length === 2
+      ? children_ids
+      : null;
 
-    if (dbError) {
-      logger.error({ error: dbError, customer_id }, 'Failed to save purchase to database');
-      throw dbError;
-    }
+    let purchase;
 
-    // For family passes, link all selected children via purchase_children table
-    if (Array.isArray(children_ids) && children_ids.length > 0) {
-      const purchaseChildrenRows = children_ids.map((cid: string) => ({
-        purchase_id: purchase.id,
-        child_id: cid,
-      }));
+    if (comboChildrenIds) {
+      // Create a separate purchase for each child in the combo
+      const pricePerChild = (payment_method === 'complimentary' ? 0 : product_price) / comboChildrenIds.length;
+      const purchases = [];
 
-      const { error: pcError } = await adminSupabase
-        .from('purchase_children')
-        .insert(purchaseChildrenRows);
+      for (const comboChildId of comboChildrenIds) {
+        const { data: childPurchase, error: childDbError } = await adminSupabase
+          .from('purchases')
+          .insert({
+            customer_id,
+            child_id: comboChildId,
+            type: purchase_type,
+            product_id,
+            name: product_name,
+            price: pricePerChild,
+            purchase_date: now.toISOString(),
+            expiry_date: expiryDate?.toISOString() || null,
+            used_sessions: 0,
+            total_sessions: 1,
+            status: 'active',
+            stripe_payment_intent_id: paymentIntentId,
+          })
+          .select()
+          .single();
 
-      if (pcError) {
-        logger.error({ error: pcError, purchaseId: purchase.id }, 'Failed to link children to family pass');
-        // Don't fail the purchase, just log the error
-      } else {
-        logger.info(
-          { purchaseId: purchase.id, childCount: children_ids.length },
-          'Family pass children linked successfully'
-        );
+        if (childDbError) {
+          logger.error({ error: childDbError, customer_id, comboChildId }, 'Failed to save combo purchase');
+          throw childDbError;
+        }
+
+        purchases.push(childPurchase);
+      }
+
+      purchase = purchases[0]; // Use first for the response
+      logger.info(
+        { purchaseIds: purchases.map(p => p.id), customer_id },
+        'Combo pass: created individual purchases for each child'
+      );
+    } else {
+      // Standard single purchase
+      const { data: singlePurchase, error: dbError } = await adminSupabase
+        .from('purchases')
+        .insert({
+          customer_id,
+          child_id: child_id || null,
+          type: purchase_type,
+          product_id,
+          name: product_name,
+          price: payment_method === 'complimentary' ? 0 : (product_price * quantity),
+          purchase_date: now.toISOString(),
+          expiry_date: expiryDate?.toISOString() || null,
+          used_sessions: 0,
+          total_sessions: totalSessions,
+          status: purchase_type === 'food_beverage' ? 'used' : 'active',
+          stripe_payment_intent_id: paymentIntentId,
+          party_date: metadata.party_date || null,
+          party_start_time: metadata.party_time || null,
+          party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
+          party_notes: metadata.party_notes || null,
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        logger.error({ error: dbError, customer_id }, 'Failed to save purchase to database');
+        throw dbError;
+      }
+
+      purchase = singlePurchase;
+
+      // For family passes, link all selected children via purchase_children table
+      if (Array.isArray(children_ids) && children_ids.length > 0) {
+        const purchaseChildrenRows = children_ids.map((cid: string) => ({
+          purchase_id: purchase.id,
+          child_id: cid,
+        }));
+
+        const { error: pcError } = await adminSupabase
+          .from('purchase_children')
+          .insert(purchaseChildrenRows);
+
+        if (pcError) {
+          logger.error({ error: pcError, purchaseId: purchase.id }, 'Failed to link children to family pass');
+        } else {
+          logger.info(
+            { purchaseId: purchase.id, childCount: children_ids.length },
+            'Family pass children linked successfully'
+          );
+        }
       }
     }
 
