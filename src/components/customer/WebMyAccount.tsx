@@ -28,7 +28,7 @@ import {
 } from '@/lib/utils/customerTransforms';
 import type { Child, Purchase, SavedCard } from '@/lib/types/customer';
 
-type TabType = 'children' | 'passes' | 'parties' | 'after-dark' | 'payments';
+type TabType = 'children' | 'passes' | 'parties' | 'groups' | 'after-dark' | 'payments';
 
 // Inner component that uses searchParams - must be in its own Suspense boundary
 function WebMyAccountContent() {
@@ -53,7 +53,7 @@ function WebMyAccountContent() {
   // Read tab from URL on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab') as TabType;
-    if (tabParam && ['children', 'passes', 'parties', 'after-dark', 'payments'].includes(tabParam)) {
+    if (tabParam && ['children', 'passes', 'parties', 'groups', 'after-dark', 'payments'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -90,6 +90,12 @@ function WebMyAccountContent() {
   // Party scheduling state
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
   const [schedulingParty, setSchedulingParty] = useState<Purchase | null>(null);
+
+  // Group children state
+  const [groupChildName, setGroupChildName] = useState('');
+  const [groupChildBirthdate, setGroupChildBirthdate] = useState('');
+  const [isAddingGroupChild, setIsAddingGroupChild] = useState(false);
+  const [groupChildren, setGroupChildren] = useState<Child[]>([]);
 
   // Gift card state
   const [giftCardCode, setGiftCardCode] = useState('');
@@ -1049,6 +1055,22 @@ function WebMyAccountContent() {
                 <span>Parties<span className="sm:hidden"><br />({activePartyPurchases.length})</span><span className="hidden sm:inline"> ({activePartyPurchases.length})</span></span>
               </div>
             </button>
+            {/* Groups tab - only visible for group accounts */}
+            {profile?.is_group && (
+              <button
+                onClick={() => setActiveTab('groups')}
+                className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
+                  activeTab === 'groups'
+                    ? 'bg-amber-500 text-white shadow-lg transform scale-105 border-2 border-amber-600'
+                    : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                  <span className="text-lg sm:text-2xl">🏫</span>
+                  <span>Group</span>
+                </div>
+              </button>
+            )}
             {/* After Dark tab hidden until ready for release */}
             <button
               onClick={() => setActiveTab('payments')}
@@ -1889,6 +1911,116 @@ function WebMyAccountContent() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Groups Tab */}
+        {activeTab === 'groups' && profile?.is_group && (
+          <div className="space-y-6">
+            {/* Group Info */}
+            <Card className="p-6 border-amber-200 bg-amber-50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">🏫</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-amber-900">{profile.group_name}</h3>
+                  <p className="text-sm text-amber-700">Group Account &middot; {children.length} children</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Add Child to Group */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Add Child to Group</h3>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={groupChildName}
+                  onChange={(e) => setGroupChildName(e.target.value)}
+                  placeholder="Child's full name"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+                <input
+                  type="date"
+                  value={groupChildBirthdate}
+                  onChange={(e) => setGroupChildBirthdate(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+                <Button
+                  onClick={async () => {
+                    if (!groupChildName.trim() || !groupChildBirthdate || !user) return;
+                    setIsAddingGroupChild(true);
+                    try {
+                      const res = await fetch('/api/children', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: groupChildName.trim(), birthdate: groupChildBirthdate }),
+                      });
+                      if (res.ok) {
+                        setGroupChildName('');
+                        setGroupChildBirthdate('');
+                        await fetchData();
+                        setSuccessDetails({ title: 'Child Added', message: `${groupChildName.trim()} has been added to the group.` });
+                        setShowSuccessModal(true);
+                      } else {
+                        const err = await res.json();
+                        setSuccessDetails({ title: 'Error', message: err.error || 'Failed to add child', variant: 'error' });
+                        setShowSuccessModal(true);
+                      }
+                    } catch {
+                      setSuccessDetails({ title: 'Error', message: 'Failed to add child', variant: 'error' });
+                      setShowSuccessModal(true);
+                    } finally {
+                      setIsAddingGroupChild(false);
+                    }
+                  }}
+                  disabled={isAddingGroupChild || !groupChildName.trim() || !groupChildBirthdate}
+                  className="bg-amber-500 hover:bg-amber-600 text-white whitespace-nowrap"
+                >
+                  {isAddingGroupChild ? 'Adding...' : '+ Add Child'}
+                </Button>
+              </div>
+            </Card>
+
+            {/* Group Children List */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Group Children ({children.length})</h3>
+              {children.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No children added to this group yet. Use the form above to add children.</p>
+              ) : (
+                <div className="space-y-3">
+                  {children.map((child) => (
+                    <div key={child.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                          <span className="text-lg">{child.age < 2 ? '👶' : '👧'}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{child.name}</p>
+                          <p className="text-sm text-gray-500">Age: {child.age} &middot; Born: {new Date(child.birthdate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {child.waiverSigned ? (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Waiver Signed</span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setWaiverChild(child);
+                              setShowWaiverModal(true);
+                            }}
+                            className="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-medium hover:bg-amber-200 transition-colors"
+                          >
+                            Sign Waiver
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
         )}
 

@@ -218,8 +218,11 @@ export function GroupsManager() {
     }
   };
 
+  const [linkSuccess, setLinkSuccess] = useState('');
+
   const handleCreateGroup = async () => {
     setCreateError('');
+    setLinkSuccess('');
     setCreating(true);
     try {
       const response = await fetch('/api/admin/groups', {
@@ -236,6 +239,10 @@ export function GroupsManager() {
       setStats(prev => ({ ...prev, total: prev.total + 1 }));
       setShowCreateForm(false);
       setCreateForm({ group_name: '', contact_name: '', phone: '', email: '' });
+      if (data.linked) {
+        setLinkSuccess(`Existing account for ${data.group.contactName} has been linked as "${data.group.groupName}". They can now manage group children from their My Account.`);
+        setTimeout(() => setLinkSuccess(''), 8000);
+      }
     } catch {
       setCreateError('Network error');
     } finally {
@@ -773,6 +780,11 @@ export function GroupsManager() {
   // List view
   return (
     <div className="space-y-6">
+      {linkSuccess && (
+        <Card className="p-4 border-green-300 bg-green-50">
+          <p className="text-green-800 font-medium">✅ {linkSuccess}</p>
+        </Card>
+      )}
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
