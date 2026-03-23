@@ -1628,6 +1628,24 @@ export async function sendPartyBookingConfirmationEmail(data: {
   // Get package-specific content
   const packageContent = getPackageEmailContent(data.packageName);
 
+  // Format package name for display
+  const packageLabels: Record<string, string> = {
+    queen_bee: 'Queen Bee',
+    worker_bee: 'Worker Bee',
+    basic_bee: 'Basic Bee',
+  };
+  const packageDisplay = packageLabels[data.packageName] || data.packageName;
+
+  // Format time for display (convert HH:MM:SS to readable format)
+  const formatEmailTime = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+  const displayStartTime = formatEmailTime(data.startTime);
+  const displayEndTime = formatEmailTime(data.endTime);
+
   // Plain text fallback
   const text = `
 Party Booking Confirmed!
@@ -1638,8 +1656,8 @@ Great news! ${data.childName}'s birthday party is confirmed!
 
 PARTY DETAILS:
 Date: ${formattedDate}
-Time: ${data.startTime} - ${data.endTime}
-Package: ${data.packageName}
+Time: ${displayStartTime} - ${displayEndTime}
+Package: ${packageDisplay}
 Guests: ${data.guestCount}
 Total: $${data.totalPrice.toFixed(2)}
 
@@ -1655,31 +1673,44 @@ Busy Bees Indoor Play Center
 ${siteUrl}
 `;
 
-  // Beautiful HTML email
+  // Branded HTML email — Busy Bees honey/amber palette with dark mode support
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Party Booking Confirmed</title>
+  <style>
+    :root { color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .email-bg { background-color: #1a1a1a !important; }
+      .email-card { background-color: #2b2b2b !important; }
+      .email-text { color: #e5e5e5 !important; }
+      .email-text-secondary { color: #a3a3a3 !important; }
+      .email-footer-link { color: #fbbf24 !important; }
+      .email-details-inner { background-color: rgba(0,0,0,0.2) !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #fffbeb;" class="email-bg">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; padding: 20px 0;" class="email-bg">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" class="email-card">
 
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: #fce7f3; border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
                 <span style="font-size: 36px;">🎂</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
                 Party Confirmed!
               </h1>
-              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+              <p style="margin: 10px 0 0; color: #fef3c7; font-size: 16px;">
                 ${data.childName}'s Birthday Party
               </p>
             </td>
@@ -1688,19 +1719,19 @@ ${siteUrl}
           <!-- Body -->
           <tr>
             <td style="padding: 30px 25px;">
-              <p style="text-align: center; margin: 0 0 25px; font-size: 16px; color: #6b7280;">
+              <p style="text-align: center; margin: 0 0 25px; font-size: 16px; color: #6b7280;" class="email-text-secondary">
                 Hi ${data.customerName}! We're so excited to celebrate with you!
               </p>
 
               <!-- Party Details Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%); border-radius: 12px; margin-bottom: 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; margin-bottom: 20px;">
                 <tr>
                   <td style="padding: 20px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td>
                           <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Party Booking</p>
-                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🎈 ${data.packageName}</p>
+                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🐝 ${packageDisplay}</p>
                         </td>
                         <td align="right">
                           <span style="font-size: 24px;">🎉</span>
@@ -1708,7 +1739,7 @@ ${siteUrl}
                       </tr>
                     </table>
 
-                    <div style="margin: 15px 0; padding: 15px; background-color: rgba(255,255,255,0.15); border-radius: 8px;">
+                    <div style="margin: 15px 0; padding: 15px; background-color: rgba(255,255,255,0.15); border-radius: 8px;" class="email-details-inner">
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td style="padding: 5px 0;">
@@ -1719,7 +1750,7 @@ ${siteUrl}
                         <tr>
                           <td style="padding: 5px 0;">
                             <span style="font-size: 12px; color: rgba(255,255,255,0.8);">⏰ Time</span><br>
-                            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">${data.startTime} - ${data.endTime}</span>
+                            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">${displayStartTime} - ${displayEndTime}</span>
                           </td>
                         </tr>
                         <tr>
@@ -1753,7 +1784,7 @@ ${packageContent.html}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom: 25px;">
-                    <a href="${siteUrl}/customer/parties" style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);">
+                    <a href="${siteUrl}/customer/parties" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
                       View My Booking
                     </a>
                   </td>
@@ -1764,9 +1795,9 @@ ${packageContent.html}
               <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">📍 Busy Bees Indoor Play Center</p>
-                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">🌐 <a href="${siteUrl}" style="color: #ec4899; text-decoration: none;">busybeesipc.com</a></p>
-                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">Let's make it a party to remember! 🎈🐝</p>
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;" class="email-text-secondary">📍 Busy Bees Indoor Play Center</p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;" class="email-text-secondary">🌐 <a href="${siteUrl}" style="color: #d97706; text-decoration: none;" class="email-footer-link">busybeesipc.com</a></p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;" class="email-text-secondary">Let's make it a party to remember! 🎈🐝</p>
                   </td>
                 </tr>
               </table>
