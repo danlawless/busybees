@@ -1673,7 +1673,9 @@ Busy Bees Indoor Play Center
 ${siteUrl}
 `;
 
-  // Branded HTML email — Busy Bees honey/amber palette with dark mode support
+  // Branded HTML email — Busy Bees honey/amber palette
+  // Uses solid background-color (not gradients) for maximum email client compatibility
+  // All colors are explicit hex values (no rgba) for dark mode resilience
   const html = `
 <!DOCTYPE html>
 <html>
@@ -1683,28 +1685,17 @@ ${siteUrl}
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
   <title>Party Booking Confirmed</title>
-  <style>
-    :root { color-scheme: light dark; }
-    @media (prefers-color-scheme: dark) {
-      .email-bg { background-color: #1a1a1a !important; }
-      .email-card { background-color: #2b2b2b !important; }
-      .email-text { color: #e5e5e5 !important; }
-      .email-text-secondary { color: #a3a3a3 !important; }
-      .email-footer-link { color: #fbbf24 !important; }
-      .email-details-inner { background-color: rgba(0,0,0,0.2) !important; }
-    }
-  </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #fffbeb;" class="email-bg">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; padding: 20px 0;" class="email-bg">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f0e1; padding: 20px 0;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" class="email-card">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
 
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
+            <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
                 <span style="font-size: 36px;">🎂</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
@@ -1718,20 +1709,20 @@ ${siteUrl}
 
           <!-- Body -->
           <tr>
-            <td style="padding: 30px 25px;">
-              <p style="text-align: center; margin: 0 0 25px; font-size: 16px; color: #6b7280;" class="email-text-secondary">
+            <td style="padding: 30px 25px; background-color: #ffffff;">
+              <p style="text-align: center; margin: 0 0 25px; font-size: 16px; color: #4b5563;">
                 Hi ${data.customerName}! We're so excited to celebrate with you!
               </p>
 
               <!-- Party Details Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; margin-bottom: 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 20px;">
                 <tr>
                   <td style="padding: 20px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td>
-                          <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Party Booking</p>
-                          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff;">🐝 ${packageDisplay}</p>
+                          <p style="margin: 0 0 2px; font-size: 10px; color: #92400e; text-transform: uppercase; letter-spacing: 1px;">Party Booking</p>
+                          <p style="margin: 0; font-size: 18px; font-weight: 700; color: #78350f;">🐝 ${packageDisplay}</p>
                         </td>
                         <td align="right">
                           <span style="font-size: 24px;">🎉</span>
@@ -1739,37 +1730,41 @@ ${siteUrl}
                       </tr>
                     </table>
 
-                    <div style="margin: 15px 0; padding: 15px; background-color: rgba(255,255,255,0.15); border-radius: 8px;" class="email-details-inner">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td style="padding: 5px 0;">
-                            <span style="font-size: 12px; color: rgba(255,255,255,0.8);">📅 Date</span><br>
-                            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">${formattedDate}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 5px 0;">
-                            <span style="font-size: 12px; color: rgba(255,255,255,0.8);">⏰ Time</span><br>
-                            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">${displayStartTime} - ${displayEndTime}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 5px 0;">
-                            <span style="font-size: 12px; color: rgba(255,255,255,0.8);">👥 Guests</span><br>
-                            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">${data.guestCount} children</span>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 15px; background-color: #fef3c7; border-radius: 8px;">
+                      <tr>
+                        <td style="padding: 15px;">
+                          <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding: 6px 0;">
+                                <span style="font-size: 12px; color: #92400e;">📅 Date</span><br>
+                                <span style="font-size: 14px; font-weight: 600; color: #78350f;">${formattedDate}</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0;">
+                                <span style="font-size: 12px; color: #92400e;">⏰ Time</span><br>
+                                <span style="font-size: 14px; font-weight: 600; color: #78350f;">${displayStartTime} - ${displayEndTime}</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0;">
+                                <span style="font-size: 12px; color: #92400e;">👥 Guests</span><br>
+                                <span style="font-size: 14px; font-weight: 600; color: #78350f;">${data.guestCount} children</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
 
-                    <table width="100%" cellpadding="0" cellspacing="0">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 15px;">
                       <tr>
                         <td>
-                          <p style="margin: 0 0 2px; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase;">Total Paid</p>
-                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff;">$${data.totalPrice.toFixed(2)}</p>
+                          <p style="margin: 0 0 2px; font-size: 10px; color: #92400e; text-transform: uppercase;">Total Paid</p>
+                          <p style="margin: 0; font-size: 28px; font-weight: 700; color: #78350f;">$${data.totalPrice.toFixed(2)}</p>
                         </td>
                         <td align="right" style="vertical-align: bottom;">
-                          <p style="margin: 0; font-size: 11px; color: rgba(255,255,255,0.7);">Ref: ${data.bookingId.slice(0, 8).toUpperCase()}</p>
+                          <p style="margin: 0; font-size: 11px; color: #b45309;">Ref: ${data.bookingId.slice(0, 8).toUpperCase()}</p>
                         </td>
                       </tr>
                     </table>
@@ -1784,20 +1779,27 @@ ${packageContent.html}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom: 25px;">
-                    <a href="${siteUrl}/customer/parties" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${siteUrl}/customer/parties" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="50%" fillcolor="#d97706">
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">View My Booking</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="${siteUrl}/customer/parties" style="display: inline-block; background-color: #d97706; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 30px;">
                       View My Booking
                     </a>
+                    <!--<![endif]-->
                   </td>
                 </tr>
               </table>
 
               <!-- Footer -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb;">
                 <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;" class="email-text-secondary">📍 Busy Bees Indoor Play Center</p>
-                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;" class="email-text-secondary">🌐 <a href="${siteUrl}" style="color: #d97706; text-decoration: none;" class="email-footer-link">busybeesipc.com</a></p>
-                    <p style="margin: 0; font-size: 12px; color: #9ca3af;" class="email-text-secondary">Let's make it a party to remember! 🎈🐝</p>
+                  <td align="center" style="padding-top: 20px;">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">📍 Busy Bees Indoor Play Center</p>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">🌐 <a href="${siteUrl}" style="color: #d97706; text-decoration: none;">busybeesipc.com</a></p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">Let's make it a party to remember! 🎈🐝</p>
                   </td>
                 </tr>
               </table>
