@@ -25,6 +25,7 @@ import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
+import { sendPurchaseConfirmationEmail } from '@/lib/email/resend';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -408,6 +409,29 @@ export async function POST(request: NextRequest) {
 
     // Decrement inventory for food/beverage purchases
     await decrementInventoryAfterPurchase(adminSupabase, productId, productName, quantity, purchaseType);
+
+    // Send purchase confirmation email
+    try {
+      const { data: userProfile } = await adminSupabase
+        .from('users')
+        .select('name, email')
+        .eq('id', user.id)
+        .single();
+
+      if (userProfile?.email) {
+        await sendPurchaseConfirmationEmail({
+          to: userProfile.email,
+          customerName: userProfile.name || 'Valued Customer',
+          purchaseName: productName,
+          purchasePrice: totalAmount,
+          purchaseType,
+          expiryDate: purchaseDefaults.expiryDate?.toISOString(),
+        });
+        logger.info({ to: userProfile.email, purchaseType }, '📧 Purchase confirmation email sent');
+      }
+    } catch (emailError) {
+      logger.warn({ error: emailError }, 'Failed to send purchase confirmation email (non-blocking)');
+    }
 
     logger.info(
       {
