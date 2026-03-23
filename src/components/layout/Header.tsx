@@ -47,6 +47,9 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsLoggedIn(!!user)
       setIsLoading(false)
+    }).catch(() => {
+      setIsLoggedIn(false)
+      setIsLoading(false)
     })
 
     // Listen for auth changes

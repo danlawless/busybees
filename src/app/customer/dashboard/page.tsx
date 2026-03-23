@@ -5,8 +5,6 @@
 
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { WebMyAccount } from '@/components/customer/WebMyAccount';
 

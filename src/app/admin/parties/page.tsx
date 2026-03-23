@@ -1185,7 +1185,36 @@ export default function AdminPartiesPage() {
                         <p><strong>Time:</strong> {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}</p>
                         <p><strong>Package:</strong> <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${PACKAGE_BADGE_COLORS[selectedBooking.package_name] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>{PACKAGE_LABELS[selectedBooking.package_name as keyof typeof PACKAGE_LABELS] || selectedBooking.package_name}</span></p>
                         <p><strong>Type:</strong> {PARTY_TYPE_LABELS[selectedBooking.party_type]}</p>
-                        <p><strong>Birthday Child:</strong> {selectedBooking.child_name}{selectedBooking.child_age ? ` (${selectedBooking.child_age} yrs)` : ''}</p>
+                        <div className="flex items-center gap-2">
+                          <strong>Birthday Child:</strong>
+                          <input
+                            type="text"
+                            defaultValue={selectedBooking.child_name || ''}
+                            onBlur={async (e) => {
+                              const newName = e.target.value.trim();
+                              if (newName && newName !== selectedBooking.child_name) {
+                                try {
+                                  const res = await fetch(`/api/admin/party-bookings/${selectedBooking.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ child_name: newName }),
+                                  });
+                                  if (res.ok) {
+                                    const updated = await res.json();
+                                    setBookings(prev => prev.map(b => b.id === selectedBooking.id ? updated : b));
+                                    setSelectedBooking(updated);
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to update child name:', err);
+                                }
+                              }
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 w-40"
+                            placeholder="Enter name"
+                          />
+                          {selectedBooking.child_age ? <span className="text-gray-500">({selectedBooking.child_age} yrs)</span> : null}
+                        </div>
                       </div>
                     </div>
                     <div>

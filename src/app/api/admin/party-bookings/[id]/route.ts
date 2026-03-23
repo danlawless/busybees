@@ -15,6 +15,7 @@ const UpdateBookingSchema = z.object({
   party_date: z.string().optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
+  child_name: z.string().min(1).max(100).optional(),
 });
 
 export async function PATCH(
