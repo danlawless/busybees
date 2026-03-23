@@ -21,17 +21,23 @@ export function useUser() {
   useEffect(() => {
     // Get initial user
     const getUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setUser(authUser);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setUser(authUser);
 
-      if (authUser) {
-        // Fetch profile
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-        setProfile(data);
+        if (authUser) {
+          // Fetch profile
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authUser.id)
+            .single();
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        setUser(null);
+        setProfile(null);
       }
 
       setLoading(false);
@@ -46,12 +52,16 @@ export function useUser() {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setProfile(data);
+        try {
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setProfile(data);
+        } catch {
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
