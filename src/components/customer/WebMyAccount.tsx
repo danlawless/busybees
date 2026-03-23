@@ -1779,73 +1779,6 @@ function WebMyAccountContent() {
                 </Card>
               )}
 
-              {/* Birthday Child Selector */}
-              {children.length > 0 && (
-                <Card className="p-4 mb-4 border-purple-200 bg-purple-50">
-                  <label className="block text-sm font-semibold text-purple-800 mb-2">
-                    🎂 Who is the birthday party for? <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-2">
-                    {children.map((child) => {
-                      const isSelected = selectedBirthdayChildren.has(child.id);
-                      return (
-                        <label
-                          key={child.id}
-                          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'border-purple-500 bg-purple-100'
-                              : 'border-purple-200 bg-white hover:border-purple-300'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              setSelectedBirthdayChildren(prev => {
-                                const next = new Set(prev);
-                                if (next.has(child.id)) {
-                                  next.delete(child.id);
-                                } else {
-                                  next.add(child.id);
-                                }
-                                return next;
-                              });
-                            }}
-                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                          />
-                          <span className={`text-sm font-medium ${isSelected ? 'text-purple-800' : 'text-gray-700'}`}>
-                            {child.name}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {selectedBirthdayChildren.size === 0 && (
-                    <p className="text-xs text-purple-600 mt-2">Select which child(ren) the birthday party is for before purchasing.</p>
-                  )}
-                  {selectedBirthdayChildren.size > 0 && (
-                    <p className="text-xs text-purple-700 mt-2 font-medium">
-                      Party for: {children.filter(c => selectedBirthdayChildren.has(c.id)).map(c => c.name).join(', ')}
-                    </p>
-                  )}
-                </Card>
-              )}
-
-              {children.length === 0 && (
-                <Card className="p-4 mb-4 border-yellow-200 bg-yellow-50">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-white">👶</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-yellow-800">Add a Child First</h4>
-                      <p className="text-yellow-600 text-sm">
-                        You need to add a child in the Children tab before booking a birthday party.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
 
               <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
                 <div className="grid gap-4 text-left">
@@ -1887,26 +1820,15 @@ function WebMyAccountContent() {
                               setActiveTab('payments');
                               return;
                             }
-                            if (selectedBirthdayChildren.size === 0) {
-                              setSuccessDetails({
-                                title: 'Birthday Child Required',
-                                message: 'Please select which child(ren) the birthday party is for before purchasing.',
-                                variant: 'warning'
-                              });
-                              setShowSuccessModal(true);
-                              return;
-                            }
                             handleConfirmPurchase(product.id);
                           }}
                           size="lg"
-                          disabled={processingProduct === product.id || selectedBirthdayChildren.size === 0}
+                          disabled={processingProduct === product.id}
                           className={`px-6 py-3 text-white transition-colors ${
                             processingProduct === product.id
                               ? 'bg-purple-500'
                               : savedCards.length === 0
                               ? 'bg-yellow-500 hover:bg-yellow-600'
-                              : selectedBirthdayChildren.size === 0
-                              ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-purple-600 hover:bg-purple-700'
                           }`}
                         >
@@ -1914,8 +1836,6 @@ function WebMyAccountContent() {
                             ? 'Processing...'
                             : savedCards.length === 0
                             ? '💳 Add Payment First'
-                            : selectedBirthdayChildren.size === 0
-                            ? 'Select Birthday Child'
                             : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
                           }
                         </Button>
