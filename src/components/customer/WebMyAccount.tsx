@@ -1290,72 +1290,17 @@ function WebMyAccountContent() {
               </div>
             )}
 
-            {/* Waiver Modal */}
-            {showWaiverModal && waiverChild && (
-              <div
-                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                onClick={(e) => {
-                  if (e.target === e.currentTarget) {
-                    setShowWaiverModal(false);
-                    setWaiverChild(null);
-                  }
-                }}
-              >
-                <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
-                  <button
-                    onClick={() => {
-                      setShowWaiverModal(false);
-                      setWaiverChild(null);
-                    }}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
-                  >
-                    ✕
-                  </button>
-
-                  <h3 className="text-lg font-semibold mb-4">Waiver for {waiverChild.name}</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
-                    <h4 className="font-medium mb-2">LIABILITY WAIVER AND RELEASE</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      I hereby acknowledge that I am the parent/guardian of {waiverChild.name},
-                      age {waiverChild.age}, and I understand that participation in activities at
-                      Busy Bees Indoor Playground involves inherent risks.
-                    </p>
-                    <p className="text-sm text-gray-700 mb-2">
-                      I hereby release, waive, discharge and covenant not to sue Busy Bees Indoor Playground,
-                      its owners, employees, and agents from any and all liability, claims, demands,
-                      actions and causes of action whatsoever arising out of or related to any loss,
-                      damage, or injury that may be sustained by my child while participating in activities.
-                    </p>
-                    <p className="text-sm text-gray-700 mb-2">
-                      I acknowledge that I have read and understood this waiver and that I am signing
-                      it voluntarily. This waiver shall be binding upon my heirs, executors,
-                      administrators and assigns.
-                    </p>
-                    <p className="text-sm font-medium text-gray-800">
-                      By clicking "I Agree and Sign", I electronically sign this waiver on behalf of my child.
-                    </p>
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <Button
-                      onClick={() => {
-                        setShowWaiverModal(false);
-                        setWaiverChild(null);
-                      }}
-                      variant="secondary"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => handleSignWaiver(waiverChild)}
-                      className="bg-green-500 hover:bg-green-600 text-white"
-                      disabled={isSigningWaiver}
-                    >
-                      {isSigningWaiver ? 'Signing...' : 'I Agree and Sign'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Waiver Modal — uses shared WaiverModal component (same as POS) */}
+            <WaiverModal
+              isOpen={showWaiverModal && !!waiverChild}
+              onClose={() => {
+                setShowWaiverModal(false);
+                setWaiverChild(null);
+              }}
+              childName={waiverChild?.name}
+              onAgree={() => waiverChild && handleSignWaiver(waiverChild)}
+              isSubmitting={isSigningWaiver}
+            />
           </div>
         )}
 
