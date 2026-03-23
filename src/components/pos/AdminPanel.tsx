@@ -1236,19 +1236,6 @@ export function AdminPanel({
           </Card>
         )}
 
-        {isAdmin && (
-          <Card className="p-6">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📈</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* POS Mode Settings - Hidden for now, will be enabled later */}
