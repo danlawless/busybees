@@ -10,8 +10,8 @@ export default function Home() {
     <Layout>
       <WeekendBanner />
       <Hero />
-      <Features />
       <Gallery />
+      <Features />
       <ReviewCTA />
     </Layout>
   )
