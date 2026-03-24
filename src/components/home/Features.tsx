@@ -104,7 +104,7 @@ export function Features() {
             Why Families <span className="text-honey-500">Love Us</span>
           </h2>
           <p className="text-xl text-charcoal-600 max-w-2xl mx-auto">
-            Discover what makes Busy Bees the perfect place for your family
+            We&apos;re not just another play center. We&apos;re parents who built the space we wished existed for our own families.
           </p>
         </motion.div>
 
@@ -152,20 +152,7 @@ export function Features() {
         </motion.div>
 
         {/* Descriptive Text */}
-        <motion.div
-          className="text-left mt-20 mb-14"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <p className="text-xl text-charcoal-600 max-w-3xl leading-relaxed">
-            We're not just another play center. We're parents who built the space
-            <strong className="text-honey-500"> we wished existed</strong> for our own families.
-          </p>
-        </motion.div>
-
-        {/* Call to Action - 16:9 with hero background */}
+        {/* Call to Action */}
       </div>
     </section>
   )
