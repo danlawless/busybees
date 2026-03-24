@@ -107,45 +107,6 @@ export function Hero() {
             A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children. Our mission is to create a go-to destination for families to play, socialize, celebrate and grow.
           </motion.p>
 
-          {/* Feature Pills */}
-          <motion.div
-            variants={fadeInUp}
-            className="flex flex-wrap justify-center gap-4 sm:gap-5 mb-12"
-          >
-            {features.map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <div
-                  key={index}
-                  className="flex items-center space-x-2.5 bg-white/90 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-soft border border-primary-200/50"
-                >
-                  <Icon className="w-4 h-4 text-primary-500" />
-                  <span className="text-sm font-medium text-charcoal-800">{feature.text}</span>
-                </div>
-              )
-            })}
-          </motion.div>
-
-          {/* CTA Buttons */}
-          <motion.div
-            variants={fadeInUp}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
-            {PURCHASING_ENABLED ? (
-              <Link href="/register">
-                <Button variant="primary" size="lg" className="min-w-48 rounded-full">
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Register Now
-                </Button>
-              </Link>
-            ) : (
-              <Button variant="primary" size="lg" className="min-w-48 rounded-full" disabled>
-                <UserPlus className="w-5 h-5 mr-2" />
-                Coming Soon
-              </Button>
-            )}
-          </motion.div>
-
           {/* Good to Know */}
           <motion.div
             variants={fadeInUp}

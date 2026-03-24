@@ -88,10 +88,6 @@ export function Gallery() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-5 py-2 rounded-full shadow-soft border border-primary-200/40 mb-6">
-            <Camera className="w-4 h-4 text-honey-500" />
-            <span className="text-sm font-medium text-charcoal-700">Our Space</span>
-          </div>
           <h2 className="text-4xl font-bold text-charcoal-800 sm:text-5xl mb-4">
             Take a <span className="text-honey-500">Peek Inside</span>
           </h2>
