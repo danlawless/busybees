@@ -95,6 +95,9 @@ export function GroupsManager() {
   const [confirmingGroupDelete, setConfirmingGroupDelete] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
 
+  // Invoice state
+  const [invoiceGenerated, setInvoiceGenerated] = useState(false);
+
   // Group edit state
   const [editingGroup, setEditingGroup] = useState(false);
   const [editForm, setEditForm] = useState({ group_name: '', contact_name: '', phone: '', email: '' });
@@ -218,8 +221,132 @@ export function GroupsManager() {
     }
   };
 
+  const handleGenerateInvoice = () => {
+    if (!selectedGroup || activeChildIds.size === 0) return;
+
+    const activeChildren = children.filter(c => activeChildIds.has(c.id));
+    const over2 = activeChildren.filter(c => calculateAge(c.birthdate) >= 2);
+    const under2 = activeChildren.filter(c => calculateAge(c.birthdate) < 2);
+    const total = (over2.length * PRICE_AGE_2_PLUS) + (under2.length * PRICE_UNDER_2);
+    const today = new Date();
+    const invoiceNum = `INV-${selectedGroup.phone.slice(-4)}-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + 30);
+    const formattedDueDate = dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice ${invoiceNum}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 700px; margin: 0 auto; padding: 40px 20px; color: #1f2937; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #f59e0b; padding-bottom: 20px; margin-bottom: 30px; }
+          .header h1 { font-size: 28px; color: #d97706; margin: 0; }
+          .header .company { text-align: right; font-size: 13px; color: #6b7280; }
+          .meta { display: flex; justify-content: space-between; margin-bottom: 30px; }
+          .meta-block { font-size: 13px; }
+          .meta-block strong { display: block; font-size: 11px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; margin-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background: #fffbeb; text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: #92400e; letter-spacing: 0.5px; border-bottom: 2px solid #f59e0b; }
+          td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+          .total-row td { border-top: 2px solid #1f2937; font-weight: 700; font-size: 16px; padding-top: 12px; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
+          .badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+          @media print { body { padding: 20px; } .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+          <button onclick="window.print()" style="background: #d97706; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Download / Print Invoice</button>
+        </div>
+        <div class="header">
+          <div>
+            <h1>INVOICE</h1>
+            <p style="margin: 4px 0 0; font-size: 14px; color: #6b7280;">${invoiceNum}</p>
+          </div>
+          <div class="company">
+            <p style="font-weight: 700; font-size: 16px; color: #1f2937; margin: 0;">Busy Bees Indoor Play Center</p>
+            <p style="margin: 2px 0;">busybeesipc.com</p>
+            <p style="margin: 2px 0;">info@busybeesipc.com</p>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="meta-block">
+            <strong>Bill To</strong>
+            <p style="margin: 0; font-weight: 600;">${selectedGroup.groupName}</p>
+            <p style="margin: 2px 0;">Attn: ${selectedGroup.contactName}</p>
+            ${selectedGroup.email ? `<p style="margin: 2px 0;">${selectedGroup.email}</p>` : ''}
+            <p style="margin: 2px 0;">${selectedGroup.phone}</p>
+          </div>
+          <div class="meta-block" style="text-align: right;">
+            <strong>Invoice Date</strong>
+            <p style="margin: 0;">${formattedDate}</p>
+            <strong style="margin-top: 10px;">Due Date</strong>
+            <p style="margin: 0;">${formattedDueDate}</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th style="text-align: center;">Qty</th>
+              <th style="text-align: right;">Rate</th>
+              <th style="text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${over2.length > 0 ? `
+            <tr>
+              <td>Group Visit — Children Ages 2+</td>
+              <td style="text-align: center;">${over2.length}</td>
+              <td style="text-align: right;">$${PRICE_AGE_2_PLUS}.00</td>
+              <td style="text-align: right;">$${(over2.length * PRICE_AGE_2_PLUS).toFixed(2)}</td>
+            </tr>` : ''}
+            ${under2.length > 0 ? `
+            <tr>
+              <td>Group Visit — Children Under 2</td>
+              <td style="text-align: center;">${under2.length}</td>
+              <td style="text-align: right;">$${PRICE_UNDER_2}.00</td>
+              <td style="text-align: right;">$${(under2.length * PRICE_UNDER_2).toFixed(2)}</td>
+            </tr>` : ''}
+            <tr class="total-row">
+              <td colspan="3">Total</td>
+              <td style="text-align: right;">$${total.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <p style="margin: 0; font-size: 13px; color: #92400e;">
+            <strong>Children attending (${activeChildren.length}):</strong>
+            ${activeChildren.map(c => `${c.name} (age ${calculateAge(c.birthdate)})`).join(', ')}
+          </p>
+        </div>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 16px;">
+          <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #374151;">Payment Instructions</p>
+          <p style="margin: 0; font-size: 13px; color: #6b7280;">
+            Please make payment within 30 days. For questions, contact info@busybeesipc.com.
+          </p>
+        </div>
+        <div class="footer">
+          <p>Busy Bees Indoor Play Center &middot; busybeesipc.com</p>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setInvoiceGenerated(true);
+  };
+
+  const [linkSuccess, setLinkSuccess] = useState('');
+
   const handleCreateGroup = async () => {
     setCreateError('');
+    setLinkSuccess('');
     setCreating(true);
     try {
       const response = await fetch('/api/admin/groups', {
@@ -236,6 +363,10 @@ export function GroupsManager() {
       setStats(prev => ({ ...prev, total: prev.total + 1 }));
       setShowCreateForm(false);
       setCreateForm({ group_name: '', contact_name: '', phone: '', email: '' });
+      if (data.linked) {
+        setLinkSuccess(`Existing account for ${data.group.contactName} has been linked as "${data.group.groupName}". They can now manage group children from their My Account.`);
+        setTimeout(() => setLinkSuccess(''), 8000);
+      }
     } catch {
       setCreateError('Network error');
     } finally {
@@ -750,19 +881,55 @@ export function GroupsManager() {
                   (****{paymentSuccess.cardLast4})
                 </p>
               </div>
+            ) : invoiceGenerated ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-amber-800 font-semibold">Invoice Generated!</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  The invoice has been opened in a new tab for download/printing.
+                </p>
+                <button
+                  onClick={() => setInvoiceGenerated(false)}
+                  className="text-xs text-amber-600 underline mt-2"
+                >
+                  Dismiss
+                </button>
+              </div>
             ) : (
-              <Button
-                onClick={handleProcessPayment}
-                disabled={processingPayment || activeChildIds.size === 0 || !selectedCardId}
-                className="w-full"
-              >
-                {processingPayment
-                  ? 'Processing...'
-                  : activeChildIds.size === 0
-                  ? 'Select children to pay'
-                  : `Charge $${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)} to Card`
-                }
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleProcessPayment}
+                  disabled={processingPayment || activeChildIds.size === 0 || !selectedCardId}
+                  className="w-full"
+                >
+                  {processingPayment
+                    ? 'Processing...'
+                    : activeChildIds.size === 0
+                    ? 'Select children to pay'
+                    : `Charge $${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)} to Card`
+                  }
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-3 text-gray-500 uppercase">or</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleGenerateInvoice}
+                  disabled={activeChildIds.size === 0}
+                  variant="outline"
+                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  {activeChildIds.size === 0
+                    ? 'Select children for invoice'
+                    : `Pay with Invoice ($${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)})`
+                  }
+                </Button>
+              </div>
             )}
           </Card>
         )}
@@ -773,6 +940,11 @@ export function GroupsManager() {
   // List view
   return (
     <div className="space-y-6">
+      {linkSuccess && (
+        <Card className="p-4 border-green-300 bg-green-50">
+          <p className="text-green-800 font-medium">✅ {linkSuccess}</p>
+        </Card>
+      )}
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">

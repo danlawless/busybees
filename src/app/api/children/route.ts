@@ -61,8 +61,13 @@ export async function POST(request: NextRequest) {
 
     const isStaff = userData?.role === 'staff' || userData?.role === 'admin';
 
-    if (!isStaff && body.customer_id !== user.id) {
+    if (!isStaff && body.customer_id && body.customer_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Default customer_id to authenticated user if not provided
+    if (!body.customer_id) {
+      body.customer_id = user.id;
     }
 
     const child = await createChild(body);

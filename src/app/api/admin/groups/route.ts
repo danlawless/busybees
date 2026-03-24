@@ -119,15 +119,59 @@ export async function POST(request: NextRequest) {
     // Check for existing account with same phone
     const { data: existing } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name, email, is_group, group_name, created_at')
       .eq('phone', cleanPhone)
       .single();
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'An account with this phone number already exists' },
-        { status: 409 }
-      );
+      // If already a group, return error
+      if (existing.is_group) {
+        return NextResponse.json(
+          { error: 'This phone number is already linked to a group account' },
+          { status: 409 }
+        );
+      }
+
+      // Link existing customer as a group
+      const { data: linked, error: linkError } = await supabase
+        .from('users')
+        .update({
+          is_group: true,
+          group_name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select('id, name, phone, email, group_name, created_at')
+        .single();
+
+      if (linkError) {
+        logger.error({ error: linkError, userId: existing.id }, 'Failed to link existing account as group');
+        return NextResponse.json({ error: 'Failed to link account as group' }, { status: 500 });
+      }
+
+      // Count existing children
+      const { count: childCount } = await supabase
+        .from('children')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', existing.id);
+
+      logger.info({ userId: existing.id, groupName: group_name }, 'Existing account linked as group');
+
+      return NextResponse.json({
+        success: true,
+        linked: true,
+        group: {
+          id: linked.id,
+          groupName: linked.group_name,
+          contactName: linked.name,
+          phone: cleanPhone,
+          email: linked.email,
+          childCount: childCount || 0,
+          waiversSigned: 0,
+          waiversPending: 0,
+          createdAt: linked.created_at,
+        },
+      }, { status: 200 });
     }
 
     // Create auth user first (required for users table FK)
