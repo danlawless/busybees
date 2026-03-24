@@ -3,7 +3,6 @@ import { WeekendBanner } from '@/components/home/WeekendBanner'
 import { Hero } from '@/components/home/Hero'
 import { Features } from '@/components/home/Features'
 import { Gallery } from '@/components/home/Gallery'
-import { Pricing } from '@/components/home/Pricing'
 import { ReviewCTA } from '@/components/home/ReviewCTA'
 
 export default function Home() {
@@ -13,7 +12,6 @@ export default function Home() {
       <Hero />
       <Features />
       <Gallery />
-      <Pricing />
       <ReviewCTA />
     </Layout>
   )
