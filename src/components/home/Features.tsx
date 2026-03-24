@@ -166,41 +166,6 @@ export function Features() {
         </motion.div>
 
         {/* Call to Action - 16:9 with hero background */}
-        <motion.div
-          className="mt-20 max-w-5xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <div
-            className="relative w-full aspect-video rounded-3xl overflow-hidden shadow-soft border-2 border-primary-200/50 bg-primary-50"
-            style={{
-              backgroundImage: 'linear-gradient(180deg, rgba(255,253,247,0.75) 0%, rgba(255,248,231,0.6) 50%, rgba(255,243,208,0.5) 100%), url("/hero-background.png")',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 sm:p-10 text-center">
-              <h3 className="text-2xl sm:text-3xl font-bold text-charcoal-800 mb-4">
-                Ready to See What Makes Us Different?
-              </h3>
-              <p className="text-lg text-charcoal-600 max-w-2xl mx-auto mb-8 leading-relaxed">
-                Come experience the Busy Bees difference—a place where everyone feels welcome, safe, and excited to play.
-              </p>
-              <Link href="/customer/login">
-                <div className="inline-flex flex-col items-center gap-3 rounded-2xl bg-white/90 px-8 py-6 border border-primary-200/60 shadow-soft hover:shadow-medium transition-all duration-300 cursor-pointer">
-                  <span className="text-xl font-bold text-honey-600 tracking-tight">
-                    Purchase in My Account
-                  </span>
-                  <span className="text-sm text-charcoal-600">
-                    Sign up to get started
-                  </span>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   )
