@@ -400,6 +400,46 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
   if (existingPurchase) {
     console.log('Purchase record already exists for PaymentIntent:', paymentIntent.id);
+
+    // Even if purchase exists (created by direct-payment route), ensure party confirmation was sent
+    if (metadata.product_type === 'party_package' && metadata.customer_id) {
+      try {
+        const { data: booking } = await supabase
+          .from('party_bookings')
+          .select('*')
+          .eq('customer_id', metadata.customer_id)
+          .eq('stripe_payment_intent_id', paymentIntent.id)
+          .single();
+
+        if (booking && booking.customer_email && booking.payment_status === 'paid') {
+          // Booking already confirmed by direct-payment route, skip duplicate email
+          console.log('Party booking already confirmed for PaymentIntent:', paymentIntent.id);
+        } else if (booking && booking.customer_email) {
+          // Booking exists but wasn't confirmed yet — confirm and send email as safety net
+          await supabase
+            .from('party_bookings')
+            .update({ status: 'confirmed', payment_status: 'paid', stripe_payment_intent_id: paymentIntent.id })
+            .eq('id', booking.id);
+
+          await sendPartyBookingConfirmationEmail({
+            to: booking.customer_email,
+            customerName: booking.customer_name || 'Valued Customer',
+            childName: booking.child_name,
+            partyDate: booking.party_date,
+            startTime: booking.start_time,
+            endTime: booking.end_time,
+            packageName: booking.package_name,
+            guestCount: booking.guest_count,
+            totalPrice: Number(booking.total_price),
+            bookingId: booking.id,
+          });
+          console.log('🎂 Party confirmation email sent via webhook safety net');
+        }
+      } catch (partyError) {
+        console.error('Error handling party booking in webhook:', partyError);
+      }
+    }
+
     return;
   }
 

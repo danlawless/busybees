@@ -25,7 +25,7 @@ import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
-import { sendPurchaseConfirmationEmail } from '@/lib/email/resend';
+import { sendPurchaseConfirmationEmail, sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -410,27 +410,76 @@ export async function POST(request: NextRequest) {
     // Decrement inventory for food/beverage purchases
     await decrementInventoryAfterPurchase(adminSupabase, productId, productName, quantity, purchaseType);
 
-    // Send purchase confirmation email
+    // Send confirmation email
     try {
-      const { data: userProfile } = await adminSupabase
-        .from('users')
-        .select('name, email')
-        .eq('id', user.id)
-        .single();
+      if (purchaseType === 'party_package') {
+        // Party package: look up the booking and send party-specific confirmation
+        const { data: booking } = await adminSupabase
+          .from('party_bookings')
+          .select('*')
+          .eq('customer_id', user.id)
+          .in('status', ['pending', 'confirmed'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      if (userProfile?.email) {
-        await sendPurchaseConfirmationEmail({
-          to: userProfile.email,
-          customerName: userProfile.name || 'Valued Customer',
-          purchaseName: productName,
-          purchasePrice: totalAmount,
-          purchaseType,
-          expiryDate: purchaseDefaults.expiryDate?.toISOString(),
-        });
-        logger.info({ to: userProfile.email, purchaseType }, '📧 Purchase confirmation email sent');
+        if (booking) {
+          // Update booking status to confirmed + paid
+          await adminSupabase
+            .from('party_bookings')
+            .update({
+              status: 'confirmed',
+              payment_status: 'paid',
+              stripe_payment_intent_id: paymentIntent.id,
+            })
+            .eq('id', booking.id);
+
+          // Send party booking confirmation email (CC'd to info@busybeesipc.com)
+          if (booking.customer_email) {
+            const emailResult = await sendPartyBookingConfirmationEmail({
+              to: booking.customer_email,
+              customerName: booking.customer_name || 'Valued Customer',
+              childName: booking.child_name,
+              partyDate: booking.party_date,
+              startTime: booking.start_time,
+              endTime: booking.end_time,
+              packageName: booking.package_name,
+              guestCount: booking.guest_count,
+              totalPrice: Number(booking.total_price),
+              bookingId: booking.id,
+            });
+
+            if (emailResult.success) {
+              logger.info({ to: booking.customer_email, bookingId: booking.id }, '🎂 Party confirmation email sent');
+            } else {
+              logger.error({ bookingId: booking.id, error: emailResult.error }, 'Failed to send party confirmation email');
+            }
+          }
+        } else {
+          logger.warn({ customerId: user.id }, 'Party package purchased but no pending booking found');
+        }
+      } else {
+        // Non-party purchase: send generic confirmation
+        const { data: userProfile } = await adminSupabase
+          .from('users')
+          .select('name, email')
+          .eq('id', user.id)
+          .single();
+
+        if (userProfile?.email) {
+          await sendPurchaseConfirmationEmail({
+            to: userProfile.email,
+            customerName: userProfile.name || 'Valued Customer',
+            purchaseName: productName,
+            purchasePrice: totalAmount,
+            purchaseType,
+            expiryDate: purchaseDefaults.expiryDate?.toISOString(),
+          });
+          logger.info({ to: userProfile.email, purchaseType }, '📧 Purchase confirmation email sent');
+        }
       }
     } catch (emailError) {
-      logger.warn({ error: emailError }, 'Failed to send purchase confirmation email (non-blocking)');
+      logger.warn({ error: emailError }, 'Failed to send confirmation email (non-blocking)');
     }
 
     logger.info(
