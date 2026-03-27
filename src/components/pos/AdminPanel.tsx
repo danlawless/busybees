@@ -1353,7 +1353,7 @@ export function AdminPanel({
                       <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded">
                         Refunded
                       </span>
-                    ) : isAdmin ? (
+                    ) : (
                       <Button
                         onClick={() => {
                           if (processingRefund === purchase.id) return;
@@ -1380,7 +1380,7 @@ export function AdminPanel({
                           ? '✓ Confirm Refund'
                           : 'Refund'}
                       </Button>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               );
@@ -4586,7 +4586,7 @@ export function AdminPanel({
                         <td className="py-3 px-2 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <span>{formatCurrency(Number(card.remaining_amount))}</span>
-                            {Number(card.remaining_amount) > 0 && isAdmin && (
+                            {Number(card.remaining_amount) > 0 && (
                               confirmingGiftCardRefund === card.id ? (
                                 <div className="flex items-center gap-1">
                                   <Button
