@@ -314,7 +314,7 @@ export async function POST(request: NextRequest) {
     logger.info({ ...logContext, paymentIntentId: paymentIntent.id }, '✅ Stripe charge succeeded, saving purchase record');
 
     // Child + Infant combo pass: create individual purchases per child
-    const isComboPass = productName.toLowerCase().includes('child') && productName.toLowerCase().includes('infant');
+    const isComboPass = (productName.toLowerCase().includes('child') || productName.toLowerCase().includes('toddler')) && productName.toLowerCase().includes('infant');
     const comboChildrenIds = isComboPass && childrenIds.length === 2 ? childrenIds : null;
 
     let purchase;

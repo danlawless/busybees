@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Child + Infant combo pass: create individual purchases per child
-    const isComboPass = product_name.toLowerCase().includes('child') && product_name.toLowerCase().includes('infant');
+    const isComboPass = (product_name.toLowerCase().includes('child') || product_name.toLowerCase().includes('toddler')) && product_name.toLowerCase().includes('infant');
     const comboChildrenIds = isComboPass && Array.isArray(children_ids) && children_ids.length === 2
       ? children_ids
       : null;
