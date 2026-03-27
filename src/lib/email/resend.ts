@@ -1040,7 +1040,7 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
                 <tr>
                   <td style="${sectionPadding}">
                     <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
-                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.</p>
                     <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
                   </td>
                 </tr>
@@ -1152,7 +1152,7 @@ Before heading out, kids are welcome to stop by the front desk near the shoe are
 Your cooperation with the schedule helps us ensure every family gets the same great party experience!
 
 ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.
 Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
 
 SUPPLIES & CUSTOMIZATION
@@ -1228,7 +1228,7 @@ Busy Bee's Party Team`;
                 <tr>
                   <td style="${sectionPadding}">
                     <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
-                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.</p>
                     <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
                   </td>
                 </tr>
@@ -1340,7 +1340,7 @@ Before heading out, kids are welcome to stop by the front desk near the shoe are
 Your cooperation with the schedule helps us ensure every family gets the same great party experience!
 
 ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.
 Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
 
 SUPPLIES & CUSTOMIZATION
@@ -1416,7 +1416,7 @@ Busy Bee's Party Team`;
                 <tr>
                   <td style="${sectionPadding}">
                     <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
-                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
+                    <p style="${textStyle}">You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.</p>
                     <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
                   </td>
                 </tr>
@@ -1528,7 +1528,7 @@ Before heading out, kids are welcome to stop by the front desk near the shoe are
 Your cooperation with the schedule helps us ensure every family gets the same great party experience!
 
 ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+You may arrive up to 20 minutes before your scheduled start time to begin setting up in the party room.
 Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
 
 SUPPLIES & CUSTOMIZATION
@@ -3238,7 +3238,7 @@ Party Details:
 - Guests: ${data.guestCount}
 
 Quick Reminders:
-- You may arrive up to 30 minutes before your start time to set up the party room
+- You may arrive up to 20 minutes before your start time to set up the party room
 - Each guest will need to sign a quick waiver upon arrival — it takes less than 10 seconds and then they're all set!
 - Socks are required for all children and adults in the play area
 - Outside decorations are welcome but must be approved (no confetti, glitter, or loose small items)
