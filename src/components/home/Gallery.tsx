@@ -88,7 +88,7 @@ export function Gallery() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl font-bold text-charcoal-800 sm:text-5xl mb-4">
+          <h2 className="text-3xl font-bold text-charcoal-800 sm:text-4xl md:text-5xl mb-4">
             Take a <span className="text-honey-500">Peek Inside</span>
           </h2>
           <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">

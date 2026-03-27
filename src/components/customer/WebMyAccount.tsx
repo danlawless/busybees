@@ -516,7 +516,7 @@ function WebMyAccountContent() {
 
   const isChildInfantComboPass = (productName: string): boolean => {
     const lowerName = productName.toLowerCase();
-    return lowerName.includes('child') && lowerName.includes('infant');
+    return (lowerName.includes('child') || lowerName.includes('toddler')) && lowerName.includes('infant');
   };
 
   const isSelectedProductFamily = (() => {

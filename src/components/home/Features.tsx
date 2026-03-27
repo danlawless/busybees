@@ -94,7 +94,7 @@ export function Features() {
 
       <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
         <motion.div
-          className="text-center mb-20"
+          className="text-center mb-12 sm:mb-20"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -103,7 +103,7 @@ export function Features() {
           <h2 className="text-4xl font-bold text-charcoal-800 sm:text-5xl mb-5">
             Why Families <span className="text-honey-500">Love Us</span>
           </h2>
-          <p className="text-xl text-charcoal-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-charcoal-600 max-w-2xl mx-auto">
             We&apos;re not just another play center. We&apos;re parents who built the space we wished existed for our own families.
           </p>
         </motion.div>
