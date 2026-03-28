@@ -120,7 +120,19 @@ export async function resolvePurchaseDefaults(
     const durationDays = passData.duration || 365;
 
     // Calculate expiry: use the pass's configured duration from purchase date
-    const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    let expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    // Event passes with fixed end dates: look up pass name for override
+    const { data: passNameData } = await db
+      .from('passes')
+      .select('name')
+      .eq('id', productId)
+      .single();
+
+    if (passNameData?.name?.toLowerCase().includes('easter egg')) {
+      // Easter Egg Hunt passes expire April 4, 2026 at 3:00 PM EST (7:00 PM UTC)
+      expiryDate = new Date('2026-04-04T19:00:00.000Z');
+    }
 
     return { totalSessions, expiryDate };
   }
