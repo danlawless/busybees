@@ -31,6 +31,12 @@ export function useSetupIntent() {
         },
       });
 
+      // If session expired, refresh the page to let middleware renew the token
+      if (response.status === 401) {
+        window.location.reload();
+        return null;
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create setup intent');
