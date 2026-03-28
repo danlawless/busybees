@@ -122,7 +122,7 @@ function PartiesContent() {
 
             <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-charcoal-600">
               <span className="flex items-center gap-1">
-                ✓ 15 kids included
+                ✓ Up to 20 kids included
               </span>
               <span className="flex items-center gap-1">
                 ✓ 2-hour party

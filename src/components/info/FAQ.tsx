@@ -61,8 +61,8 @@ const faqs = [
         answer: 'Absolutely! You can bring your own decorations, cake, and party favors. We provide basic decorations, but you\'re welcome to personalize the space for your child\'s special day.'
       },
       {
-        question: 'What if I have more than 15 children?',
-        answer: 'Our packages include 15 kids, however we can accommodate up to 20 kids for each party. Each additional child over the included 15 is an additional $15/child.'
+        question: 'How many kids are included in a party package?',
+        answer: 'Our Queen Bee package includes 20 kids, and our Worker Bee and Basic Bee packages include 15 kids. Each additional child beyond the included amount is $15/child. Queen Bee can accommodate up to 25 kids, and Worker Bee/Basic Bee can accommodate up to 20.'
       }
     ]
   },

@@ -32,16 +32,16 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
 
     if (formData.guestCount < 1) {
       newErrors.guestCount = 'At least 1 guest is required';
-    } else if (formData.guestCount > MAX_CHILDREN) {
-      newErrors.guestCount = `Maximum ${MAX_CHILDREN} children allowed`;
+    } else if (formData.guestCount > maxChildren) {
+      newErrors.guestCount = `Maximum ${maxChildren} children allowed`;
     }
 
     setErrors(newErrors);
     onValidChange(Object.keys(newErrors).length === 0);
-  }, [formData.childName, formData.guestCount, onValidChange]);
+  }, [formData.childName, formData.guestCount, maxChildren, onValidChange]);
 
   const handleGuestCountChange = (delta: number) => {
-    const newCount = Math.max(1, Math.min(MAX_CHILDREN, formData.guestCount + delta));
+    const newCount = Math.max(1, Math.min(maxChildren, formData.guestCount + delta));
     onUpdate({ guestCount: newCount });
   };
 
@@ -53,6 +53,10 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
   const includedKids = formData.packageName
     ? PACKAGE_PRICING[formData.packageName].includedKids
     : INCLUDED_KIDS;
+
+  const maxChildren = formData.packageName
+    ? PACKAGE_PRICING[formData.packageName].maxGuests
+    : MAX_CHILDREN;
 
   return (
     <div className="space-y-6">
@@ -131,7 +135,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
             type="button"
             variant="outline"
             onClick={() => handleGuestCountChange(1)}
-            disabled={formData.guestCount >= MAX_CHILDREN}
+            disabled={formData.guestCount >= maxChildren}
             className="w-12 h-12 rounded-full"
           >
             <Plus className="w-5 h-5" />
@@ -186,7 +190,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
           <strong>{includedKids} children are included</strong> with your package. Each
-          additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {MAX_CHILDREN} children total).
+          additional child is ${ADDITIONAL_KIDS_PRICE} (maximum {maxChildren} children total).
           The birthday child counts toward your guest total.
         </p>
       </div>
