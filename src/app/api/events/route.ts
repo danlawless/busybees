@@ -15,7 +15,7 @@ export async function GET() {
 
     const { data, error } = await adminSupabase
       .from('events')
-      .select('id, title, description, image_url, event_date, event_date_end, event_time_start, event_time_end, is_free')
+      .select('id, title, description, image_url, event_date, event_date_end, event_time_start, event_time_end, is_free, is_bookable, max_capacity, pass_ids, booking_instructions')
       .eq('status', 'published')
       .order('event_date', { ascending: true });
 
