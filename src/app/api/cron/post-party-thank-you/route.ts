@@ -44,7 +44,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to fetch bookings' }, { status: 500 });
     }
 
-    if (!bookings || bookings.length === 0) {
+    // Filter out event bookings (e.g. Easter Egg Hunt) — not birthday parties
+    const partyBookings = (bookings || []).filter(booking => {
+      const childName = (booking.child_name || '').toLowerCase();
+      const packageName = (booking.package_name || '').toLowerCase();
+      return !(childName.includes('egg hunt') || childName.includes('easter')
+        || packageName.includes('egg hunt') || packageName.includes('easter'));
+    });
+
+    if (partyBookings.length === 0) {
       logger.info({ date: yesterday }, 'No parties from yesterday to send thank you emails');
       return NextResponse.json({
         success: true,
@@ -56,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Auto-mark confirmed parties from yesterday as done
-    const confirmedIds = bookings.filter(b => b.status === 'confirmed').map(b => b.id);
+    const confirmedIds = partyBookings.filter(b => b.status === 'confirmed').map(b => b.id);
     let markedDone = 0;
 
     if (confirmedIds.length > 0) {
@@ -77,8 +85,8 @@ export async function GET(request: NextRequest) {
     let failed = 0;
     const errors: Array<{ email: string; error: string }> = [];
 
-    for (let i = 0; i < bookings.length; i++) {
-      const booking = bookings[i];
+    for (let i = 0; i < partyBookings.length; i++) {
+      const booking = partyBookings[i];
 
       // Rate limit: wait 600ms between sends
       if (i > 0) {
@@ -108,7 +116,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    logger.info({ sent, failed, total: bookings.length, date: yesterday }, 'Post-party thank you batch complete');
+    logger.info({ sent, failed, total: partyBookings.length, date: yesterday }, 'Post-party thank you batch complete');
 
     return NextResponse.json({
       success: true,
@@ -116,7 +124,7 @@ export async function GET(request: NextRequest) {
       sent,
       failed,
       markedDone,
-      total: bookings.length,
+      total: partyBookings.length,
       date: yesterday,
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),

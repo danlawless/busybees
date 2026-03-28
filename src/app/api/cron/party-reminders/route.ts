@@ -50,7 +50,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to fetch bookings' }, { status: 500 });
     }
 
-    if (!bookings || bookings.length === 0) {
+    // Filter out event bookings (e.g. Easter Egg Hunt) — these are not birthday parties
+    const partyBookings = (bookings || []).filter(booking => {
+      const childName = (booking.child_name || '').toLowerCase();
+      const packageName = (booking.package_name || '').toLowerCase();
+      const isEvent = childName.includes('egg hunt') || childName.includes('easter')
+        || packageName.includes('egg hunt') || packageName.includes('easter');
+      if (isEvent) {
+        logger.info({ bookingId: booking.id, childName: booking.child_name }, 'Skipping event booking (not a birthday party)');
+      }
+      return !isEvent;
+    });
+
+    if (partyBookings.length === 0) {
       logger.info({ date: targetDate }, 'No parties 7 days from now to send reminders');
       return NextResponse.json({
         success: true,
@@ -64,8 +76,8 @@ export async function GET(request: NextRequest) {
     let failed = 0;
     const errors: Array<{ email: string; error: string }> = [];
 
-    for (let i = 0; i < bookings.length; i++) {
-      const booking = bookings[i];
+    for (let i = 0; i < partyBookings.length; i++) {
+      const booking = partyBookings[i];
 
       // Rate limit: wait 600ms between sends
       if (i > 0) {
@@ -99,14 +111,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    logger.info({ sent, failed, total: bookings.length, targetDate }, 'Party reminder batch complete');
+    logger.info({ sent, failed, total: partyBookings.length, targetDate }, 'Party reminder batch complete');
 
     return NextResponse.json({
       success: true,
       message: `Sent ${sent} reminder${sent !== 1 ? 's' : ''}`,
       sent,
       failed,
-      total: bookings.length,
+      total: partyBookings.length,
       targetDate,
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
