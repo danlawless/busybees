@@ -51,10 +51,10 @@ WHERE NOT EXISTS (SELECT 1 FROM public.passes WHERE name = 'Punch Card (10 passe
 
 -- Queen Bee (Private)
 INSERT INTO public.party_packages (name, base_price, capacity, duration, included_items, add_ons, description, is_active)
-SELECT 'Queen Bee (Private)', 575.00, 20, 2,
+SELECT 'Queen Bee (Private)', 575.00, 25, 2,
   '["Private party room", "Premium decorations", "Plates, cups, napkins", "Dedicated party host", "Setup & cleanup", "Party favors for all kids", "Digital photo package"]'::jsonb,
-  '[{"id": "addon-1", "name": "Extra 30 minutes", "price": 50, "description": "Extend party time"}, {"id": "addon-2", "name": "Additional child (over 15)", "price": 15, "description": "Per extra child"}]'::jsonb,
-  'Our premium private party package! Pricing includes 15 kids with pizza, drinks, cake and balloons.', TRUE
+  '[{"id": "addon-1", "name": "Extra 30 minutes", "price": 50, "description": "Extend party time"}, {"id": "addon-2", "name": "Additional child (over 20)", "price": 15, "description": "Per extra child"}]'::jsonb,
+  'Our premium private party package! Pricing includes 20 kids with pizza, drinks, cake and balloons.', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM public.party_packages WHERE name = 'Queen Bee (Private)');
 
 -- Worker Bee (Private)
@@ -75,10 +75,10 @@ WHERE NOT EXISTS (SELECT 1 FROM public.party_packages WHERE name = 'Basic Bee (P
 
 -- Queen Bee (Semi-Private)
 INSERT INTO public.party_packages (name, base_price, capacity, duration, included_items, add_ons, description, is_active)
-SELECT 'Queen Bee (Semi-Private)', 500.00, 20, 2,
+SELECT 'Queen Bee (Semi-Private)', 500.00, 25, 2,
   '["Semi-private party area", "Premium decorations", "Plates, cups, napkins", "Party host", "Setup & cleanup", "Party favors for all kids"]'::jsonb,
-  '[{"id": "addon-13", "name": "Extra 30 minutes", "price": 50, "description": "Extend party time"}, {"id": "addon-14", "name": "Additional child (over 15)", "price": 15, "description": "Per extra child"}]'::jsonb,
-  'Premium semi-private party! Pricing includes 15 kids with pizza, drinks, cake and balloons.', TRUE
+  '[{"id": "addon-13", "name": "Extra 30 minutes", "price": 50, "description": "Extend party time"}, {"id": "addon-14", "name": "Additional child (over 20)", "price": 15, "description": "Per extra child"}]'::jsonb,
+  'Premium semi-private party! Pricing includes 20 kids with pizza, drinks, cake and balloons.', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM public.party_packages WHERE name = 'Queen Bee (Semi-Private)');
 
 -- Worker Bee (Semi-Private)
