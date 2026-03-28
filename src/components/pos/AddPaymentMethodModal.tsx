@@ -115,12 +115,18 @@ export function AddPaymentMethodModal({
     setError(null);
 
     try {
-      const response = await fetch('/api/stripe/payment-methods', {
+      let response = await fetch('/api/stripe/payment-methods', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
+
+      // If session expired, refresh the page to let middleware renew the token
+      if (response.status === 401) {
+        window.location.reload();
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
