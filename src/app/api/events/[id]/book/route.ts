@@ -16,7 +16,7 @@ import { z } from 'zod';
 const BookEventSchema = z.object({
   children: z.array(z.object({
     child_id: z.string().uuid(),
-    pass_id: z.string().uuid(),
+    pass_id: z.string().uuid().optional().default(''),
   })).min(1).max(10),
   paymentMethodId: z.string().min(1),
   useGiftCardBalance: z.boolean().optional().default(true),
@@ -105,19 +105,7 @@ export async function POST(
       return NextResponse.json({ error: 'Profile not found' }, { status: 400 });
     }
 
-    // Fetch pass prices and children details
-    const passIds = [...new Set(children.map(c => c.pass_id))];
-    const { data: passes } = await adminSupabase
-      .from('passes')
-      .select('id, name, price, sessions_included, duration, category')
-      .in('id', passIds);
-
-    if (!passes || passes.length === 0) {
-      return NextResponse.json({ error: 'Invalid pass selection' }, { status: 400 });
-    }
-
-    const passMap = new Map(passes.map(p => [p.id, p]));
-
+    // Fetch children details
     const childIds = children.map(c => c.child_id);
     const { data: childrenData } = await adminSupabase
       .from('children')
@@ -126,14 +114,44 @@ export async function POST(
 
     const childMap = new Map((childrenData || []).map(c => [c.id, c]));
 
+    // Determine pricing mode: linked passes or inline event pricing
+    const hasPassIds = children.some(c => c.pass_id);
+    const hasInlinePricing = event.toddler_price != null || event.infant_price != null;
+
+    let passMap = new Map<string, { id: string; name: string; price: number; sessions_included: number; duration: number; category: string }>();
+
+    if (hasPassIds) {
+      const passIds = [...new Set(children.map(c => c.pass_id).filter(Boolean))];
+      const { data: passes } = await adminSupabase
+        .from('passes')
+        .select('id, name, price, sessions_included, duration, category')
+        .in('id', passIds);
+
+      if (!passes || passes.length === 0) {
+        return NextResponse.json({ error: 'Invalid pass selection' }, { status: 400 });
+      }
+      passMap = new Map(passes.map(p => [p.id, p]));
+    }
+
     // Calculate total price
+    const now = new Date();
     let totalAmount = 0;
     for (const child of children) {
-      const pass = passMap.get(child.pass_id);
-      if (!pass) {
-        return NextResponse.json({ error: `Pass not found: ${child.pass_id}` }, { status: 400 });
+      if (hasPassIds && child.pass_id) {
+        const pass = passMap.get(child.pass_id);
+        if (!pass) {
+          return NextResponse.json({ error: `Pass not found: ${child.pass_id}` }, { status: 400 });
+        }
+        totalAmount += pass.price;
+      } else if (hasInlinePricing) {
+        const childInfo = childMap.get(child.child_id);
+        let age = 2; // default to toddler
+        if (childInfo?.date_of_birth) {
+          const dob = new Date(childInfo.date_of_birth);
+          age = Math.floor((now.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        }
+        totalAmount += age < 2 ? (event.infant_price || 0) : (event.toddler_price || 0);
       }
-      totalAmount += pass.price;
     }
 
     // Gift card handling
@@ -205,28 +223,54 @@ export async function POST(
     // Create purchase records (one per child) for check-in compatibility
     const purchaseIds: string[] = [];
     const childDetails: Array<{ child_id: string; name: string; age: number | null; pass_name: string; purchase_id: string }> = [];
-    const now = new Date();
 
     for (const child of children) {
-      const pass = passMap.get(child.pass_id)!;
       const childInfo = childMap.get(child.child_id);
+      const pass = hasPassIds && child.pass_id ? passMap.get(child.pass_id) : null;
 
-      // Resolve expiry from pass config
-      const { totalSessions, expiryDate } = await resolvePurchaseDefaults(
-        child.pass_id,
-        pass.category === 'day' ? 'day_pass' : pass.category === 'weekly' ? 'weekly_pass' : 'monthly_pass',
-        adminSupabase,
-      );
+      // Calculate child age
+      let age: number | null = null;
+      if (childInfo?.date_of_birth) {
+        const dob = new Date(childInfo.date_of_birth);
+        age = Math.floor((now.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      }
+
+      // Determine price, name, and type for this child
+      let childPrice: number;
+      let purchaseName: string;
+      let purchaseType: string = 'day_pass';
+      let productId: string = eventId;
+      let totalSessions = 1;
+      let expiryDate: Date | null = null;
+
+      if (pass) {
+        // Pass-based pricing
+        childPrice = pass.price;
+        purchaseName = pass.name;
+        purchaseType = pass.category === 'day' ? 'day_pass' : pass.category === 'weekly' ? 'weekly_pass' : 'monthly_pass';
+        productId = child.pass_id;
+        const defaults = await resolvePurchaseDefaults(child.pass_id, purchaseType, adminSupabase);
+        totalSessions = defaults.totalSessions;
+        expiryDate = defaults.expiryDate;
+      } else {
+        // Inline event pricing
+        const isInfant = (age !== null && age < 2);
+        childPrice = isInfant ? (event.infant_price || 0) : (event.toddler_price || 0);
+        purchaseName = `${event.title} - ${isInfant ? 'Infant' : 'Child 2+'}`;
+        // Set expiry to event date end of day
+        const eventDateObj = new Date(event.event_date + 'T23:59:59');
+        expiryDate = eventDateObj;
+      }
 
       const { data: purchase, error: purchaseError } = await adminSupabase
         .from('purchases')
         .insert({
           customer_id: user.id,
           child_id: child.child_id,
-          type: pass.category === 'day' ? 'day_pass' : pass.category === 'weekly' ? 'weekly_pass' : 'monthly_pass',
-          product_id: child.pass_id,
-          name: pass.name,
-          price: pass.price,
+          type: purchaseType,
+          product_id: productId,
+          name: purchaseName,
+          price: childPrice,
           purchase_date: now.toISOString(),
           expiry_date: expiryDate?.toISOString() || null,
           used_sessions: 0,
@@ -244,18 +288,11 @@ export async function POST(
 
       purchaseIds.push(purchase.id);
 
-      // Calculate age
-      let age: number | null = null;
-      if (childInfo?.date_of_birth) {
-        const dob = new Date(childInfo.date_of_birth);
-        age = Math.floor((now.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-      }
-
       childDetails.push({
         child_id: child.child_id,
         name: childInfo?.name || 'Unknown',
         age,
-        pass_name: pass.name,
+        pass_name: purchaseName,
         purchase_id: purchase.id,
       });
     }

@@ -42,6 +42,8 @@ export const CreateEventSchema = z.object({
   max_capacity: z.number().int().positive().optional().nullable(),
   pass_ids: z.array(z.string().uuid()).optional().nullable(),
   booking_instructions: z.string().max(1000).optional().nullable(),
+  toddler_price: z.number().min(0).optional().nullable(),
+  infant_price: z.number().min(0).optional().nullable(),
 });
 
 export const UpdateEventSchema = z.object({
@@ -83,6 +85,8 @@ export const UpdateEventSchema = z.object({
   max_capacity: z.number().int().positive().optional().nullable(),
   pass_ids: z.array(z.string().uuid()).optional().nullable(),
   booking_instructions: z.string().max(1000).optional().nullable(),
+  toddler_price: z.number().min(0).optional().nullable(),
+  infant_price: z.number().min(0).optional().nullable(),
 });
 
 // File validation constants

@@ -42,6 +42,8 @@ interface BookableEvent {
   max_capacity: number | null;
   pass_ids: string[] | null;
   booking_instructions: string | null;
+  toddler_price: number | null;
+  infant_price: number | null;
 }
 
 interface EventDetail {
@@ -185,14 +187,29 @@ export function EventBooking({ customerName, customerEmail, customerPhone, child
     });
   };
 
-  // Calculate total price based on selected children and their matched passes
+  // Calculate total price based on selected children and their matched passes or inline pricing
   const getChildPassAssignments = () => {
     if (!selectedEventDetail) return [];
+    const event = selectedEventDetail.event;
+    const hasInlinePricing = event.toddler_price != null || event.infant_price != null;
+    const hasPasses = selectedEventDetail.passes.length > 0;
+
     return selectedChildren.map(childId => {
       const child = children.find(c => c.id === childId);
       if (!child) return null;
-      const pass = matchPassToChild(selectedEventDetail.passes, child.age);
-      return pass ? { child_id: childId, pass_id: pass.id, childName: child.name, childAge: child.age, passName: pass.name, price: pass.price } : null;
+
+      if (hasPasses) {
+        // Use linked passes
+        const pass = matchPassToChild(selectedEventDetail.passes, child.age);
+        return pass ? { child_id: childId, pass_id: pass.id, childName: child.name, childAge: child.age, passName: pass.name, price: pass.price } : null;
+      } else if (hasInlinePricing) {
+        // Use inline event pricing
+        const ageGroup = getAgeGroup(child.age);
+        const price = ageGroup === 'infant' ? (event.infant_price || 0) : (event.toddler_price || 0);
+        const label = ageGroup === 'infant' ? 'Infant' : 'Child 2+';
+        return { child_id: childId, pass_id: '', childName: child.name, childAge: child.age, passName: label, price };
+      }
+      return null;
     }).filter(Boolean) as Array<{ child_id: string; pass_id: string; childName: string; childAge: number; passName: string; price: number }>;
   };
 
