@@ -19,11 +19,11 @@ const faqCategories = [
       },
       {
         question: 'Can I change my party date after booking?',
-        answer: 'Yes! You can reschedule your party up to 48 hours before the event without any fees. We understand that plans can change, and we\'re here to help make it work.'
+        answer: 'One complimentary reschedule is allowed if requested at least 7 days prior to the event (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost to cover the lost birthday slot.'
       },
       {
         question: 'What if I need to cancel my party?',
-        answer: 'We offer a full refund if you cancel at least 48 hours before your party. For cancellations within 48 hours, we can apply your deposit to a future party date.'
+        answer: 'Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event. Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.'
       }
     ]
   },

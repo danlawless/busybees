@@ -1109,7 +1109,7 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
 
                     <p style="${subheadingStyle}">Rescheduling</p>
                     <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
 
                     <p style="${subheadingStyle}">Weather or Emergencies</p>
                     <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
@@ -1173,7 +1173,7 @@ Play Rules: All guests must follow standard Busy Bee play rules during the event
 BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
 Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
 Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
 Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
@@ -1297,7 +1297,7 @@ Busy Bee's Party Team`;
 
                     <p style="${subheadingStyle}">Rescheduling</p>
                     <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
 
                     <p style="${subheadingStyle}">Weather or Emergencies</p>
                     <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
@@ -1361,7 +1361,7 @@ Play Rules: All guests must follow standard Busy Bee play rules during the event
 BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
 Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
 Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
 Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
@@ -1485,7 +1485,7 @@ Busy Bee's Party Team`;
 
                     <p style="${subheadingStyle}">Rescheduling</p>
                     <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a $50 administrative fee.</p>
+                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
 
                     <p style="${subheadingStyle}">Weather or Emergencies</p>
                     <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
@@ -1549,7 +1549,7 @@ Play Rules: All guests must follow standard Busy Bee play rules during the event
 BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
 Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
 Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a $50 administrative fee.
+Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
 Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!

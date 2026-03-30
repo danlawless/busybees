@@ -51,6 +51,11 @@ export default function AdminEventsPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isBookable, setIsBookable] = useState(false);
+  const [maxCapacity, setMaxCapacity] = useState('');
+  const [toddlerPrice, setToddlerPrice] = useState('');
+  const [infantPrice, setInfantPrice] = useState('');
+  const [bookingInstructions, setBookingInstructions] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit state
@@ -149,6 +154,11 @@ export default function AdminEventsPage() {
     setImageUrl('');
     setImagePreview('');
     setEditingEvent(null);
+    setIsBookable(false);
+    setMaxCapacity('');
+    setToddlerPrice('');
+    setInfantPrice('');
+    setBookingInstructions('');
   };
 
   const handleCreate = async () => {
@@ -174,6 +184,11 @@ export default function AdminEventsPage() {
           event_time_end: eventTimeEnd || null,
           is_free: isFree,
           status,
+          is_bookable: isBookable,
+          max_capacity: maxCapacity ? parseInt(maxCapacity) : null,
+          toddler_price: toddlerPrice ? parseFloat(toddlerPrice) : null,
+          infant_price: infantPrice ? parseFloat(infantPrice) : null,
+          booking_instructions: bookingInstructions || null,
         }),
       });
 
@@ -727,6 +742,83 @@ export default function AdminEventsPage() {
                     Free event (included with admission)
                   </label>
                 </div>
+
+                {/* Bookable Event */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="is-bookable"
+                    checked={isBookable}
+                    onChange={(e) => setIsBookable(e.target.checked)}
+                    className="h-5 w-5 rounded border-neutral-300 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="is-bookable" className="text-sm font-medium text-neutral-700">
+                    Bookable event (customers can register and pay from My Account)
+                  </label>
+                </div>
+
+                {/* Booking Configuration - shown when bookable */}
+                {isBookable && (
+                  <div className="ml-8 space-y-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-emerald-800">Booking Settings</h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">Toddler Price (2+)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={toddlerPrice}
+                            onChange={(e) => setToddlerPrice(e.target.value)}
+                            placeholder="17.00"
+                            className="w-full pl-7 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">Infant Price (under 2)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={infantPrice}
+                            onChange={(e) => setInfantPrice(e.target.value)}
+                            placeholder="7.00"
+                            className="w-full pl-7 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">Max Capacity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={maxCapacity}
+                          onChange={(e) => setMaxCapacity(e.target.value)}
+                          placeholder="100"
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Booking Instructions (optional)</label>
+                      <textarea
+                        value={bookingInstructions}
+                        onChange={(e) => setBookingInstructions(e.target.value)}
+                        placeholder="Instructions shown to customers when booking..."
+                        rows={2}
+                        maxLength={1000}
+                        className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 resize-none text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Status */}
                 <div>

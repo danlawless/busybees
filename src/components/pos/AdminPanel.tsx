@@ -41,6 +41,7 @@ import {
 import { GroupsManager } from './GroupsManager';
 import { AnnouncementManager } from './AnnouncementManager';
 import { AfterDarkAdmin } from './AfterDarkAdmin';
+import { EventBookingsAdmin } from './EventBookingsAdmin';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -144,7 +145,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'events' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -5433,6 +5434,8 @@ export function AdminPanel({
       {currentView === 'marketing' && renderMarketing()}
       {currentView === 'announcements' && <AnnouncementManager />}
       {currentView === 'after-dark' && <AfterDarkAdmin />}
+
+      {currentView === 'events' && <EventBookingsAdmin />}
       {currentView === 'newsletter' && renderNewsletter()}
       {currentView === 'passes' && renderPasses()}
       {currentView === 'parties' && renderParties()}
@@ -5492,6 +5495,25 @@ export function AdminPanel({
             <span>Open Dashboard</span>
             <span>↗</span>
           </a>
+        </div>
+      </Card>
+
+      {/* Quick Access: Events Dashboard */}
+      <Card className="p-4 mt-4 bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎪</span>
+            <div>
+              <h3 className="font-semibold text-emerald-900">Events Dashboard</h3>
+              <p className="text-sm text-emerald-600">View event attendees, registrations, and manage bookings</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setCurrentView('events')}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+          >
+            Open Events
+          </button>
         </div>
       </Card>
 

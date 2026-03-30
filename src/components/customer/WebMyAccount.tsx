@@ -14,6 +14,7 @@ import { AddPaymentMethodModal } from '@/components/pos/AddPaymentMethodModal';
 import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { AfterDarkBooking } from './AfterDarkBooking';
+import { EventBooking } from './EventBooking';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { WaiverModal } from '@/components/ui/WaiverModal';
 import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
@@ -28,7 +29,7 @@ import {
 } from '@/lib/utils/customerTransforms';
 import type { Child, Purchase, SavedCard } from '@/lib/types/customer';
 
-type TabType = 'children' | 'passes' | 'parties' | 'groups' | 'after-dark' | 'payments';
+type TabType = 'children' | 'passes' | 'parties' | 'groups' | 'events' | 'after-dark' | 'payments';
 
 // Inner component that uses searchParams - must be in its own Suspense boundary
 function WebMyAccountContent() {
@@ -53,7 +54,7 @@ function WebMyAccountContent() {
   // Read tab from URL on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab') as TabType;
-    if (tabParam && ['children', 'passes', 'parties', 'groups', 'after-dark', 'payments'].includes(tabParam)) {
+    if (tabParam && ['children', 'passes', 'parties', 'groups', 'events', 'after-dark', 'payments'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -1071,6 +1072,20 @@ function WebMyAccountContent() {
                 </div>
               </button>
             )}
+            {/* Events tab */}
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
+                activeTab === 'events'
+                  ? 'bg-emerald-500 text-white shadow-lg transform scale-105 border-2 border-emerald-600'
+                  : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">🎪</span>
+                <span>Events</span>
+              </div>
+            </button>
             {/* After Dark tab hidden until ready for release */}
             <button
               onClick={() => setActiveTab('payments')}
@@ -1966,6 +1981,18 @@ function WebMyAccountContent() {
                 </div>
               )}
             </Card>
+          </div>
+        )}
+
+        {/* Events Tab */}
+        {activeTab === 'events' && (
+          <div className="space-y-8">
+            <EventBooking
+              customerName={profile?.name || ''}
+              customerEmail={user?.email || ''}
+              customerPhone={profile?.phone || ''}
+              children={children}
+            />
           </div>
         )}
 
