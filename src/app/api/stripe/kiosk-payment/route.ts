@@ -252,75 +252,124 @@ export async function POST(request: NextRequest) {
         );
         const expiryDate = defaults.expiryDate;
 
-        // Calculate total sessions (multiply by quantity for stackable passes)
-        const sessionsPerUnit = defaults.totalSessions;
-        const isUnlimited = sessionsPerUnit === 999;
-        const totalSessions = isUnlimited
-            ? 999 // Unlimited doesn't multiply
-            : sessionsPerUnit * quantity;
+        // Child + Infant combo pass: create individual purchases per child
+        const isComboPass = (productName.toLowerCase().includes('child') || productName.toLowerCase().includes('toddler')) && productName.toLowerCase().includes('infant');
+        const comboChildrenIds = isComboPass && Array.isArray(childrenIds) && childrenIds.length === 2
+            ? childrenIds
+            : null;
 
-        // Build product name with quantity
-        const purchaseName = quantity > 1 ? `${quantity}x ${productName}` : productName;
+        let purchase;
 
-        // Create purchase record (matching POS endpoint structure)
-        // Note: productPrice already includes quantity * discount from frontend
-        const { data: purchase, error: purchaseError } = await adminSupabase
-            .from("purchases")
-            .insert({
-                customer_id: customerId,
-                child_id: childId || null,
-                type: purchaseType,
-                product_id: productId,
-                name: purchaseName,
-                price: productPrice, // Already includes quantity + discount
-                purchase_date: now.toISOString(),
-                expiry_date: expiryDate?.toISOString() || null,
-                used_sessions: 0,
-                total_sessions: totalSessions,
-                status: purchaseType === "food_beverage" ? "used" : "active",
-                stripe_payment_intent_id: paymentIntent.id,
-            })
-            .select()
-            .single();
+        if (comboChildrenIds) {
+            // Create a separate purchase for each child in the combo
+            const pricePerChild = productPrice / comboChildrenIds.length;
+            const purchases = [];
 
-        if (purchaseError) {
-            logger.error(
-                { ...logContext, error: purchaseError },
-                "❌ Failed to create purchase record"
+            for (const comboChildId of comboChildrenIds) {
+                const { data: childPurchase, error: childDbError } = await adminSupabase
+                    .from("purchases")
+                    .insert({
+                        customer_id: customerId,
+                        child_id: comboChildId,
+                        type: purchaseType,
+                        product_id: productId,
+                        name: productName,
+                        price: pricePerChild,
+                        purchase_date: now.toISOString(),
+                        expiry_date: expiryDate?.toISOString() || null,
+                        used_sessions: 0,
+                        total_sessions: 1,
+                        status: "active",
+                        stripe_payment_intent_id: paymentIntent.id,
+                    })
+                    .select()
+                    .single();
+
+                if (childDbError) {
+                    logger.error({ error: childDbError, customerId, comboChildId }, "Failed to save combo purchase");
+                    throw childDbError;
+                }
+
+                purchases.push(childPurchase);
+            }
+
+            purchase = purchases[0];
+            logger.info(
+                { purchaseIds: purchases.map(p => p.id), customerId },
+                "Combo pass: created individual purchases for each child"
             );
-            Sentry.captureException(purchaseError, {
-                tags: { component: "kiosk-payment", action: "create_purchase" },
-                extra: { customerId, paymentIntentId: paymentIntent.id },
-            });
+        } else {
+            // Standard single purchase
+            // Calculate total sessions (multiply by quantity for stackable passes)
+            const sessionsPerUnit = defaults.totalSessions;
+            const isUnlimited = sessionsPerUnit === 999;
+            const totalSessions = isUnlimited
+                ? 999 // Unlimited doesn't multiply
+                : sessionsPerUnit * quantity;
 
-            // Payment succeeded but record failed - this needs manual review
-            return NextResponse.json(
-                {
-                    error: "Payment processed but failed to create record. Please contact staff.",
-                    paymentIntentId: paymentIntent.id,
-                },
-                { status: 500 }
-            );
-        }
+            // Build product name with quantity
+            const purchaseName = quantity > 1 ? `${quantity}x ${productName}` : productName;
 
-        // For family passes, link all selected children via purchase_children table
-        if (Array.isArray(childrenIds) && childrenIds.length > 0) {
-            const purchaseChildrenRows = childrenIds.map((cid: string) => ({
-                purchase_id: purchase.id,
-                child_id: cid,
-            }));
+            // Create purchase record (matching POS endpoint structure)
+            const { data: singlePurchase, error: purchaseError } = await adminSupabase
+                .from("purchases")
+                .insert({
+                    customer_id: customerId,
+                    child_id: childId || null,
+                    type: purchaseType,
+                    product_id: productId,
+                    name: purchaseName,
+                    price: productPrice,
+                    purchase_date: now.toISOString(),
+                    expiry_date: expiryDate?.toISOString() || null,
+                    used_sessions: 0,
+                    total_sessions: totalSessions,
+                    status: purchaseType === "food_beverage" ? "used" : "active",
+                    stripe_payment_intent_id: paymentIntent.id,
+                })
+                .select()
+                .single();
 
-            const { error: pcError } = await adminSupabase
-                .from("purchase_children")
-                .insert(purchaseChildrenRows);
-
-            if (pcError) {
-                logger.error({ error: pcError, purchaseId: purchase.id }, "Failed to link children to family pass");
-            } else {
-                logger.info(
-                    { purchaseId: purchase.id, childCount: childrenIds.length },
-                    "Family pass children linked successfully"
+            if (purchaseError) {
+                logger.error(
+                    { ...logContext, error: purchaseError },
+                    "❌ Failed to create purchase record"
                 );
+                Sentry.captureException(purchaseError, {
+                    tags: { component: "kiosk-payment", action: "create_purchase" },
+                    extra: { customerId, paymentIntentId: paymentIntent.id },
+                });
+
+                return NextResponse.json(
+                    {
+                        error: "Payment processed but failed to create record. Please contact staff.",
+                        paymentIntentId: paymentIntent.id,
+                    },
+                    { status: 500 }
+                );
+            }
+
+            purchase = singlePurchase;
+
+            // For family passes, link all selected children via purchase_children table
+            if (Array.isArray(childrenIds) && childrenIds.length > 0) {
+                const purchaseChildrenRows = childrenIds.map((cid: string) => ({
+                    purchase_id: purchase.id,
+                    child_id: cid,
+                }));
+
+                const { error: pcError } = await adminSupabase
+                    .from("purchase_children")
+                    .insert(purchaseChildrenRows);
+
+                if (pcError) {
+                    logger.error({ error: pcError, purchaseId: purchase.id }, "Failed to link children to family pass");
+                } else {
+                    logger.info(
+                        { purchaseId: purchase.id, childCount: childrenIds.length },
+                        "Family pass children linked successfully"
+                    );
+                }
             }
         }
 
