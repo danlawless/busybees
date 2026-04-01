@@ -4965,6 +4965,16 @@ export function CheckIn({
                                                 const eligibleChildren = signedChildren.filter((c) => c.age >= 2);
                                                 const eligibleInfants = signedChildren.filter((c) => c.age < 2);
 
+                                                const comboChildHasActivePass = (childId: string) => {
+                                                    return customer.purchases.some(
+                                                        (p) =>
+                                                            (p.childId === childId || p.childIds?.includes(childId)) &&
+                                                            p.status === 'active' &&
+                                                            ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                            (p.totalSessions === 999 || p.usedSessions < p.totalSessions)
+                                                    );
+                                                };
+
                                                 return (
                                                     <>
                                                         {/* Child (2+) selection */}
@@ -4974,12 +4984,17 @@ export function CheckIn({
                                                             </label>
                                                             {eligibleChildren.length > 0 ? (
                                                                 <div className="space-y-2">
-                                                                    {eligibleChildren.map((child) => (
+                                                                    {eligibleChildren.map((child) => {
+                                                                        const hasPass = comboChildHasActivePass(child.id);
+                                                                        return (
                                                                         <button
                                                                             key={child.id}
-                                                                            onClick={() => setComboChildId(comboChildId === child.id ? null : child.id)}
+                                                                            onClick={() => !hasPass && setComboChildId(comboChildId === child.id ? null : child.id)}
+                                                                            disabled={hasPass}
                                                                             className={`w-full p-3 text-left border rounded-lg transition-colors ${
-                                                                                comboChildId === child.id
+                                                                                hasPass
+                                                                                    ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                                                    : comboChildId === child.id
                                                                                     ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
                                                                                     : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
                                                                             }`}
@@ -4988,13 +5003,17 @@ export function CheckIn({
                                                                                 <div>
                                                                                     <p className="font-medium text-gray-900">{child.name}</p>
                                                                                     <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                                                                    {hasPass && (
+                                                                                        <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
+                                                                                    )}
                                                                                 </div>
-                                                                                <div className={`text-xl ${comboChildId === child.id ? 'text-green-600' : 'text-gray-300'}`}>
+                                                                                <div className={`text-xl ${hasPass ? 'text-gray-300' : comboChildId === child.id ? 'text-green-600' : 'text-gray-300'}`}>
                                                                                     {comboChildId === child.id ? '✅' : '⬜'}
                                                                                 </div>
                                                                             </div>
                                                                         </button>
-                                                                    ))}
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">
@@ -5010,12 +5029,17 @@ export function CheckIn({
                                                             </label>
                                                             {eligibleInfants.length > 0 ? (
                                                                 <div className="space-y-2">
-                                                                    {eligibleInfants.map((child) => (
+                                                                    {eligibleInfants.map((child) => {
+                                                                        const hasPass = comboChildHasActivePass(child.id);
+                                                                        return (
                                                                         <button
                                                                             key={child.id}
-                                                                            onClick={() => setComboInfantId(comboInfantId === child.id ? null : child.id)}
+                                                                            onClick={() => !hasPass && setComboInfantId(comboInfantId === child.id ? null : child.id)}
+                                                                            disabled={hasPass}
                                                                             className={`w-full p-3 text-left border rounded-lg transition-colors ${
-                                                                                comboInfantId === child.id
+                                                                                hasPass
+                                                                                    ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                                                    : comboInfantId === child.id
                                                                                     ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                                                                     : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
                                                                             }`}
@@ -5024,13 +5048,17 @@ export function CheckIn({
                                                                                 <div>
                                                                                     <p className="font-medium text-gray-900">{child.name}</p>
                                                                                     <p className="text-sm text-gray-600">Age: {child.age}</p>
+                                                                                    {hasPass && (
+                                                                                        <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
+                                                                                    )}
                                                                                 </div>
-                                                                                <div className={`text-xl ${comboInfantId === child.id ? 'text-blue-600' : 'text-gray-300'}`}>
+                                                                                <div className={`text-xl ${hasPass ? 'text-gray-300' : comboInfantId === child.id ? 'text-blue-600' : 'text-gray-300'}`}>
                                                                                     {comboInfantId === child.id ? '✅' : '⬜'}
                                                                                 </div>
                                                                             </div>
                                                                         </button>
-                                                                    ))}
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">
@@ -5072,17 +5100,32 @@ export function CheckIn({
                                             const customer = selectedCustomer || currentCustomer;
                                             if (!customer) return null;
 
+                                            const childHasActivePass = (childId: string) => {
+                                                return customer.purchases.some(
+                                                    (p) =>
+                                                        (p.childId === childId || p.childIds?.includes(childId)) &&
+                                                        p.status === 'active' &&
+                                                        ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                        (p.totalSessions === 999 || p.usedSessions < p.totalSessions)
+                                                );
+                                            };
+
                                             return customer.children
                                                 .filter((child) => child.waiverSigned)
                                                 .map((child) => {
+                                                    const hasPass = childHasActivePass(child.id);
+
                                                     if (isFamilyProduct) {
                                                         const isSelected = selectedChildrenForFamilyPass.includes(child.id);
                                                         return (
                                                             <button
                                                                 key={child.id}
-                                                                onClick={() => toggleChildForFamilyPass(child.id)}
+                                                                onClick={() => !hasPass && toggleChildForFamilyPass(child.id)}
+                                                                disabled={hasPass}
                                                                 className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                                                                    isSelected
+                                                                    hasPass
+                                                                        ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                                        : isSelected
                                                                         ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
                                                                         : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
                                                                 }`}
@@ -5095,8 +5138,11 @@ export function CheckIn({
                                                                         <p className="text-sm text-gray-600">
                                                                             Age: {child.age}
                                                                         </p>
+                                                                        {hasPass && (
+                                                                            <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
+                                                                        )}
                                                                     </div>
-                                                                    <div className={`text-xl ${isSelected ? 'text-green-600' : 'text-gray-300'}`}>
+                                                                    <div className={`text-xl ${hasPass ? 'text-gray-300' : isSelected ? 'text-green-600' : 'text-gray-300'}`}>
                                                                         {isSelected ? '✅' : '⬜'}
                                                                     </div>
                                                                 </div>
@@ -5107,10 +5153,13 @@ export function CheckIn({
                                                     return (
                                                         <button
                                                             key={child.id}
-                                                            onClick={() =>
-                                                                handleChildSelectionForPurchase(child.id)
-                                                            }
-                                                            className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                                                            onClick={() => !hasPass && handleChildSelectionForPurchase(child.id)}
+                                                            disabled={hasPass}
+                                                            className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                                                                hasPass
+                                                                    ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                                    : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+                                                            }`}
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div>
@@ -5120,9 +5169,12 @@ export function CheckIn({
                                                                     <p className="text-sm text-gray-600">
                                                                         Age: {child.age}
                                                                     </p>
+                                                                    {hasPass && (
+                                                                        <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
+                                                                    )}
                                                                 </div>
-                                                                <div className="text-green-600">
-                                                                    ✅ Waiver Signed
+                                                                <div className={hasPass ? 'text-gray-300' : 'text-green-600'}>
+                                                                    {hasPass ? '⚠️ Active Pass' : '✅ Waiver Signed'}
                                                                 </div>
                                                             </div>
                                                         </button>
