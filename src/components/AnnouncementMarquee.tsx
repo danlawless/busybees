@@ -48,13 +48,13 @@ export function AnnouncementMarquee() {
         <div className="marquee-content">
           <span
             className="inline-block text-sm font-semibold whitespace-nowrap px-8"
-            style={{ color: textColor }}
+            style={{ color: textColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}
           >
             📢 {combinedMessage}
           </span>
           <span
             className="inline-block text-sm font-semibold whitespace-nowrap px-8"
-            style={{ color: textColor }}
+            style={{ color: textColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}
           >
             📢 {combinedMessage}
           </span>
