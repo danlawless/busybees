@@ -12,23 +12,29 @@ const gloriaHallelujah = Gloria_Hallelujah({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://busybeesipc.com'),
-  title: 'Busy Bees Indoor Play Center',
-  description: 'Modern, safe and engaging indoor play space for children ages 0-6. Creating a go-to destination for families to play, socialize and celebrate.',
-  keywords: 'indoor playground, kids play center, birthday parties, toddler activities, family fun, safe play space',
+  title: {
+    default: 'Busy Bees Indoor Play Center | Indoor Playground in Lunenburg, MA',
+    template: '%s | Busy Bees Indoor Play Center',
+  },
+  description: 'Modern, safe and engaging indoor play space for children ages 0-6 in Lunenburg, Massachusetts. Day passes, birthday parties, monthly memberships, and special events for toddlers and infants.',
+  keywords: 'indoor playground Lunenburg MA, kids play center Massachusetts, birthday parties for toddlers, indoor play space near me, toddler activities Lunenburg, infant play area, family fun center',
   authors: [{ name: 'Busy Bees Indoor Play Center' }],
-  // Icons handled manually in head section below
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'Busy Bees Indoor Play Center',
-    description: 'Safe, fun indoor play space for children ages 0-6',
+    title: 'Busy Bees Indoor Play Center | Indoor Playground in Lunenburg, MA',
+    description: 'Safe, fun indoor play space for children ages 0-6 in Lunenburg, MA. Day passes, birthday parties, and memberships.',
     url: 'https://busybeesipc.com',
     siteName: 'Busy Bees Indoor Play Center',
     images: ['/busy-bees-logo-winter.png'],
     type: 'website',
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Busy Bees Indoor Play Center',
-    description: 'Safe, fun indoor play space for children ages 0-6',
+    title: 'Busy Bees Indoor Play Center | Lunenburg, MA',
+    description: 'Safe, fun indoor play space for children ages 0-6 in Lunenburg, MA',
     images: ['/busy-bees-logo-winter.png'],
   },
   other: {
@@ -55,6 +61,56 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${gloriaHallelujah.className} font-body antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'LocalBusiness',
+              '@id': 'https://busybeesipc.com',
+              name: 'Busy Bees Indoor Play Center',
+              description: 'Modern, safe and engaging indoor play space for children ages 0-6 in Lunenburg, Massachusetts.',
+              url: 'https://busybeesipc.com',
+              telephone: '+19787850015',
+              email: 'info@busybeesipc.com',
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: '301 Massachusetts Ave (Rt. 2A)',
+                addressLocality: 'Lunenburg',
+                addressRegion: 'MA',
+                postalCode: '01462',
+                addressCountry: 'US',
+              },
+              geo: {
+                '@type': 'GeoCoordinates',
+                latitude: 42.5934,
+                longitude: -71.7264,
+              },
+              priceRange: '$$',
+              image: 'https://busybeesipc.com/busy-bees-logo-winter.png',
+              sameAs: [
+                'https://www.instagram.com/busybeesipc/',
+                'https://www.facebook.com/busybeesipc',
+              ],
+              openingHoursSpecification: [
+                {
+                  '@type': 'OpeningHoursSpecification',
+                  dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+                  opens: '09:00',
+                  closes: '18:00',
+                },
+                {
+                  '@type': 'OpeningHoursSpecification',
+                  dayOfWeek: ['Saturday', 'Sunday'],
+                  opens: '09:00',
+                  closes: '17:00',
+                },
+              ],
+              hasMap: 'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+Lunenburg+MA',
+              additionalType: 'https://schema.org/ChildCare',
+            }),
+          }}
+        />
         <AnnouncementMarquee />
         {children}
       </body>
