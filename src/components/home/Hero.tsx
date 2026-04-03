@@ -104,13 +104,12 @@ export function Hero() {
                 </Button>
               </Link>
               <Link href="/info">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="px-8 py-4 text-lg font-semibold bg-charcoal-800 text-white border-2 border-charcoal-700 hover:bg-charcoal-700 shadow-xl transition-all"
+                <button
+                  className="px-8 py-4 text-lg font-semibold rounded-full shadow-xl transition-all hover:opacity-90"
+                  style={{ backgroundColor: '#1f2937', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif', border: 'none' }}
                 >
                   Learn More
-                </Button>
+                </button>
               </Link>
             </motion.div>
           </motion.div>
