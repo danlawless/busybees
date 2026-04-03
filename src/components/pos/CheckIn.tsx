@@ -2332,9 +2332,10 @@ export function CheckIn({
 // Group passes by type and sum remaining sessions
                                                     // Extract pass type from name if type field is missing
                                                     const inferPassType = (name: string, type?: string): string => {
-                                                        if (type && type !== 'undefined') return type;
-                                                        // Try to infer from name
                                                         const lowerName = name.toLowerCase();
+                                                        // Event passes get their own group based on name
+                                                        if (lowerName.includes('easter egg') || lowerName.includes('egg hunt')) return 'event_easter';
+                                                        if (type && type !== 'undefined') return type;
                                                         if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
                                                         if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
                                                         if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
@@ -2343,7 +2344,10 @@ export function CheckIn({
                                                     };
 
                                                     // Map type to friendly display name
-                                                    const getPassTypeName = (type: string) => {
+                                                    const getPassTypeName = (type: string, passName?: string) => {
+                                                        if (type.startsWith('event_')) {
+                                                            return passName || 'Event Pass';
+                                                        }
                                                         switch (type) {
                                                             case 'day_pass': return 'Day Pass';
                                                             case 'weekly_pass': return 'Punch Card';
@@ -2360,7 +2364,7 @@ export function CheckIn({
                                                         if (!acc[key]) {
                                                             acc[key] = {
                                                                 type: normalizedType,
-                                                                name: getPassTypeName(normalizedType),
+                                                                name: getPassTypeName(normalizedType, pass.name),
                                                                 totalRemaining: 0,
                                                                 isUnlimited: false,
                                                                 purchaseIds: [],
@@ -2769,8 +2773,10 @@ export function CheckIn({
 
                                 // Group passes by type + childId
                                 const inferPassType = (name: string, type?: string): string => {
-                                    if (type && type !== 'undefined') return type;
                                     const lowerName = name.toLowerCase();
+                                    // Event passes get their own group based on name
+                                    if (lowerName.includes('easter egg') || lowerName.includes('egg hunt')) return 'event_easter';
+                                    if (type && type !== 'undefined') return type;
                                     if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
                                     if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
                                     if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
@@ -2778,7 +2784,10 @@ export function CheckIn({
                                     return 'day_pass';
                                 };
 
-                                const getPassTypeName = (type: string) => {
+                                const getPassTypeName = (type: string, passName?: string) => {
+                                    if (type.startsWith('event_')) {
+                                        return passName || 'Event Pass';
+                                    }
                                     switch (type) {
                                         case 'day_pass': return 'Day Pass';
                                         case 'weekly_pass': return 'Punch Card';
@@ -2799,7 +2808,7 @@ export function CheckIn({
                                             if (!acc[key]) {
                                                 acc[key] = {
                                                     type: normalizedType,
-                                                    typeName: getPassTypeName(normalizedType) + ' (Family)',
+                                                    typeName: getPassTypeName(normalizedType, purchase.name) + ' (Family)',
                                                     childId: cId,
                                                     childName: getChildName(cId, displayCustomer),
                                                     totalVisits: 0,
@@ -2821,7 +2830,7 @@ export function CheckIn({
                                         if (!acc[key]) {
                                             acc[key] = {
                                                 type: normalizedType,
-                                                typeName: getPassTypeName(normalizedType),
+                                                typeName: getPassTypeName(normalizedType, purchase.name),
                                                 childId: purchase.childId,
                                                 childName: purchase.childId ? getChildName(purchase.childId, displayCustomer) : null,
                                                 totalVisits: 0,
@@ -4965,13 +4974,18 @@ export function CheckIn({
                                                 const eligibleChildren = signedChildren.filter((c) => c.age >= 2);
                                                 const eligibleInfants = signedChildren.filter((c) => c.age < 2);
 
+                                                const isEventProduct = selectedProduct?.name?.toLowerCase().includes('easter') || selectedProduct?.name?.toLowerCase().includes('egg hunt');
                                                 const comboChildHasActivePass = (childId: string) => {
                                                     return customer.purchases.some(
-                                                        (p) =>
-                                                            (p.childId === childId || p.childIds?.includes(childId)) &&
-                                                            p.status === 'active' &&
-                                                            ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
-                                                            (p.totalSessions === 999 || p.usedSessions < p.totalSessions)
+                                                        (p) => {
+                                                            const isEventPass = p.name.toLowerCase().includes('easter') || p.name.toLowerCase().includes('egg hunt');
+                                                            // Only block if same kind: event blocks event, regular blocks regular
+                                                            if (isEventProduct !== isEventPass) return false;
+                                                            return (p.childId === childId || p.childIds?.includes(childId)) &&
+                                                                p.status === 'active' &&
+                                                                ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                                (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
+                                                        }
                                                     );
                                                 };
 
@@ -5100,13 +5114,18 @@ export function CheckIn({
                                             const customer = selectedCustomer || currentCustomer;
                                             if (!customer) return null;
 
+                                            const isEventProduct = selectedProduct?.name?.toLowerCase().includes('easter') || selectedProduct?.name?.toLowerCase().includes('egg hunt');
                                             const childHasActivePass = (childId: string) => {
                                                 return customer.purchases.some(
-                                                    (p) =>
-                                                        (p.childId === childId || p.childIds?.includes(childId)) &&
-                                                        p.status === 'active' &&
-                                                        ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
-                                                        (p.totalSessions === 999 || p.usedSessions < p.totalSessions)
+                                                    (p) => {
+                                                        const isEventPass = p.name.toLowerCase().includes('easter') || p.name.toLowerCase().includes('egg hunt');
+                                                        // Only block if same kind: event blocks event, regular blocks regular
+                                                        if (isEventProduct !== isEventPass) return false;
+                                                        return (p.childId === childId || p.childIds?.includes(childId)) &&
+                                                            p.status === 'active' &&
+                                                            ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                            (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
+                                                    }
                                                 );
                                             };
 
