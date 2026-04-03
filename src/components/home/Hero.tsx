@@ -87,20 +87,20 @@ export function Hero() {
             {/* Tagline */}
             <motion.p
               variants={fadeInUp}
-              className="mx-auto max-w-2xl text-lg sm:text-xl text-white/90 mb-10 leading-relaxed drop-shadow-md"
+              className="mx-auto max-w-2xl text-xl sm:text-2xl text-white font-bold mb-10 leading-relaxed drop-shadow-lg"
               style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
             >
               A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children.
             </motion.p>
 
             {/* CTA Buttons */}
-            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <motion.div variants={fadeInUp} className="flex flex-row items-center justify-center gap-4">
               <Link href="/customer/login">
                 <Button
                   size="lg"
                   className="px-8 py-4 text-lg font-semibold bg-honey-500 hover:bg-honey-600 text-charcoal-900 border-0 shadow-xl hover:shadow-2xl transition-all"
                 >
-                  Book Now
+                  Join the Hive
                 </Button>
               </Link>
               <Link href="/info">
