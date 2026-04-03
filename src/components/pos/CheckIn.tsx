@@ -4974,16 +4974,14 @@ export function CheckIn({
                                                 const eligibleChildren = signedChildren.filter((c) => c.age >= 2);
                                                 const eligibleInfants = signedChildren.filter((c) => c.age < 2);
 
-                                                const isEventProduct = selectedProduct?.name?.toLowerCase().includes('easter') || selectedProduct?.name?.toLowerCase().includes('egg hunt');
                                                 const comboChildHasActivePass = (childId: string) => {
                                                     return customer.purchases.some(
                                                         (p) => {
-                                                            const isEventPass = p.name.toLowerCase().includes('easter') || p.name.toLowerCase().includes('egg hunt');
-                                                            // Only block if same kind: event blocks event, regular blocks regular
-                                                            if (isEventProduct !== isEventPass) return false;
+                                                            // Allow multiple day passes temporarily
+                                                            if (p.type === 'day_pass') return false;
                                                             return (p.childId === childId || p.childIds?.includes(childId)) &&
                                                                 p.status === 'active' &&
-                                                                ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                                ['monthly_pass', 'weekly_pass'].includes(p.type) &&
                                                                 (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
                                                         }
                                                     );
@@ -5114,16 +5112,14 @@ export function CheckIn({
                                             const customer = selectedCustomer || currentCustomer;
                                             if (!customer) return null;
 
-                                            const isEventProduct = selectedProduct?.name?.toLowerCase().includes('easter') || selectedProduct?.name?.toLowerCase().includes('egg hunt');
                                             const childHasActivePass = (childId: string) => {
                                                 return customer.purchases.some(
                                                     (p) => {
-                                                        const isEventPass = p.name.toLowerCase().includes('easter') || p.name.toLowerCase().includes('egg hunt');
-                                                        // Only block if same kind: event blocks event, regular blocks regular
-                                                        if (isEventProduct !== isEventPass) return false;
+                                                        // Allow multiple day passes temporarily
+                                                        if (p.type === 'day_pass') return false;
                                                         return (p.childId === childId || p.childIds?.includes(childId)) &&
                                                             p.status === 'active' &&
-                                                            ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                            ['monthly_pass', 'weekly_pass'].includes(p.type) &&
                                                             (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
                                                     }
                                                 );
