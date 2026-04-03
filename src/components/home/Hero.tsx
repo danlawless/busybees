@@ -107,6 +107,38 @@ export function Hero() {
             A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children. Our mission is to create a go-to destination for families to play, socialize, celebrate and grow.
           </motion.p>
 
+          {/* Virtual Tour Video */}
+          <motion.div variants={fadeInUp} className="max-w-5xl mx-auto mb-12">
+            <div className="rounded-2xl overflow-hidden shadow-xl">
+              <video
+                className="w-full hidden sm:block"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source
+                  src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-desktop.mp4"
+                  type="video/mp4"
+                />
+              </video>
+              <video
+                className="w-full sm:hidden"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source
+                  src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-mobile.mp4"
+                  type="video/mp4"
+                />
+              </video>
+            </div>
+          </motion.div>
+
           {/* Good to Know */}
           <motion.div
             variants={fadeInUp}
