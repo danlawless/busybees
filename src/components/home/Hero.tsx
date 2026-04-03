@@ -4,26 +4,9 @@ import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Star, Shield, Heart, UserPlus } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Logo } from '@/components/ui/Logo'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-import { PURCHASING_ENABLED } from '@/lib/feature-flags'
-
-const features = [
-  {
-    icon: Shield,
-    text: 'Safe & Clean Environment'
-  },
-  {
-    icon: Heart,
-    text: 'All Ages Welcome'
-  },
-  {
-    icon: Star,
-    text: 'All-Day Fun'
-  }
-]
 
 const goodToKnowItems = [
   { iconSrc: '/icons/cash-free.png', text: 'Cash-free business - all major cards accepted' },
@@ -34,119 +17,133 @@ const goodToKnowItems = [
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden py-24 sm:py-32 lg:py-36 min-h-[32rem]">
-      {/* Hero background image - in-component so it is never overridden */}
-      <div className="absolute inset-0 z-0" aria-hidden>
-        <Image
-          src="/hero-background.png"
-          alt=""
-          fill
-          className="object-cover object-center"
-          priority
-          sizes="100vw"
-        />
-        <div
-          className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/20 via-transparent to-[#FFF8E7]/15"
-          aria-hidden
-        />
-      </div>
-
-      {/* Flying Bees beside Title */}
-      <motion.div
-        className="absolute left-1/2 top-32 transform -translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
-        initial={{ x: -100, opacity: 0, scale: 0.8 }}
-        animate={{ x: 0, opacity: 0.8, scale: 1 }}
-        transition={{ duration: 1.2, delay: 0.8 }}
-      >
-        <Image
-          src="/bee-flying-side2.png"
-          alt="Flying bee decoration"
-          width={180}
-          height={180}
-          className="drop-shadow-lg"
-        />
-      </motion.div>
-
-      <motion.div
-        className="absolute right-1/2 top-32 transform translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
-        initial={{ x: 100, opacity: 0, scale: 0.8 }}
-        animate={{ x: 0, opacity: 0.8, scale: 1 }}
-        transition={{ duration: 1.2, delay: 1.0 }}
-      >
-        <Image
-          src="/bee-flying-side1.png"
-          alt="Flying bee decoration"
-          width={180}
-          height={180}
-          className="drop-shadow-lg"
-        />
-      </motion.div>
-
-      <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
-        <motion.div
-          className="text-center"
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
+    <>
+      {/* Full-Screen Video Hero */}
+      <section className="relative w-full h-screen min-h-[600px] max-h-[1000px] overflow-hidden">
+        {/* Video Background */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover hidden sm:block"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
         >
-          {/* Main Hero Content */}
-          <motion.div variants={fadeInUp} className="mb-10">
-            <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
-              <span className="text-primary-600">Busy Bees</span>
+          <source
+            src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-desktop.mp4"
+            type="video/mp4"
+          />
+        </video>
+        <video
+          className="absolute inset-0 w-full h-full object-cover sm:hidden"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+        >
+          <source
+            src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-mobile.mp4"
+            type="video/mp4"
+          />
+        </video>
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/45 z-10" />
+
+        {/* Content Overlay */}
+        <div className="relative z-20 h-full flex flex-col items-center justify-center px-6 sm:px-8 lg:px-12">
+          <motion.div
+            className="text-center max-w-3xl mx-auto"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            {/* Logo */}
+            <motion.div variants={fadeInUp} className="mb-6">
+              <Image
+                src="/busy-bees-logo.png"
+                alt="Busy Bees Indoor Play Center"
+                width={160}
+                height={160}
+                className="mx-auto drop-shadow-2xl"
+                priority
+              />
+            </motion.div>
+
+            {/* Title */}
+            <motion.h1
+              variants={fadeInUp}
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-lg"
+              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+            >
+              Busy Bees
               <br />
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-charcoal-700">
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-honey-300">
                 Indoor Play Center
               </span>
-            </h1>
+            </motion.h1>
+
+            {/* Tagline */}
+            <motion.p
+              variants={fadeInUp}
+              className="mx-auto max-w-2xl text-lg sm:text-xl text-white/90 mb-10 leading-relaxed drop-shadow-md"
+              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+            >
+              A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children.
+            </motion.p>
+
+            {/* CTA Buttons */}
+            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/customer/login">
+                <Button
+                  size="lg"
+                  className="px-8 py-4 text-lg font-semibold bg-honey-500 hover:bg-honey-600 text-charcoal-900 border-0 shadow-xl hover:shadow-2xl transition-all"
+                >
+                  Book Now
+                </Button>
+              </Link>
+              <Link href="/info">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 py-4 text-lg font-semibold bg-white/10 backdrop-blur-sm text-white border-2 border-white/40 hover:bg-white/20 hover:border-white/60 transition-all"
+                >
+                  Learn More
+                </Button>
+              </Link>
+            </motion.div>
           </motion.div>
 
-          <motion.p
-            variants={fadeInUp}
-            className="mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-600 mb-10 leading-relaxed"
-          >
-            A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children. Our mission is to create a go-to destination for families to play, socialize, celebrate and grow.
-          </motion.p>
-
-          {/* Virtual Tour Video */}
-          <motion.div variants={fadeInUp} className="max-w-5xl mx-auto mb-12">
-            <div className="rounded-2xl overflow-hidden shadow-xl">
-              <video
-                className="w-full hidden sm:block"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              >
-                <source
-                  src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-desktop.mp4"
-                  type="video/mp4"
-                />
-              </video>
-              <video
-                className="w-full sm:hidden"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              >
-                <source
-                  src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-mobile.mp4"
-                  type="video/mp4"
-                />
-              </video>
-            </div>
-          </motion.div>
-
-          {/* Good to Know */}
+          {/* Scroll Indicator */}
           <motion.div
-            variants={fadeInUp}
-            className="mt-16 max-w-5xl mx-auto"
+            className="absolute bottom-8 left-1/2 -translate-x-1/2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5, duration: 0.6 }}
           >
-            <h3 className="text-xl font-semibold text-charcoal-800 mb-8 text-center">
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+            >
+              <ChevronDown className="w-8 h-8 text-white/60" />
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Good to Know Section */}
+      <section className="py-16 sm:py-20 bg-[#FFFDF7]">
+        <div className="mx-auto max-w-5xl px-6 sm:px-8 lg:px-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
               Good to Know
-            </h3>
+            </h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
               {goodToKnowItems.map((item, index) => (
                 <div
@@ -171,9 +168,8 @@ export function Hero() {
               ))}
             </div>
           </motion.div>
-        </motion.div>
-      </div>
-
-    </section>
+        </div>
+      </section>
+    </>
   )
 }
