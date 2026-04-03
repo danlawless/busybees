@@ -4,6 +4,7 @@ import { ImportantInfo } from '@/components/info/ImportantInfo'
 import { DetailedHours } from '@/components/info/DetailedHours'
 import { Pricing } from '@/components/home/Pricing'
 import { FAQ } from '@/components/info/FAQ'
+import { RulesAndPolicies } from '@/components/info/RulesAndPolicies'
 
 export const metadata = {
   title: 'Hours, Pricing & FAQ',
@@ -84,6 +85,7 @@ export default function InfoPage() {
       <Pricing />
       <ImportantInfo />
       <FAQ />
+      <RulesAndPolicies />
     </Layout>
   )
 }

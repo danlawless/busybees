@@ -84,32 +84,6 @@ export function OurStory() {
           </motion.div>
         </div>
 
-        {/* Facility Photo Strip */}
-        <motion.div
-          className="mt-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
-        >
-          <p className="text-center text-sm font-medium text-charcoal-500 mb-5 uppercase tracking-wider">
-            A glimpse of our space
-          </p>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-            {facilitySnapshots.map((src, i) => (
-              <div key={i} className="relative aspect-square rounded-2xl overflow-hidden shadow-soft border border-primary-200/30">
-                <Image
-                  src={src}
-                  alt={`Busy Bees facility photo ${i + 1}`}
-                  fill
-                  className="object-cover hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 640px) 33vw, 20vw"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </section>
   )
