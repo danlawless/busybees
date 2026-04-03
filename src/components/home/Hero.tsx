@@ -107,7 +107,7 @@ export function Hero() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="px-8 py-4 text-lg font-semibold bg-white/10 backdrop-blur-sm text-white border-2 border-white/40 hover:bg-white/20 hover:border-white/60 transition-all"
+                  className="px-8 py-4 text-lg font-semibold bg-charcoal-800 text-white border-2 border-charcoal-700 hover:bg-charcoal-700 shadow-xl transition-all"
                 >
                   Learn More
                 </Button>
