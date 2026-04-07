@@ -1591,6 +1591,14 @@ export default function AdminPartiesPage() {
                               Mark Done
                             </button>
                           )}
+                          {booking.status === 'done' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateBookingStatus(booking.id, 'confirmed'); }}
+                              className="text-xs px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                            >
+                              Not Done
+                            </button>
+                          )}
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
