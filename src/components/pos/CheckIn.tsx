@@ -4977,11 +4977,9 @@ export function CheckIn({
                                                 const comboChildHasActivePass = (childId: string) => {
                                                     return customer.purchases.some(
                                                         (p) => {
-                                                            // Allow multiple day passes temporarily
-                                                            if (p.type === 'day_pass') return false;
                                                             return (p.childId === childId || p.childIds?.includes(childId)) &&
                                                                 p.status === 'active' &&
-                                                                ['monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                                ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
                                                                 (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
                                                         }
                                                     );
@@ -5115,11 +5113,9 @@ export function CheckIn({
                                             const childHasActivePass = (childId: string) => {
                                                 return customer.purchases.some(
                                                     (p) => {
-                                                        // Allow multiple day passes temporarily
-                                                        if (p.type === 'day_pass') return false;
                                                         return (p.childId === childId || p.childIds?.includes(childId)) &&
                                                             p.status === 'active' &&
-                                                            ['monthly_pass', 'weekly_pass'].includes(p.type) &&
+                                                            ['day_pass', 'monthly_pass', 'weekly_pass'].includes(p.type) &&
                                                             (p.totalSessions === 999 || p.usedSessions < p.totalSessions);
                                                     }
                                                 );
