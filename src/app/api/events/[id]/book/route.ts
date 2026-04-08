@@ -175,7 +175,7 @@ export async function POST(
       .single();
 
     const stripeCustomerId = customerData?.[customerIdColumn] ||
-      await getOrCreateStripeCustomer(user.id, adminSupabase);
+      await getOrCreateStripeCustomer(user.id, profile.email || user.email || '', profile.name || 'Customer', profile.phone || undefined);
 
     // Process Stripe payment
     let stripePaymentIntentId: string | null = null;
