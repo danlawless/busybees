@@ -14,6 +14,7 @@ interface Child {
 
 interface SavedCard {
   id: string;
+  stripe_payment_method_id: string;
   brand: string;
   last4: string;
   exp_month: number;
@@ -158,7 +159,7 @@ export function EventBooking({ customerName, customerEmail, customerPhone, child
         const cards = data.paymentMethods || [];
         setSavedCards(cards);
         const defaultCard = cards.find((c: SavedCard) => c.is_default) || cards[0];
-        if (defaultCard) setSelectedCard(defaultCard.id);
+        if (defaultCard) setSelectedCard(defaultCard.stripe_payment_method_id);
       })
       .catch(() => {});
   }, []);
@@ -366,17 +367,17 @@ export function EventBooking({ customerName, customerEmail, customerPhone, child
               {savedCards.map(card => (
                 <button
                   key={card.id}
-                  onClick={() => setSelectedCard(card.id)}
+                  onClick={() => setSelectedCard(card.stripe_payment_method_id)}
                   className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
-                    selectedCard === card.id
+                    selectedCard === card.stripe_payment_method_id
                       ? 'border-emerald-500 bg-emerald-50'
                       : 'border-gray-200 hover:border-emerald-300 bg-white'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                    selectedCard === card.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
+                    selectedCard === card.stripe_payment_method_id ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {selectedCard === card.id ? '✓' : '💳'}
+                    {selectedCard === card.stripe_payment_method_id ? '✓' : '💳'}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{card.brand} &bull;&bull;&bull;&bull; {card.last4}</p>
