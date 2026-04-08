@@ -113,7 +113,7 @@ export function EventCard({
             href="/customer/dashboard"
             className="inline-flex items-center justify-center w-full rounded-full font-semibold text-base px-6 py-3 btn-pastel-primary text-charcoal-800 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Get Tickets
+            Reserve Your Spot
           </Link>
         )}
       </div>
