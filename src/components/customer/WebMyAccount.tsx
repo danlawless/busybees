@@ -1072,7 +1072,19 @@ function WebMyAccountContent() {
                 </div>
               </button>
             )}
-            {/* Events tab - hidden until ready for release */}
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
+                activeTab === 'events'
+                  ? 'bg-purple-600 text-white shadow-lg transform scale-105 border-2 border-purple-700'
+                  : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                <span className="text-lg sm:text-2xl">🎉</span>
+                <span>Events</span>
+              </div>
+            </button>
             {/* After Dark tab hidden until ready for release */}
             <button
               onClick={() => setActiveTab('payments')}
