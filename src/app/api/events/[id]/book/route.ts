@@ -16,7 +16,7 @@ import { z } from 'zod';
 const BookEventSchema = z.object({
   children: z.array(z.object({
     child_id: z.string().uuid(),
-    pass_id: z.string().uuid().optional().default(''),
+    pass_id: z.union([z.string().uuid(), z.literal('')]).optional().default(''),
   })).min(1).max(10),
   paymentMethodId: z.string().min(1),
   useGiftCardBalance: z.boolean().optional().default(true),
