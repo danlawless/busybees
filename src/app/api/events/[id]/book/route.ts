@@ -167,7 +167,7 @@ export async function POST(
     }
 
     // Get Stripe customer
-    const customerIdColumn = getStripeCustomerIdColumn();
+    const customerIdColumn = await getStripeCustomerIdColumn();
     const { data: customerData } = await adminSupabase
       .from('users')
       .select(`${customerIdColumn}`)
