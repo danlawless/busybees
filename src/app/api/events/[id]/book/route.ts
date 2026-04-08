@@ -346,7 +346,8 @@ export async function POST(
       giftCardAmountUsed,
     }, { status: 201 });
   } catch (error) {
-    logger.error({ error }, 'Event booking error');
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ error, message }, 'Event booking error');
+    return NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 });
   }
 }
