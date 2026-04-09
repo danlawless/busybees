@@ -198,7 +198,7 @@ export function PartyAvailabilityCalendar({ onSelectSlot }: PartyAvailabilityCal
                   ${isToday && !isSelected ? 'ring-2 ring-blue-300' : ''}
                   ${isSelected ? 'bg-purple-500 text-white font-bold ring-2 ring-purple-600' : ''}
                   ${status === 'available' && !isSelected ? 'bg-green-100 text-green-800 hover:bg-green-200 font-medium' : ''}
-                  ${status === 'partial' && !isSelected ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 font-medium' : ''}
+                  ${status === 'partial' && !isSelected ? 'bg-green-100 text-green-800 hover:bg-green-200 font-medium' : ''}
                   ${status === 'full' && !isSelected ? 'bg-red-100 text-red-800 hover:bg-red-200 font-medium' : ''}
                   ${isWeekend && isClickable && !isSelected ? 'font-semibold' : ''}
                 `}
@@ -215,7 +215,7 @@ export function PartyAvailabilityCalendar({ onSelectSlot }: PartyAvailabilityCal
             <span>Available</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded" />
+            <div className="w-3 h-3 bg-green-100 border border-green-300 rounded" />
             <span>Some slots taken</span>
           </div>
           <div className="flex items-center gap-1.5">
