@@ -13,6 +13,8 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getPurchase, updatePurchase } from '@/lib/services/purchases';
 import { createOrUpdateBookingFromPurchase } from '@/lib/services/party-bookings';
+import { sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
+import { logger } from '@/lib/logger';
 
 // Validation schema for party scheduling updates
 const partyScheduleSchema = z.object({
@@ -200,6 +202,32 @@ async function handleUpdate(
         error: `Booking sync failed: ${errorMessage}`,
         purchaseId: id,
       }, { status: 500 });
+    }
+
+    // Send party booking confirmation email
+    try {
+      const recipientEmail = profile?.email || user.email;
+      if (recipientEmail) {
+        const emailResult = await sendPartyBookingConfirmationEmail({
+          to: recipientEmail,
+          customerName: profile?.name || 'Valued Customer',
+          childName: partyData.child_name,
+          partyDate: partyData.party_date,
+          startTime: partyData.party_start_time,
+          endTime: partyData.party_end_time,
+          packageName: purchase.name,
+          guestCount: partyData.party_guests,
+          totalPrice: Number(purchase.price),
+          bookingId: id,
+        });
+        if (emailResult.success) {
+          logger.info({ to: recipientEmail, purchaseId: id }, '🎂 Party confirmation email sent');
+        } else {
+          logger.error({ purchaseId: id, error: emailResult.error }, 'Failed to send party confirmation email');
+        }
+      }
+    } catch (emailError) {
+      logger.error({ error: emailError, purchaseId: id }, 'Error sending party confirmation email');
     }
 
     return NextResponse.json({
