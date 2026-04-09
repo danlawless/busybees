@@ -140,13 +140,8 @@ function PartiesContent() {
 
       {/* Availability Calendar */}
       <PartyAvailabilityPreview
-        onBookDate={(date) => {
-          if (authLoading) return
-          if (isAuthenticated) {
-            setShowBookingWizard(true)
-          } else {
-            router.push('/customer/signup?redirect=/parties')
-          }
+        onBookDate={() => {
+          router.push('/customer/login?redirect=/customer/dashboard?tab=parties')
         }}
       />
 
