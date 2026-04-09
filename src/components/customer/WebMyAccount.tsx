@@ -92,6 +92,16 @@ function WebMyAccountContent() {
   const [showPartyScheduling, setShowPartyScheduling] = useState(false);
   const [schedulingParty, setSchedulingParty] = useState<Purchase | null>(null);
 
+  // Party booking flow state (calendar slot → package → details → book)
+  const [partyBookingSlot, setPartyBookingSlot] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
+  const [partyBookingStep, setPartyBookingStep] = useState<'package' | 'details' | 'review'>('package');
+  const [partyBookingPackage, setPartyBookingPackage] = useState<string | null>(null);
+  const [partyBookingChild, setPartyBookingChild] = useState('');
+  const [partyBookingChildAge, setPartyBookingChildAge] = useState('');
+  const [partyBookingGuests, setPartyBookingGuests] = useState(15);
+  const [partyBookingNotes, setPartyBookingNotes] = useState('');
+  const [partyBookingProcessing, setPartyBookingProcessing] = useState(false);
+
   // Group children state
   const [groupChildName, setGroupChildName] = useState('');
   const [groupChildBirthdate, setGroupChildBirthdate] = useState('');
@@ -1737,95 +1747,286 @@ function WebMyAccountContent() {
             {/* Check Availability Calendar */}
             <div>
               <h3 className="text-xl font-semibold mb-4">📅 Check Party Availability</h3>
-              <PartyAvailabilityCalendar />
+              <p className="text-sm text-gray-600 mb-4">Select an available time slot to start booking your party.</p>
+              <PartyAvailabilityCalendar
+                onSelectSlot={(date, startTime, endTime) => {
+                  if (savedCards.length === 0) {
+                    setSuccessDetails({
+                      title: 'Payment Method Required',
+                      message: 'Please add a payment method in the Payments tab first.',
+                      variant: 'warning'
+                    });
+                    setShowSuccessModal(true);
+                    setActiveTab('payments');
+                    return;
+                  }
+                  setPartyBookingSlot({ date, startTime, endTime });
+                  setPartyBookingStep('package');
+                  setPartyBookingPackage(null);
+                  setPartyBookingChild('');
+                  setPartyBookingChildAge('');
+                  setPartyBookingGuests(15);
+                  setPartyBookingNotes('');
+                }}
+              />
             </div>
 
-            {/* Purchase New Party Packages */}
-            <div>
-              <h3 className="text-xl font-semibold mb-4">🛒 Purchase Party Packages</h3>
+            {/* Party Booking Flow Modal */}
+            {partyBookingSlot && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+                <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl">
+                  <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800">🎉 Book Your Party</h3>
+                      <button
+                        onClick={() => setPartyBookingSlot(null)}
+                        className="text-gray-400 hover:text-gray-600 text-2xl"
+                      >
+                        ×
+                      </button>
+                    </div>
 
-              {savedCards.length === 0 && (
-                <Card className="p-6 mb-4 border-yellow-200 bg-yellow-50">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-white">💳</span>
+                    {/* Selected slot banner */}
+                    <div className="mb-6 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
+                      <span className="font-medium text-purple-800">
+                        📅 {new Date(partyBookingSlot.date + 'T12:00:00').toLocaleDateString('en-US', {
+                          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+                        })}
+                        {' · '}
+                        {(() => {
+                          const fmt = (t: string) => {
+                            const [h, m] = t.split(':'); const hr = parseInt(h);
+                            return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+                          };
+                          return `${fmt(partyBookingSlot.startTime)} - ${fmt(partyBookingSlot.endTime)}`;
+                        })()}
+                      </span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-yellow-800">Add a Payment Method First</h4>
-                      <p className="text-yellow-600 text-sm">
-                        You'll need to add a payment method in the Payments tab before you can purchase party packages.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
 
-
-              <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
-                <div className="grid gap-4 text-left">
-                  {!productsLoaded ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-3"></div>
-                      <p className="text-sm">Loading party packages...</p>
-                    </div>
-                  ) : availableParties.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p className="text-lg mb-2">🎉 No party packages available</p>
-                      <p className="text-sm">Please check back later or contact staff.</p>
-                    </div>
-                  ) : (
-                    availableParties.map((product) => (
-                      <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
-                        <div className="flex-1">
-                          <span className="font-medium text-gray-900 text-lg">
-                            🎉 {product.name}
-                          </span>
-                          <p className="text-sm text-gray-600">{product.description}</p>
-                          <p className="text-lg font-bold text-gray-900 mt-1">{formatCurrency(product.price)}</p>
-                          {savedCards.length > 0 && (
-                            <p className="text-xs text-green-600 mt-1">
-                              💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
-                            </p>
-                          )}
-                          {giftCardBalance > 0 && (
-                            <p className="text-xs text-amber-600 mt-1 font-medium">
-                              {giftCardBalance >= product.price
-                                ? '🎁 Fully covered by gift card balance!'
-                                : `🎁 $${Math.min(giftCardBalance, product.price).toFixed(2)} gift card credit will be applied`}
-                            </p>
-                          )}
+                    {/* Step 1: Select Package */}
+                    {partyBookingStep === 'package' && (
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-4">Select a Party Package</h4>
+                        {!productsLoaded ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-3"></div>
+                            <p className="text-sm">Loading packages...</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {availableParties.map((product) => (
+                              <button
+                                key={product.id}
+                                onClick={() => setPartyBookingPackage(product.id)}
+                                className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                                  partyBookingPackage === product.id
+                                    ? 'border-purple-500 bg-purple-50'
+                                    : 'border-gray-200 hover:border-purple-300 bg-white'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <span className="font-semibold text-gray-900">🎉 {product.name}</span>
+                                    <p className="text-sm text-gray-600 mt-1">{product.description}</p>
+                                  </div>
+                                  <span className="text-xl font-bold text-gray-900">{formatCurrency(product.price)}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex justify-end mt-6">
+                          <Button
+                            onClick={() => setPartyBookingStep('details')}
+                            disabled={!partyBookingPackage}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-8"
+                          >
+                            Next →
+                          </Button>
                         </div>
-                        <Button
-                          onClick={() => {
-                            if (savedCards.length === 0) {
-                              setActiveTab('payments');
-                              return;
-                            }
-                            handleConfirmPurchase(product.id);
-                          }}
-                          size="lg"
-                          disabled={processingProduct === product.id}
-                          className={`px-6 py-3 text-white transition-colors ${
-                            processingProduct === product.id
-                              ? 'bg-purple-500'
-                              : savedCards.length === 0
-                              ? 'bg-yellow-500 hover:bg-yellow-600'
-                              : 'bg-purple-600 hover:bg-purple-700'
-                          }`}
-                        >
-                          {processingProduct === product.id
-                            ? 'Processing...'
-                            : savedCards.length === 0
-                            ? '💳 Add Payment First'
-                            : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`
-                          }
-                        </Button>
                       </div>
-                    ))
-                  )}
+                    )}
+
+                    {/* Step 2: Guest Details */}
+                    {partyBookingStep === 'details' && (
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-4">Party Details</h4>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Birthday Child&apos;s Name *</label>
+                            <input
+                              type="text"
+                              value={partyBookingChild}
+                              onChange={(e) => setPartyBookingChild(e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              placeholder="Enter birthday child's name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Child&apos;s Age (optional)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="12"
+                              value={partyBookingChildAge}
+                              onChange={(e) => setPartyBookingChildAge(e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              placeholder="Age (0-12)"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Number of Children Attending</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={partyBookingGuests}
+                              onChange={(e) => setPartyBookingGuests(parseInt(e.target.value) || 1)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Special Notes or Requests (optional)</label>
+                            <textarea
+                              value={partyBookingNotes}
+                              onChange={(e) => setPartyBookingNotes(e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              rows={3}
+                              placeholder="Theme preferences, dietary restrictions, etc."
+                              maxLength={500}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-between mt-6">
+                          <Button variant="outline" onClick={() => setPartyBookingStep('package')}>
+                            ← Back
+                          </Button>
+                          <Button
+                            onClick={() => setPartyBookingStep('review')}
+                            disabled={!partyBookingChild.trim()}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-8"
+                          >
+                            Next →
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3: Review & Book */}
+                    {partyBookingStep === 'review' && (() => {
+                      const selectedPkg = availableParties.find((p) => p.id === partyBookingPackage);
+                      const paymentMethod = getDefaultPaymentMethod();
+                      return (
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-4">Review & Complete Booking</h4>
+                          <div className="space-y-3 mb-6">
+                            <div className="p-4 bg-gray-50 rounded-lg space-y-2 text-sm">
+                              <div className="flex justify-between"><span className="text-gray-600">Package</span><span className="font-medium">{selectedPkg?.name}</span></div>
+                              <div className="flex justify-between"><span className="text-gray-600">Birthday Child</span><span className="font-medium">{partyBookingChild}{partyBookingChildAge ? ` (age ${partyBookingChildAge})` : ''}</span></div>
+                              <div className="flex justify-between"><span className="text-gray-600">Guests</span><span className="font-medium">{partyBookingGuests} children</span></div>
+                              {partyBookingNotes && <div><span className="text-gray-600">Notes:</span> <span className="text-gray-800">{partyBookingNotes}</span></div>}
+                              <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
+                                <span>Total</span>
+                                <span>{formatCurrency(selectedPkg?.price || 0)}</span>
+                              </div>
+                            </div>
+                            {paymentMethod && (
+                              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                                💳 Charging card ending in •••• {paymentMethod.last4}
+                              </div>
+                            )}
+                            {giftCardBalance > 0 && selectedPkg && (
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                🎁 {giftCardBalance >= selectedPkg.price
+                                  ? 'Fully covered by gift card balance!'
+                                  : `$${Math.min(giftCardBalance, selectedPkg.price).toFixed(2)} gift card credit will be applied`}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-between">
+                            <Button variant="outline" onClick={() => setPartyBookingStep('details')}>
+                              ← Back
+                            </Button>
+                            <Button
+                              onClick={async () => {
+                                if (!selectedPkg || !paymentMethod) return;
+                                setPartyBookingProcessing(true);
+                                try {
+                                  // Step 1: Purchase the party package
+                                  const purchaseRes = await fetch('/api/stripe/direct-payment', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      productId: selectedPkg.id,
+                                      productName: selectedPkg.name,
+                                      productPrice: selectedPkg.price,
+                                      productDescription: selectedPkg.description,
+                                      purchaseType: 'party_package',
+                                      paymentMethodId: paymentMethod.id,
+                                      quantity: 1,
+                                    }),
+                                  });
+                                  const purchaseData = await purchaseRes.json();
+                                  if (!purchaseRes.ok) throw new Error(purchaseData.error || 'Payment failed');
+
+                                  // Step 2: Schedule the party on the purchased package
+                                  const purchaseId = purchaseData.purchaseId;
+                                  if (purchaseId) {
+                                    await fetch(`/api/purchases/${purchaseId}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        party_date: partyBookingSlot.date,
+                                        party_start_time: partyBookingSlot.startTime,
+                                        party_end_time: partyBookingSlot.endTime,
+                                        party_guests: partyBookingGuests,
+                                        party_notes: partyBookingNotes || undefined,
+                                        child_name: partyBookingChild,
+                                      }),
+                                    });
+                                  }
+
+                                  setPartyBookingSlot(null);
+                                  const fmtTime = (t: string) => {
+                                    const [h, m] = t.split(':'); const hr = parseInt(h);
+                                    return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+                                  };
+                                  setSuccessDetails({
+                                    title: '🎉 Party Booked!',
+                                    message: `${partyBookingChild}'s party has been booked and paid!`,
+                                    details: {
+                                      date: partyBookingSlot.date,
+                                      time: `${fmtTime(partyBookingSlot.startTime)} - ${fmtTime(partyBookingSlot.endTime)}`,
+                                      guests: partyBookingGuests,
+                                      type: selectedPkg.name,
+                                    }
+                                  });
+                                  setShowSuccessModal(true);
+                                  await fetchData();
+                                } catch (err) {
+                                  setSuccessDetails({
+                                    title: 'Booking Failed',
+                                    message: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+                                  });
+                                  setShowSuccessModal(true);
+                                } finally {
+                                  setPartyBookingProcessing(false);
+                                }
+                              }}
+                              disabled={partyBookingProcessing}
+                              className="bg-green-600 hover:bg-green-700 text-white px-8"
+                            >
+                              {partyBookingProcessing ? 'Processing...' : 'Complete Party Booking'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </Card>
-            </div>
+              </div>
+            )}
 
             {/* Party Purchase History - collapsed by default */}
             {pastPartyPurchases.length > 0 && (
