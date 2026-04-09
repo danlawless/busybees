@@ -41,13 +41,22 @@ export async function GET(request: NextRequest) {
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Peak hours heatmap (hour vs day-of-week)
+    // Peak hours heatmap (hour vs day-of-week) in Eastern Time
     const peakHoursMap = new Map<string, number>();
+    const easternFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      hour12: false,
+      weekday: 'short',
+    });
     for (const s of sessions) {
       const d = new Date(s.start_time);
       if (isNaN(d.getTime())) continue;
-      const hour = d.getHours();
-      const day = d.getDay();
+      const parts = easternFormatter.formatToParts(d);
+      const hour = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
+      const dayName = parts.find(p => p.type === 'weekday')?.value ?? '';
+      const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      const day = dayMap[dayName] ?? d.getDay();
       const key = `${hour}-${day}`;
       peakHoursMap.set(key, (peakHoursMap.get(key) || 0) + 1);
     }

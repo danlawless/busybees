@@ -5,16 +5,17 @@
 
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { easternNow } from '@/lib/services/report-aggregations';
 
 export const revalidate = 60; // Cache for 60 seconds
 
 export async function GET() {
   try {
     const supabase = createAdminClient();
-    const now = new Date();
+    const et = easternNow();
 
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todayStr = `${et.year}-${String(et.month).padStart(2, '0')}-${String(et.day).padStart(2, '0')}`;
+    const currentTime = `${String(et.hour).padStart(2, '0')}:${String(et.minute).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('announcements')

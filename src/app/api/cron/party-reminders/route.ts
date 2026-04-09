@@ -7,11 +7,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendPartyReminderEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
+import { formatDateET } from '@/lib/services/report-aggregations';
 
 function getDateInDays(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return formatDateET(date);
 }
 
 function formatTime(timeStr: string): string {
