@@ -13,6 +13,7 @@ import {
   lastWeekEndStr,
   monthStartStr,
   daysAgoStr,
+  formatDateET,
 } from '@/lib/services/report-aggregations';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -166,7 +167,7 @@ export async function GET(_request: NextRequest) {
     for (let i = 30; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const key = formatDateET(d);
       trend.push({ date: key, revenue: trendMap.get(key) || 0 });
     }
 
@@ -184,13 +185,18 @@ export async function GET(_request: NextRequest) {
       }
     }
 
-    // Busiest hour from today's purchases
+    // Busiest hour from today's purchases (Eastern Time)
     const hourCounts = new Map<number, number>();
+    const etHourFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      hour12: false,
+    });
     for (const p of todayPurchases) {
-      // purchase_date includes time
       const date = new Date(p.purchase_date);
       if (!isNaN(date.getTime())) {
-        const hour = date.getHours();
+        const hourPart = etHourFormatter.formatToParts(date).find(pt => pt.type === 'hour');
+        const hour = Number(hourPart?.value ?? 0);
         hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
       }
     }

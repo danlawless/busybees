@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { formatDateET } from '@/lib/services/report-aggregations';
 import { isTimeSlotAvailable } from '@/lib/services/party-bookings';
 import { calculateBookingPrice } from '@/lib/validations/party-booking';
 import type { Database } from '@/lib/supabase/database.types';
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     const adminSupabase = createAdminClient();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    const yesterdayStr = formatDateET(yesterday);
 
     const { data: staleBookings, error: staleError } = await adminSupabase
       .from('party_bookings')

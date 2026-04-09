@@ -11,6 +11,7 @@ import {
   parseGranularity,
   bucketDate,
   purchaseTypeLabel,
+  formatDateET,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -31,8 +32,7 @@ export async function GET(request: NextRequest) {
     const prevStart = new Date(prevEnd);
     prevStart.setDate(prevStart.getDate() - daysDiff);
 
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const fmt = (d: Date) => formatDateET(d);
 
     // Fetch current and previous period in parallel, plus gift cards
     const [currentRes, previousRes, currentGiftCardsRes, previousGiftCardsRes] = await Promise.all([

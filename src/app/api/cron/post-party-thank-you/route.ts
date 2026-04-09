@@ -9,11 +9,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendPostPartyThankYouEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
+import { formatDateET } from '@/lib/services/report-aggregations';
 
 function getYesterdayDate(): string {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  return `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+  return formatDateET(yesterday);
 }
 
 export async function GET(request: NextRequest) {

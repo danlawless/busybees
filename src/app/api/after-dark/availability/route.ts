@@ -6,21 +6,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { easternNow, formatDateET } from '@/lib/services/report-aggregations';
 
 const MAX_KIDS = 40;
 
 function getUpcomingFridays(count: number): string[] {
   const fridays: string[] = [];
+  const { dayOfWeek } = easternNow();
   const d = new Date();
-  const dayOfWeek = d.getDay();
   const daysUntilFriday = dayOfWeek <= 5 ? 5 - dayOfWeek : 6;
   d.setDate(d.getDate() + daysUntilFriday);
 
   for (let i = 0; i < count; i++) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    fridays.push(`${y}-${m}-${day}`);
+    fridays.push(formatDateET(d));
     d.setDate(d.getDate() + 7);
   }
   return fridays;

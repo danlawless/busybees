@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
+import { easternNow, formatDateET } from '@/lib/services/report-aggregations';
 
 const PACKAGE_LABELS: Record<string, string> = {
   queen_bee: 'Queen Bee',
@@ -35,16 +36,15 @@ function formatDate(dateStr: string): string {
 }
 
 function getUpcomingWeekendDates(): { saturday: string; sunday: string } {
+  const { dayOfWeek } = easternNow();
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
   const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // Next Saturday
   const saturday = new Date(now);
   saturday.setDate(now.getDate() + daysUntilSaturday);
   const sunday = new Date(saturday);
   sunday.setDate(saturday.getDate() + 1);
 
-  const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return { saturday: format(saturday), sunday: format(sunday) };
+  return { saturday: formatDateET(saturday), sunday: formatDateET(sunday) };
 }
 
 export async function GET(request: NextRequest) {

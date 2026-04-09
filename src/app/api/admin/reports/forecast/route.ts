@@ -6,9 +6,10 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { formatDateET, easternNow } from '@/lib/services/report-aggregations';
 
 function formatDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return formatDateET(d);
 }
 
 function getMonthKey(dateStr: string): string {
@@ -16,9 +17,9 @@ function getMonthKey(dateStr: string): string {
 }
 
 function monthsBetween(months: number): { start: string; end: string } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - months, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const et = easternNow();
+  const start = new Date(et.year, et.month - 1 - months, 1);
+  const end = new Date(et.year, et.month, 0);
   return { start: formatDate(start), end: formatDate(end) };
 }
 
