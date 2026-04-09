@@ -12,7 +12,11 @@ interface TimeSlot {
   label: string;
 }
 
-export function PartyAvailabilityCalendar() {
+interface PartyAvailabilityCalendarProps {
+  onSelectSlot?: (date: string, startTime: string, endTime: string) => void;
+}
+
+export function PartyAvailabilityCalendar({ onSelectSlot }: PartyAvailabilityCalendarProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState<Map<string, string[]>>(new Map());
   const [totalSlots, setTotalSlots] = useState<{ weekend: number; weekday: number }>({ weekend: 0, weekday: 0 });
@@ -245,13 +249,17 @@ export function PartyAvailabilityCalendar() {
               {timeSlots.map((slot, index) => {
                 const booked = isSlotBooked(slot.startTime);
                 return (
-                  <div
+                  <button
                     key={index}
+                    disabled={booked}
+                    onClick={() => !booked && onSelectSlot?.(selectedDate!, slot.startTime, slot.endTime)}
                     className={`
-                      p-3 rounded-lg border text-sm
+                      w-full p-3 rounded-lg border text-sm text-left transition-all
                       ${booked
-                        ? 'border-red-200 bg-red-50 opacity-60'
-                        : 'border-green-200 bg-green-50'
+                        ? 'border-red-200 bg-red-50 opacity-60 cursor-not-allowed'
+                        : onSelectSlot
+                          ? 'border-green-200 bg-green-50 hover:border-purple-300 hover:bg-purple-50 cursor-pointer'
+                          : 'border-green-200 bg-green-50'
                       }
                     `}
                   >
@@ -262,13 +270,13 @@ export function PartyAvailabilityCalendar() {
                       <span
                         className={`
                           px-2 py-0.5 rounded-full text-xs font-medium
-                          ${booked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
+                          ${booked ? 'bg-red-100 text-red-700' : onSelectSlot ? 'bg-purple-500 text-white' : 'bg-green-100 text-green-700'}
                         `}
                       >
-                        {booked ? 'Booked' : 'Open'}
+                        {booked ? 'Booked' : onSelectSlot ? 'Book Now' : 'Open'}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
