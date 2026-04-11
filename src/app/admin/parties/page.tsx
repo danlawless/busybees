@@ -1468,6 +1468,34 @@ export default function AdminPartiesPage() {
                         <p className="text-xs text-amber-600">Waivers Pending</p>
                       </div>
                     </div>
+
+                    {/* Send Party Recap Email */}
+                    {selectedBooking && guests.length > 0 && (
+                      <div className="mt-4">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/admin/party-bookings/send-recap', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ bookingId: selectedBooking.id }),
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                alert(`Party recap email sent to ${data.to}`);
+                              } else {
+                                alert(`Failed: ${data.error}`);
+                              }
+                            } catch {
+                              alert('Failed to send recap email');
+                            }
+                          }}
+                          className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          📧 Send Party Recap to Host
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
