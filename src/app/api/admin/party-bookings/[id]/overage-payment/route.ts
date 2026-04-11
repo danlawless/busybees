@@ -207,6 +207,26 @@ export async function POST(
       logger.error({ error: updateError, bookingId }, 'Failed to update booking overage');
     }
 
+    // Create a purchase record so overage revenue appears in reports
+    const { error: purchaseError } = await supabase
+      .from('purchases')
+      .insert({
+        customer_id: booking.customer_id || null,
+        type: 'day_pass',
+        product_id: bookingId,
+        name: `Birthday Party Attendees - ${booking.customer_name} (${extraKids} extra)`,
+        price: totalAmount,
+        purchase_date: new Date().toISOString(),
+        used_sessions: 1,
+        total_sessions: 1,
+        status: 'used',
+        stripe_payment_intent_id: paymentIntentId || `cash_overage_${Date.now()}`,
+      });
+
+    if (purchaseError) {
+      logger.error({ error: purchaseError, bookingId }, 'Failed to create overage purchase record');
+    }
+
     logger.info(
       { bookingId, extraKids, totalAmount, paymentMethod: payment_method, paymentIntentId },
       'Party overage payment processed'
