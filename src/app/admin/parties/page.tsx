@@ -989,12 +989,6 @@ export default function AdminPartiesPage() {
               <div className="text-sm text-neutral-600 mt-1">Upcoming</div>
             </div>
           </Card>
-          <Card hover={false} padding="sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-honey-600">{formatCurrency(stats.totalRevenue)}</div>
-              <div className="text-sm text-neutral-600 mt-1">Total Revenue</div>
-            </div>
-          </Card>
         </div>
 
         {/* View Tabs */}
