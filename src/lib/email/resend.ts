@@ -2899,6 +2899,14 @@ export async function sendPostPartyThankYouEmail(data: {
   customerName: string;
   childName: string;
   packageName: string;
+  partyDate?: string;
+  startTime?: string;
+  endTime?: string;
+  basePrice?: number;
+  includedKids?: number;
+  guests?: Array<{ child_name: string; age: number | null }>;
+  extraKidPrice?: number;
+  overageCharged?: number;
 }): Promise<EmailResult> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
   const googleReviewUrl = 'https://g.page/r/CbjlkAgAnnOKEBM/review';
@@ -2910,13 +2918,54 @@ export async function sendPostPartyThankYouEmail(data: {
 
   const subject = `🎉 Thanks for celebrating ${data.childName}'s birthday with us!`;
 
+  // Build recap text if guest data is provided
+  const hasRecap = data.guests && data.guests.length > 0;
+  const includedKids = data.includedKids ?? 15;
+  const extraKidPrice = data.extraKidPrice ?? 15;
+  const overageKids = hasRecap ? Math.max(0, data.guests!.length - includedKids) : 0;
+  const overageCharged = data.overageCharged ?? overageKids * extraKidPrice;
+  const basePrice = data.basePrice ?? 0;
+  const totalCharged = basePrice + overageCharged;
+
+  const formatEmailTime = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  const formattedDate = data.partyDate
+    ? parseDateString(data.partyDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  const guestListText = hasRecap
+    ? data.guests!.map((g, i) => {
+        const marker = i >= includedKids ? ` (+$${extraKidPrice})` : '';
+        return `  ${i + 1}. ${g.child_name}${g.age != null ? ` (age ${g.age})` : ''}${marker}`;
+      }).join('\n')
+    : '';
+
+  const recapText = hasRecap ? `
+PARTY RECAP:
+Date: ${formattedDate}
+Time: ${data.startTime && data.endTime ? `${formatEmailTime(data.startTime)} - ${formatEmailTime(data.endTime)}` : ''}
+Package: ${packageDisplayName}
+
+ATTENDEES (${data.guests!.length}):
+${guestListText}
+
+RECEIPT:
+Package (${packageDisplayName}, ${includedKids} kids included): $${basePrice.toFixed(2)}
+${overageKids > 0 ? `Additional children (${overageKids} x $${extraKidPrice}): $${overageCharged.toFixed(2)}\n` : ''}Total Charged: $${totalCharged.toFixed(2)}
+` : '';
+
   const text = `
 Hi ${data.customerName}!
 
 Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
 
 It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
-
+${recapText}
 If you have a moment, we'd really appreciate it if you could leave us a quick Google review. Your feedback helps other families discover Busy Bee's and means the world to our small team!
 
 Leave a review: ${googleReviewUrl}
@@ -2970,6 +3019,64 @@ Visit us: ${siteUrl}
               <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
                 It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
               </p>
+
+              ${hasRecap ? `
+              <!-- Party Recap -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f3ff; border: 1px solid #e9d5ff; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0 0 4px; font-size: 12px; color: #7c3aed; font-weight: 600; text-transform: uppercase;">Party Details</p>
+                    ${formattedDate ? `<p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Date:</strong> ${formattedDate}</p>` : ''}
+                    ${data.startTime && data.endTime ? `<p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Time:</strong> ${formatEmailTime(data.startTime)} - ${formatEmailTime(data.endTime)}</p>` : ''}
+                    <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Package:</strong> ${packageDisplayName}</p>
+                    <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Total Guests:</strong> ${data.guests!.length}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Attendee List -->
+              <p style="margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #374151;">Attendees (${data.guests!.length})</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px;">
+                <tr style="background-color: #f9fafb;">
+                  <th style="padding: 8px 12px; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">#</th>
+                  <th style="padding: 8px 12px; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">Name</th>
+                  <th style="padding: 8px 12px; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">Age</th>
+                  <th style="padding: 8px 12px; font-size: 12px; color: #6b7280; text-align: left; font-weight: 600;">Status</th>
+                </tr>
+                ${data.guests!.map((g, i) => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 8px 12px; font-size: 14px; color: #374151;">${i + 1}</td>
+                  <td style="padding: 8px 12px; font-size: 14px; color: #374151;">${g.child_name}</td>
+                  <td style="padding: 8px 12px; font-size: 14px; color: #6b7280;">${g.age != null ? g.age : '-'}</td>
+                  <td style="padding: 8px 12px; font-size: 14px; color: ${i >= includedKids ? '#dc2626' : '#16a34a'}; font-weight: 600;">${i >= includedKids ? `+$${extraKidPrice}` : 'Included'}</td>
+                </tr>`).join('')}
+              </table>
+
+              <!-- Receipt -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border-radius: 12px; border: 1px solid #fde68a; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0 0 12px; font-size: 12px; color: #92400e; font-weight: 600; text-transform: uppercase;">Receipt</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #374151;">${packageDisplayName} Package (${includedKids} kids included)</td>
+                        <td style="padding: 4px 0; font-size: 14px; color: #374151; text-align: right;">$${basePrice.toFixed(2)}</td>
+                      </tr>
+                      ${overageKids > 0 ? `
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 14px; color: #dc2626;">Additional children (${overageKids} × $${extraKidPrice})</td>
+                        <td style="padding: 4px 0; font-size: 14px; color: #dc2626; text-align: right;">$${overageCharged.toFixed(2)}</td>
+                      </tr>` : ''}
+                      <tr><td colspan="2" style="border-top: 2px solid #d97706; padding-top: 8px;"></td></tr>
+                      <tr>
+                        <td style="padding: 4px 0; font-size: 18px; font-weight: 700; color: #374151;">Total Charged</td>
+                        <td style="padding: 4px 0; font-size: 18px; font-weight: 700; color: #374151; text-align: right;">$${totalCharged.toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
 
               <!-- Google Review CTA -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; margin-bottom: 25px;">
