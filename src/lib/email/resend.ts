@@ -3632,3 +3632,139 @@ We hope everyone had a wonderful time! 🎉
 
   return sendEmail({ to: data.to, subject, text, html, cc: BUSINESS_EMAIL });
 }
+
+/**
+ * Send a birthday promo email to parents 45 days before their child's birthday
+ */
+export async function sendBirthdayPromoEmail(data: {
+  to: string;
+  parentName: string;
+  childName: string;
+  childAge: number;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const bookPartyUrl = `${siteUrl}/customer/dashboard?tab=parties`;
+  const turningAge = data.childAge + 1;
+
+  const subject = `🎂 ${data.childName}'s birthday is coming up!`;
+
+  const text = `
+Hi ${data.parentName}!
+
+${data.childName}'s birthday is right around the corner, and we'd love to be part of the celebration!
+
+At Busy Bees Indoor Play Center, we take the stress out of party planning so you can focus on what matters most — celebrating your little one. From setup to cleanup, our dedicated party hosts handle everything while the kids have a blast in our play areas.
+
+Our party packages include:
+- 2 hours of private party fun
+- Dedicated party host
+- Up to 15-20 kids (depending on package)
+- Play area, cafe, and party room access
+- Paper goods and decorations (select packages)
+
+Book ${data.childName}'s party today: ${bookPartyUrl}
+
+We can't wait to help make ${data.childName}'s birthday unforgettable!
+
+Warm regards,
+The Busy Bees Party Team
+
+Visit us: ${siteUrl}
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${data.childName}'s Birthday is Coming!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f0e1; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #ec4899; padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: #fce7f3; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
+                <span style="font-size: 36px;">🎂</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+                ${data.childName}'s Birthday is Coming!
+              </h1>
+              <p style="margin: 8px 0 0; color: #fce7f3; font-size: 16px;">
+                ${turningAge > 0 ? `Turning ${turningAge} soon` : 'A special day is approaching'}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <p style="margin: 0 0 20px; font-size: 16px; color: #374151; line-height: 1.6;">
+                Hi ${data.parentName}!
+              </p>
+              <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                ${data.childName}'s birthday is right around the corner, and we'd love to be considered for the celebration!
+              </p>
+              <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                At Busy Bees Indoor Play Center, we take the stress out of party planning so you can focus on what matters most — celebrating your little one. From setup to cleanup, our dedicated party hosts handle everything while the kids have a blast!
+              </p>
+
+              <!-- What's Included -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #92400e;">🐝 Our Party Packages Include:</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ 2 hours of private party fun</td></tr>
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Dedicated party host</td></tr>
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Up to 15-20 kids (depending on package)</td></tr>
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Play area, cafe & party room access</td></tr>
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Paper goods & decorations (select packages)</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td align="center">
+                    <a href="${bookPartyUrl}" style="display: inline-block; background-color: #d97706; color: #ffffff; font-size: 18px; font-weight: 700; text-decoration: none; padding: 16px 40px; border-radius: 30px;">
+                      🎉 Book ${data.childName}'s Party
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6; text-align: center;">
+                We can't wait to help make ${data.childName}'s birthday unforgettable!
+              </p>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #4b5563;">Warm regards,</p>
+                    <p style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #374151;">The Busy Bees Party Team</p>
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">📍 Busy Bees Indoor Play Center</p>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return sendEmail({ to: data.to, subject, text, html, cc: BUSINESS_EMAIL });
+}
