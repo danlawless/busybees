@@ -3153,6 +3153,7 @@ Visit us: ${siteUrl}
     subject,
     text,
     html,
+    cc: BUSINESS_EMAIL,
   });
 }
 
