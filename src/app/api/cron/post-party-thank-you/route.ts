@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Find confirmed/done bookings from yesterday that haven't been sent a thank you
     const { data: bookings, error } = await supabase
       .from('party_bookings')
-      .select('id, customer_name, customer_email, child_name, package_name, status')
+      .select('id, customer_name, customer_email, child_name, package_name, status, party_date, start_time, end_time, base_price, total_price, additional_kids_price')
       .eq('party_date', yesterday)
       .in('status', ['confirmed', 'done'])
       .neq('payment_status', 'refunded');
@@ -100,11 +100,29 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      // Fetch guests for recap
+      const { data: guests } = await supabase
+        .from('party_guests')
+        .select('child_name, age')
+        .eq('booking_id', booking.id)
+        .order('created_at', { ascending: true });
+
+      const PACKAGE_INCLUDED_KIDS: Record<string, number> = { queen_bee: 20, worker_bee: 15, basic_bee: 15 };
+      const includedKids = PACKAGE_INCLUDED_KIDS[booking.package_name] ?? 15;
+
       const result = await sendPostPartyThankYouEmail({
         to: booking.customer_email,
         customerName: booking.customer_name || 'Valued Customer',
         childName: booking.child_name,
         packageName: booking.package_name,
+        partyDate: booking.party_date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        basePrice: Number(booking.base_price) || Number(booking.total_price) || 0,
+        includedKids,
+        guests: guests || [],
+        extraKidPrice: 15,
+        overageCharged: Number(booking.additional_kids_price) || 0,
       });
 
       if (result.success) {
