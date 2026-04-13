@@ -3688,14 +3688,14 @@ Visit us: ${siteUrl}
 
           <!-- Header -->
           <tr>
-            <td style="background-color: #ec4899; padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: #fce7f3; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
+            <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
+              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
                 <span style="font-size: 36px;">🎂</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
                 ${data.childName}'s Birthday is Coming!
               </h1>
-              <p style="margin: 8px 0 0; color: #fce7f3; font-size: 16px;">
+              <p style="margin: 8px 0 0; color: #fef3c7; font-size: 16px;">
                 ${turningAge > 0 ? `Turning ${turningAge} soon` : 'A special day is approaching'}
               </p>
             </td>
