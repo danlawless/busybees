@@ -112,6 +112,7 @@ export async function GET(
       createdAt: user.created_at,
       lastVisit: user.last_visit,
       giftCardBalance: user.gift_card_balance,
+      notes: user.notes || '',
     };
 
     return NextResponse.json({ customer });
@@ -133,7 +134,7 @@ export async function PATCH(
     const supabase = createAdminClient();
 
     // Validate input
-    const allowedFields = ['name', 'email', 'phone'];
+    const allowedFields = ['name', 'email', 'phone', 'notes'];
     const updates: Record<string, string | null> = {};
 
     for (const field of allowedFields) {
