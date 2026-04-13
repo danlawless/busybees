@@ -82,8 +82,25 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Calculate child's current age
+      // Calculate the age the child will be turning
       const birthDate = new Date(child.birthdate + 'T00:00:00');
+      const turningAge = targetDate.getFullYear() - birthDate.getFullYear();
+
+      // Skip kids turning 7 or older (play center is for ages 0-6)
+      if (turningAge >= 7) {
+        skipped++;
+        continue;
+      }
+
+      // Only send if parent's last name matches child's last name
+      const parentLastName = (parent.name || '').trim().split(/\s+/).pop()?.toLowerCase() || '';
+      const childLastName = (child.name || '').trim().split(/\s+/).pop()?.toLowerCase() || '';
+      if (!parentLastName || !childLastName || parentLastName !== childLastName) {
+        skipped++;
+        continue;
+      }
+
+      // Calculate child's current age for display
       const et = easternNow();
       const today = new Date(et.year, et.month - 1, et.day);
       let age = today.getFullYear() - birthDate.getFullYear();
