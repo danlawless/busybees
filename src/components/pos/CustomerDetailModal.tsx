@@ -72,6 +72,7 @@ interface Customer {
   createdAt: string;
   lastVisit?: string;
   giftCardBalance?: number;
+  notes?: string;
 }
 
 interface CustomerDetailModalProps {
@@ -112,7 +113,7 @@ export function CustomerDetailModal({
 
   // Customer edit state
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profileFormData, setProfileFormData] = useState({ name: '', email: '', phone: '' });
+  const [profileFormData, setProfileFormData] = useState({ name: '', email: '', phone: '', notes: '' });
 
   // Reset state when modal opens/closes or customer changes
   useEffect(() => {
@@ -127,6 +128,7 @@ export function CustomerDetailModal({
         name: customer.name,
         email: customer.email || '',
         phone: customer.phone,
+        notes: customer.notes || '',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset on customer ID change, not every prop update
@@ -208,6 +210,7 @@ export function CustomerDetailModal({
           name: profileFormData.name,
           email: profileFormData.email || null,
           phone: profileFormData.phone,
+          notes: profileFormData.notes || null,
         }),
       });
 
@@ -221,6 +224,7 @@ export function CustomerDetailModal({
         name: profileFormData.name,
         email: profileFormData.email || undefined,
         phone: profileFormData.phone,
+        notes: profileFormData.notes || '',
       };
 
       onCustomerUpdated(updatedCustomer);
@@ -552,6 +556,7 @@ export function CustomerDetailModal({
                               name: customer.name,
                               email: customer.email || '',
                               phone: customer.phone,
+                              notes: customer.notes || '',
                             });
                           }}
                           variant="outline"
@@ -599,9 +604,19 @@ export function CustomerDetailModal({
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
                         />
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <textarea
+                          value={profileFormData.notes}
+                          onChange={(e) => setProfileFormData({ ...profileFormData, notes: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                          rows={3}
+                          placeholder="Add notes about this customer..."
+                        />
+                      </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-4">
+                    <><div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Name</p>
                         <p className="font-medium">{customer.name}</p>
@@ -631,6 +646,13 @@ export function CustomerDetailModal({
                         </div>
                       )}
                     </div>
+                    {customer.notes && (
+                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-gray-500 mb-1">Notes</p>
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{customer.notes}</p>
+                      </div>
+                    )}
+                    </>
                   )}
                 </Card>
 
