@@ -29,6 +29,7 @@ const groupTypes = [
 
 const benefits = [
   'Only pay for kids who show up — no upfront group fees',
+  'Reduced rates for toddlers and infants',
   'Flexible scheduling that works around your group\'s needs',
   'Safe, clean indoor play space designed for ages 0-6',
   'Dedicated play areas for toddlers and infants',
@@ -153,6 +154,7 @@ export default function GroupsPage() {
                   <p className="text-sm font-medium text-green-700 uppercase tracking-wide mb-2">How It Works</p>
                   <p className="text-4xl font-bold text-charcoal-800">Pay Per Child</p>
                   <p className="text-charcoal-600 mt-2">Only charged for kids who attend</p>
+                  <p className="text-sm text-amber-700 font-medium mt-2">10 kid minimum &bull; Reduced rates for toddlers &amp; infants</p>
                 </div>
                 <div className="space-y-3">
                   {['Schedule your group visit', 'Bring your kids to play', 'Only pay for who shows up'].map((step, i) => (
