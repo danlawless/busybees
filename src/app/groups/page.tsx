@@ -4,7 +4,6 @@ import { Layout } from '@/components/layout/Layout'
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
 import { Users, GraduationCap, Heart, Calendar, DollarSign, CheckCircle, Mail } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 
 const groupTypes = [
   {
@@ -58,16 +57,13 @@ export default function GroupsPage() {
               Whether it&apos;s a school field trip, homeschool meetup, or organized group outing,
               Busy Bees is the perfect indoor play destination for your little ones.
             </p>
-            <Button
-              size="lg"
-              onClick={() => {
-                window.location.href = 'mailto:info@busybeesipc.com?subject=Group Play Inquiry'
-              }}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 border-0"
+            <a
+              href="mailto:info@busybeesipc.com?subject=Group Play Inquiry"
+              className="inline-flex items-center bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 rounded-lg transition-colors"
             >
               <Mail className="w-5 h-5 mr-2" />
               Inquire About Group Play
-            </Button>
+            </a>
           </motion.div>
         </div>
       </section>
@@ -229,49 +225,18 @@ export default function GroupsPage() {
               <p className="text-charcoal-600 mb-8">
                 Interested in booking a group visit? Send us an email and we&apos;ll take care of the rest!
               </p>
-              <Button
-                size="lg"
-                onClick={() => {
-                  window.location.href = 'mailto:info@busybeesipc.com?subject=Group Play Inquiry'
-                }}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 border-0"
+              <a
+                href="mailto:info@busybeesipc.com?subject=Group Play Inquiry"
+                className="inline-flex items-center bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 rounded-lg transition-colors"
               >
                 <Mail className="w-5 h-5 mr-2" />
                 Email info@busybeesipc.com
-              </Button>
+              </a>
             </Card>
           </motion.div>
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="py-16 bg-charcoal-800">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Ready to Plan Your Group Visit?
-            </h2>
-            <p className="text-lg text-gray-300 mb-8">
-              We can&apos;t wait to welcome your group to Busy Bees Indoor Play Center!
-            </p>
-            <Button
-              size="lg"
-              onClick={() => {
-                window.location.href = 'mailto:info@busybeesipc.com?subject=Group Play Inquiry'
-              }}
-              className="bg-primary-500 hover:bg-primary-600 text-charcoal-800 font-bold text-lg border-0"
-            >
-              <Mail className="w-5 h-5 mr-2" />
-              Get in Touch
-            </Button>
-          </motion.div>
-        </div>
-      </section>
     </Layout>
   )
 }
