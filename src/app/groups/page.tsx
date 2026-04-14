@@ -1,9 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { Layout } from '@/components/layout/Layout'
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
-import { Users, GraduationCap, Heart, Calendar, DollarSign, CheckCircle, Mail } from 'lucide-react'
+import { Users, GraduationCap, Heart, Calendar, DollarSign, CheckCircle, Mail, Send, Loader2 } from 'lucide-react'
 
 const groupTypes = [
   {
@@ -57,13 +58,13 @@ export default function GroupsPage() {
               Whether it&apos;s a school field trip, homeschool meetup, or organized group outing,
               Busy Bees is the perfect indoor play destination for your little ones.
             </p>
-            <a
-              href="mailto:info@busybeesipc.com?subject=Group Play Inquiry"
+            <button
+              onClick={() => document.getElementById('group-inquiry')?.scrollIntoView({ behavior: 'smooth' })}
               className="inline-flex items-center bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 rounded-lg transition-colors"
             >
               <Mail className="w-5 h-5 mr-2" />
               Inquire About Group Play
-            </a>
+            </button>
           </motion.div>
         </div>
       </section>
@@ -188,40 +189,182 @@ export default function GroupsPage() {
         </div>
       </section>
 
-      {/* Scheduling CTA */}
-      <section className="py-16 sm:py-20 bg-[#FFF8E7]/70">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+      {/* Inquiry Form */}
+      <section id="group-inquiry" className="py-16 sm:py-20 bg-[#FFF8E7]/70">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <Card className="p-8 sm:p-10 text-center bg-white border-2 border-amber-200">
-              <Calendar className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-              <h2 className="text-2xl sm:text-3xl font-bold text-charcoal-800 mb-4">
-                Stress-Free Scheduling
-              </h2>
-              <p className="text-lg text-charcoal-600 max-w-2xl mx-auto mb-6">
-                Planning a group outing shouldn&apos;t be stressful. Just reach out and we&apos;ll work with
-                you to find the perfect date and time for your group. We&apos;re flexible and happy to
-                accommodate your schedule.
-              </p>
-              <p className="text-charcoal-600 mb-8">
-                Interested in booking a group visit? Send us an email and we&apos;ll take care of the rest!
-              </p>
-              <a
-                href="mailto:info@busybeesipc.com?subject=Group Play Inquiry"
-                className="inline-flex items-center bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg px-8 py-4 rounded-lg transition-colors"
-              >
-                <Mail className="w-5 h-5 mr-2" />
-                Email info@busybeesipc.com
-              </a>
+            <Card className="p-8 sm:p-10 bg-white border-2 border-amber-200">
+              <div className="text-center mb-8">
+                <Calendar className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                <h2 className="text-2xl sm:text-3xl font-bold text-charcoal-800 mb-2">
+                  Schedule Your Group Visit
+                </h2>
+                <p className="text-charcoal-600">
+                  Fill out the form below and we&apos;ll get back to you to finalize the details.
+                </p>
+              </div>
+              <GroupInquiryForm />
             </Card>
           </motion.div>
         </div>
       </section>
 
     </Layout>
+  )
+}
+
+function GroupInquiryForm() {
+  const [formData, setFormData] = useState({
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    groupName: '',
+    anticipatedDate: '',
+    notes: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/groups/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+
+      if (res.ok) {
+        setSubmitted(true)
+      } else {
+        const data = await res.json()
+        setError(data.error || 'Something went wrong. Please try again.')
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-xl font-bold text-charcoal-800 mb-2">Inquiry Sent!</h3>
+        <p className="text-charcoal-600">
+          Thank you for your interest! We&apos;ll get back to you shortly to finalize the details.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.contactName}
+            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="Your full name"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Group Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.groupName}
+            onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="e.g. Sunshine Daycare, Troop 42"
+          />
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+          <input
+            type="email"
+            required
+            value={formData.contactEmail}
+            onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+          <input
+            type="tel"
+            required
+            value={formData.contactPhone}
+            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="(555) 123-4567"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Anticipated Date of Visit *</label>
+        <input
+          type="date"
+          required
+          value={formData.anticipatedDate}
+          onChange={(e) => setFormData({ ...formData, anticipatedDate: e.target.value })}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes (optional)</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+          rows={3}
+          placeholder="Estimated group size, age range, special requests, etc."
+          maxLength={1000}
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-bold text-lg px-8 py-3 rounded-lg transition-colors"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            Sending...
+          </>
+        ) : (
+          <>
+            <Send className="w-5 h-5 mr-2" />
+            Submit Inquiry
+          </>
+        )}
+      </button>
+    </form>
   )
 }
