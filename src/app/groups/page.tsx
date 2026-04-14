@@ -71,21 +71,6 @@ export default function GroupsPage() {
       {/* Group Types */}
       <section className="py-16 sm:py-20 bg-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
-              Who We Welcome
-            </h2>
-            <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
-              We love hosting groups of all kinds. Here are just a few of the groups that play with us.
-            </p>
-          </motion.div>
-
           <div className="grid md:grid-cols-3 gap-8">
             {groupTypes.map((group, index) => {
               const Icon = group.icon
