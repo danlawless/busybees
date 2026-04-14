@@ -18,6 +18,7 @@ const navigation = [
   { name: 'Events', href: '/events' },
   { name: 'Info', href: '/info' },
   { name: 'Parties', href: '/parties' },
+  { name: 'Groups', href: '/groups' },
   ...(SHOW_GIFT_CARDS ? [{ name: 'Gift Cards', href: '/gift-cards' }] : []),
   // { name: 'Jobs', href: '/jobs' },
   // { name: 'Contact', href: '/contact' },  // Hidden until contact form email is fixed
