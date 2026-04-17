@@ -1333,7 +1333,7 @@ function WebMyAccountContent() {
           <div className="space-y-8">
             <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
               <p className="text-sm text-blue-900">
-                <span className="font-semibold">Note:</span> Passes are valid for 30 days after purchase.
+                <span className="font-semibold">Note:</span> Day passes are valid for 30 days after purchase. Punch cards are valid for 365 days after purchase.
               </p>
             </div>
             {/* Active Passes */}
