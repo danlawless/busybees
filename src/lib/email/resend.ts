@@ -468,6 +468,7 @@ export async function sendGiftCardPurchaseConfirmation(data: {
   recipientName: string;
   recipientEmail: string;
   amount: number;
+  giftCardCode: string;
   deliveryMethod: 'email_recipient' | 'email_self';
 }): Promise<EmailResult> {
   const amount = Number(data.amount);
@@ -487,6 +488,7 @@ Hi ${data.purchaserName}!
 Thank you for your gift card purchase at Busy Bees Indoor Play Center!
 
 ORDER SUMMARY:
+Gift Card Code: ${data.giftCardCode}
 Gift Card Amount: $${amount.toFixed(2)}
 Recipient: ${data.recipientName}
 Delivered to: ${deliveredTo}
@@ -543,6 +545,10 @@ ${siteUrl}
                       🧾 Order Summary
                     </p>
                     <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 14px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Gift Card Code</td>
+                        <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 700; color: #059669; letter-spacing: 1px; border-bottom: 1px solid #e5e7eb;">${data.giftCardCode}</td>
+                      </tr>
                       <tr>
                         <td style="padding: 8px 0; font-size: 14px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Gift Card Amount</td>
                         <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">$${amount.toFixed(2)}</td>

@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
           recipientName: metadata.recipient_name,
           recipientEmail: metadata.recipient_email,
           amount: parseFloat(metadata.amount),
+          giftCardCode: giftCard.code,
           deliveryMethod: metadata.delivery_method as 'email_recipient' | 'email_self',
         });
         if (confirmResult.success) {

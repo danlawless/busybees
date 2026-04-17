@@ -1331,6 +1331,11 @@ function WebMyAccountContent() {
         {/* Passes Tab */}
         {activeTab === 'passes' && (
           <div className="space-y-8">
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+              <p className="text-sm text-blue-900">
+                <span className="font-semibold">Note:</span> Passes are valid for 30 days after purchase.
+              </p>
+            </div>
             {/* Active Passes */}
             {activePassPurchases.length > 0 && (
               <div>
