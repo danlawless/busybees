@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 interface EventCardProps {
   title: string;
@@ -50,6 +52,76 @@ export function EventCard({
   const isPast = variant === 'past';
   const isHappeningNow = variant === 'happening-now';
 
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const closeLightbox = useCallback(() => setIsLightboxOpen(false), []);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeLightbox();
+    }
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [isLightboxOpen, closeLightbox]);
+
+  const lightbox = (
+    <AnimatePresence>
+      {isLightboxOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div
+            className="absolute inset-0 bg-charcoal-900/95 backdrop-blur-sm cursor-zoom-out"
+            onClick={closeLightbox}
+          />
+
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            aria-label="Close image viewer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <motion.div
+            className="relative z-10 flex items-center justify-center p-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeLightbox}
+          >
+            <Image
+              src={imageUrl}
+              alt={title}
+              width={1600}
+              height={1200}
+              className="w-auto h-auto max-w-[95vw] max-h-[90vh] object-contain"
+              sizes="95vw"
+              priority
+            />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <motion.div
       className={`bg-white rounded-3xl shadow-soft border overflow-hidden transition-all duration-300 ${
@@ -71,17 +143,24 @@ export function EventCard({
         </div>
       )}
 
-      {/* Image - shows the full Canva graphic without cropping */}
-      <div className="relative w-full">
+      {/* Image - shows the full Canva graphic without cropping, click to enlarge */}
+      <button
+        type="button"
+        onClick={() => setIsLightboxOpen(true)}
+        className="relative w-full block group focus:outline-none focus:ring-2 focus:ring-honey-400 focus:ring-inset cursor-zoom-in"
+        aria-label={`View ${title} flyer at full size`}
+      >
         <Image
           src={imageUrl}
           alt={title}
           width={800}
           height={600}
-          className={`w-full h-auto ${isPast ? 'grayscale' : ''}`}
+          className={`w-full h-auto transition-transform duration-300 group-hover:scale-[1.02] ${isPast ? 'grayscale' : ''}`}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
-      </div>
+      </button>
+
+      {isMounted && createPortal(lightbox, document.body)}
 
       {/* Content */}
       <div className="p-5">
