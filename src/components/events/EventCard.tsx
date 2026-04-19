@@ -100,7 +100,7 @@ export function EventCard({
           </button>
 
           <motion.div
-            className="relative z-10 w-[95vw] h-[90vh] flex items-center justify-center p-4"
+            className="relative z-10 flex items-center justify-center p-4"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -110,8 +110,9 @@ export function EventCard({
             <Image
               src={imageUrl}
               alt={title}
-              fill
-              className="object-contain"
+              width={1600}
+              height={1200}
+              className="w-auto h-auto max-w-[95vw] max-h-[90vh] object-contain"
               sizes="95vw"
               priority
             />
