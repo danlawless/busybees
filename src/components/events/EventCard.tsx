@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,8 +53,13 @@ export function EventCard({
   const isHappeningNow = variant === 'happening-now';
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const closeLightbox = useCallback(() => setIsLightboxOpen(false), []);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isLightboxOpen) return;
@@ -69,6 +75,51 @@ export function EventCard({
       window.removeEventListener('keydown', handleKey);
     };
   }, [isLightboxOpen, closeLightbox]);
+
+  const lightbox = (
+    <AnimatePresence>
+      {isLightboxOpen && (
+        <motion.div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div
+            className="absolute inset-0 bg-charcoal-900/95 backdrop-blur-sm cursor-zoom-out"
+            onClick={closeLightbox}
+          />
+
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            aria-label="Close image viewer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <motion.div
+            className="relative z-10 w-[95vw] h-[90vh] flex items-center justify-center p-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeLightbox}
+          >
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              className="object-contain"
+              sizes="95vw"
+              priority
+            />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <motion.div
@@ -108,49 +159,7 @@ export function EventCard({
         />
       </button>
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {isLightboxOpen && (
-          <motion.div
-            className="fixed inset-0 z-[9999] flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div
-              className="absolute inset-0 bg-charcoal-900/95 backdrop-blur-sm cursor-zoom-out"
-              onClick={closeLightbox}
-            />
-
-            <button
-              onClick={closeLightbox}
-              className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-              aria-label="Close image viewer"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            <motion.div
-              className="relative z-10 w-[95vw] h-[90vh] flex items-center justify-center p-4"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              onClick={closeLightbox}
-            >
-              <Image
-                src={imageUrl}
-                alt={title}
-                fill
-                className="object-contain"
-                sizes="95vw"
-                priority
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isMounted && createPortal(lightbox, document.body)}
 
       {/* Content */}
       <div className="p-5">
