@@ -123,7 +123,7 @@ export default function POSPage() {
     // Inactivity timeout states
     const [showInactivityWarning, setShowInactivityWarning] = useState(false);
     const [countdownSeconds, setCountdownSeconds] = useState(30);
-    const [inactivityCountdown, setInactivityCountdown] = useState(30); // Tracks time until warning appears
+    const [inactivityCountdown, setInactivityCountdown] = useState(60); // Tracks time until warning appears
     const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
     const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
     const [countdownTimer, setCountdownTimer] = useState<NodeJS.Timeout | null>(null);
@@ -406,7 +406,7 @@ export default function POSPage() {
         setCurrentView("login");
         setShowInactivityWarning(false);
         setCountdownSeconds(30);
-        setInactivityCountdown(30);
+        setInactivityCountdown(60);
     };
 
     // Resume session (dismiss warning and restart timer)
@@ -414,7 +414,7 @@ export default function POSPage() {
         // Clear the warning modal and reset counters
         setShowInactivityWarning(false);
         setCountdownSeconds(30);
-        setInactivityCountdown(30);
+        setInactivityCountdown(60);
 
         // Trigger a synthetic activity event after the warning is cleared
         // This will cause handleActivity to restart the timer since warning is now false
@@ -510,7 +510,7 @@ export default function POSPage() {
             setCountdownTimer(null);
             setShowInactivityWarning(false);
             setCountdownSeconds(30);
-            setInactivityCountdown(30);
+            setInactivityCountdown(60);
             return;
         }
 
@@ -524,8 +524,8 @@ export default function POSPage() {
             if (warningCountdown) clearTimeout(warningCountdown);
             if (inactivityCountdownTimer) clearInterval(inactivityCountdownTimer);
 
-            // Start inactivity countdown from 30 seconds
-            let inactivitySeconds = 30;
+            // Start inactivity countdown from 60 seconds
+            let inactivitySeconds = 60;
             setInactivityCountdown(inactivitySeconds);
 
             inactivityCountdownTimer = setInterval(() => {
@@ -537,11 +537,11 @@ export default function POSPage() {
                 }
             }, 1000);
 
-            // Set 30-second timer for warning
+            // Set 60-second timer for warning
             activityTimer = setTimeout(() => {
                 // Show warning modal (countdown will be handled by separate useEffect)
                 setShowInactivityWarning(true);
-            }, 30000); // 30 seconds
+            }, 60000); // 60 seconds
         };
 
         const handleActivity = () => {
