@@ -209,6 +209,7 @@ export function purchaseTypeLabel(type: string): string {
     monthly_pass: 'Monthly Pass',
     party_package: 'Party Package',
     food_beverage: 'Food & Beverage',
+    after_dark: 'After Dark',
   };
   return labels[type] || type;
 }

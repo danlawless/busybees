@@ -24,7 +24,7 @@ export interface CheckoutSessionParams {
     description?: string;
   }>;
   metadata: {
-    purchase_type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+    purchase_type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
     product_id: string;
     child_id?: string;
     [key: string]: string | undefined;

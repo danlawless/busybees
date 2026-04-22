@@ -206,6 +206,27 @@ export async function POST(request: NextRequest) {
       await applyGiftCardBalance(user.id, giftCardAmountUsed);
     }
 
+    // Record a purchases row so After Dark revenue appears in reports
+    const { error: purchaseError } = await adminSupabase
+      .from('purchases')
+      .insert({
+        customer_id: user.id,
+        type: 'after_dark',
+        product_id: booking.id,
+        name: `After Dark — ${event_date} (${num_kids} kid${num_kids > 1 ? 's' : ''})`,
+        price: totalAmount,
+        purchase_date: new Date().toISOString(),
+        used_sessions: 0,
+        total_sessions: num_kids,
+        status: 'active',
+        stripe_payment_intent_id: stripePaymentIntentId,
+        gift_card_amount_used: giftCardAmountUsed,
+      });
+
+    if (purchaseError) {
+      logger.error({ error: purchaseError, bookingId: booking.id }, 'Failed to record After Dark purchase');
+    }
+
     logger.info({
       bookingId: booking.id,
       event_date,

@@ -3,7 +3,7 @@
  * Used by both POS and My Account for consistent data models
  */
 
-export type PurchaseType = 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+export type PurchaseType = 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
 export type PurchaseStatus = 'active' | 'expired' | 'used' | 'refunded';
 
 export interface Child {

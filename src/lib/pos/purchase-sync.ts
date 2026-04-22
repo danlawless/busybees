@@ -5,7 +5,7 @@
 
 interface Purchase {
   id: string;
-  type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+  type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
   name: string;
   price: number;
   purchaseDate: string;

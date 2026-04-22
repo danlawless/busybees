@@ -59,6 +59,13 @@ export async function POST(
       })
       .eq('id', id);
 
+    // Mark associated purchase row as refunded (if present)
+    await supabase
+      .from('purchases')
+      .update({ status: 'refunded', updated_at: new Date().toISOString() })
+      .eq('product_id', id)
+      .eq('type', 'after_dark');
+
     if (updateError) {
       logger.error({ error: updateError }, 'Failed to update booking status after refund');
       return NextResponse.json({ error: 'Refund processed but failed to update booking status' }, { status: 500 });
