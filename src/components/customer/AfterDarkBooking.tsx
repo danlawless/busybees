@@ -106,9 +106,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     });
   };
 
-  const totalPrice = selectedChildren.length >= 2
-    ? selectedChildren.length * 40
-    : selectedChildren.length === 1 ? 45 : 0;
+  const totalPrice = selectedChildren.length * 50;
 
   const kidDetails = selectedChildren
     .map(id => {
@@ -282,7 +280,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             <p className="text-sm text-purple-700"><strong>Children:</strong> {kidDetails}</p>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-purple-200">
               <span className="text-sm text-purple-700">
-                {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; {selectedChildren.length >= 2 ? '$40' : '$45'}
+                {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; $50
               </span>
               <span className="text-lg font-bold text-purple-800">${totalPrice}</span>
             </div>
@@ -486,15 +484,12 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-700">
-                  {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; {selectedChildren.length >= 2 ? '$40' : '$45'}
+                  {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; $50
                 </span>
                 <span className="text-lg font-bold text-purple-800">
-                  ${selectedChildren.length >= 2 ? selectedChildren.length * 40 : 45}
+                  ${totalPrice}
                 </span>
               </div>
-              {selectedChildren.length >= 2 && (
-                <p className="text-xs text-purple-600 mt-1">Multi-child discount applied!</p>
-              )}
             </div>
           )}
 
