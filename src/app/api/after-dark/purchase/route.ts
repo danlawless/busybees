@@ -285,7 +285,12 @@ export async function POST(request: NextRequest) {
       remaining: remaining - num_kids,
     }, { status: 201 });
   } catch (error) {
-    logger.error({ error }, 'After Dark purchase error');
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    logger.error({ error, message, stack }, 'After Dark purchase error');
+    return NextResponse.json(
+      { error: 'Internal server error', detail: message },
+      { status: 500 }
+    );
   }
 }

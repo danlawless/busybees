@@ -168,7 +168,8 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         setAvailability(avData.availability || []);
         setBookings(bookData.bookings || []);
       } else {
-        setError(data.error || 'Payment failed. Please try again.');
+        const detail = data.detail ? ` (${data.detail})` : '';
+        setError((data.error || 'Payment failed. Please try again.') + detail);
       }
     } catch {
       setError('Something went wrong. Please try again.');
