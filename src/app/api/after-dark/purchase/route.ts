@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
 import { logger } from '@/lib/logger';
@@ -114,16 +114,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate payment method belongs to customer
-    const stripeMode = getStripeMode();
-    const customerIdColumn = getStripeCustomerIdColumn();
+    const customerIdColumn = await getStripeCustomerIdColumn();
     const { data: customerData } = await adminSupabase
       .from('users')
-      .select(`${customerIdColumn}`)
+      .select(customerIdColumn)
       .eq('id', user.id)
       .single();
 
-    const stripeCustomerId = customerData?.[customerIdColumn] ||
-      await getOrCreateStripeCustomer(user.id, adminSupabase);
+    const stripeCustomerId = (customerData as Record<string, string | null> | null)?.[customerIdColumn] ||
+      await getOrCreateStripeCustomer(
+        user.id,
+        profile.email || user.email || '',
+        profile.name || 'Customer',
+        profile.phone || undefined
+      );
 
     let stripePaymentIntentId: string | null = null;
 
