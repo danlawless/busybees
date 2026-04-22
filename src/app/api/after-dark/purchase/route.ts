@@ -14,6 +14,17 @@ import { z } from 'zod';
 const MAX_KIDS = 40;
 const PRICE_PER_KID = 50;
 
+const WaiverDataSchema = z.object({
+  emergency_contact_name: z.string().min(1),
+  emergency_contact_phone: z.string().min(1),
+  emergency_contact_relationship: z.string().min(1),
+  authorized_pickup: z.string().min(1),
+  allergies: z.string().optional().default(''),
+  medical_conditions: z.string().optional().default(''),
+  photo_consent: z.boolean(),
+  signature: z.string().min(1),
+});
+
 const PurchaseSchema = z.object({
   event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   num_kids: z.number().int().min(1).max(10),
@@ -22,6 +33,7 @@ const PurchaseSchema = z.object({
   paymentMethodId: z.string().min(1),
   useGiftCardBalance: z.boolean().optional().default(true),
   booking_id: z.string().uuid().optional(),
+  waiver: WaiverDataSchema.optional(),
 });
 
 function getReturnUrl(): string {
@@ -55,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { event_date, num_kids, kid_details, notes, paymentMethodId, useGiftCardBalance, booking_id } = parsed.data;
+    const { event_date, num_kids, kid_details, notes, paymentMethodId, useGiftCardBalance, booking_id, waiver } = parsed.data;
     const adminSupabase = createAdminClient();
 
     // Get customer profile
@@ -190,6 +202,7 @@ export async function POST(request: NextRequest) {
           status: 'confirmed',
           amount_paid: totalAmount,
           stripe_payment_intent_id: stripePaymentIntentId,
+          waiver_signed: !!waiver,
         })
         .select()
         .single();
@@ -199,6 +212,31 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Payment processed but booking failed. Please contact us.' }, { status: 500 });
       }
       booking = data;
+
+      // Save waiver if provided
+      if (waiver) {
+        const { error: waiverError } = await adminSupabase
+          .from('after_dark_waivers')
+          .insert({
+            booking_id: booking.id,
+            parent_name: profile.name || 'Customer',
+            parent_email: profile.email || user.email || '',
+            parent_phone: profile.phone || '',
+            child_names: kid_details || '',
+            emergency_contact_name: waiver.emergency_contact_name,
+            emergency_contact_phone: waiver.emergency_contact_phone,
+            emergency_contact_relationship: waiver.emergency_contact_relationship,
+            authorized_pickup: waiver.authorized_pickup,
+            allergies: waiver.allergies || null,
+            medical_conditions: waiver.medical_conditions || null,
+            photo_consent: waiver.photo_consent,
+            signature: waiver.signature,
+            signed_at: new Date().toISOString(),
+          });
+        if (waiverError) {
+          logger.error({ error: waiverError, bookingId: booking.id }, 'Failed to save After Dark waiver after payment');
+        }
+      }
     }
 
     // Deduct gift card if used

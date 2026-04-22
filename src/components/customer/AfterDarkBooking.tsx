@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AfterDarkWaiver } from './AfterDarkWaiver';
+import { AfterDarkWaiver, type WaiverFormData } from './AfterDarkWaiver';
 
 interface Child {
   id: string;
@@ -59,7 +59,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [selectedCard, setSelectedCard] = useState('');
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
-  const [pendingBookingId, setPendingBookingId] = useState('');
+  const [waiverData, setWaiverData] = useState<WaiverFormData | null>(null);
 
   const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 6);
 
@@ -116,50 +116,22 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     .filter(Boolean)
     .join(', ');
 
-  // Step 1 → Step 2: Create unpaid booking, then go to waiver
-  const handleProceedToWaiver = async () => {
+  // Step 1 → Step 2: Go to waiver (no DB writes yet)
+  const handleProceedToWaiver = () => {
     if (!selectedDate || selectedChildren.length === 0) return;
-    setSubmitting(true);
     setError('');
-
-    try {
-      const res = await fetch('/api/after-dark/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_date: selectedDate,
-          parent_name: customerName,
-          parent_email: customerEmail,
-          parent_phone: customerPhone,
-          num_kids: selectedChildren.length,
-          kid_details: kidDetails,
-          notes: notes || undefined,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setPendingBookingId(data.booking.id);
-        setStep('waiver');
-      } else {
-        setError(data.error || 'Booking failed. Please try again.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    setStep('waiver');
   };
 
-  // Step 2 → Step 3: Waiver signed, go to payment
-  const handleWaiverComplete = () => {
+  // Step 2 → Step 3: Waiver data captured, go to payment
+  const handleWaiverComplete = (data: WaiverFormData) => {
+    setWaiverData(data);
     setStep('payment');
   };
 
-  // Step 3 → Success: Process payment
+  // Step 3 → Success: Process payment (creates booking + waiver + purchase)
   const handlePayment = async () => {
-    if (!selectedCard || !pendingBookingId) return;
+    if (!selectedCard || !waiverData) return;
     setSubmitting(true);
     setError('');
 
@@ -174,7 +146,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           notes: notes || undefined,
           paymentMethodId: selectedCard,
           useGiftCardBalance: true,
-          booking_id: pendingBookingId,
+          waiver: waiverData,
         }),
       });
 
@@ -257,13 +229,12 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
       )}
 
       {/* Step: Waiver */}
-      {step === 'waiver' && pendingBookingId && (
+      {step === 'waiver' && (
         <AfterDarkWaiver
           parentName={customerName}
           parentEmail={customerEmail}
           parentPhone={customerPhone}
           childNames={kidDetails}
-          bookingId={pendingBookingId}
           onComplete={handleWaiverComplete}
           onCancel={() => setStep('select')}
         />
@@ -351,7 +322,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
               Amount charged: ${amountPaid.toFixed(2)}
             </p>
           )}
-          <Button onClick={() => { setSuccess(false); setAmountPaid(null); setStep('select'); setPendingBookingId(''); }}>Book Another Date</Button>
+          <Button onClick={() => { setSuccess(false); setAmountPaid(null); setStep('select'); setWaiverData(null); }}>Book Another Date</Button>
         </Card>
       )}
 
@@ -502,11 +473,11 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           {/* Continue to Waiver */}
           <Button
             onClick={handleProceedToWaiver}
-            disabled={submitting || !selectedDate || selectedChildren.length === 0}
+            disabled={!selectedDate || selectedChildren.length === 0}
             className="w-full py-4 text-lg"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
           >
-            {submitting ? 'Reserving...' : `Continue — $${totalPrice}`}
+            Continue — ${totalPrice}
           </Button>
         </Card>
       )}
