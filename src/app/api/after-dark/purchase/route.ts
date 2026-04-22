@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     let stripePaymentIntentId: string | null = null;
 
     if (amountToCharge > 0) {
-      const stripe = getStripeClient();
+      const stripe = await getStripeClient();
       const amountInCents = Math.round(amountToCharge * 100);
 
       const paymentIntent = await stripe.paymentIntents.create({
