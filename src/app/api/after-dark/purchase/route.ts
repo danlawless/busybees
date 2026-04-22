@@ -12,7 +12,8 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const MAX_KIDS = 40;
-const PRICE_PER_KID = 50;
+const PRICE_SINGLE = 45;
+const PRICE_MULTI = 40;
 
 const PurchaseSchema = z.object({
   event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -88,7 +89,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate price
-    const totalAmount = num_kids * PRICE_PER_KID;
+    const pricePerKid = num_kids >= 2 ? PRICE_MULTI : PRICE_SINGLE;
+    const totalAmount = num_kids * pricePerKid;
     let amountToCharge = totalAmount;
     let giftCardAmountUsed = 0;
 

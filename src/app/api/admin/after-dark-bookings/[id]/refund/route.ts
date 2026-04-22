@@ -31,13 +31,8 @@ export async function POST(
       return NextResponse.json({ error: 'Booking is already cancelled' }, { status: 400 });
     }
 
-    // Process Stripe refund if payment was made via Stripe
-    // Skip for gift card or walk-in placeholders (cash/card-in-person/comp)
-    if (
-      booking.stripe_payment_intent_id &&
-      !booking.stripe_payment_intent_id.startsWith('giftcard_') &&
-      !booking.stripe_payment_intent_id.startsWith('walkin_')
-    ) {
+    // Process Stripe refund if payment was made
+    if (booking.stripe_payment_intent_id && !booking.stripe_payment_intent_id.startsWith('giftcard_')) {
       try {
         const stripe = getStripeClient();
         await stripe.refunds.create({
