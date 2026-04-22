@@ -36,10 +36,11 @@ function formatDate(dateStr: string): string {
 
 interface SavedCard {
   id: string;
+  stripe_payment_method_id: string;
   brand: string;
   last4: string;
-  exp_month: number;
-  exp_year: number;
+  expiry_month: number;
+  expiry_year: number;
   is_default: boolean;
 }
 
@@ -88,7 +89,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         const cards = data.paymentMethods || [];
         setSavedCards(cards);
         const defaultCard = cards.find((c: SavedCard) => c.is_default) || cards[0];
-        if (defaultCard) setSelectedCard(defaultCard.id);
+        if (defaultCard) setSelectedCard(defaultCard.stripe_payment_method_id);
       })
       .catch(() => {});
   }, []);
@@ -269,21 +270,21 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
               {savedCards.map(card => (
                 <button
                   key={card.id}
-                  onClick={() => setSelectedCard(card.id)}
+                  onClick={() => setSelectedCard(card.stripe_payment_method_id)}
                   className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
-                    selectedCard === card.id
+                    selectedCard === card.stripe_payment_method_id
                       ? 'border-purple-500 bg-purple-50'
                       : 'border-gray-200 hover:border-purple-300 bg-white'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                    selectedCard === card.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
+                    selectedCard === card.stripe_payment_method_id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {selectedCard === card.id ? '✓' : '💳'}
+                    {selectedCard === card.stripe_payment_method_id ? '✓' : '💳'}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{card.brand} •••• {card.last4}</p>
-                    <p className="text-xs text-gray-500">Expires {card.exp_month}/{card.exp_year}{card.is_default && ' — Default'}</p>
+                    <p className="text-xs text-gray-500">Expires {card.expiry_month}/{card.expiry_year}{card.is_default && ' — Default'}</p>
                   </div>
                 </button>
               ))}
