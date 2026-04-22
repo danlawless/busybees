@@ -35,12 +35,45 @@ function formatShortDate(dateStr: string): string {
 
 type SubView = 'attendees' | 'movies';
 
+const PRICE_PER_KID = 50;
+
+type PaymentMethod = 'cash' | 'card' | 'comp';
+
 export function AfterDarkAdmin() {
   const [subView, setSubView] = useState<SubView>('attendees');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refunding, setRefunding] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showWalkIn, setShowWalkIn] = useState(false);
+  const [walkInSaving, setWalkInSaving] = useState(false);
+  const [walkInError, setWalkInError] = useState('');
+  const [walkInForm, setWalkInForm] = useState({
+    parent_name: '',
+    parent_phone: '',
+    parent_email: '',
+    num_kids: 1,
+    kid_details: '',
+    notes: '',
+    payment_method: 'cash' as PaymentMethod,
+    amount_override: '',
+    waiver_signed: false,
+  });
+
+  const resetWalkInForm = () => {
+    setWalkInForm({
+      parent_name: '',
+      parent_phone: '',
+      parent_email: '',
+      num_kids: 1,
+      kid_details: '',
+      notes: '',
+      payment_method: 'cash',
+      amount_override: '',
+      waiver_signed: false,
+    });
+    setWalkInError('');
+  };
 
   const fetchBookings = useCallback(async () => {
     setIsLoading(true);
@@ -75,6 +108,54 @@ export function AfterDarkAdmin() {
       // ignore
     } finally {
       setRefunding(null);
+    }
+  };
+
+  const handleWalkInSubmit = async () => {
+    if (!effectiveDate) return;
+    const name = walkInForm.parent_name.trim();
+    if (!name) {
+      setWalkInError('Please enter a name (or use "Walk-in").');
+      return;
+    }
+    if (walkInForm.num_kids < 1) {
+      setWalkInError('Number of kids must be at least 1.');
+      return;
+    }
+    setWalkInSaving(true);
+    setWalkInError('');
+    try {
+      const overrideNum = walkInForm.amount_override === ''
+        ? undefined
+        : Number(walkInForm.amount_override);
+      const res = await fetch('/api/admin/after-dark-bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_date: effectiveDate,
+          parent_name: name,
+          parent_email: walkInForm.parent_email.trim() || undefined,
+          parent_phone: walkInForm.parent_phone.trim() || undefined,
+          num_kids: walkInForm.num_kids,
+          kid_details: walkInForm.kid_details.trim() || undefined,
+          notes: walkInForm.notes.trim() || undefined,
+          payment_method: walkInForm.payment_method,
+          amount_paid: Number.isFinite(overrideNum) ? overrideNum : undefined,
+          waiver_signed: walkInForm.waiver_signed,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await fetchBookings();
+        setShowWalkIn(false);
+        resetWalkInForm();
+      } else {
+        setWalkInError(data.error || 'Failed to add walk-in.');
+      }
+    } catch {
+      setWalkInError('Something went wrong. Please try again.');
+    } finally {
+      setWalkInSaving(false);
     }
   };
 
@@ -219,13 +300,21 @@ export function AfterDarkAdmin() {
                   {/* Selected date details */}
                   {effectiveDate && (
                     <div>
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                         <div>
                           <h3 className="text-lg font-bold text-charcoal-800">{formatDate(effectiveDate)}</h3>
                           <p className="text-sm text-neutral-500">
                             {totalKids} kid{totalKids !== 1 ? 's' : ''} registered &bull; {40 - totalKids} spots remaining
                           </p>
                         </div>
+                        <Button
+                          onClick={() => { setShowWalkIn(v => !v); setWalkInError(''); }}
+                          size="sm"
+                          disabled={40 - totalKids <= 0}
+                          style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                        >
+                          {showWalkIn ? '✕ Close' : '➕ Add Walk-in'}
+                        </Button>
                         {/* Capacity bar */}
                         <div className="w-32">
                           <div className="h-3 bg-neutral-100 rounded-full overflow-hidden">
@@ -240,6 +329,160 @@ export function AfterDarkAdmin() {
                           <p className="text-xs text-neutral-500 text-center mt-1">{totalKids}/40</p>
                         </div>
                       </div>
+
+                      {/* Walk-in form */}
+                      {showWalkIn && (
+                        <div className="mb-4 p-4 rounded-xl border-2 border-purple-200 bg-purple-50/60">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-purple-800">Add Walk-in Attendee</h4>
+                            <span className="text-xs text-purple-700">
+                              {40 - totalKids} spot{40 - totalKids === 1 ? '' : 's'} open
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Parent name *</label>
+                              <input
+                                type="text"
+                                value={walkInForm.parent_name}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, parent_name: e.target.value }))}
+                                placeholder="e.g. Walk-in or Jane Smith"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                maxLength={200}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Phone</label>
+                              <input
+                                type="tel"
+                                value={walkInForm.parent_phone}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, parent_phone: e.target.value }))}
+                                placeholder="(optional)"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                maxLength={20}
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Email</label>
+                              <input
+                                type="email"
+                                value={walkInForm.parent_email}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, parent_email: e.target.value }))}
+                                placeholder="(optional)"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Number of kids *</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={Math.max(1, 40 - totalKids)}
+                                value={walkInForm.num_kids}
+                                onChange={(e) => {
+                                  const n = parseInt(e.target.value, 10);
+                                  setWalkInForm(f => ({ ...f, num_kids: Number.isFinite(n) && n > 0 ? n : 1 }));
+                                }}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Payment method</label>
+                              <select
+                                value={walkInForm.payment_method}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+                              >
+                                <option value="cash">Cash</option>
+                                <option value="card">Card (in person)</option>
+                                <option value="comp">Comp (no charge)</option>
+                              </select>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                                Kid names & ages
+                              </label>
+                              <input
+                                type="text"
+                                value={walkInForm.kid_details}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, kid_details: e.target.value }))}
+                                placeholder="e.g. Emma (5), Liam (4)"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                maxLength={500}
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">Notes</label>
+                              <input
+                                type="text"
+                                value={walkInForm.notes}
+                                onChange={(e) => setWalkInForm(f => ({ ...f, notes: e.target.value }))}
+                                placeholder="Allergies, pickup person, etc. (optional)"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                maxLength={500}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                                Amount collected
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <span className="text-neutral-500 text-sm">$</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={walkInForm.amount_override}
+                                  onChange={(e) => setWalkInForm(f => ({ ...f, amount_override: e.target.value }))}
+                                  placeholder={
+                                    walkInForm.payment_method === 'comp'
+                                      ? '0.00'
+                                      : (walkInForm.num_kids * PRICE_PER_KID).toFixed(2)
+                                  }
+                                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                                />
+                              </div>
+                              <p className="text-xs text-neutral-500 mt-1">
+                                Default: {walkInForm.num_kids} × ${PRICE_PER_KID} = ${walkInForm.num_kids * PRICE_PER_KID}
+                              </p>
+                            </div>
+                            <div className="flex items-end">
+                              <label className="inline-flex items-center gap-2 text-sm text-neutral-700 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={walkInForm.waiver_signed}
+                                  onChange={(e) => setWalkInForm(f => ({ ...f, waiver_signed: e.target.checked }))}
+                                  className="rounded border-neutral-300 text-purple-600 focus:ring-purple-500"
+                                />
+                                Waiver signed on paper
+                              </label>
+                            </div>
+                          </div>
+                          {walkInError && (
+                            <div className="mt-3 p-2 rounded bg-red-50 border border-red-200 text-xs text-red-700">
+                              {walkInError}
+                            </div>
+                          )}
+                          <div className="mt-4 flex gap-2 justify-end">
+                            <Button
+                              onClick={() => { setShowWalkIn(false); resetWalkInForm(); }}
+                              variant="outline"
+                              size="sm"
+                              disabled={walkInSaving}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleWalkInSubmit}
+                              disabled={walkInSaving || walkInForm.num_kids > (40 - totalKids)}
+                              size="sm"
+                              style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                            >
+                              {walkInSaving ? 'Saving...' : 'Add Attendee'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Attendee list */}
                       {selectedBookings.length === 0 ? (
