@@ -46,13 +46,13 @@ export async function GET(_request: NextRequest) {
       // Today's revenue from purchases
       supabase
         .from('purchases')
-        .select('price, type, name')
+        .select('price, type, name, gift_card_amount_used, purchase_date')
         .gte('purchase_date', today)
         .lte('purchase_date', today + 'T23:59:59'),
       // MTD revenue from purchases
       supabase
         .from('purchases')
-        .select('price')
+        .select('price, gift_card_amount_used')
         .gte('purchase_date', mtdStart)
         .lte('purchase_date', today + 'T23:59:59'),
       // Active sessions (no end_time)
@@ -65,20 +65,20 @@ export async function GET(_request: NextRequest) {
       // 30-day revenue trend from purchases
       supabase
         .from('purchases')
-        .select('purchase_date, price')
+        .select('purchase_date, price, gift_card_amount_used')
         .gte('purchase_date', thirtyDaysAgo)
         .lte('purchase_date', today + 'T23:59:59')
         .order('purchase_date', { ascending: true }),
       // This week revenue from purchases
       supabase
         .from('purchases')
-        .select('price')
+        .select('price, gift_card_amount_used')
         .gte('purchase_date', thisWeekStart)
         .lte('purchase_date', today + 'T23:59:59'),
       // Last week revenue from purchases
       supabase
         .from('purchases')
-        .select('price')
+        .select('price, gift_card_amount_used')
         .gte('purchase_date', lastWeekStart)
         .lte('purchase_date', lastWeekEnd + 'T23:59:59'),
       // New customers this week
@@ -138,24 +138,28 @@ export async function GET(_request: NextRequest) {
     const lastWeekGiftCards = lastWeekGiftCardsRes.data || [];
 
     // Coerce NUMERIC fields - Supabase returns NUMERIC(10,2) as strings
+    // Subtract gift card amount already counted when the gift card was sold
+    const netPurchase = (p: { price: number | string; gift_card_amount_used?: number | string | null }) =>
+      Math.max(0, Number(p.price) - Number(p.gift_card_amount_used || 0));
+
     const todayRevenue =
-      todayPurchases.reduce((s, p) => s + Number(p.price), 0) +
+      todayPurchases.reduce((s, p) => s + netPurchase(p), 0) +
       todayGiftCards.reduce((s, g) => s + Number(g.amount), 0);
     const mtdRevenue =
-      mtdPurchases.reduce((s, p) => s + Number(p.price), 0) +
+      mtdPurchases.reduce((s, p) => s + netPurchase(p), 0) +
       mtdGiftCards.reduce((s, g) => s + Number(g.amount), 0);
     const thisWeekRevenue =
-      thisWeekPurchases.reduce((s, p) => s + Number(p.price), 0) +
+      thisWeekPurchases.reduce((s, p) => s + netPurchase(p), 0) +
       thisWeekGiftCards.reduce((s, g) => s + Number(g.amount), 0);
     const lastWeekRevenue =
-      lastWeekPurchases.reduce((s, p) => s + Number(p.price), 0) +
+      lastWeekPurchases.reduce((s, p) => s + netPurchase(p), 0) +
       lastWeekGiftCards.reduce((s, g) => s + Number(g.amount), 0);
 
     // Build 30-day trend (combine purchases + gift cards by date)
     const trendMap = new Map<string, number>();
     for (const p of trendPurchases) {
       const dateKey = p.purchase_date.slice(0, 10);
-      trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + Number(p.price));
+      trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + netPurchase(p));
     }
     for (const g of trendGiftCards) {
       const dateKey = g.created_at.slice(0, 10);
