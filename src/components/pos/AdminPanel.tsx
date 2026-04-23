@@ -5360,7 +5360,14 @@ export function AdminPanel({
           >
             📣 Announcements
           </Button>
-<Button
+          <Button
+            onClick={() => setCurrentView('after-dark')}
+            variant={currentView === 'after-dark' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🌙 After Dark
+          </Button>
+          <Button
             onClick={() => setCurrentView('newsletter')}
             variant={currentView === 'newsletter' ? 'default' : 'outline'}
             size="sm"

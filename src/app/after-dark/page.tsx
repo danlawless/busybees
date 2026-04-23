@@ -375,14 +375,10 @@ export default function AfterDarkPage() {
             <div className="mt-8 pt-8" style={{ borderTop: '1px solid rgba(139, 92, 246, 0.2)' }}>
               <div className="text-center">
                 <p className="text-sm uppercase tracking-wider mb-2" style={{ color: '#a78bfa' }}>Pricing</p>
-                <div className="flex flex-col sm:flex-row justify-center gap-6">
-                  <div className="rounded-xl p-4" style={{ background: 'rgba(139, 92, 246, 0.1)' }}>
-                    <p className="text-3xl font-bold" style={{ color: '#c4b5fd' }}>$45</p>
-                    <p className="text-sm" style={{ color: '#a78bfa' }}>1 Child</p>
-                  </div>
+                <div className="flex justify-center">
                   <div className="rounded-xl p-4" style={{ background: 'rgba(139, 92, 246, 0.15)' }}>
-                    <p className="text-3xl font-bold" style={{ color: '#c4b5fd' }}>$40</p>
-                    <p className="text-sm" style={{ color: '#a78bfa' }}>Per Child (2+)</p>
+                    <p className="text-3xl font-bold" style={{ color: '#c4b5fd' }}>$50</p>
+                    <p className="text-sm" style={{ color: '#a78bfa' }}>Per Child</p>
                   </div>
                 </div>
               </div>

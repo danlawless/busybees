@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
         monthlyPass: number;
         partyPackage: number;
         foodBeverage: number;
+        afterDark: number;
         giftCard: number;
         total: number;
         txCount: number;
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
         monthlyPass: 0,
         partyPackage: 0,
         foodBeverage: 0,
+        afterDark: 0,
         giftCard: 0,
         total: 0,
         txCount: 0,
@@ -113,6 +115,9 @@ export async function GET(request: NextRequest) {
         case 'food_beverage':
           entry.foodBeverage += price;
           break;
+        case 'after_dark':
+          entry.afterDark += price;
+          break;
       }
       entry.total += price;
       entry.txCount += 1;
@@ -129,6 +134,7 @@ export async function GET(request: NextRequest) {
         monthlyPass: 0,
         partyPackage: 0,
         foodBeverage: 0,
+        afterDark: 0,
         giftCard: 0,
         total: 0,
         txCount: 0,

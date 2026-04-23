@@ -34,7 +34,7 @@ export async function POST(
     // Process Stripe refund if payment was made
     if (booking.stripe_payment_intent_id && !booking.stripe_payment_intent_id.startsWith('giftcard_')) {
       try {
-        const stripe = getStripeClient();
+        const stripe = await getStripeClient();
         await stripe.refunds.create({
           payment_intent: booking.stripe_payment_intent_id,
           reason: 'requested_by_customer',
@@ -58,6 +58,13 @@ export async function POST(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
+
+    // Mark associated purchase row as refunded (if present)
+    await supabase
+      .from('purchases')
+      .update({ status: 'refunded', updated_at: new Date().toISOString() })
+      .eq('product_id', id)
+      .eq('type', 'after_dark');
 
     if (updateError) {
       logger.error({ error: updateError }, 'Failed to update booking status after refund');

@@ -4,26 +4,35 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
+export interface WaiverFormData {
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relationship: string;
+  authorized_pickup: string;
+  allergies: string;
+  medical_conditions: string;
+  photo_consent: boolean;
+  signature: string;
+}
+
 interface AfterDarkWaiverProps {
   parentName: string;
   parentEmail: string;
   parentPhone: string;
   childNames: string;
-  bookingId: string;
-  onComplete: () => void;
+  onComplete: (data: WaiverFormData) => void;
   onCancel: () => void;
 }
 
 export function AfterDarkWaiver({
   parentName,
-  parentEmail,
-  parentPhone,
+  parentEmail: _parentEmail,
+  parentPhone: _parentPhone,
   childNames,
-  bookingId,
   onComplete,
   onCancel,
 }: AfterDarkWaiverProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<WaiverFormData>({
     emergency_contact_name: '',
     emergency_contact_phone: '',
     emergency_contact_relationship: '',
@@ -34,43 +43,15 @@ export function AfterDarkWaiver({
     signature: '',
   });
   const [agreed, setAgreed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!form.emergency_contact_name || !form.emergency_contact_phone || !form.emergency_contact_relationship || !form.authorized_pickup || !form.signature || !agreed) {
       setError('Please complete all required fields and agree to the terms.');
       return;
     }
-
-    setSubmitting(true);
     setError('');
-
-    try {
-      const res = await fetch('/api/after-dark/waiver', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          booking_id: bookingId,
-          parent_name: parentName,
-          parent_email: parentEmail,
-          parent_phone: parentPhone,
-          child_names: childNames,
-          ...form,
-        }),
-      });
-
-      if (res.ok) {
-        onComplete();
-      } else {
-        const data = await res.json();
-        setError(data.error || 'Failed to submit waiver.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    onComplete(form);
   };
 
   return (
@@ -248,11 +229,11 @@ export function AfterDarkWaiver({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !agreed || !form.signature || !form.emergency_contact_name || !form.emergency_contact_phone}
+            disabled={!agreed || !form.signature || !form.emergency_contact_name || !form.emergency_contact_phone}
             className="flex-1"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
           >
-            {submitting ? 'Submitting...' : 'Sign & Continue to Payment'}
+            Sign &amp; Continue to Payment
           </Button>
         </div>
       </div>

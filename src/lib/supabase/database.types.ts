@@ -269,7 +269,7 @@ export interface Database {
           id: string;
           customer_id: string;
           child_id: string | null;
-          type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+          type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
           product_id: string;
           name: string;
           price: number;
@@ -297,7 +297,7 @@ export interface Database {
           id?: string;
           customer_id: string;
           child_id?: string | null;
-          type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+          type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
           product_id: string;
           name: string;
           price: number;
@@ -325,7 +325,7 @@ export interface Database {
           id?: string;
           customer_id?: string;
           child_id?: string | null;
-          type?: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+          type?: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
           product_id?: string;
           name?: string;
           price?: number;
@@ -1079,7 +1079,7 @@ export interface Database {
       user_role: 'customer' | 'staff' | 'admin';
       pass_category: 'day' | 'weekly' | 'monthly';
       product_category: 'food' | 'beverage' | 'retail';
-      purchase_type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage';
+      purchase_type: 'day_pass' | 'weekly_pass' | 'monthly_pass' | 'party_package' | 'food_beverage' | 'after_dark';
       purchase_status: 'active' | 'expired' | 'used' | 'refunded';
       product_type: 'pass' | 'party' | 'product';
       banner_style: 'honeycomb' | 'gradient-wave' | 'confetti' | 'minimal' | 'bold-stripes';

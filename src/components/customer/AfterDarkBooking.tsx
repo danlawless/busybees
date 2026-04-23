@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AfterDarkWaiver } from './AfterDarkWaiver';
+import { AfterDarkWaiver, type WaiverFormData } from './AfterDarkWaiver';
 
 interface Child {
   id: string;
@@ -36,10 +36,11 @@ function formatDate(dateStr: string): string {
 
 interface SavedCard {
   id: string;
+  stripe_payment_method_id: string;
   brand: string;
   last4: string;
-  exp_month: number;
-  exp_year: number;
+  expiry_month: number;
+  expiry_year: number;
   is_default: boolean;
 }
 
@@ -59,7 +60,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [selectedCard, setSelectedCard] = useState('');
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
-  const [pendingBookingId, setPendingBookingId] = useState('');
+  const [waiverData, setWaiverData] = useState<WaiverFormData | null>(null);
 
   const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 6);
 
@@ -88,7 +89,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         const cards = data.paymentMethods || [];
         setSavedCards(cards);
         const defaultCard = cards.find((c: SavedCard) => c.is_default) || cards[0];
-        if (defaultCard) setSelectedCard(defaultCard.id);
+        if (defaultCard) setSelectedCard(defaultCard.stripe_payment_method_id);
       })
       .catch(() => {});
   }, []);
@@ -106,9 +107,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     });
   };
 
-  const totalPrice = selectedChildren.length >= 2
-    ? selectedChildren.length * 40
-    : selectedChildren.length === 1 ? 45 : 0;
+  const totalPrice = selectedChildren.length * 50;
 
   const kidDetails = selectedChildren
     .map(id => {
@@ -118,50 +117,22 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
     .filter(Boolean)
     .join(', ');
 
-  // Step 1 → Step 2: Create unpaid booking, then go to waiver
-  const handleProceedToWaiver = async () => {
+  // Step 1 → Step 2: Go to waiver (no DB writes yet)
+  const handleProceedToWaiver = () => {
     if (!selectedDate || selectedChildren.length === 0) return;
-    setSubmitting(true);
     setError('');
-
-    try {
-      const res = await fetch('/api/after-dark/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_date: selectedDate,
-          parent_name: customerName,
-          parent_email: customerEmail,
-          parent_phone: customerPhone,
-          num_kids: selectedChildren.length,
-          kid_details: kidDetails,
-          notes: notes || undefined,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setPendingBookingId(data.booking.id);
-        setStep('waiver');
-      } else {
-        setError(data.error || 'Booking failed. Please try again.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    setStep('waiver');
   };
 
-  // Step 2 → Step 3: Waiver signed, go to payment
-  const handleWaiverComplete = () => {
+  // Step 2 → Step 3: Waiver data captured, go to payment
+  const handleWaiverComplete = (data: WaiverFormData) => {
+    setWaiverData(data);
     setStep('payment');
   };
 
-  // Step 3 → Success: Process payment
+  // Step 3 → Success: Process payment (creates booking + waiver + purchase)
   const handlePayment = async () => {
-    if (!selectedCard || !pendingBookingId) return;
+    if (!selectedCard || !waiverData) return;
     setSubmitting(true);
     setError('');
 
@@ -176,7 +147,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           notes: notes || undefined,
           paymentMethodId: selectedCard,
           useGiftCardBalance: true,
-          booking_id: pendingBookingId,
+          waiver: waiverData,
         }),
       });
 
@@ -198,7 +169,8 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
         setAvailability(avData.availability || []);
         setBookings(bookData.bookings || []);
       } else {
-        setError(data.error || 'Payment failed. Please try again.');
+        const detail = data.detail ? ` (${data.detail})` : '';
+        setError((data.error || 'Payment failed. Please try again.') + detail);
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -259,13 +231,12 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
       )}
 
       {/* Step: Waiver */}
-      {step === 'waiver' && pendingBookingId && (
+      {step === 'waiver' && (
         <AfterDarkWaiver
           parentName={customerName}
           parentEmail={customerEmail}
           parentPhone={customerPhone}
           childNames={kidDetails}
-          bookingId={pendingBookingId}
           onComplete={handleWaiverComplete}
           onCancel={() => setStep('select')}
         />
@@ -282,7 +253,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             <p className="text-sm text-purple-700"><strong>Children:</strong> {kidDetails}</p>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-purple-200">
               <span className="text-sm text-purple-700">
-                {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; {selectedChildren.length >= 2 ? '$40' : '$45'}
+                {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; $50
               </span>
               <span className="text-lg font-bold text-purple-800">${totalPrice}</span>
             </div>
@@ -299,21 +270,21 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
               {savedCards.map(card => (
                 <button
                   key={card.id}
-                  onClick={() => setSelectedCard(card.id)}
+                  onClick={() => setSelectedCard(card.stripe_payment_method_id)}
                   className={`w-full p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
-                    selectedCard === card.id
+                    selectedCard === card.stripe_payment_method_id
                       ? 'border-purple-500 bg-purple-50'
                       : 'border-gray-200 hover:border-purple-300 bg-white'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                    selectedCard === card.id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
+                    selectedCard === card.stripe_payment_method_id ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {selectedCard === card.id ? '✓' : '💳'}
+                    {selectedCard === card.stripe_payment_method_id ? '✓' : '💳'}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{card.brand} •••• {card.last4}</p>
-                    <p className="text-xs text-gray-500">Expires {card.exp_month}/{card.exp_year}{card.is_default && ' — Default'}</p>
+                    <p className="text-xs text-gray-500">Expires {card.expiry_month}/{card.expiry_year}{card.is_default && ' — Default'}</p>
                   </div>
                 </button>
               ))}
@@ -353,7 +324,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
               Amount charged: ${amountPaid.toFixed(2)}
             </p>
           )}
-          <Button onClick={() => { setSuccess(false); setAmountPaid(null); setStep('select'); setPendingBookingId(''); }}>Book Another Date</Button>
+          <Button onClick={() => { setSuccess(false); setAmountPaid(null); setStep('select'); setWaiverData(null); }}>Book Another Date</Button>
         </Card>
       )}
 
@@ -486,15 +457,12 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-700">
-                  {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; {selectedChildren.length >= 2 ? '$40' : '$45'}
+                  {selectedChildren.length} kid{selectedChildren.length > 1 ? 's' : ''} &times; $50
                 </span>
                 <span className="text-lg font-bold text-purple-800">
-                  ${selectedChildren.length >= 2 ? selectedChildren.length * 40 : 45}
+                  ${totalPrice}
                 </span>
               </div>
-              {selectedChildren.length >= 2 && (
-                <p className="text-xs text-purple-600 mt-1">Multi-child discount applied!</p>
-              )}
             </div>
           )}
 
@@ -507,11 +475,11 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
           {/* Continue to Waiver */}
           <Button
             onClick={handleProceedToWaiver}
-            disabled={submitting || !selectedDate || selectedChildren.length === 0}
+            disabled={!selectedDate || selectedChildren.length === 0}
             className="w-full py-4 text-lg"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
           >
-            {submitting ? 'Reserving...' : `Continue — $${totalPrice}`}
+            Continue — ${totalPrice}
           </Button>
         </Card>
       )}
