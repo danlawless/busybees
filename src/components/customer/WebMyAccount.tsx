@@ -850,6 +850,30 @@ function WebMyAccountContent() {
     setDeleteTimeout(timeout);
   };
 
+  const [settingDefault, setSettingDefault] = useState<string | null>(null);
+
+  const handleSetDefaultCard = async (cardId: string) => {
+    setSettingDefault(cardId);
+    try {
+      const response = await fetch(`/api/stripe/payment-methods/${cardId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setAsDefault: true }),
+      });
+      if (!response.ok) throw new Error('Failed to set default card');
+      await fetchData();
+    } catch (error) {
+      console.error('Error setting default card:', error);
+      setSuccessDetails({
+        title: 'Error',
+        message: 'Failed to set default payment method. Please try again.',
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setSettingDefault(null);
+    }
+  };
+
   const handleConfirmDelete = async (cardId: string) => {
     setConfirmingDelete(null);
     if (deleteTimeout) {
@@ -2259,10 +2283,19 @@ function WebMyAccountContent() {
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          {card.isDefault && (
+                          {card.isDefault ? (
                             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                               Default
                             </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSetDefaultCard(card.id)}
+                              disabled={settingDefault === card.id}
+                              className="px-3 py-1 rounded-full text-xs font-medium border border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                              title="Set as default payment method"
+                            >
+                              {settingDefault === card.id ? 'Setting...' : 'Set as Default'}
+                            </button>
                           )}
 
                           <button
