@@ -38,13 +38,13 @@ export async function GET(request: NextRequest) {
     const [currentRes, previousRes, currentGiftCardsRes, previousGiftCardsRes] = await Promise.all([
       supabase
         .from('purchases')
-        .select('purchase_date, price, type')
+        .select('purchase_date, price, type, gift_card_amount_used')
         .gte('purchase_date', range.startDate)
         .lte('purchase_date', range.endDate + 'T23:59:59')
         .order('purchase_date', { ascending: true }),
       supabase
         .from('purchases')
-        .select('price')
+        .select('price, gift_card_amount_used')
         .gte('purchase_date', fmt(prevStart))
         .lte('purchase_date', fmt(prevEnd) + 'T23:59:59'),
       supabase
@@ -98,7 +98,8 @@ export async function GET(request: NextRequest) {
       };
 
       // Coerce NUMERIC - Supabase returns NUMERIC(10,2) as strings
-      const price = Number(p.price);
+      // Net revenue = price minus gift card amount already counted when the gift card was sold
+      const price = Math.max(0, Number(p.price) - Number(p.gift_card_amount_used || 0));
       switch (p.type) {
         case 'day_pass':
           entry.dayPass += price;
@@ -150,11 +151,12 @@ export async function GET(request: NextRequest) {
       .map(([date, d]) => ({ date, ...d }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Revenue breakdown by type
+    // Revenue breakdown by type (net of gift card redemption to avoid double-counting)
     const breakdownMap = new Map<string, number>();
     for (const p of purchases) {
       const label = purchaseTypeLabel(p.type);
-      breakdownMap.set(label, (breakdownMap.get(label) || 0) + Number(p.price));
+      const net = Math.max(0, Number(p.price) - Number(p.gift_card_amount_used || 0));
+      breakdownMap.set(label, (breakdownMap.get(label) || 0) + net);
     }
     const giftCardTotal = giftCards.reduce((s, g) => s + Number(g.amount), 0);
     if (giftCardTotal > 0) {
@@ -165,13 +167,13 @@ export async function GET(request: NextRequest) {
       value,
     }));
 
-    // Average transaction value over time
+    // Average transaction value over time (net of gift card redemption)
     const avgTxMap = new Map<string, { total: number; count: number }>();
     for (const p of purchases) {
       const dateKey = p.purchase_date.slice(0, 10);
       const bucket = bucketDate(dateKey, granularity);
       const entry = avgTxMap.get(bucket) || { total: 0, count: 0 };
-      entry.total += Number(p.price);
+      entry.total += Math.max(0, Number(p.price) - Number(p.gift_card_amount_used || 0));
       entry.count += 1;
       avgTxMap.set(bucket, entry);
     }
@@ -182,10 +184,12 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    const netPurchase = (p: { price: number | string; gift_card_amount_used?: number | string | null }) =>
+      Math.max(0, Number(p.price) - Number(p.gift_card_amount_used || 0));
     const currentPeriodTotal =
-      purchases.reduce((s, p) => s + Number(p.price), 0) + giftCardTotal;
+      purchases.reduce((s, p) => s + netPurchase(p), 0) + giftCardTotal;
     const previousPeriodTotal =
-      previousPurchases.reduce((s, p) => s + Number(p.price), 0) +
+      previousPurchases.reduce((s, p) => s + netPurchase(p), 0) +
       previousGiftCards.reduce((s, g) => s + Number(g.amount), 0);
 
     return NextResponse.json({
