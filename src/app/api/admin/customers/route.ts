@@ -130,27 +130,34 @@ export async function GET(_request: NextRequest) {
     logger.info({}, '📊 Admin customers API called');
     const supabase = createAdminClient();
 
-    // Fetch all customers with role 'customer'
-    // Using explicit type cast to ensure proper type inference
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('role', 'customer' as const)
-      .order('created_at', { ascending: false });
+    // Fetch all customers with role 'customer' (paginated to bypass 1000-row cap)
+    const PAGE_SIZE = 1000;
+    const users: DbUser[] = [];
+    let from = 0;
+    while (true) {
+      const { data: pageData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'customer' as const)
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (usersError) {
-      logger.error(
-        { error: usersError, code: usersError.code, details: usersError.details },
-        'Failed to fetch customers from database'
-      );
-      return NextResponse.json(
-        { error: 'Failed to fetch customers', details: usersError.message },
-        { status: 500 }
-      );
+      if (usersError) {
+        logger.error(
+          { error: usersError, code: usersError.code, details: usersError.details },
+          'Failed to fetch customers from database'
+        );
+        return NextResponse.json(
+          { error: 'Failed to fetch customers', details: usersError.message },
+          { status: 500 }
+        );
+      }
+
+      const rows = (pageData || []) as DbUser[];
+      users.push(...rows);
+      if (rows.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
-
-    // Type assertion and null check
-    const users = (usersData || []) as DbUser[];
 
     if (users.length === 0) {
       logger.info({}, '📊 No customers found');
