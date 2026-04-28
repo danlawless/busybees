@@ -62,7 +62,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
   const [waiverData, setWaiverData] = useState<WaiverFormData | null>(null);
 
-  const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 6);
+  const eligibleChildren = children.filter(c => c.age >= 3 && c.age <= 18);
 
   useEffect(() => {
     // Fetch availability
@@ -397,7 +397,7 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
             {eligibleChildren.length === 0 ? (
               <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center">
                 <p className="text-sm text-amber-800">
-                  No eligible children found (ages 3-6). Add your children in the Children tab first.
+                  No eligible children found (ages 3 and up). Add your children in the Children tab first.
                 </p>
               </div>
             ) : (
