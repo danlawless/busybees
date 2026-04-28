@@ -84,6 +84,7 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+  childIds?: string[]; // For family passes: all children covered by this purchase
 }
 
 interface Session {
@@ -1295,15 +1296,18 @@ export function AdminPanel({
                 <div className="font-medium">{customer.name} ({formatPhoneNumber(customer.phone)})</div>
                 {(customer.activeSessions || []).map(session => {
                   const purchase = customer.purchases.find(p => p.id === session.purchaseId);
-                  const child = purchase?.childId
-                    ? customer.children.find(c => c.id === purchase.childId)
-                    : null;
+                  const linkedChildIds = purchase?.childIds?.length
+                    ? purchase.childIds
+                    : (purchase?.childId ? [purchase.childId] : []);
+                  const childNames = linkedChildIds
+                    .map(id => customer.children.find(c => c.id === id)?.name)
+                    .filter((n): n is string => Boolean(n));
                   return (
                   <div key={session.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg ml-4">
                     <div>
-                      {child && (
+                      {childNames.length > 0 && (
                         <p className="text-sm font-medium text-gray-800">
-                          {child.name}
+                          {childNames.join(', ')}
                         </p>
                       )}
                       <p className="text-sm text-gray-600">
