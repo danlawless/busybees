@@ -41,10 +41,10 @@ export default function AfterDarkPage() {
   ];
 
   const details = [
-    { label: 'Ages', value: '3-6 years old' },
+    { label: 'Ages', value: '3 and Up (must be potty trained)' },
     { label: 'Time', value: 'Fridays, 5:00 PM - 7:30 PM' },
     { label: 'Includes', value: 'Pizza, drinks, movie & supervised play' },
-    { label: 'Capacity', value: 'Limited spots — book early!' },
+    { label: 'Capacity', value: 'Limited to 40 spots. Book Early' },
   ];
 
   return (
@@ -221,7 +221,7 @@ export default function AfterDarkPage() {
             {[
               { step: '1', title: 'Book Online', desc: 'Reserve your spot — capacity is limited to ensure every child gets personal attention.', icon: '📱' },
               { step: '2', title: 'Drop Off at 5 PM', desc: 'Sign the waiver, say goodbye, and head out for your Friday evening! Kids start with supervised play time.', icon: '👋' },
-              { step: '3', title: 'Pick Up at 7:30 PM', desc: 'Return to happy, tired kids who had the time of their lives. Pizza consumed, movie watched, fun had!', icon: '🌙' },
+              { step: '3', title: 'Pick Up at 7:30 PM', desc: 'Return to happy, fed, tired kids ready for the ride home.', icon: '🌙' },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -383,6 +383,41 @@ export default function AfterDarkPage() {
                 </div>
               </div>
             </div>
+          </motion.div>
+
+          {/* Atmosphere Note */}
+          <motion.div
+            className="rounded-xl p-6 text-center mb-8"
+            style={{
+              background: 'rgba(139, 92, 246, 0.08)',
+              border: '1px solid rgba(139, 92, 246, 0.25)',
+            }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            <p className="text-sm" style={{ color: '#c4b5fd' }}>
+              <strong>Please Note:</strong> For After Dark, the space will feature modified
+              lighting, including flashing and moving effects. Curtains will be drawn to
+              block natural sunlight and create a darker, nighttime-style atmosphere.
+            </p>
+          </motion.div>
+
+          {/* Booking Instructions */}
+          <motion.div
+            className="rounded-xl p-6 text-center mb-8"
+            style={{
+              background: 'rgba(59, 130, 246, 0.08)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+            }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            <p className="text-sm" style={{ color: '#93c5fd' }}>
+              <strong>How to Book:</strong> Go to the After-Dark section in My Account
+              and choose your preferred date and movie.
+            </p>
           </motion.div>
 
           {/* Safety Note */}

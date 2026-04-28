@@ -190,7 +190,7 @@ export function MovieScheduleManager() {
     }
   };
 
-  const upcomingFridays = getNextFridays(8);
+  const upcomingFridays = getNextFridays(13);
   const scheduledDates = new Set(movies.map(m => m.show_date));
   const upcomingMovies = movies.filter(m => !isPast(m.show_date)).sort((a, b) => a.show_date.localeCompare(b.show_date));
   const pastMovies = movies.filter(m => isPast(m.show_date));

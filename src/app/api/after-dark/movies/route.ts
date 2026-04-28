@@ -19,7 +19,7 @@ export async function GET() {
       .select('id, title, show_date, description, poster_url, rating')
       .gte('show_date', todayStr)
       .order('show_date', { ascending: true })
-      .limit(8);
+      .limit(13);
 
     if (error) {
       return NextResponse.json({ movies: [] });
