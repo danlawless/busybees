@@ -38,6 +38,8 @@ interface PurchaseData {
   usedSessions: number;
   totalSessions: number;
   status: string;
+  childId: string | null;
+  childIds: string[];
 }
 
 interface SessionData {
@@ -199,6 +201,21 @@ export async function GET(_request: NextRequest) {
       purchasesByCustomer.set(purchase.customer_id, existing);
     }
 
+    // Resolve child links via the purchase_children join table (covers family passes)
+    const purchaseIds = allPurchases.map(p => p.id);
+    const childIdsByPurchase = new Map<string, string[]>();
+    if (purchaseIds.length > 0) {
+      const purchaseChildrenData = await chunkedIn<{ purchase_id: string; child_id: string }>(
+        supabase, 'purchase_children', 'purchase_id', purchaseIds,
+        { select: 'purchase_id, child_id' },
+      );
+      for (const pc of purchaseChildrenData) {
+        const existing = childIdsByPurchase.get(pc.purchase_id) || [];
+        existing.push(pc.child_id);
+        childIdsByPurchase.set(pc.purchase_id, existing);
+      }
+    }
+
     const sessionsByCustomer = new Map<string, DbSession[]>();
     for (const session of allSessions) {
       const existing = sessionsByCustomer.get(session.customer_id) || [];
@@ -237,6 +254,8 @@ export async function GET(_request: NextRequest) {
         usedSessions: purchase.used_sessions,
         totalSessions: purchase.total_sessions,
         status: purchase.status,
+        childId: purchase.child_id,
+        childIds: childIdsByPurchase.get(purchase.id) || [],
       }));
 
       const activeSessions = (sessionsByCustomer.get(user.id) || []).map(session => ({
