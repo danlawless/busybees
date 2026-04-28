@@ -1293,9 +1293,19 @@ export function AdminPanel({
             {activeSessions.map((customer) => (
               <div key={customer.id} className="space-y-2">
                 <div className="font-medium">{customer.name} ({formatPhoneNumber(customer.phone)})</div>
-                {(customer.activeSessions || []).map(session => (
+                {(customer.activeSessions || []).map(session => {
+                  const purchase = customer.purchases.find(p => p.id === session.purchaseId);
+                  const child = purchase?.childId
+                    ? customer.children.find(c => c.id === purchase.childId)
+                    : null;
+                  return (
                   <div key={session.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg ml-4">
                     <div>
+                      {child && (
+                        <p className="text-sm font-medium text-gray-800">
+                          {child.name}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-600">
                         Session started: {formatDate(session.startTime)}
                       </p>
@@ -1311,7 +1321,8 @@ export function AdminPanel({
                       Force Checkout All
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </div>

@@ -38,6 +38,7 @@ interface PurchaseData {
   usedSessions: number;
   totalSessions: number;
   status: string;
+  childId: string | null;
 }
 
 interface SessionData {
@@ -237,6 +238,7 @@ export async function GET(_request: NextRequest) {
         usedSessions: purchase.used_sessions,
         totalSessions: purchase.total_sessions,
         status: purchase.status,
+        childId: purchase.child_id,
       }));
 
       const activeSessions = (sessionsByCustomer.get(user.id) || []).map(session => ({
