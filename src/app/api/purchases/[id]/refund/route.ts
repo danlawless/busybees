@@ -12,6 +12,30 @@ import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 
+type AdminSupabase = ReturnType<typeof createAdminClient>;
+
+async function cancelLinkedAfterDarkBooking(
+  supabase: AdminSupabase,
+  bookingId: string,
+  logContext: Record<string, unknown>
+) {
+  const { error } = await supabase
+    .from('after_dark_bookings')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .neq('status', 'cancelled');
+
+  if (error) {
+    logger.error({ ...logContext, bookingId, error }, 'Failed to cancel After Dark booking after refund');
+    Sentry.captureException(error, {
+      tags: { component: 'api', action: 'after_dark_booking_cancel_on_refund' },
+      extra: { bookingId },
+    });
+  } else {
+    logger.info({ ...logContext, bookingId }, 'After Dark booking cancelled after purchase refund');
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,6 +89,10 @@ export async function POST(
         throw updateError;
       }
 
+      if (purchase.type === 'after_dark' && purchase.product_id) {
+        await cancelLinkedAfterDarkBooking(supabase, purchase.product_id, logContext);
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Gift card purchase marked as refunded',
@@ -114,6 +142,10 @@ export async function POST(
         extra: { purchaseId, refundId: refund.id },
       });
       // Still return success since the refund was processed
+    }
+
+    if (purchase.type === 'after_dark' && purchase.product_id) {
+      await cancelLinkedAfterDarkBooking(supabase, purchase.product_id, logContext);
     }
 
     Sentry.addBreadcrumb({
