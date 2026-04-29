@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // All upcoming Fridays availability
-    const fridays = getUpcomingFridays(8);
+    const fridays = getUpcomingFridays(13);
 
     const { data, error } = await supabase
       .from('after_dark_bookings')
@@ -65,6 +65,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to check availability' }, { status: 500 });
     }
 
+    const { data: movieRows } = await supabase
+      .from('after_dark_movies')
+      .select('show_date, title, rating')
+      .in('show_date', fridays);
+
+    const movieByDate: Record<string, { title: string; rating: string }> = {};
+    (movieRows || []).forEach(m => {
+      movieByDate[m.show_date] = { title: m.title, rating: m.rating };
+    });
+
     // Sum kids per date
     const bookedByDate: Record<string, number> = {};
     (data || []).forEach(b => {
@@ -73,12 +83,15 @@ export async function GET(request: NextRequest) {
 
     const availability = fridays.map(date => {
       const booked = bookedByDate[date] || 0;
+      const movie = movieByDate[date] || null;
       return {
         date,
         maxKids: MAX_KIDS,
         booked,
         remaining: Math.max(0, MAX_KIDS - booked),
         isFull: booked >= MAX_KIDS,
+        movieTitle: movie?.title || null,
+        movieRating: movie?.rating || null,
       };
     });
 
