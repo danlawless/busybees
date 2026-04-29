@@ -19,6 +19,8 @@ interface Availability {
   booked: number;
   remaining: number;
   isFull: boolean;
+  movieTitle: string | null;
+  movieRating: string | null;
 }
 
 interface AfterDarkBookingProps {
@@ -355,6 +357,15 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
                     <p className={`text-sm font-bold ${a.isFull ? 'text-gray-400' : 'text-gray-800'}`}>
                       {formatDate(a.date)}
                     </p>
+                    {a.movieTitle ? (
+                      <p className={`text-xs mt-1 font-semibold truncate ${a.isFull ? 'text-gray-400' : 'text-purple-700'}`} title={a.movieTitle}>
+                        🎬 {a.movieTitle}
+                      </p>
+                    ) : (
+                      <p className={`text-xs mt-1 italic ${a.isFull ? 'text-gray-400' : 'text-gray-400'}`}>
+                        Movie TBA
+                      </p>
+                    )}
                     <p className={`text-xs mt-1 font-medium ${
                       a.isFull ? 'text-red-500' : a.remaining <= 10 ? 'text-amber-600' : 'text-green-600'
                     }`}>
