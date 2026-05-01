@@ -54,6 +54,28 @@ export function EventCard({
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isDescriptionClamped, setIsDescriptionClamped] = useState(false);
+  const descriptionRef = React.useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (!description) return;
+    const el = descriptionRef.current;
+    if (!el) return;
+    const check = () => {
+      const wasExpanded = el.classList.contains('line-clamp-none');
+      el.classList.remove('line-clamp-none');
+      el.classList.add('line-clamp-2');
+      setIsDescriptionClamped(el.scrollHeight > el.clientHeight + 1);
+      if (wasExpanded) {
+        el.classList.remove('line-clamp-2');
+        el.classList.add('line-clamp-none');
+      }
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [description]);
 
   const closeLightbox = useCallback(() => setIsLightboxOpen(false), []);
 
@@ -176,7 +198,26 @@ export function EventCard({
         </p>
 
         {description && (
-          <p className="text-sm text-neutral-500 mb-4 line-clamp-2">{description}</p>
+          <div className="mb-4">
+            <p
+              ref={descriptionRef}
+              className={`text-sm text-neutral-500 whitespace-pre-line ${
+                isDescriptionExpanded ? 'line-clamp-none' : 'line-clamp-2'
+              }`}
+            >
+              {description}
+            </p>
+            {(isDescriptionClamped || isDescriptionExpanded) && (
+              <button
+                type="button"
+                onClick={() => setIsDescriptionExpanded((v) => !v)}
+                className="mt-1 text-sm font-semibold text-honey-600 hover:text-honey-700 focus:outline-none focus:ring-2 focus:ring-honey-400 rounded cursor-pointer"
+                aria-expanded={isDescriptionExpanded}
+              >
+                {isDescriptionExpanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
         )}
 
         {isPast ? (
