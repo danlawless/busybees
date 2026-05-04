@@ -286,7 +286,7 @@ export default function AfterDarkPage() {
                         className="text-center py-1.5 text-xs font-bold uppercase tracking-wider"
                         style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', color: '#ffffff' }}
                       >
-                        This Friday
+                        Coming Up
                       </div>
                     )}
                     <div className="p-6 text-center">
