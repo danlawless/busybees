@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { easternNow, formatDateET } from '@/lib/services/report-aggregations';
 
 const MAX_KIDS = 40;
+const LAUNCH_DATE = '2026-06-05';
 
 function getUpcomingFridays(count: number): string[] {
   const fridays: string[] = [];
@@ -21,7 +22,7 @@ function getUpcomingFridays(count: number): string[] {
     fridays.push(formatDateET(d));
     d.setDate(d.getDate() + 7);
   }
-  return fridays;
+  return fridays.filter(date => date >= LAUNCH_DATE);
 }
 
 export async function GET(request: NextRequest) {
