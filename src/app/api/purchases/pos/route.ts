@@ -268,6 +268,12 @@ export async function POST(request: NextRequest) {
       adminSupabase,
     );
 
+    // Monthly passes default to auto-renew on (renew 7 days before expiry)
+    const isMonthlyPass = purchase_type === 'monthly_pass';
+    const nextRenewalDate = isMonthlyPass && expiryDate
+      ? new Date(expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // Child + Infant combo pass: create individual purchases per child
     const isComboPass = (product_name.toLowerCase().includes('child') || product_name.toLowerCase().includes('toddler')) && product_name.toLowerCase().includes('infant');
     const comboChildrenIds = isComboPass && Array.isArray(children_ids) && children_ids.length === 2
@@ -331,6 +337,8 @@ export async function POST(request: NextRequest) {
           total_sessions: totalSessions,
           status: purchase_type === 'food_beverage' ? 'used' : 'active',
           stripe_payment_intent_id: paymentIntentId,
+          auto_renew: isMonthlyPass,
+          next_renewal_date: nextRenewalDate,
           party_date: metadata.party_date || null,
           party_start_time: metadata.party_time || null,
           party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
