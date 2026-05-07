@@ -314,13 +314,26 @@ export async function updateEmailStatus(
  */
 export async function getAllContactSubmissions(): Promise<ContactSubmissionData[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('contact_submissions')
-    .select('*')
-    .order('submitted_at', { ascending: false });
 
-  if (error) throw error;
-  return (data || []).map(toContactData);
+  // Paginated to bypass Supabase 1000-row cap
+  const PAGE_SIZE = 1000;
+  const all: ContactSubmissionData[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('contact_submissions')
+      .select('*')
+      .order('submitted_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const rows = data || [];
+    all.push(...rows.map(toContactData));
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return all;
 }
 
 /**
@@ -328,14 +341,27 @@ export async function getAllContactSubmissions(): Promise<ContactSubmissionData[
  */
 export async function getFailedEmailSubmissions(): Promise<ContactSubmissionData[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('contact_submissions')
-    .select('*')
-    .eq('email_sent', false)
-    .order('submitted_at', { ascending: false });
 
-  if (error) throw error;
-  return (data || []).map(toContactData);
+  // Paginated to bypass Supabase 1000-row cap
+  const PAGE_SIZE = 1000;
+  const all: ContactSubmissionData[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('contact_submissions')
+      .select('*')
+      .eq('email_sent', false)
+      .order('submitted_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const rows = data || [];
+    all.push(...rows.map(toContactData));
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return all;
 }
 
 /**

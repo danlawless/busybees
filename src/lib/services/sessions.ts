@@ -57,22 +57,34 @@ export async function getActiveSessions(customerId: string): Promise<Session[]> 
 export async function getAllActiveSessions(): Promise<Session[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .select(`
-      *,
-      customer:users!sessions_customer_id_fkey (id, name, phone),
-      purchase:purchases (id, name, type)
-    `)
-    .is('end_time', null)
-    .order('start_time', { ascending: false });
+  // Paginated to bypass Supabase 1000-row cap
+  const PAGE_SIZE = 1000;
+  const all: Session[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(`
+        *,
+        customer:users!sessions_customer_id_fkey (id, name, phone),
+        purchase:purchases (id, name, type)
+      `)
+      .is('end_time', null)
+      .order('start_time', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
 
-  if (error) {
-    console.error('Error fetching all active sessions:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching all active sessions:', error);
+      throw error;
+    }
+
+    const rows = data || [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
 
-  return data;
+  return all;
 }
 
 /**

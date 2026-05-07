@@ -102,17 +102,29 @@ export async function getActivePurchases(customerId: string): Promise<Purchase[]
 export async function getAllPurchases(): Promise<Purchase[]> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-        .from("purchases")
-        .select("*")
-        .order("purchase_date", { ascending: false });
+    // Paginated to bypass Supabase 1000-row cap
+    const PAGE_SIZE = 1000;
+    const all: Purchase[] = [];
+    let from = 0;
+    while (true) {
+        const { data, error } = await supabase
+            .from("purchases")
+            .select("*")
+            .order("purchase_date", { ascending: false })
+            .range(from, from + PAGE_SIZE - 1);
 
-    if (error) {
-        console.error("Error fetching all purchases:", error);
-        throw error;
+        if (error) {
+            console.error("Error fetching all purchases:", error);
+            throw error;
+        }
+
+        const rows = data || [];
+        all.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
     }
 
-    return data;
+    return all;
 }
 
 /**
