@@ -12,27 +12,48 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient();
 
-    // Fetch all subscribers using admin client (bypasses RLS)
-    const { data: subscribers, error: subscribersError } = await supabase
-      .from('newsletter_subscribers')
-      .select('*')
-      .order('subscribed_at', { ascending: false });
+    // Fetch all subscribers (paginated to bypass Supabase 1000-row cap)
+    type SubscriberRow = {
+      id: string;
+      name: string | null;
+      email: string;
+      subscribed_at: string;
+      is_active: boolean;
+      unsubscribed_at: string | null;
+      source: string | null;
+      created_at: string;
+    };
+    const PAGE_SIZE = 1000;
+    const subscribers: SubscriberRow[] = [];
+    let from = 0;
+    while (true) {
+      const { data: pageData, error: subscribersError } = await supabase
+        .from('newsletter_subscribers')
+        .select('*')
+        .order('subscribed_at', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (subscribersError) {
-      logger.error({ error: subscribersError }, 'Failed to fetch newsletter subscribers');
-      return NextResponse.json(
-        { error: 'Failed to fetch newsletter subscribers' },
-        { status: 500 }
-      );
+      if (subscribersError) {
+        logger.error({ error: subscribersError }, 'Failed to fetch newsletter subscribers');
+        return NextResponse.json(
+          { error: 'Failed to fetch newsletter subscribers' },
+          { status: 500 }
+        );
+      }
+
+      const rows = pageData || [];
+      subscribers.push(...rows);
+      if (rows.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
 
     // Calculate stats
-    const total = subscribers?.length || 0;
-    const active = subscribers?.filter(s => s.is_active).length || 0;
+    const total = subscribers.length;
+    const active = subscribers.filter(s => s.is_active).length;
     const unsubscribed = total - active;
 
     // Transform to frontend format
-    const formattedSubscribers = (subscribers || []).map(row => ({
+    const formattedSubscribers = subscribers.map(row => ({
       id: row.id,
       name: row.name,
       email: row.email,

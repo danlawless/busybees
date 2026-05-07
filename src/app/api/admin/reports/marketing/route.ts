@@ -20,11 +20,31 @@ export async function GET(request: NextRequest) {
     const range = parseDateRange(searchParams);
     const granularity = parseGranularity(searchParams);
 
+    type SubscriberRow = { subscribed_at: string; source: string | null; is_active: boolean };
+
+    const fetchAllSubscribers = async (): Promise<SubscriberRow[]> => {
+      const PAGE_SIZE = 1000;
+      const out: SubscriberRow[] = [];
+      let from = 0;
+      while (true) {
+        const { data } = await supabase
+          .from('newsletter_subscribers')
+          .select('subscribed_at, source, is_active')
+          .order('subscribed_at', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        const rows = (data || []) as SubscriberRow[];
+        out.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return out;
+    };
+
     const [
       giftCardsRes,
       redemptionsRes,
       allGiftCardsRes,
-      subscribersRes,
+      subscribers,
       promosRes,
     ] = await Promise.all([
       // Gift cards in range
@@ -47,11 +67,8 @@ export async function GET(request: NextRequest) {
         .from('gift_cards')
         .select('remaining_amount, status')
         .neq('status', 'pending'),
-      // Newsletter subscribers
-      supabase
-        .from('newsletter_subscribers')
-        .select('subscribed_at, source, is_active')
-        .order('subscribed_at', { ascending: true }),
+      // Newsletter subscribers (paginated to bypass 1000-row cap)
+      fetchAllSubscribers(),
       // Active promos
       supabase
         .from('promos')
@@ -63,7 +80,6 @@ export async function GET(request: NextRequest) {
     const giftCards = giftCardsRes.data || [];
     const redemptions = redemptionsRes.data || [];
     const allGiftCards = allGiftCardsRes.data || [];
-    const subscribers = subscribersRes.data || [];
     const promos = promosRes.data || [];
 
     // Gift card sales & redemptions over time
