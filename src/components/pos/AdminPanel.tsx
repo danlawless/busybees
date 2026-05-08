@@ -42,6 +42,7 @@ import { GroupsManager } from './GroupsManager';
 import { AnnouncementManager } from './AnnouncementManager';
 import { AfterDarkAdmin } from './AfterDarkAdmin';
 import { EventBookingsAdmin } from './EventBookingsAdmin';
+import { CouponsAdmin } from './CouponsAdmin';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
@@ -146,7 +147,7 @@ interface StaffUser {
   created_at: string;
 }
 
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'events' | 'settings';
+type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'coupons' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'events' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -5418,6 +5419,13 @@ export function AdminPanel({
             🎁 Gift Cards
           </Button>
           <Button
+            onClick={() => setCurrentView('coupons')}
+            variant={currentView === 'coupons' ? 'default' : 'outline'}
+            size="sm"
+          >
+            🎟️ Coupons
+          </Button>
+          <Button
             onClick={() => setCurrentView('groups')}
             variant={currentView === 'groups' ? 'default' : 'outline'}
             size="sm"
@@ -5463,6 +5471,7 @@ export function AdminPanel({
       {currentView === 'parties' && renderParties()}
       {currentView === 'products' && renderProducts()}
       {currentView === 'gift-cards' && renderGiftCards()}
+      {currentView === 'coupons' && <CouponsAdmin />}
       {currentView === 'groups' && <GroupsManager />}
       {currentView === 'monthly-members' && renderMonthlyMembers()}
       {currentView === 'punch-cards' && renderPunchCards()}
