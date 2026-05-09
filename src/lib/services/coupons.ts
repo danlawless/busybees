@@ -1,7 +1,7 @@
 /**
  * Coupon Service
- * Single-use, fixed-dollar codes redeemable toward day-pass purchases.
- * 365-day expiration. Unused balance is forfeited at redemption (single-use rule).
+ * Single-use, day-pass-only codes. Either a fixed-dollar discount or a percent off.
+ * 365-day expiration. For dollar coupons, balance above the pass price is forfeited.
  */
 
 import { createAdminClient } from '@/lib/supabase/server';
@@ -9,11 +9,15 @@ import { logger } from '@/lib/logger';
 import { randomBytes } from 'crypto';
 
 export type CouponStatus = 'active' | 'redeemed' | 'expired' | 'voided';
+export type CouponDiscountType = 'amount' | 'percent';
 
 export interface Coupon {
   id: string;
   code: string;
-  amount: number;
+  name: string | null;
+  discount_type: CouponDiscountType;
+  amount: number | null;
+  discount_percent: number | null;
   status: CouponStatus;
   expires_at: string;
   redeemed_by: string | null;
@@ -46,31 +50,85 @@ export function generateCouponCode(): string {
   return `${CODE_PREFIX}-${segments.join('-')}`;
 }
 
+/**
+ * Validate a coupon code's surface format. Accepts:
+ *   - Auto-generated BBCP-XXXX-XXXX-XXXX
+ *   - Custom admin-chosen codes: 3-30 chars, alphanumeric + dashes/underscores
+ */
 export function isValidCouponCodeFormat(code: string): boolean {
-  return /^BBCP-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(code.toUpperCase());
+  return /^[A-Z0-9_-]{3,30}$/.test(code.toUpperCase());
+}
+
+export interface CreateCouponInput {
+  code?: string; // Optional — if omitted, auto-generated
+  name?: string;
+  discount_type: CouponDiscountType;
+  amount?: number;
+  discount_percent?: number;
+  notes?: string;
+  createdByAdmin?: string;
 }
 
 /**
  * Create a new coupon. Auto-generates a unique code; expires in 365 days.
  */
-export async function createCoupon(input: {
-  amount: number;
-  notes?: string;
-  createdByAdmin?: string;
-}): Promise<Coupon> {
-  if (input.amount <= 0) throw new Error('Coupon amount must be positive');
+export async function createCoupon(input: CreateCouponInput): Promise<Coupon> {
+  if (input.discount_type === 'amount') {
+    if (!input.amount || input.amount <= 0) {
+      throw new Error('Coupon amount must be positive');
+    }
+  } else if (input.discount_type === 'percent') {
+    if (!input.discount_percent || input.discount_percent <= 0 || input.discount_percent > 100) {
+      throw new Error('Coupon discount_percent must be between 1 and 100');
+    }
+  } else {
+    throw new Error('Invalid coupon discount_type');
+  }
 
   const supabase = createAdminClient();
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  // Retry on the (extremely unlikely) collision
+  // Custom code path — single attempt, surface unique-violation as a friendly error
+  if (input.code) {
+    const customCode = input.code.trim().toUpperCase();
+    if (!isValidCouponCodeFormat(customCode)) {
+      throw new Error('Coupon code must be 3-30 characters: letters, numbers, dashes, underscores only');
+    }
+    const { data, error } = await supabase
+      .from('coupons')
+      .insert({
+        code: customCode,
+        name: input.name || null,
+        discount_type: input.discount_type,
+        amount: input.discount_type === 'amount' ? input.amount : null,
+        discount_percent: input.discount_type === 'percent' ? input.discount_percent : null,
+        status: 'active',
+        expires_at: expiresAt,
+        notes: input.notes || null,
+        created_by_admin: input.createdByAdmin || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') throw new Error(`Coupon code "${customCode}" is already in use`);
+      logger.error({ error }, 'Failed to create coupon');
+      throw error;
+    }
+    return data as Coupon;
+  }
+
+  // Auto-generated code path — retry on the (extremely unlikely) collision
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateCouponCode();
     const { data, error } = await supabase
       .from('coupons')
       .insert({
         code,
-        amount: input.amount,
+        name: input.name || null,
+        discount_type: input.discount_type,
+        amount: input.discount_type === 'amount' ? input.amount : null,
+        discount_percent: input.discount_type === 'percent' ? input.discount_percent : null,
         status: 'active',
         expires_at: expiresAt,
         notes: input.notes || null,
@@ -131,6 +189,27 @@ export async function validateCoupon(code: string): Promise<ValidateCouponResult
   return { valid: true, coupon };
 }
 
+/**
+ * Compute the discount a coupon applies to a given pass price.
+ * For 'amount' coupons: capped at pass price (remainder forfeited).
+ * For 'percent' coupons: passPrice * (discount_percent/100), capped at passPrice.
+ */
+export function computeCouponDiscount(coupon: Coupon, passPrice: number): { applied: number; forfeited: number } {
+  if (coupon.discount_type === 'amount') {
+    const value = Number(coupon.amount || 0);
+    const applied = Math.min(value, passPrice);
+    const forfeited = Math.max(0, value - passPrice);
+    return { applied: round2(applied), forfeited: round2(forfeited) };
+  }
+  const pct = Number(coupon.discount_percent || 0);
+  const applied = Math.min(passPrice * (pct / 100), passPrice);
+  return { applied: round2(applied), forfeited: 0 };
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export interface RedeemCouponResult {
   success: boolean;
   amountApplied?: number;
@@ -140,14 +219,7 @@ export interface RedeemCouponResult {
 
 /**
  * Atomically mark a coupon redeemed against a day-pass purchase.
- * Uses a conditional update on status='active' so concurrent redemptions can't double-spend.
- *
- * Per single-use rule: any coupon balance above the pass price is forfeited.
- *
- * @param code Coupon code (any case)
- * @param userId Customer redeeming
- * @param purchaseId The day-pass purchase being credited
- * @param passPrice The price of the pass (cap on amount applied)
+ * Conditional UPDATE on status='active' so concurrent redemptions can't double-spend.
  */
 export async function redeemCoupon(
   code: string,
@@ -161,12 +233,10 @@ export async function redeemCoupon(
   }
 
   const coupon = validation.coupon;
-  const amountApplied = Math.min(coupon.amount, passPrice);
-  const forfeited = Math.max(0, coupon.amount - passPrice);
+  const { applied, forfeited } = computeCouponDiscount(coupon, passPrice);
 
   const supabase = createAdminClient();
 
-  // Atomic state transition: only redeem if still 'active'
   const { data, error } = await supabase
     .from('coupons')
     .update({
@@ -174,7 +244,7 @@ export async function redeemCoupon(
       redeemed_by: userId,
       redeemed_at: new Date().toISOString(),
       redeemed_purchase_id: purchaseId,
-      amount_applied: amountApplied,
+      amount_applied: applied,
     })
     .eq('id', coupon.id)
     .eq('status', 'active')
@@ -186,12 +256,12 @@ export async function redeemCoupon(
     return { success: false, error: 'This coupon has already been redeemed' };
   }
 
-  logger.info({ couponId: coupon.id, userId, purchaseId, amountApplied, forfeited }, '🎟️ Coupon redeemed');
-  return { success: true, amountApplied, forfeited };
+  logger.info({ couponId: coupon.id, userId, purchaseId, applied, forfeited }, '🎟️ Coupon redeemed');
+  return { success: true, amountApplied: applied, forfeited };
 }
 
 /**
- * Void an active coupon (admin action). Does not refund anything since coupons aren't paid for.
+ * Void an active coupon (admin action).
  */
 export async function voidCoupon(couponId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();

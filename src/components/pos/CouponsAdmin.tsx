@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/Button';
 interface Coupon {
   id: string;
   code: string;
-  amount: number;
+  name: string | null;
+  discount_type: 'amount' | 'percent';
+  amount: number | null;
+  discount_percent: number | null;
   status: 'active' | 'redeemed' | 'expired' | 'voided';
   expires_at: string;
   redeemed_by: string | null;
@@ -23,8 +26,12 @@ interface Stats {
   total: number;
   active: number;
   redeemed: number;
-  totalIssued: number;
   totalRedeemed: number;
+}
+
+function formatDiscount(c: Coupon): string {
+  if (c.discount_type === 'percent') return `${Number(c.discount_percent).toFixed(0)}% off`;
+  return `$${Number(c.amount).toFixed(2)}`;
 }
 
 const STATUS_LABEL: Record<Coupon['status'], string> = {
@@ -43,14 +50,22 @@ const STATUS_COLOR: Record<Coupon['status'], string> = {
 
 export function CouponsAdmin() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, active: 0, redeemed: 0, totalIssued: 0, totalRedeemed: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, active: 0, redeemed: 0, totalRedeemed: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Coupon['status']>('all');
-  const [form, setForm] = useState({ amount: '', notes: '', createdByAdmin: '' });
+  const [form, setForm] = useState({
+    code: '',
+    name: '',
+    discount_type: 'amount' as 'amount' | 'percent',
+    amount: '',
+    discount_percent: '',
+    notes: '',
+    createdByAdmin: '',
+  });
   const [createdCoupon, setCreatedCoupon] = useState<Coupon | null>(null);
 
   const fetchCoupons = useCallback(async () => {
@@ -60,7 +75,7 @@ export function CouponsAdmin() {
       if (res.ok) {
         const data = await res.json();
         setCoupons(data.coupons || []);
-        setStats(data.stats || { total: 0, active: 0, redeemed: 0, totalIssued: 0, totalRedeemed: 0 });
+        setStats(data.stats || { total: 0, active: 0, redeemed: 0, totalRedeemed: 0 });
       }
     } finally {
       setIsLoading(false);
@@ -81,23 +96,43 @@ export function CouponsAdmin() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = parseFloat(form.amount);
-    if (!amount || amount <= 0) return;
+    const body: {
+      code?: string;
+      name?: string;
+      discount_type: 'amount' | 'percent';
+      amount?: number;
+      discount_percent?: number;
+      notes?: string;
+      createdByAdmin?: string;
+    } = {
+      discount_type: form.discount_type,
+      code: form.code.trim() ? form.code.trim().toUpperCase() : undefined,
+      name: form.name || undefined,
+      notes: form.notes || undefined,
+      createdByAdmin: form.createdByAdmin || undefined,
+    };
+
+    if (form.discount_type === 'amount') {
+      const amount = parseFloat(form.amount);
+      if (!amount || amount <= 0) return;
+      body.amount = amount;
+    } else {
+      const pct = parseFloat(form.discount_percent);
+      if (!pct || pct <= 0 || pct > 100) return;
+      body.discount_percent = pct;
+    }
+
     setCreating(true);
     try {
       const res = await fetch('/api/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          notes: form.notes || undefined,
-          createdByAdmin: form.createdByAdmin || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         const data = await res.json();
         setCreatedCoupon(data.coupon);
-        setForm({ amount: '', notes: '', createdByAdmin: '' });
+        setForm({ code: '', name: '', discount_type: 'amount', amount: '', discount_percent: '', notes: '', createdByAdmin: '' });
         setShowForm(false);
         fetchCoupons();
       } else {
@@ -149,8 +184,8 @@ export function CouponsAdmin() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm font-medium text-gray-600">Total Issued</p>
-            <p className="text-2xl font-bold mt-1">${stats.totalIssued.toFixed(2)}</p>
+            <p className="text-sm font-medium text-gray-600">Redeemed</p>
+            <p className="text-2xl font-bold mt-1">{stats.redeemed}</p>
           </CardContent>
         </Card>
         <Card>
@@ -178,7 +213,8 @@ export function CouponsAdmin() {
               </Button>
             </div>
             <p className="text-xs text-green-700 mt-2">
-              ${Number(createdCoupon.amount).toFixed(2)} — valid until {formatDate(createdCoupon.expires_at)}
+              {createdCoupon.name ? `${createdCoupon.name} — ` : ''}
+              {formatDiscount(createdCoupon)} — valid until {formatDate(createdCoupon.expires_at)}
             </p>
           </CardContent>
         </Card>
@@ -196,18 +232,82 @@ export function CouponsAdmin() {
           {showForm && (
             <form onSubmit={handleCreate} className="space-y-3 mb-6 p-4 bg-gray-50 rounded-lg">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Code (optional)</label>
                 <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={form.amount}
-                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                  type="text"
+                  value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono uppercase"
+                  placeholder="e.g., EARLY20 (leave blank to auto-generate)"
+                  maxLength={30}
+                />
+                <p className="text-xs text-gray-500 mt-1">3-30 chars: letters, numbers, dashes, underscores. Auto-uppercased.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., 10.00"
+                  placeholder="e.g., Birthday Promo"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="discount_type"
+                      value="amount"
+                      checked={form.discount_type === 'amount'}
+                      onChange={() => setForm(f => ({ ...f, discount_type: 'amount' }))}
+                    />
+                    Dollar amount
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="discount_type"
+                      value="percent"
+                      checked={form.discount_type === 'percent'}
+                      onChange={() => setForm(f => ({ ...f, discount_type: 'percent' }))}
+                    />
+                    Percent off
+                  </label>
+                </div>
+              </div>
+              {form.discount_type === 'amount' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    value={form.amount}
+                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="e.g., 10.00"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Percent off (1-100)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    required
+                    value={form.discount_percent}
+                    onChange={e => setForm(f => ({ ...f, discount_percent: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="e.g., 25"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
                 <input
@@ -231,7 +331,7 @@ export function CouponsAdmin() {
               <div className="flex gap-2">
                 <Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Coupon'}</Button>
               </div>
-              <p className="text-xs text-gray-600">Coupons expire 365 days after creation. Single-use, day-pass purchases only. Unused balance is forfeited at redemption.</p>
+              <p className="text-xs text-gray-600">Coupons expire 365 days after creation. Single-use, day-pass purchases only. Dollar amounts above the pass price are forfeited at redemption.</p>
             </form>
           )}
 
@@ -268,7 +368,8 @@ export function CouponsAdmin() {
                 <thead className="bg-gray-100 text-left">
                   <tr>
                     <th className="px-3 py-2">Code</th>
-                    <th className="px-3 py-2">Amount</th>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Discount</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Expires</th>
                     <th className="px-3 py-2">Notes</th>
@@ -287,12 +388,13 @@ export function CouponsAdmin() {
                             {c.code}
                           </button>
                         </td>
-                        <td className="px-3 py-2">${Number(c.amount).toFixed(2)}</td>
+                        <td className="px-3 py-2 text-gray-700">{c.name || '—'}</td>
+                        <td className="px-3 py-2">{formatDiscount(c)}</td>
                         <td className="px-3 py-2">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[status]}`}>
                             {STATUS_LABEL[status]}
                           </span>
-                          {c.status === 'redeemed' && c.amount_applied != null && Number(c.amount_applied) < Number(c.amount) && (
+                          {c.status === 'redeemed' && c.amount_applied != null && (
                             <span className="ml-2 text-xs text-gray-500">
                               (applied ${Number(c.amount_applied).toFixed(2)})
                             </span>

@@ -113,6 +113,17 @@ export function CheckIn({
     const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null);
     const [purchaseSuccess, setPurchaseSuccess] = useState<string>("");
     const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
+    // Per-product coupon UI state (day-pass products only)
+    const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
+    const [couponLoading, setCouponLoading] = useState<Record<string, boolean>>({});
+    const [couponErrors, setCouponErrors] = useState<Record<string, string>>({});
+    const [appliedCoupons, setAppliedCoupons] = useState<Record<string, {
+        code: string;
+        name: string | null;
+        discountType: 'amount' | 'percent';
+        applied: number;
+        forfeited: number;
+    }>>({});
     const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
     const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
     const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -1195,6 +1206,51 @@ export function CheckIn({
         }
     };
 
+    const handleApplyCoupon = async (productId: string, productPrice: number) => {
+        const raw = (couponInputs[productId] || "").trim();
+        if (!raw) {
+            setCouponErrors(prev => ({ ...prev, [productId]: "Enter a coupon code" }));
+            return;
+        }
+        const code = raw.toUpperCase();
+        setCouponLoading(prev => ({ ...prev, [productId]: true }));
+        setCouponErrors(prev => ({ ...prev, [productId]: "" }));
+        try {
+            const res = await fetch(
+                `/api/coupons/validate?code=${encodeURIComponent(code)}&passPrice=${productPrice}`
+            );
+            const data = await res.json();
+            if (!data.valid) {
+                setCouponErrors(prev => ({ ...prev, [productId]: data.error || "Invalid coupon" }));
+                return;
+            }
+            setAppliedCoupons(prev => ({
+                ...prev,
+                [productId]: {
+                    code: data.coupon.code,
+                    name: data.coupon.name,
+                    discountType: data.coupon.discount_type,
+                    applied: Number(data.preview?.applied || 0),
+                    forfeited: Number(data.preview?.forfeited || 0),
+                },
+            }));
+            setCouponInputs(prev => ({ ...prev, [productId]: "" }));
+        } catch {
+            setCouponErrors(prev => ({ ...prev, [productId]: "Failed to validate coupon" }));
+        } finally {
+            setCouponLoading(prev => ({ ...prev, [productId]: false }));
+        }
+    };
+
+    const handleRemoveCoupon = (productId: string) => {
+        setAppliedCoupons(prev => {
+            const next = { ...prev };
+            delete next[productId];
+            return next;
+        });
+        setCouponErrors(prev => ({ ...prev, [productId]: "" }));
+    };
+
     const handleQuickPurchase = (productId: string) => {
         // Clear any existing timeout
         if (confirmTimeout) {
@@ -1525,41 +1581,10 @@ export function CheckIn({
                 }
             }
 
-            // Optional coupon code (day-pass purchases only). Runs before the
-            // kiosk-vs-staff branch so both flows can forward the code.
-            let couponCode: string | undefined = undefined;
-            if (purchaseType === "day_pass") {
-                const entered = window.prompt("Apply a coupon code? (leave blank for none)");
-                if (entered && entered.trim()) {
-                    const code = entered.trim().toUpperCase();
-                    const validateRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`);
-                    const validateData = await validateRes.json();
-                    if (!validateData.valid) {
-                        alert(`Coupon error: ${validateData.error || "Invalid coupon"}`);
-                        setPurchasingProduct(null);
-                        return;
-                    }
-                    const couponAmount = Number(validateData.coupon.amount);
-                    const passPrice = Number(product.price);
-                    const applied = Math.min(couponAmount, passPrice);
-                    const forfeited = Math.max(0, couponAmount - passPrice);
-                    const lines = [
-                        `Coupon ${validateData.coupon.code}`,
-                        `Coupon value: $${couponAmount.toFixed(2)}`,
-                        `Pass price: $${passPrice.toFixed(2)}`,
-                        `Discount applied: $${applied.toFixed(2)}`,
-                    ];
-                    if (forfeited > 0) {
-                        lines.push(`Forfeited (single-use): $${forfeited.toFixed(2)}`);
-                    }
-                    lines.push(`Customer pays: $${(passPrice - applied).toFixed(2)}`);
-                    if (!window.confirm(lines.join("\n") + "\n\nProceed?")) {
-                        setPurchasingProduct(null);
-                        return;
-                    }
-                    couponCode = code;
-                }
-            }
+            // Optional coupon code (day-pass purchases only). Pulled from the
+            // per-product Apply Coupon UI on each day-pass row.
+            const couponCode: string | undefined =
+                purchaseType === "day_pass" ? appliedCoupons[productId]?.code : undefined;
 
             // In kiosk mode, use self-serve payment with saved cards (no redirect)
             if (posMode === 'kiosk') {
@@ -3425,6 +3450,63 @@ export function CheckIn({
                                                             })()}
                                                     </div>
                                                 </div>
+
+                                                {/* Apply Coupon — day passes only */}
+                                                {product.category === 'day' && (
+                                                    <div className="mr-4 min-w-[200px]">
+                                                        {appliedCoupons[product.id] ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="text-sm font-medium text-green-700">
+                                                                    ✓ {appliedCoupons[product.id].name || appliedCoupons[product.id].code}
+                                                                </div>
+                                                                <div className="text-xs text-gray-600">
+                                                                    {appliedCoupons[product.id].discountType === 'percent'
+                                                                        ? `−$${appliedCoupons[product.id].applied.toFixed(2)} off`
+                                                                        : `−$${appliedCoupons[product.id].applied.toFixed(2)}`}
+                                                                    {appliedCoupons[product.id].forfeited > 0 && (
+                                                                        <span className="text-amber-600 ml-1">
+                                                                            (${appliedCoupons[product.id].forfeited.toFixed(2)} forfeited)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveCoupon(product.id)}
+                                                                    className="text-xs text-red-600 hover:underline self-start"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center gap-1">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={couponInputs[product.id] || ''}
+                                                                        onChange={e =>
+                                                                            setCouponInputs(prev => ({ ...prev, [product.id]: e.target.value }))
+                                                                        }
+                                                                        placeholder="Coupon"
+                                                                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded font-mono uppercase"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleApplyCoupon(product.id, product.price)}
+                                                                        disabled={couponLoading[product.id]}
+                                                                        className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                                                                    >
+                                                                        {couponLoading[product.id] ? '...' : 'Apply'}
+                                                                    </button>
+                                                                </div>
+                                                                {couponErrors[product.id] && (
+                                                                    <div className="text-xs text-red-600">
+                                                                        {couponErrors[product.id]}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
                                                 {/* Quantity Controls */}
                                                 <div className="flex items-center space-x-3 mr-4">
