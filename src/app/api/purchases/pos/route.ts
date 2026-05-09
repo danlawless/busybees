@@ -20,6 +20,7 @@ import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
+import { validateCoupon, redeemCoupon } from '@/lib/services/coupons';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       payment_method = 'test' as PaymentMethod,
       payment_method_id, // For saved_card
       terminal_payment_intent_id, // For terminal (already confirmed via Terminal SDK)
+      coupon_code, // Optional: single-use coupon code (day-pass purchases only)
     } = body;
 
     // Validate required fields
@@ -116,6 +118,36 @@ export async function POST(request: NextRequest) {
 
     logger.info({ customer_id, product_name, purchase_type, payment_method }, 'Processing POS purchase');
 
+    // Coupon validation (day-pass only; single-use; cap at one unit's price; remainder forfeited)
+    let couponDiscount = 0;
+    let validatedCouponId: string | null = null;
+    if (coupon_code) {
+      if (purchase_type !== 'day_pass') {
+        return NextResponse.json(
+          { error: 'Coupon codes can only be applied to day pass purchases' },
+          { status: 400 }
+        );
+      }
+      if (payment_method === 'terminal') {
+        // Terminal payment intent's amount is locked at creation time on the
+        // client; coupon-discounted prices need to be processed via cash or
+        // saved_card so the charge reflects the discounted total.
+        return NextResponse.json(
+          { error: 'Terminal payment is not supported with coupon codes — use cash or saved card' },
+          { status: 400 }
+        );
+      }
+      const couponResult = await validateCoupon(coupon_code);
+      if (!couponResult.valid || !couponResult.coupon) {
+        return NextResponse.json(
+          { error: couponResult.error || 'Invalid coupon code' },
+          { status: 400 }
+        );
+      }
+      couponDiscount = Math.min(Number(couponResult.coupon.amount), Number(product_price));
+      validatedCouponId = couponResult.coupon.id;
+    }
+
     // Get or create Stripe customer (mode-aware)
     const existingStripeCustomerId = customer[customerIdColumn];
     const stripeCustomerId = existingStripeCustomerId || await getOrCreateStripeCustomer(
@@ -127,13 +159,21 @@ export async function POST(request: NextRequest) {
 
     const stripe = await getStripeClient();
     const stripeMode = await getStripeMode();
-    const amountInCents = Math.round(product_price * quantity * 100);
+    const finalUnitPrice = Math.max(0, Number(product_price) - couponDiscount);
+    const finalTotal = finalUnitPrice * quantity;
+    const amountInCents = Math.round(finalTotal * 100);
+    const couponCoversFull = coupon_code != null && finalTotal === 0;
 
     let paymentIntentId: string | null = null;
     let paymentStatus: string = 'succeeded';
 
     // Handle different payment methods
-    if (payment_method === 'terminal') {
+    if (couponCoversFull) {
+      // Coupon fully covers price — skip Stripe (mirrors the complimentary path)
+      paymentIntentId = null;
+      paymentStatus = 'coupon_full_redeem';
+      logger.info({ customer_id, product_name }, '🎟️ Coupon fully covered purchase — Stripe skipped');
+    } else if (payment_method === 'terminal') {
       // Terminal payment - PaymentIntent already created and confirmed via Terminal SDK
       if (!terminal_payment_intent_id) {
         return NextResponse.json(
@@ -330,7 +370,7 @@ export async function POST(request: NextRequest) {
           type: purchase_type,
           product_id,
           name: product_name,
-          price: payment_method === 'complimentary' ? 0 : (product_price * quantity),
+          price: payment_method === 'complimentary' ? 0 : finalTotal,
           purchase_date: now.toISOString(),
           expiry_date: expiryDate?.toISOString() || null,
           used_sessions: 0,
@@ -353,6 +393,19 @@ export async function POST(request: NextRequest) {
       }
 
       purchase = singlePurchase;
+
+      // Atomically redeem the coupon against this purchase
+      if (validatedCouponId && coupon_code) {
+        const redeemResult = await redeemCoupon(coupon_code, customer_id, purchase.id, Number(product_price));
+        if (!redeemResult.success) {
+          // Race-loss (concurrent redemption). Purchase already happened at the
+          // discounted price — log so this can be reconciled, but don't fail the request.
+          logger.error(
+            { couponCode: coupon_code, purchaseId: purchase.id, error: redeemResult.error },
+            '⚠️ Coupon redemption failed after purchase succeeded — manual reconciliation needed'
+          );
+        }
+      }
 
       // For family passes, link all selected children via purchase_children table
       if (Array.isArray(children_ids) && children_ids.length > 0) {

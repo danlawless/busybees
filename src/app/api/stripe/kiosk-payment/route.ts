@@ -24,6 +24,7 @@ import * as Sentry from "@sentry/nextjs";
 import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
 import { decrementInventoryAfterPurchase } from "@/lib/services/products";
+import { validateCoupon, redeemCoupon } from "@/lib/services/coupons";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
             quantity = 1,
             paymentMethodId,
             metadata = {},
+            couponCode, // Optional: single-use coupon code (day-pass purchases only)
         } = body;
 
         // Validate required fields
@@ -161,11 +163,36 @@ export async function POST(request: NextRequest) {
             ));
 
         const stripe = await getStripeClient();
-        // productPrice already includes quantity × discount from frontend
-        const amountInCents = Math.round(productPrice * 100);
 
-        // Create and confirm payment intent with saved card
-        let paymentIntent;
+        // Coupon validation (day-pass only; single-use; cap at productPrice; remainder forfeited)
+        let couponDiscount = 0;
+        let validatedCouponId: string | null = null;
+        if (couponCode) {
+            if (purchaseType !== "day_pass") {
+                return NextResponse.json(
+                    { error: "Coupon codes can only be applied to day pass purchases" },
+                    { status: 400 }
+                );
+            }
+            const couponResult = await validateCoupon(couponCode);
+            if (!couponResult.valid || !couponResult.coupon) {
+                return NextResponse.json(
+                    { error: couponResult.error || "Invalid coupon code" },
+                    { status: 400 }
+                );
+            }
+            couponDiscount = Math.min(Number(couponResult.coupon.amount), Number(productPrice));
+            validatedCouponId = couponResult.coupon.id;
+        }
+
+        // productPrice already includes quantity × discount from frontend
+        const finalTotal = Math.max(0, Number(productPrice) - couponDiscount);
+        const amountInCents = Math.round(finalTotal * 100);
+        const couponCoversFull = couponCode != null && finalTotal === 0;
+
+        // Create and confirm payment intent with saved card (skipped if coupon fully covers)
+        let paymentIntent: { id: string; status: string } | null = null;
+        if (!couponCoversFull) {
         try {
             // Build description with quantity
             const paymentDescription =
@@ -227,13 +254,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify payment succeeded
-        if (paymentIntent.status !== "succeeded") {
+        if (!paymentIntent || paymentIntent.status !== "succeeded") {
             logger.warn(
-                { ...logContext, status: paymentIntent.status },
+                { ...logContext, status: paymentIntent?.status },
                 "Payment not completed"
             );
             return NextResponse.json(
-                { error: `Payment not completed. Status: ${paymentIntent.status}` },
+                { error: `Payment not completed. Status: ${paymentIntent?.status}` },
                 { status: 400 }
             );
         }
@@ -242,6 +269,9 @@ export async function POST(request: NextRequest) {
             { ...logContext, paymentIntentId: paymentIntent.id },
             "💳 Kiosk payment succeeded"
         );
+        } else {
+            logger.info({ ...logContext }, "🎟️ Coupon fully covered kiosk purchase — Stripe skipped");
+        }
 
         // Resolve purchase defaults from passes table (throws if pass not found)
         const now = new Date();
@@ -262,7 +292,7 @@ export async function POST(request: NextRequest) {
 
         if (comboChildrenIds) {
             // Create a separate purchase for each child in the combo
-            const pricePerChild = productPrice / comboChildrenIds.length;
+            const pricePerChild = finalTotal / comboChildrenIds.length;
             const purchases = [];
 
             for (const comboChildId of comboChildrenIds) {
@@ -280,7 +310,7 @@ export async function POST(request: NextRequest) {
                         used_sessions: 0,
                         total_sessions: 1,
                         status: "active",
-                        stripe_payment_intent_id: paymentIntent.id,
+                        stripe_payment_intent_id: paymentIntent?.id || null,
                     })
                     .select()
                     .single();
@@ -319,7 +349,7 @@ export async function POST(request: NextRequest) {
                     type: purchaseType,
                     product_id: productId,
                     name: purchaseName,
-                    price: productPrice,
+                    price: finalTotal,
                     purchase_date: now.toISOString(),
                     expiry_date: expiryDate?.toISOString() || null,
                     used_sessions: 0,
@@ -337,19 +367,30 @@ export async function POST(request: NextRequest) {
                 );
                 Sentry.captureException(purchaseError, {
                     tags: { component: "kiosk-payment", action: "create_purchase" },
-                    extra: { customerId, paymentIntentId: paymentIntent.id },
+                    extra: { customerId, paymentIntentId: paymentIntent?.id },
                 });
 
                 return NextResponse.json(
                     {
                         error: "Payment processed but failed to create record. Please contact staff.",
-                        paymentIntentId: paymentIntent.id,
+                        paymentIntentId: paymentIntent?.id,
                     },
                     { status: 500 }
                 );
             }
 
             purchase = singlePurchase;
+
+            // Atomically redeem the coupon against this purchase
+            if (validatedCouponId && couponCode) {
+                const redeemResult = await redeemCoupon(couponCode, customerId, purchase.id, Number(productPrice));
+                if (!redeemResult.success) {
+                    logger.error(
+                        { couponCode, purchaseId: purchase.id, error: redeemResult.error },
+                        "⚠️ Coupon redemption failed after kiosk purchase succeeded — manual reconciliation needed"
+                    );
+                }
+            }
 
             // For family passes, link all selected children via purchase_children table
             if (Array.isArray(childrenIds) && childrenIds.length > 0) {
@@ -380,7 +421,7 @@ export async function POST(request: NextRequest) {
             {
                 ...logContext,
                 purchaseId: purchase.id,
-                paymentIntentId: paymentIntent.id,
+                paymentIntentId: paymentIntent?.id,
             },
             "✅ Kiosk purchase completed successfully"
         );
@@ -395,7 +436,7 @@ export async function POST(request: NextRequest) {
                 status: purchase.status,
             },
             payment: {
-                id: paymentIntent.id,
+                id: paymentIntent?.id || null,
                 amount: amountInCents,
                 cardLast4: savedCard.last4,
                 cardBrand: savedCard.brand,
