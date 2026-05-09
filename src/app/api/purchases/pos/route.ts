@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
-import { validateCoupon, redeemCoupon } from '@/lib/services/coupons';
+import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      couponDiscount = Math.min(Number(couponResult.coupon.amount), Number(product_price));
+      const { applied } = computeCouponDiscount(couponResult.coupon, Number(product_price));
+      couponDiscount = applied;
       validatedCouponId = couponResult.coupon.id;
     }
 

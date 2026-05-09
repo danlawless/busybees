@@ -24,7 +24,7 @@ import * as Sentry from "@sentry/nextjs";
 import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
 import { decrementInventoryAfterPurchase } from "@/lib/services/products";
-import { validateCoupon, redeemCoupon } from "@/lib/services/coupons";
+import { validateCoupon, redeemCoupon, computeCouponDiscount } from "@/lib/services/coupons";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -181,7 +181,8 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 );
             }
-            couponDiscount = Math.min(Number(couponResult.coupon.amount), Number(productPrice));
+            const { applied } = computeCouponDiscount(couponResult.coupon, Number(productPrice));
+            couponDiscount = applied;
             validatedCouponId = couponResult.coupon.id;
         }
 
