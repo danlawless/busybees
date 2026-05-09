@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     let couponDiscount = 0;
     let validatedCouponId: string | null = null;
     if (coupon_code) {
-      if (purchase_type !== 'day_pass') {
+      if (purchase_type !== 'day_pass' || /punch/i.test(product_name)) {
         return NextResponse.json(
           { error: 'Coupon codes can only be applied to day pass purchases' },
           { status: 400 }
