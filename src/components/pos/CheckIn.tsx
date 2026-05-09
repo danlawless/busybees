@@ -1525,6 +1525,42 @@ export function CheckIn({
                 }
             }
 
+            // Optional coupon code (day-pass purchases only). Runs before the
+            // kiosk-vs-staff branch so both flows can forward the code.
+            let couponCode: string | undefined = undefined;
+            if (purchaseType === "day_pass") {
+                const entered = window.prompt("Apply a coupon code? (leave blank for none)");
+                if (entered && entered.trim()) {
+                    const code = entered.trim().toUpperCase();
+                    const validateRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`);
+                    const validateData = await validateRes.json();
+                    if (!validateData.valid) {
+                        alert(`Coupon error: ${validateData.error || "Invalid coupon"}`);
+                        setPurchasingProduct(null);
+                        return;
+                    }
+                    const couponAmount = Number(validateData.coupon.amount);
+                    const passPrice = Number(product.price);
+                    const applied = Math.min(couponAmount, passPrice);
+                    const forfeited = Math.max(0, couponAmount - passPrice);
+                    const lines = [
+                        `Coupon ${validateData.coupon.code}`,
+                        `Coupon value: $${couponAmount.toFixed(2)}`,
+                        `Pass price: $${passPrice.toFixed(2)}`,
+                        `Discount applied: $${applied.toFixed(2)}`,
+                    ];
+                    if (forfeited > 0) {
+                        lines.push(`Forfeited (single-use): $${forfeited.toFixed(2)}`);
+                    }
+                    lines.push(`Customer pays: $${(passPrice - applied).toFixed(2)}`);
+                    if (!window.confirm(lines.join("\n") + "\n\nProceed?")) {
+                        setPurchasingProduct(null);
+                        return;
+                    }
+                    couponCode = code;
+                }
+            }
+
             // In kiosk mode, use self-serve payment with saved cards (no redirect)
             if (posMode === 'kiosk') {
                 // Check if customer has a saved payment method
@@ -1557,6 +1593,7 @@ export function CheckIn({
                         childrenIds: (isPassPurchase && (isFamilyPass(product.name) || isChildInfantComboPass(product.name))) ? selectedChildrenForFamilyPass : undefined,
                         paymentMethodId: defaultCard.id,
                         quantity: quantity,
+                        couponCode: couponCode,
                     }),
                 });
 
@@ -1649,41 +1686,6 @@ export function CheckIn({
             const purchasePrice = isGroupRate && groupRateTotalPrice !== null
                 ? groupRateTotalPrice
                 : product.price;
-
-            // Optional coupon code (day-pass purchases only). Staff prompts the
-            // customer for a code; we validate before charging.
-            let couponCode: string | undefined = undefined;
-            if (purchaseType === "day_pass") {
-                const entered = window.prompt("Apply a coupon code? (leave blank for none)");
-                if (entered && entered.trim()) {
-                    const code = entered.trim().toUpperCase();
-                    const validateRes = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`);
-                    const validateData = await validateRes.json();
-                    if (!validateData.valid) {
-                        alert(`Coupon error: ${validateData.error || "Invalid coupon"}`);
-                        setPurchasingProduct(null);
-                        return;
-                    }
-                    const couponAmount = Number(validateData.coupon.amount);
-                    const applied = Math.min(couponAmount, purchasePrice);
-                    const forfeited = Math.max(0, couponAmount - purchasePrice);
-                    const lines = [
-                        `Coupon ${validateData.coupon.code}`,
-                        `Coupon value: $${couponAmount.toFixed(2)}`,
-                        `Pass price: $${purchasePrice.toFixed(2)}`,
-                        `Discount applied: $${applied.toFixed(2)}`,
-                    ];
-                    if (forfeited > 0) {
-                        lines.push(`Forfeited (single-use): $${forfeited.toFixed(2)}`);
-                    }
-                    lines.push(`Customer pays: $${(purchasePrice - applied).toFixed(2)}`);
-                    if (!window.confirm(lines.join("\n") + "\n\nProceed?")) {
-                        setPurchasingProduct(null);
-                        return;
-                    }
-                    couponCode = code;
-                }
-            }
 
             const response = await fetch("/api/purchases/pos", {
                 method: "POST",
