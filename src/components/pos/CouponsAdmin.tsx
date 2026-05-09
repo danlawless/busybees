@@ -58,6 +58,7 @@ export function CouponsAdmin() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Coupon['status']>('all');
   const [form, setForm] = useState({
+    code: '',
     name: '',
     discount_type: 'amount' as 'amount' | 'percent',
     amount: '',
@@ -96,6 +97,7 @@ export function CouponsAdmin() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const body: {
+      code?: string;
       name?: string;
       discount_type: 'amount' | 'percent';
       amount?: number;
@@ -104,6 +106,7 @@ export function CouponsAdmin() {
       createdByAdmin?: string;
     } = {
       discount_type: form.discount_type,
+      code: form.code.trim() ? form.code.trim().toUpperCase() : undefined,
       name: form.name || undefined,
       notes: form.notes || undefined,
       createdByAdmin: form.createdByAdmin || undefined,
@@ -129,7 +132,7 @@ export function CouponsAdmin() {
       if (res.ok) {
         const data = await res.json();
         setCreatedCoupon(data.coupon);
-        setForm({ name: '', discount_type: 'amount', amount: '', discount_percent: '', notes: '', createdByAdmin: '' });
+        setForm({ code: '', name: '', discount_type: 'amount', amount: '', discount_percent: '', notes: '', createdByAdmin: '' });
         setShowForm(false);
         fetchCoupons();
       } else {
@@ -228,6 +231,18 @@ export function CouponsAdmin() {
         <CardContent>
           {showForm && (
             <form onSubmit={handleCreate} className="space-y-3 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Code (optional)</label>
+                <input
+                  type="text"
+                  value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono uppercase"
+                  placeholder="e.g., EARLY20 (leave blank to auto-generate)"
+                  maxLength={30}
+                />
+                <p className="text-xs text-gray-500 mt-1">3-30 chars: letters, numbers, dashes, underscores. Auto-uppercased.</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
                 <input

@@ -50,11 +50,17 @@ export function generateCouponCode(): string {
   return `${CODE_PREFIX}-${segments.join('-')}`;
 }
 
+/**
+ * Validate a coupon code's surface format. Accepts:
+ *   - Auto-generated BBCP-XXXX-XXXX-XXXX
+ *   - Custom admin-chosen codes: 3-30 chars, alphanumeric + dashes/underscores
+ */
 export function isValidCouponCodeFormat(code: string): boolean {
-  return /^BBCP-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(code.toUpperCase());
+  return /^[A-Z0-9_-]{3,30}$/.test(code.toUpperCase());
 }
 
 export interface CreateCouponInput {
+  code?: string; // Optional — if omitted, auto-generated
   name?: string;
   discount_type: CouponDiscountType;
   amount?: number;
@@ -82,6 +88,37 @@ export async function createCoupon(input: CreateCouponInput): Promise<Coupon> {
   const supabase = createAdminClient();
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
+  // Custom code path — single attempt, surface unique-violation as a friendly error
+  if (input.code) {
+    const customCode = input.code.trim().toUpperCase();
+    if (!isValidCouponCodeFormat(customCode)) {
+      throw new Error('Coupon code must be 3-30 characters: letters, numbers, dashes, underscores only');
+    }
+    const { data, error } = await supabase
+      .from('coupons')
+      .insert({
+        code: customCode,
+        name: input.name || null,
+        discount_type: input.discount_type,
+        amount: input.discount_type === 'amount' ? input.amount : null,
+        discount_percent: input.discount_type === 'percent' ? input.discount_percent : null,
+        status: 'active',
+        expires_at: expiresAt,
+        notes: input.notes || null,
+        created_by_admin: input.createdByAdmin || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') throw new Error(`Coupon code "${customCode}" is already in use`);
+      logger.error({ error }, 'Failed to create coupon');
+      throw error;
+    }
+    return data as Coupon;
+  }
+
+  // Auto-generated code path — retry on the (extremely unlikely) collision
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateCouponCode();
     const { data, error } = await supabase

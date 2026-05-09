@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { createCoupon, listCoupons } from '@/lib/services/coupons';
 
 const CreateCouponSchema = z.object({
+  code: z.string().trim().min(3).max(30).regex(/^[A-Za-z0-9_-]+$/, 'Letters, numbers, dashes, underscores only').optional(),
   name: z.string().max(120).optional(),
   discount_type: z.enum(['amount', 'percent']),
   amount: z.number().positive().max(1000).optional(),
