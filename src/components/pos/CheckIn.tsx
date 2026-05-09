@@ -3451,8 +3451,9 @@ export function CheckIn({
                                                     </div>
                                                 </div>
 
-                                                {/* Apply Coupon — day passes only */}
-                                                {product.category === 'day' && (
+                                                {/* Apply Coupon — single day passes only (Infant / Toddler / Combo).
+                                                    Excludes punch cards even if they share category='day'. */}
+                                                {product.name.toLowerCase().startsWith('day pass') && (
                                                     <div className="mr-4 min-w-[200px]">
                                                         {appliedCoupons[product.id] ? (
                                                             <div className="flex flex-col gap-1">
