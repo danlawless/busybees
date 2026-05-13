@@ -9,8 +9,8 @@ export default function AboutPage() {
   return (
     <Layout>
       <OurStory />
-      <ReviewCTA />
       <SuggestionForm />
+      <ReviewCTA />
     </Layout>
   )
 }
