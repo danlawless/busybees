@@ -190,15 +190,6 @@ export default function AfterDarkPage() {
             </div>
 
             <div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>How It Works</h3>
-              <ul className="list-disc list-outside pl-6 space-y-2">
-                <li>Reserve your spot online through the After Dark section in My Account.</li>
-                <li>Drop off at 5:00 PM — sign the waiver, say goodbye, and head out.</li>
-                <li>Pick up at 7:30 PM — your kids will be fed, happy, and ready for the ride home.</li>
-              </ul>
-            </div>
-
-            <div>
               <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Safety &amp; Atmosphere</h3>
               <p>
                 All staff are trained and background-checked, and we maintain a
