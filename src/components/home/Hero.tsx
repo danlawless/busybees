@@ -84,15 +84,6 @@ export function Hero() {
               </span>
             </motion.h1>
 
-            {/* Tagline */}
-            <motion.p
-              variants={fadeInUp}
-              className="mx-auto max-w-2xl text-xl sm:text-2xl text-white font-bold mb-10 leading-relaxed drop-shadow-lg"
-              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-            >
-              A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children.
-            </motion.p>
-
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-row items-center justify-center gap-4">
               <Link href="/customer/login">
