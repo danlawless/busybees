@@ -222,6 +222,60 @@ export default function AfterDarkPage() {
         </div>
       </section>
 
+      {/* While You're Out — nearby suggestions for parents */}
+      <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%)' }}>
+        <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
+          <motion.h2
+            className="text-3xl sm:text-4xl font-bold text-center mb-6 leading-tight"
+            style={{ color: '#e9d5ff' }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            While You&apos;re Out
+          </motion.h2>
+
+          <motion.div
+            className="space-y-6 text-lg sm:text-xl leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <p>
+              Make a real night of it. With your kids set for the evening, here
+              are a couple of nearby spots in the plaza to enjoy.
+            </p>
+
+            <ul className="list-disc list-outside pl-6 space-y-3">
+              <li>
+                <a
+                  href="https://www.ixtapalunenburg.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:no-underline"
+                  style={{ color: '#c4b5fd' }}
+                >
+                  Ixtapa
+                </a>{' '}
+                — authentic Mexican food, right across the plaza.
+              </li>
+              <li>
+                <a
+                  href="https://asian-imperial.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:no-underline"
+                  style={{ color: '#c4b5fd' }}
+                >
+                  Asian Imperial
+                </a>{' '}
+                — Japanese and Asian cuisine just a short walk away.
+              </li>
+            </ul>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Upcoming Movie Schedule */}
       {movies.length > 0 && (
         <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 50%, #0f0f1a 100%)' }}>
