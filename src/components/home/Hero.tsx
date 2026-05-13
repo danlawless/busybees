@@ -117,10 +117,7 @@ export function Hero() {
 
       {/* Welcome Section */}
       <section className="py-16 sm:py-20 bg-[#FFFDF7]">
-        <div
-          className="mx-auto max-w-3xl px-6 sm:px-8 lg:px-12"
-          style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
-        >
+        <div className="mx-auto max-w-3xl px-6 sm:px-8 lg:px-12">
           <motion.div
             className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"
             initial={{ opacity: 0, y: 20 }}
