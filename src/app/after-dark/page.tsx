@@ -145,10 +145,17 @@ export default function AfterDarkPage() {
       </section>
 
       {/* About the Evening — single text-driven section */}
-      <section id="details" className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)' }}>
-        <div className="max-w-2xl mx-auto" style={{ color: '#cbd5ff' }}>
+      <section
+        id="details"
+        className="py-20 px-4"
+        style={{
+          background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)',
+          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        }}
+      >
+        <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
           <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-8"
+            className="text-4xl sm:text-5xl font-bold text-center mb-10 leading-tight"
             style={{ color: '#e9d5ff' }}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -158,7 +165,7 @@ export default function AfterDarkPage() {
           </motion.h2>
 
           <motion.div
-            className="space-y-8 text-base leading-relaxed"
+            className="space-y-10 text-lg sm:text-xl leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -172,8 +179,8 @@ export default function AfterDarkPage() {
             </p>
 
             <div>
-              <h3 className="text-xl font-bold mb-3" style={{ color: '#e9d5ff' }}>Event Details</h3>
-              <ul className="list-disc list-outside pl-6 space-y-1.5">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Event Details</h3>
+              <ul className="list-disc list-outside pl-6 space-y-2">
                 <li><strong>Ages:</strong> 3 and up (must be potty trained)</li>
                 <li><strong>When:</strong> Fridays, 5:00 PM – 7:30 PM</li>
                 <li><strong>Capacity:</strong> Limited spots each week — book early</li>
@@ -183,8 +190,8 @@ export default function AfterDarkPage() {
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-3" style={{ color: '#e9d5ff' }}>How It Works</h3>
-              <ul className="list-disc list-outside pl-6 space-y-1.5">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>How It Works</h3>
+              <ul className="list-disc list-outside pl-6 space-y-2">
                 <li>Reserve your spot online through the After Dark section in My Account.</li>
                 <li>Drop off at 5:00 PM — sign the waiver, say goodbye, and head out.</li>
                 <li>Pick up at 7:30 PM — your kids will be fed, happy, and ready for the ride home.</li>
@@ -192,7 +199,7 @@ export default function AfterDarkPage() {
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-3" style={{ color: '#e9d5ff' }}>Safety &amp; Atmosphere</h3>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Safety &amp; Atmosphere</h3>
               <p>
                 All staff are trained and background-checked, and we maintain a
                 low child-to-staff ratio so every child gets real supervision and
@@ -203,7 +210,7 @@ export default function AfterDarkPage() {
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-3" style={{ color: '#e9d5ff' }}>Booking &amp; Cancellation</h3>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Booking &amp; Cancellation</h3>
               <p>
                 To book, sign in and visit the After Dark tab in My Account, then
                 choose your preferred Friday. Spots fill up quickly. If your plans
@@ -219,7 +226,7 @@ export default function AfterDarkPage() {
               >
                 Reserve a Spot
               </Link>
-              <p className="mt-4 text-xs" style={{ color: '#6d28d9' }}>
+              <p className="mt-4 text-sm" style={{ color: '#a5b4fc' }}>
                 Questions? Call us at (978) 785-0015
               </p>
             </div>
