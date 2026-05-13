@@ -116,7 +116,7 @@ export function Hero() {
       </section>
 
       {/* Welcome Section */}
-      <section className="py-16 sm:py-20 bg-[#FFFDF7]">
+      <section className="py-16 sm:py-20 bg-[#FFF8E7]">
         <div className="mx-auto max-w-3xl px-6 sm:px-8 lg:px-12">
           <motion.div
             className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"

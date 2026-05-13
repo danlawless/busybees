@@ -19,7 +19,7 @@ export function OurStory() {
         className="absolute inset-0 -z-10"
         style={{
           background: 'linear-gradient(180deg, rgba(255,253,247,0.5) 0%, transparent 40%, transparent 70%, rgba(255,248,231,0.4) 100%), url("/hero-background.png") center center / cover no-repeat',
-          backgroundColor: 'var(--cream-white)',
+          backgroundColor: 'var(--cream-light)',
         }}
       />
 

@@ -44,7 +44,7 @@ export function SuggestionForm() {
   };
 
   return (
-    <section className="py-16 sm:py-20 bg-[#FFFDF7]">
+    <section className="py-16 sm:py-20 bg-[#FFF8E7]">
       <div className="mx-auto max-w-2xl px-6 sm:px-8 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

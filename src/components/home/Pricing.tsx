@@ -440,7 +440,7 @@ export function Pricing() {
     // Loading state
     if (loadingPasses) {
         return (
-            <section className="relative py-24 bg-[#FFFDF7] overflow-visible">
+            <section className="relative py-24 bg-[#FFF8E7] overflow-visible">
                 <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
                     <div className="text-center">
                         <Loader2 className="w-12 h-12 animate-spin text-primary-500 mx-auto" />
@@ -452,7 +452,7 @@ export function Pricing() {
     }
 
     return (
-        <section className="relative py-24 bg-[#FFFDF7] overflow-visible">
+        <section className="relative py-24 bg-[#FFF8E7] overflow-visible">
             <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
                 {/* Purchase Success Message */}
                 <AnimatePresence>
