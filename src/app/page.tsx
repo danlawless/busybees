@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 import { Hero } from '@/components/home/Hero'
-import { Features } from '@/components/home/Features'
 import { Gallery } from '@/components/home/Gallery'
 
 export default function Home() {
@@ -15,7 +14,6 @@ export default function Home() {
       <WeekendBanner />
       <Hero />
       <Gallery />
-      <Features />
     </Layout>
   )
 }
