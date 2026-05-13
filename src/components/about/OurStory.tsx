@@ -48,18 +48,24 @@ export function OurStory() {
           >
             <h3 className="text-2xl font-bold text-charcoal-800">Our Story</h3>
             <p className="text-lg text-charcoal-600 leading-relaxed">
-              Once upon a time, a husband and wife had a dream: to create an indoor play center
-              for young children in or around their hometown. Inspired by the many play spaces
-              they visited with their two young kids, they envisioned something uniquely their
-              own—something that reflected their values and love for family fun.
+              Busy Bee&apos;s was created out of a desire to give our own children
+              a safe, engaging, and weather-independent place to play—a place
+              families could count on year-round, no matter the season. A place
+              where parents and guardians can relax, connect, and feel at home
+              without having to worry about the mess or stress. After visiting
+              countless indoor play spaces with our two young kids, we realized
+              how important it was to have a space that was not only fun and
+              exciting for children, but also easily accessible and welcoming
+              for parents.
             </p>
             <p className="text-lg text-charcoal-600 leading-relaxed">
-              What began as a simple idea soon grew into a heartfelt mission: to provide a safe,
-              playful, and inviting space where children could explore, imagine, and make
-              memories—while their parents and guardians could relax, connect, and feel at home.
+              What started as a simple family dream quickly grew into a heartfelt
+              mission: provide a place where children could explore, imagine,
+              learn, and burn off energy in a safe environment.
             </p>
             <p className="text-lg text-charcoal-600 leading-relaxed">
-              And so, Busy Bees was born—built by a family, for families, right here in our community.
+              That dream became Busy Bee&apos;s—built by our family, for families,
+              right here in the community of families we love.
             </p>
           </motion.div>
 
