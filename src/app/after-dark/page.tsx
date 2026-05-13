@@ -148,10 +148,7 @@ export default function AfterDarkPage() {
       <section
         id="details"
         className="py-20 px-4"
-        style={{
-          background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)',
-          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        }}
+        style={{ background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)' }}
       >
         <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
           <motion.h2
