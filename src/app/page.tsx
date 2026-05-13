@@ -6,9 +6,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 import { Hero } from '@/components/home/Hero'
-import { Features } from '@/components/home/Features'
 import { Gallery } from '@/components/home/Gallery'
-import { ReviewCTA } from '@/components/home/ReviewCTA'
 
 export default function Home() {
   return (
@@ -16,8 +14,6 @@ export default function Home() {
       <WeekendBanner />
       <Hero />
       <Gallery />
-      <Features />
-      <ReviewCTA />
     </Layout>
   )
 }

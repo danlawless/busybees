@@ -4,94 +4,78 @@ import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-
-const goodToKnowItems = [
-  { iconSrc: '/icons/cash-free.png', text: 'Cash-free business - all major cards accepted' },
-  { iconSrc: '/icons/socks.png', text: 'Socks required (we sell them if you forget!)' },
-  { iconSrc: '/icons/drop-in.png', text: 'No reservations required - just drop in!' },
-  { iconSrc: '/icons/outside-food.png', text: 'Outside food welcome in our café area' },
-]
 
 export function Hero() {
   return (
     <>
-      {/* Full-Screen Video Hero */}
-      <section className="relative w-full h-screen min-h-[600px] max-h-[1000px] overflow-hidden">
-        {/* Video Background */}
-        <video
-          className="absolute inset-0 w-full h-full object-cover hidden sm:block"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        >
-          <source
-            src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-desktop.mp4"
-            type="video/mp4"
+      {/* Static Image Hero — pre-video layout with flying bees + title + CTAs */}
+      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-36 min-h-[32rem]">
+        {/* Hero background image */}
+        <div className="absolute inset-0 z-0" aria-hidden>
+          <Image
+            src="/hero-background.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            sizes="100vw"
           />
-        </video>
-        <video
-          className="absolute inset-0 w-full h-full object-cover sm:hidden"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        >
-          <source
-            src="https://cdn-builttotal.b-cdn.net/wp-content/uploads/2026/02/Busy-Bees-321-Massachusetts-Ave-Lunenburg-mobile.mp4"
-            type="video/mp4"
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/20 via-transparent to-[#FFF8E7]/15"
+            aria-hidden
           />
-        </video>
+        </div>
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black/45 z-10" />
+        {/* Flying Bees beside Title */}
+        <motion.div
+          className="absolute left-1/2 top-32 transform -translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
+          initial={{ x: -100, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 0.8, scale: 1 }}
+          transition={{ duration: 1.2, delay: 0.8 }}
+        >
+          <Image
+            src="/bee-flying-side2.png"
+            alt="Flying bee decoration"
+            width={180}
+            height={180}
+            className="drop-shadow-lg"
+          />
+        </motion.div>
 
-        {/* Content Overlay */}
-        <div className="relative z-20 h-full flex flex-col items-center justify-center px-6 sm:px-8 lg:px-12">
+        <motion.div
+          className="absolute right-1/2 top-32 transform translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
+          initial={{ x: 100, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 0.8, scale: 1 }}
+          transition={{ duration: 1.2, delay: 1.0 }}
+        >
+          <Image
+            src="/bee-flying-side1.png"
+            alt="Flying bee decoration"
+            width={180}
+            height={180}
+            className="drop-shadow-lg"
+          />
+        </motion.div>
+
+        <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
           <motion.div
-            className="text-center max-w-3xl mx-auto"
+            className="text-center"
             variants={staggerContainer}
             initial="initial"
             animate="animate"
           >
-            {/* Logo */}
-            <motion.div variants={fadeInUp} className="mb-6">
-              <Image
-                src="/busy-bees-logo.png"
-                alt="Busy Bees Indoor Play Center"
-                width={160}
-                height={160}
-                className="mx-auto drop-shadow-2xl"
-                priority
-              />
-            </motion.div>
-
             {/* Title */}
-            <motion.h1
-              variants={fadeInUp}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-lg"
-              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-            >
-              Busy Bees
-              <br />
-              <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-honey-300">
-                Indoor Play Center
-              </span>
-            </motion.h1>
-
-            {/* Tagline */}
-            <motion.p
-              variants={fadeInUp}
-              className="mx-auto max-w-2xl text-xl sm:text-2xl text-white font-bold mb-10 leading-relaxed drop-shadow-lg"
-              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-            >
-              A modern, safe and engaging indoor play space for your little ones with distinct areas for infants, toddlers and young children.
-            </motion.p>
+            <motion.div variants={fadeInUp} className="mb-10">
+              <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
+                <span className="text-primary-600">Busy Bees</span>
+                <br />
+                <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-charcoal-700">
+                  Indoor Play Center
+                </span>
+              </h1>
+            </motion.div>
 
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-row items-center justify-center gap-4">
@@ -113,59 +97,53 @@ export function Hero() {
               </Link>
             </motion.div>
           </motion.div>
-
-          {/* Scroll Indicator */}
-          <motion.div
-            className="absolute bottom-8 left-1/2 -translate-x-1/2"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.5, duration: 0.6 }}
-          >
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-            >
-              <ChevronDown className="w-8 h-8 text-white/60" />
-            </motion.div>
-          </motion.div>
         </div>
       </section>
 
-      {/* Good to Know Section */}
-      <section className="py-16 sm:py-20 bg-[#FFFDF7]">
-        <div className="mx-auto max-w-5xl px-6 sm:px-8 lg:px-12">
+      {/* Welcome Section */}
+      <section className="py-16 sm:py-20 bg-[#FFF8E7]">
+        <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
           <motion.div
+            className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
-              Good to Know
-            </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
-              {goodToKnowItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col bg-white rounded-2xl shadow-soft border border-primary-200/30 hover:shadow-medium transition-shadow overflow-hidden"
-                >
-                  <div className="w-full h-48 sm:h-56 bg-[#FFFDF7] overflow-hidden relative p-3 sm:p-4">
-                    <Image
-                      src={item.iconSrc}
-                      alt=""
-                      fill
-                      className="object-contain p-2"
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                    />
-                  </div>
-                  <div className="p-5 text-center">
-                    <p className="text-sm font-medium text-charcoal-800 leading-snug">
-                      {item.text}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p>
+              Welcome to Busy Bee&apos;s Indoor Play Center — the ultimate place for
+              little ones to play, explore, and burn off energy in a safe, clean,
+              and exciting environment! Whether you&apos;re stopping by for open
+              play, celebrating a special occasion, or looking for fun activities
+              year-round, Busy Bee&apos;s offers a welcoming space designed for
+              children to learn, socialize, and stay active while parents relax
+              and enjoy the experience.
+            </p>
+
+            <p>
+              At Busy Bee&apos;s, there&apos;s always something fun happening for
+              kids of all ages, including:
+            </p>
+
+            <ul className="list-disc list-outside pl-6 space-y-2 columns-1 sm:columns-2 sm:gap-x-10">
+              <li>Open Play Sessions</li>
+              <li>Toddler &amp; Infant Play Areas</li>
+              <li>Birthday Parties &amp; Private Events</li>
+              <li>Summer Programs &amp; Special Events</li>
+              <li>Busy Bee&apos;s After Dark Parent Drop-Off Nights</li>
+              <li>Seasonal &amp; Holiday-Themed Events</li>
+              <li>Group Visits &amp; Summer Camp Field Trips</li>
+              <li>Rainy Day Play Adventures</li>
+              <li>Sensory-Friendly Play Opportunities</li>
+              <li>Large Group Discounts &amp; Community Events</li>
+            </ul>
+
+            <p>
+              From climbing and sliding to imaginative play and making new
+              friends, Busy Bee&apos;s is the perfect destination for families
+              looking to create lasting memories while giving little ones the
+              freedom to play, move, and have fun!
+            </p>
           </motion.div>
         </div>
       </section>

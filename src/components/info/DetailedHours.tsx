@@ -44,7 +44,7 @@ export function DetailedHours() {
   const currentDay = getCurrentDay()
 
   return (
-    <section className="py-12 sm:py-16 bg-[#FFFDF7]">
+    <section className="py-12 sm:py-16 bg-[#FFF8E7]">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <motion.div
           className="text-center mb-14"

@@ -138,8 +138,8 @@ export function EventsBoard() {
     );
   }
 
-  const { happeningNow, upcoming, past } = categorizeEvents();
-  const hasNoEvents = happeningNow.length === 0 && upcoming.length === 0 && past.length === 0;
+  const { happeningNow, upcoming } = categorizeEvents();
+  const hasNoEvents = happeningNow.length === 0 && upcoming.length === 0;
 
   if (hasNoEvents) {
     return (
@@ -162,11 +162,6 @@ export function EventsBoard() {
       {/* Upcoming Events */}
       {upcoming.length > 0 && (
         <EventSection title="Upcoming Events" events={upcoming} variant="default" />
-      )}
-
-      {/* Past Events */}
-      {past.length > 0 && (
-        <EventSection title="Past Events" events={past} variant="past" />
       )}
     </div>
   );

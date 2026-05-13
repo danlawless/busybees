@@ -22,7 +22,6 @@ function formatMovieDate(dateStr: string): string {
 }
 
 export default function AfterDarkPage() {
-  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
@@ -31,21 +30,6 @@ export default function AfterDarkPage() {
       .then(data => setMovies(data.movies || []))
       .catch(() => {});
   }, []);
-
-  const features = [
-    { icon: '🍕', title: 'Pizza Dinner', desc: 'Kids enjoy pizza and drinks — dinner is on us!' },
-    { icon: '🎬', title: 'Movie Night', desc: 'A fun movie on the big screen in the play area' },
-    { icon: '🎪', title: 'Supervised Play', desc: 'Staff-supervised activities the entire evening' },
-    { icon: '👕', title: 'PJ\'s Welcome!', desc: 'Kids are welcome to arrive in their pajamas for a cozy movie night vibe' },
-    { icon: '🕕', title: 'Drop-Off & Go', desc: 'Drop off at 5 PM, pick up at 7:30 PM — enjoy your evening!' },
-  ];
-
-  const details = [
-    { label: 'Ages', value: '3 and Up (must be potty trained)' },
-    { label: 'Time', value: 'Fridays, 5:00 PM - 7:30 PM' },
-    { label: 'Includes', value: 'Pizza, drinks, movie & supervised play' },
-    { label: 'Capacity', value: 'Limited to 40 spots. Book Early' },
-  ];
 
   return (
     <Layout>
@@ -160,216 +144,134 @@ export default function AfterDarkPage() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="details" className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)' }}>
-        <div className="max-w-5xl mx-auto">
+      {/* About the Evening — single text-driven section */}
+      <section
+        id="details"
+        className="py-20 px-4"
+        style={{ background: 'linear-gradient(180deg, #1a1025 0%, #0f0f1a 100%)' }}
+      >
+        <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
           <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-4"
+            className="text-4xl sm:text-5xl font-bold text-center mb-10 leading-tight"
             style={{ color: '#e9d5ff' }}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            What&apos;s Included
+            Because every parent deserves a night out
           </motion.h2>
-          <p className="text-center mb-12" style={{ color: '#a78bfa' }}>
-            Everything your kids need for an amazing evening
-          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, i) => (
-              <motion.div
-                key={i}
-                className="relative p-6 rounded-2xl text-center cursor-default transition-all"
-                style={{
-                  background: hoveredFeature === i
-                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid',
-                  borderColor: hoveredFeature === i ? 'rgba(139, 92, 246, 0.4)' : 'rgba(255, 255, 255, 0.06)',
-                }}
-                onMouseEnter={() => setHoveredFeature(i)}
-                onMouseLeave={() => setHoveredFeature(null)}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+          <motion.div
+            className="space-y-10 text-lg sm:text-xl leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <p>
+              After Dark is Busy Bees&apos; Friday-night drop-off event for kids ages
+              3 and up. While you enjoy a well-earned evening out, our staff keeps
+              the kids fed, entertained, and supervised the whole time — pizza,
+              a kid-friendly movie on the big screen, and plenty of play.
+              Pajamas welcome.
+            </p>
+
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Event Details</h3>
+              <ul className="list-disc list-outside pl-6 space-y-2">
+                <li><strong>Ages:</strong> 3 and up (must be potty trained)</li>
+                <li><strong>When:</strong> Fridays, 5:00 PM – 7:30 PM</li>
+                <li><strong>Capacity:</strong> Limited spots each week — book early</li>
+                <li><strong>Includes:</strong> Pizza, drinks, a movie, and supervised play</li>
+                <li><strong>Price:</strong> $50 per child</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Safety &amp; Atmosphere</h3>
+              <p>
+                All staff are trained and background-checked, and we maintain a
+                low child-to-staff ratio so every child gets real supervision and
+                attention. For the movie portion of the evening, the space features
+                modified lighting (including some flashing and moving effects) and
+                curtains drawn to create a darker, nighttime-style atmosphere.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Booking &amp; Cancellation</h3>
+              <p>
+                To book, sign in and visit the After Dark tab in My Account, then
+                choose your preferred Friday. Spots fill up quickly. If your plans
+                change, contact us as early as possible so we can offer the spot
+                to another family.
+              </p>
+            </div>
+
+            <div className="text-center pt-4">
+              <Link
+                href="/customer/dashboard?tab=after-dark"
+                className="after-dark-btn-primary inline-flex items-center justify-center px-10 py-4 text-lg font-bold rounded-full transition-all"
               >
-                <span className="text-4xl mb-4 block">{feature.icon}</span>
-                <h3 className="text-lg font-bold mb-2" style={{ color: '#e9d5ff' }}>{feature.title}</h3>
-                <p className="text-sm" style={{ color: '#a5b4fc' }}>{feature.desc}</p>
-              </motion.div>
-            ))}
-          </div>
+                Reserve a Spot
+              </Link>
+              <p className="mt-4 text-sm" style={{ color: '#a5b4fc' }}>
+                Questions? Call us at (978) 785-0015
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-20 px-4" style={{ background: '#0f0f1a' }}>
-        <div className="max-w-4xl mx-auto">
+      {/* While You're Out — nearby suggestions for parents */}
+      <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%)' }}>
+        <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
           <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-12"
+            className="text-3xl sm:text-4xl font-bold text-center mb-6 leading-tight"
             style={{ color: '#e9d5ff' }}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            How It Works
+            While You&apos;re Out
           </motion.h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: '1', title: 'Book Online', desc: 'Reserve your spot — capacity is limited to ensure every child gets personal attention.', icon: '📱' },
-              { step: '2', title: 'Drop Off at 5 PM', desc: 'Sign the waiver, say goodbye, and head out for your Friday evening! Kids start with supervised play time.', icon: '👋' },
-              { step: '3', title: 'Pick Up at 7:30 PM', desc: 'Return to happy, fed, tired kids ready for the ride home.', icon: '🌙' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                className="text-center"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-              >
-                <div
-                  className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}
+          <motion.div
+            className="space-y-6 text-lg sm:text-xl leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <p>
+              Make a real night of it. With your kids set for the evening, here
+              are a couple of nearby spots in the plaza to enjoy.
+            </p>
+
+            <ul className="list-disc list-outside pl-6 space-y-3">
+              <li>
+                <a
+                  href="https://www.ixtapalunenburg.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:no-underline"
+                  style={{ color: '#c4b5fd' }}
                 >
-                  {item.icon}
-                </div>
-                <div className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: '#8b5cf6' }}>
-                  Step {item.step}
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{ color: '#e9d5ff' }}>{item.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#a5b4fc' }}>{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Event Details */}
-      <section id="book" className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%)' }}>
-        <div className="max-w-3xl mx-auto">
-          <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-12"
-            style={{ color: '#e9d5ff' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            Event Details
-          </motion.h2>
-
-          {/* Details Card */}
-          <motion.div
-            className="rounded-2xl p-8 mb-8"
-            style={{
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {details.map((detail, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ background: '#8b5cf6' }} />
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: '#a78bfa' }}>{detail.label}</p>
-                    <p className="text-base font-semibold" style={{ color: '#e9d5ff' }}>{detail.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Pricing */}
-            <div className="mt-8 pt-8" style={{ borderTop: '1px solid rgba(139, 92, 246, 0.2)' }}>
-              <div className="text-center">
-                <p className="text-sm uppercase tracking-wider mb-2" style={{ color: '#a78bfa' }}>Pricing</p>
-                <div className="flex justify-center">
-                  <div className="rounded-xl p-4" style={{ background: 'rgba(139, 92, 246, 0.15)' }}>
-                    <p className="text-3xl font-bold" style={{ color: '#c4b5fd' }}>$50</p>
-                    <p className="text-sm" style={{ color: '#a78bfa' }}>Per Child</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Atmosphere Note */}
-          <motion.div
-            className="rounded-xl p-6 text-center mb-8"
-            style={{
-              background: 'rgba(139, 92, 246, 0.08)',
-              border: '1px solid rgba(139, 92, 246, 0.25)',
-            }}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-sm" style={{ color: '#c4b5fd' }}>
-              <strong>Please Note:</strong> For After Dark, the space will feature modified
-              lighting, including flashing and moving effects. Curtains will be drawn to
-              block natural sunlight and create a darker, nighttime-style atmosphere.
-            </p>
-          </motion.div>
-
-          {/* Booking Instructions */}
-          <motion.div
-            className="rounded-xl p-6 text-center mb-8"
-            style={{
-              background: 'rgba(59, 130, 246, 0.08)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
-            }}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-sm" style={{ color: '#93c5fd' }}>
-              <strong>How to Book:</strong> Go to the After-Dark section in My Account
-              and choose your preferred date and movie.
-            </p>
-          </motion.div>
-
-          {/* Safety Note */}
-          <motion.div
-            className="rounded-xl p-6 text-center mb-8"
-            style={{
-              background: 'rgba(34, 197, 94, 0.08)',
-              border: '1px solid rgba(34, 197, 94, 0.2)',
-            }}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-sm" style={{ color: '#86efac' }}>
-              <strong>Safety First:</strong> All staff are trained and background-checked.
-              Waivers are required for each child. We maintain a low child-to-staff ratio
-              to ensure every child receives proper supervision and attention.
-            </p>
-          </motion.div>
-
-          {/* Book CTA */}
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="mb-6 text-sm" style={{ color: '#a5b4fc' }}>
-              Spots fill up fast! Log in to your account to reserve your child&apos;s spot.
-            </p>
-            <Link
-              href="/customer/dashboard?tab=after-dark"
-              className="after-dark-btn-primary inline-flex items-center justify-center px-10 py-4 text-lg font-bold rounded-full transition-all"
-            >
-              Reserve a Spot
-            </Link>
-            <p className="mt-4 text-xs" style={{ color: '#6d28d9' }}>
-              Questions? Call us at (978) 785-0015
-            </p>
+                  Ixtapa
+                </a>{' '}
+                — authentic Mexican food, right across the plaza.
+              </li>
+              <li>
+                <a
+                  href="https://asian-imperial.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:no-underline"
+                  style={{ color: '#c4b5fd' }}
+                >
+                  Asian Imperial
+                </a>{' '}
+                — Japanese and Asian cuisine just a short walk away.
+              </li>
+            </ul>
           </motion.div>
         </div>
       </section>

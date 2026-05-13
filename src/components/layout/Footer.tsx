@@ -46,7 +46,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="relative bg-[#FFFDF7] border-t border-primary-200/30">
+    <footer className="relative bg-[#FFF8E7] border-t border-primary-200/30">
       {/* Photo strip */}
       <div className="grid grid-cols-8 gap-0">
         {['/album/MH_12594.jpg', '/album/MH_12629.jpg', '/album/MH_12660.jpg', '/album/MH_12690.jpg', '/album/MH_12726.jpg', '/album/MH_12758.jpg', '/album/MH_12798.jpg', '/album/MH_12825.jpg'].map((src, i) => (

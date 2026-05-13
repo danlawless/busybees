@@ -14,13 +14,13 @@ import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED, SHO
 
 const navigation = [
   { name: 'Home', href: '/' },
-  { name: 'About', href: '/about' },
+  { name: 'About', href: '/info' },
   { name: 'Events', href: '/events' },
-  { name: 'Info', href: '/info' },
   { name: 'Parties', href: '/parties' },
   { name: 'Groups', href: '/groups' },
   { name: 'After Dark', href: '/after-dark' },
   ...(SHOW_GIFT_CARDS ? [{ name: 'Gift Cards', href: '/gift-cards' }] : []),
+  { name: 'About Us', href: '/about' },
   // { name: 'Jobs', href: '/jobs' },
   // { name: 'Contact', href: '/contact' },  // Hidden until contact form email is fixed
 ]
@@ -167,7 +167,7 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#FFFDF7] px-8 py-8 sm:ring-1 sm:ring-primary-200/30 md:hidden rounded-l-3xl"
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#FFF8E7] px-8 py-8 sm:ring-1 sm:ring-primary-200/30 md:hidden rounded-l-3xl"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}

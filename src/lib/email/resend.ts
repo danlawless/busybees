@@ -150,6 +150,37 @@ Submitted at: ${new Date().toLocaleString()}
 }
 
 /**
+ * Send a customer suggestion to the business email
+ */
+export async function sendSuggestionEmail(data: {
+  name?: string;
+  email?: string;
+  message: string;
+}): Promise<EmailResult> {
+  const subject = 'New Suggestion - Busy Bees Website';
+  const text = `
+New suggestion submitted via the Busy Bees website:
+
+From: ${data.name?.trim() || 'Anonymous'}
+Email: ${data.email?.trim() || 'Not provided'}
+
+Suggestion:
+${data.message}
+
+---
+Sent from Busy Bees Indoor Play Center website
+Submitted at: ${new Date().toLocaleString()}
+`;
+
+  return sendEmail({
+    to: BUSINESS_EMAIL,
+    subject,
+    text,
+    replyTo: data.email?.trim() || undefined,
+  });
+}
+
+/**
  * Send newsletter signup notification to business email
  */
 export async function sendNewsletterSignupEmail(data: {

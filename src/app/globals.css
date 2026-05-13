@@ -2,7 +2,7 @@
 
 /* Busy Bees Brand Variables - Redesigned Palette */
 :root {
-  --background: #fffdf7;
+  --background: #FFF8E7;
   --foreground: #2B2B2B;
   --honey-primary: #FFB900;
   --honey-light: #FFF3D0;
@@ -29,7 +29,7 @@
 
 /* Base Styles */
 body {
-  background: var(--cream-white);
+  background: var(--cream-light);
   color: var(--charcoal-soft);
   font-family: 'Gloria Hallelujah', cursive, system-ui, sans-serif;
   min-height: 100vh;

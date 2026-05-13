@@ -81,7 +81,7 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFFDF7]">
+    <div className="min-h-screen flex flex-col bg-[#FFF8E7]">
       <Header activePromo={showBanner ? activePromo : null} onDismissBanner={handleDismissBanner} />
       <main className="flex-1">
         {children}
