@@ -11,6 +11,54 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 export function Hero() {
   return (
     <>
+      {/* Welcome Section */}
+      <section className="py-16 sm:py-20 bg-[#FFF8E7]">
+        <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
+          <motion.div
+            className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <p>
+              Welcome to Busy Bee&apos;s Indoor Play Center — the ultimate place for
+              little ones to play, explore, and burn off energy in a safe, clean,
+              and exciting environment! Whether you&apos;re stopping by for open
+              play, celebrating a special occasion, or looking for fun activities
+              year-round, Busy Bee&apos;s offers a welcoming space designed for
+              children to learn, socialize, and stay active while parents relax
+              and enjoy the experience.
+            </p>
+
+            <p>
+              At Busy Bee&apos;s, there&apos;s always something fun happening for
+              kids of all ages, including:
+            </p>
+
+            <ul className="list-disc list-outside pl-6 space-y-2 columns-1 sm:columns-2 sm:gap-x-10">
+              <li>Open Play Sessions</li>
+              <li>Toddler &amp; Infant Play Areas</li>
+              <li>Birthday Parties &amp; Private Events</li>
+              <li>Summer Programs &amp; Special Events</li>
+              <li>Busy Bee&apos;s After Dark Parent Drop-Off Nights</li>
+              <li>Seasonal &amp; Holiday-Themed Events</li>
+              <li>Group Visits &amp; Summer Camp Field Trips</li>
+              <li>Rainy Day Play Adventures</li>
+              <li>Sensory-Friendly Play Opportunities</li>
+              <li>Large Group Discounts &amp; Community Events</li>
+            </ul>
+
+            <p>
+              From climbing and sliding to imaginative play and making new
+              friends, Busy Bee&apos;s is the perfect destination for families
+              looking to create lasting memories while giving little ones the
+              freedom to play, move, and have fun!
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Video Hero — constrained width, defined borders */}
       <section className="bg-[#FFF8E7] py-8 sm:py-10">
         <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
@@ -119,53 +167,6 @@ export function Hero() {
         </div>
       </section>
 
-      {/* Welcome Section */}
-      <section className="py-16 sm:py-20 bg-[#FFF8E7]">
-        <div className="mx-auto max-w-3xl px-6 sm:px-8 lg:px-12">
-          <motion.div
-            className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <p>
-              Welcome to Busy Bee&apos;s Indoor Play Center — the ultimate place for
-              little ones to play, explore, and burn off energy in a safe, clean,
-              and exciting environment! Whether you&apos;re stopping by for open
-              play, celebrating a special occasion, or looking for fun activities
-              year-round, Busy Bee&apos;s offers a welcoming space designed for
-              children to learn, socialize, and stay active while parents relax
-              and enjoy the experience.
-            </p>
-
-            <p>
-              At Busy Bee&apos;s, there&apos;s always something fun happening for
-              kids of all ages, including:
-            </p>
-
-            <ul className="list-disc list-outside pl-6 space-y-2">
-              <li>Open Play Sessions</li>
-              <li>Toddler &amp; Infant Play Areas</li>
-              <li>Birthday Parties &amp; Private Events</li>
-              <li>Summer Programs &amp; Special Events</li>
-              <li>Busy Bee&apos;s After Dark Parent Drop-Off Nights</li>
-              <li>Seasonal &amp; Holiday-Themed Events</li>
-              <li>Group Visits &amp; Summer Camp Field Trips</li>
-              <li>Rainy Day Play Adventures</li>
-              <li>Sensory-Friendly Play Opportunities</li>
-              <li>Large Group Discounts &amp; Community Events</li>
-            </ul>
-
-            <p>
-              From climbing and sliding to imaginative play and making new
-              friends, Busy Bee&apos;s is the perfect destination for families
-              looking to create lasting memories while giving little ones the
-              freedom to play, move, and have fun!
-            </p>
-          </motion.div>
-        </div>
-      </section>
     </>
   )
 }
