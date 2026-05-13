@@ -52,7 +52,7 @@ export function Hero() {
         <div className="absolute inset-0 bg-black/45 z-10" />
 
         {/* Content Overlay */}
-        <div className="relative z-20 h-full flex flex-col items-center justify-center px-6 sm:px-8 lg:px-12">
+        <div className="relative z-20 h-full flex flex-col items-center justify-start pt-12 sm:pt-16 lg:pt-20 px-6 sm:px-8 lg:px-12">
           <motion.div
             className="text-center max-w-3xl mx-auto"
             variants={staggerContainer}
