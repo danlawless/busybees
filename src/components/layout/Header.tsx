@@ -14,13 +14,13 @@ import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED, SHO
 
 const navigation = [
   { name: 'Home', href: '/' },
-  { name: 'About', href: '/about' },
+  { name: 'About', href: '/info' },
   { name: 'Events', href: '/events' },
-  { name: 'Info', href: '/info' },
   { name: 'Parties', href: '/parties' },
   { name: 'Groups', href: '/groups' },
   { name: 'After Dark', href: '/after-dark' },
   ...(SHOW_GIFT_CARDS ? [{ name: 'Gift Cards', href: '/gift-cards' }] : []),
+  { name: 'About Us', href: '/about' },
   // { name: 'Jobs', href: '/jobs' },
   // { name: 'Contact', href: '/contact' },  // Hidden until contact form email is fixed
 ]
