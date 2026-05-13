@@ -248,93 +248,6 @@ export default function AfterDarkPage() {
         </div>
       </section>
 
-      {/* Upcoming Movie Schedule */}
-      {movies.length > 0 && (
-        <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 50%, #0f0f1a 100%)' }}>
-          <div className="max-w-5xl mx-auto">
-            <motion.h2
-              className="text-3xl sm:text-4xl font-bold text-center mb-4"
-              style={{ color: '#e9d5ff' }}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              What&apos;s on Tap?
-            </motion.h2>
-            <p className="text-center mb-12" style={{ color: '#a78bfa' }}>
-              See what&apos;s playing at upcoming After Dark nights
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {movies.map((movie, i) => {
-                const isNext = i === 0;
-                return (
-                  <motion.div
-                    key={movie.id}
-                    className="relative rounded-2xl overflow-hidden"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: isNext ? '2px solid rgba(139, 92, 246, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    {isNext && (
-                      <div
-                        className="text-center py-1.5 text-xs font-bold uppercase tracking-wider"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', color: '#ffffff' }}
-                      >
-                        Coming Up
-                      </div>
-                    )}
-                    <div className="p-6 text-center">
-                      {movie.poster_url ? (
-                        <div className="w-24 h-32 rounded-xl mx-auto mb-4 overflow-hidden">
-                          <Image
-                            src={movie.poster_url}
-                            alt={movie.title}
-                            width={96}
-                            height={128}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className="w-20 h-24 rounded-xl mx-auto mb-4 flex items-center justify-center text-4xl"
-                          style={{
-                            background: isNext
-                              ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)'
-                              : 'rgba(255, 255, 255, 0.05)',
-                          }}
-                        >
-                          🎬
-                        </div>
-                      )}
-                      <h3 className="text-xl font-bold mb-1" style={{ color: '#e9d5ff' }}>{movie.title}</h3>
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <span
-                          className="px-2 py-0.5 rounded text-xs font-semibold"
-                          style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd' }}
-                        >
-                          Rated {movie.rating}
-                        </span>
-                      </div>
-                      <p className="text-sm" style={{ color: '#a5b4fc' }}>{formatMovieDate(movie.show_date)}</p>
-                      {movie.description && (
-                        <p className="text-xs mt-2" style={{ color: '#818cf8' }}>{movie.description}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Event Details */}
       <section id="book" className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%)' }}>
         <div className="max-w-3xl mx-auto">
@@ -460,6 +373,93 @@ export default function AfterDarkPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Upcoming Movie Schedule */}
+      {movies.length > 0 && (
+        <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 50%, #0f0f1a 100%)' }}>
+          <div className="max-w-5xl mx-auto">
+            <motion.h2
+              className="text-3xl sm:text-4xl font-bold text-center mb-4"
+              style={{ color: '#e9d5ff' }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              What&apos;s on Tap?
+            </motion.h2>
+            <p className="text-center mb-12" style={{ color: '#a78bfa' }}>
+              See what&apos;s playing at upcoming After Dark nights
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {movies.map((movie, i) => {
+                const isNext = i === 0;
+                return (
+                  <motion.div
+                    key={movie.id}
+                    className="relative rounded-2xl overflow-hidden"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: isNext ? '2px solid rgba(139, 92, 246, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    {isNext && (
+                      <div
+                        className="text-center py-1.5 text-xs font-bold uppercase tracking-wider"
+                        style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', color: '#ffffff' }}
+                      >
+                        Coming Up
+                      </div>
+                    )}
+                    <div className="p-6 text-center">
+                      {movie.poster_url ? (
+                        <div className="w-24 h-32 rounded-xl mx-auto mb-4 overflow-hidden">
+                          <Image
+                            src={movie.poster_url}
+                            alt={movie.title}
+                            width={96}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-20 h-24 rounded-xl mx-auto mb-4 flex items-center justify-center text-4xl"
+                          style={{
+                            background: isNext
+                              ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                          }}
+                        >
+                          🎬
+                        </div>
+                      )}
+                      <h3 className="text-xl font-bold mb-1" style={{ color: '#e9d5ff' }}>{movie.title}</h3>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <span
+                          className="px-2 py-0.5 rounded text-xs font-semibold"
+                          style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd' }}
+                        >
+                          Rated {movie.rating}
+                        </span>
+                      </div>
+                      <p className="text-sm" style={{ color: '#a5b4fc' }}>{formatMovieDate(movie.show_date)}</p>
+                      {movie.description && (
+                        <p className="text-xs mt-2" style={{ color: '#818cf8' }}>{movie.description}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Neon CSS */}
       <style jsx global>{`

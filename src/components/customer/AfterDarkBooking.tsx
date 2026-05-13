@@ -366,39 +366,14 @@ export function AfterDarkBooking({ customerName, customerEmail, customerPhone, c
                         Movie TBA
                       </p>
                     )}
-                    <p className={`text-xs mt-1 font-medium ${
-                      a.isFull ? 'text-red-500' : a.remaining <= 10 ? 'text-amber-600' : 'text-green-600'
-                    }`}>
-                      {a.isFull ? 'FULL' : `${a.remaining} spots left`}
-                    </p>
-                    {/* Capacity bar */}
-                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${(a.booked / a.maxKids) * 100}%`,
-                          background: a.isFull ? '#ef4444' : a.remaining <= 10 ? '#f59e0b' : '#22c55e',
-                        }}
-                      />
-                    </div>
+                    {a.isFull && (
+                      <p className="text-xs mt-1 font-medium text-red-500">FULL</p>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
-
-          {/* Availability indicator */}
-          {selectedAvailability && (
-            <div className="mb-6 p-3 rounded-xl bg-gray-50 text-center">
-              <p className="text-sm text-gray-600">
-                <span className={`font-bold ${selectedAvailability.remaining <= 10 ? 'text-amber-600' : 'text-green-600'}`}>
-                  {selectedAvailability.remaining}
-                </span>
-                {' '}of {selectedAvailability.maxKids} spots remaining &bull;{' '}
-                <span className="text-gray-500">{selectedAvailability.booked} kids signed up</span>
-              </p>
-            </div>
-          )}
 
           {/* Child Selection */}
           <div className="mb-6">
