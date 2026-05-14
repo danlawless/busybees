@@ -65,19 +65,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch all active subscribers
+    // Fetch all active subscribers (paginated to bypass Supabase 1000-row cap)
     const supabase = createAdminClient();
-    const { data: subscribers, error: fetchError } = await supabase
-      .from('newsletter_subscribers')
-      .select('email, name')
-      .eq('is_active', true);
+    type SubscriberRow = { email: string; name: string | null };
+    const PAGE_SIZE = 1000;
+    const subscribers: SubscriberRow[] = [];
+    let from = 0;
+    while (true) {
+      const { data: pageData, error: fetchError } = await supabase
+        .from('newsletter_subscribers')
+        .select('email, name')
+        .eq('is_active', true)
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (fetchError) {
-      logger.error({ error: fetchError }, 'Failed to fetch active subscribers for newsletter send');
-      return NextResponse.json({ error: 'Failed to fetch subscribers' }, { status: 500 });
+      if (fetchError) {
+        logger.error({ error: fetchError }, 'Failed to fetch active subscribers for newsletter send');
+        return NextResponse.json({ error: 'Failed to fetch subscribers' }, { status: 500 });
+      }
+
+      const rows = pageData || [];
+      subscribers.push(...rows);
+      if (rows.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
 
-    if (!subscribers || subscribers.length === 0) {
+    if (subscribers.length === 0) {
       return NextResponse.json({ error: 'No active subscribers to send to' }, { status: 400 });
     }
 
