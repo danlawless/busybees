@@ -160,14 +160,16 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
         {mobileMenuOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 md:hidden"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)', zIndex: 9998 }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#FFF8E7] px-8 py-8 sm:ring-1 sm:ring-primary-200/30 md:hidden rounded-l-3xl"
+              className="fixed inset-y-0 right-0 w-full max-w-sm shadow-2xl px-8 py-8 md:hidden rounded-l-3xl"
+              style={{ backgroundColor: '#FFF3D0', zIndex: 9999, boxShadow: '-20px 0 40px rgba(0,0,0,0.15)' }}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}

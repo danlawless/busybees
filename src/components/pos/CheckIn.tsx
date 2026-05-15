@@ -7,6 +7,7 @@ import { PartySchedulingModal } from "./PartySchedulingModal";
 import { SuccessModal } from "@/components/ui/SuccessModal";
 import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { WaiverModal } from "@/components/ui/WaiverModal";
+import { AfterDarkWaiver, type WaiverFormData as AfterDarkWaiverFormData } from "@/components/customer/AfterDarkWaiver";
 import { GroupChildrenManager } from "./GroupChildrenManager";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
@@ -140,7 +141,7 @@ export function CheckIn({
         message: "",
     });
     const [activeTab, setActiveTab] = useState<
-        "children" | "passes" | "parties" | "snacks"
+        "children" | "passes" | "parties" | "snacks" | "afterdark"
     >("children");
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -215,6 +216,26 @@ export function CheckIn({
     const [complimentaryPassId, setComplimentaryPassId] = useState<string>("");
     const [complimentaryReason, setComplimentaryReason] = useState<string>("");
     const [isIssuingComplimentary, setIsIssuingComplimentary] = useState(false);
+
+    // After Dark POS booking state
+    type AfterDarkAvailability = {
+        date: string;
+        maxKids: number;
+        booked: number;
+        remaining: number;
+        isFull: boolean;
+        movieTitle: string | null;
+        movieRating: string | null;
+    };
+    type AfterDarkStep = "select" | "waiver";
+    const [afterDarkEvents, setAfterDarkEvents] = useState<AfterDarkAvailability[]>([]);
+    const [afterDarkLoading, setAfterDarkLoading] = useState(false);
+    const [afterDarkError, setAfterDarkError] = useState<string | null>(null);
+    const [afterDarkStep, setAfterDarkStep] = useState<AfterDarkStep>("select");
+    const [afterDarkBookingDate, setAfterDarkBookingDate] = useState<string | null>(null);
+    const [afterDarkSelectedChildren, setAfterDarkSelectedChildren] = useState<string[]>([]);
+    const [afterDarkNotes, setAfterDarkNotes] = useState("");
+    const [afterDarkSubmitting, setAfterDarkSubmitting] = useState(false);
 
     // Group children manager state (for group rate bookings)
     const [showGroupChildrenManager, setShowGroupChildrenManager] = useState(false);
@@ -1336,6 +1357,106 @@ export function CheckIn({
         }
     }, [selectedCustomer?.id, currentCustomer?.id]);
 
+    // After Dark availability — fetch when tab activated
+    const fetchAfterDarkAvailability = async () => {
+        setAfterDarkLoading(true);
+        setAfterDarkError(null);
+        try {
+            const res = await fetch("/api/after-dark/availability");
+            if (!res.ok) throw new Error("Failed to load After Dark dates");
+            const data = await res.json();
+            setAfterDarkEvents(data.availability || []);
+        } catch (err) {
+            setAfterDarkError(err instanceof Error ? err.message : "Failed to load");
+        } finally {
+            setAfterDarkLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "afterdark" && afterDarkEvents.length === 0 && !afterDarkLoading) {
+            fetchAfterDarkAvailability();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    const resetAfterDarkBooking = () => {
+        setAfterDarkStep("select");
+        setAfterDarkBookingDate(null);
+        setAfterDarkSelectedChildren([]);
+        setAfterDarkNotes("");
+        setAfterDarkError(null);
+    };
+
+    const handleAfterDarkWaiverComplete = async (waiver: AfterDarkWaiverFormData) => {
+        const customer = selectedCustomer || currentCustomer;
+        if (!customer || !afterDarkBookingDate) return;
+
+        const defaultCard =
+            customer.savedCards.find((c) => c.isDefault) || customer.savedCards[0];
+
+        if (!defaultCard) {
+            setAfterDarkError(
+                "No saved card on file. Add a payment method on the Payment tab first."
+            );
+            return;
+        }
+
+        const numKids = afterDarkSelectedChildren.length;
+        const kidDetails = afterDarkSelectedChildren
+            .map((id) => {
+                const c = customer.children.find((ch) => ch.id === id);
+                return c ? `${c.name} (${c.age})` : "";
+            })
+            .filter(Boolean)
+            .join(", ");
+
+        setAfterDarkSubmitting(true);
+        setAfterDarkError(null);
+
+        try {
+            const res = await fetch("/api/after-dark/book-pos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    event_date: afterDarkBookingDate,
+                    num_kids: numKids,
+                    paymentMethodId: defaultCard.id,
+                    kid_details: kidDetails,
+                    notes: afterDarkNotes || undefined,
+                    waiver,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Booking failed");
+            }
+
+            const charged = (data.amountPaid || 0) - (data.giftCardAmountUsed || 0);
+            setSuccessDetails({
+                title: "🌙 After Dark Booked!",
+                message: `${numKids} kid${numKids > 1 ? "s" : ""} booked for ${afterDarkBookingDate}.`,
+                details:
+                    `💳 Charged •••• ${defaultCard.last4}: ${formatCurrency(charged)}` +
+                    `\n👶 ${kidDetails}` +
+                    ((data.giftCardAmountUsed || 0) > 0
+                        ? `\n🎁 Gift card applied: ${formatCurrency(data.giftCardAmountUsed)}`
+                        : ""),
+            });
+            setShowSuccessModal(true);
+
+            resetAfterDarkBooking();
+            await fetchAfterDarkAvailability();
+        } catch (err) {
+            setAfterDarkError(err instanceof Error ? err.message : "Booking failed");
+            // Stay on waiver step so they can retry/cancel
+        } finally {
+            setAfterDarkSubmitting(false);
+        }
+    };
+
     const handleAddPaymentMethodSuccess = async () => {
         // Fetch updated saved cards from API
         await fetchSavedCards();
@@ -2267,6 +2388,16 @@ export function CheckIn({
                                 }`}
                             >
                                 🍎 Snacks
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("afterdark")}
+                                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                                    activeTab === "afterdark"
+                                        ? "bg-indigo-700 text-white shadow-md"
+                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                                }`}
+                            >
+                                🌙 After Dark
                             </button>
                         </div>
                     </Card>
@@ -4488,6 +4619,375 @@ export function CheckIn({
                             </div>
                         </Card>
                     )}
+
+                    {/* After Dark Tab — staff books on behalf of customer */}
+                    {activeTab === "afterdark" && (() => {
+                        const defaultCard =
+                            displayCustomer.savedCards.find((c) => c.isDefault) ||
+                            displayCustomer.savedCards[0];
+                        const eligibleChildren = displayCustomer.children.filter(
+                            (c) => c.age >= 3 && c.age <= 18
+                        );
+                        const selectedEvt = afterDarkBookingDate
+                            ? afterDarkEvents.find((e) => e.date === afterDarkBookingDate)
+                            : null;
+                        const numKids = afterDarkSelectedChildren.length;
+                        const totalPrice = numKids * 50;
+                        const kidDetailsPreview = afterDarkSelectedChildren
+                            .map((id) => {
+                                const ch = displayCustomer.children.find((c) => c.id === id);
+                                return ch ? `${ch.name} (${ch.age})` : "";
+                            })
+                            .filter(Boolean)
+                            .join(", ");
+
+                        const toggleAfterDarkChild = (childId: string) => {
+                            setAfterDarkSelectedChildren((prev) => {
+                                const next = prev.includes(childId)
+                                    ? prev.filter((id) => id !== childId)
+                                    : [...prev, childId];
+                                if (selectedEvt && next.length > selectedEvt.remaining) {
+                                    return prev;
+                                }
+                                return next;
+                            });
+                        };
+
+                        return (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-2xl font-bold">🌙 Book After Dark</h3>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            $50/kid · ages 3+ · Friday 5–7:30pm
+                                        </p>
+                                    </div>
+                                    {afterDarkStep === "select" && (
+                                        <Button
+                                            onClick={fetchAfterDarkAvailability}
+                                            variant="outline"
+                                            disabled={afterDarkLoading}
+                                        >
+                                            {afterDarkLoading ? "⏳" : "🔄"} Refresh
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {!defaultCard ? (
+                                    <Card className="p-6 bg-yellow-50 border-yellow-200">
+                                        <p className="text-yellow-900 font-medium">
+                                            ⚠️ No saved card on file for {displayCustomer.name}.
+                                        </p>
+                                        <p className="text-sm text-yellow-800 mt-1">
+                                            Add a payment method before booking — the customer's
+                                            saved card is required for the off-session charge.
+                                        </p>
+                                    </Card>
+                                ) : (
+                                    <Card className="p-4 bg-indigo-50 border-indigo-200">
+                                        <p className="text-sm text-indigo-900">
+                                            Will charge{" "}
+                                            <span className="font-semibold">
+                                                {defaultCard.brand} •••• {defaultCard.last4}
+                                            </span>{" "}
+                                            (default card). Change it from the card dropdown in the
+                                            header to use a different one.
+                                        </p>
+                                    </Card>
+                                )}
+
+                                {afterDarkError && (
+                                    <Card className="p-4 bg-red-50 border-red-200">
+                                        <p className="text-red-800 text-sm">{afterDarkError}</p>
+                                    </Card>
+                                )}
+
+                                {/* Step 2: Waiver */}
+                                {afterDarkStep === "waiver" && selectedEvt && (
+                                    <>
+                                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                                            <span className="text-green-600">1. Select</span>
+                                            <span>→</span>
+                                            <span className="text-indigo-700 font-bold">2. Waiver</span>
+                                            <span>→</span>
+                                            <span>3. Charge</span>
+                                        </div>
+                                        <Card className="p-4 bg-indigo-50 border-indigo-200">
+                                            <p className="text-sm text-indigo-900">
+                                                <strong>Date:</strong>{" "}
+                                                {parseDateString(selectedEvt.date).toLocaleDateString(
+                                                    "en-US",
+                                                    {
+                                                        weekday: "long",
+                                                        month: "short",
+                                                        day: "numeric",
+                                                    }
+                                                )}
+                                            </p>
+                                            <p className="text-sm text-indigo-900 mt-1">
+                                                <strong>Children:</strong> {kidDetailsPreview}
+                                            </p>
+                                            <p className="text-sm text-indigo-900 mt-1">
+                                                <strong>Total:</strong> {formatCurrency(totalPrice)}
+                                            </p>
+                                        </Card>
+                                        <AfterDarkWaiver
+                                            parentName={displayCustomer.name}
+                                            parentEmail={displayCustomer.email || ""}
+                                            parentPhone={displayCustomer.phone}
+                                            childNames={kidDetailsPreview}
+                                            onComplete={handleAfterDarkWaiverComplete}
+                                            onCancel={() => {
+                                                setAfterDarkStep("select");
+                                                setAfterDarkError(null);
+                                            }}
+                                        />
+                                        {afterDarkSubmitting && (
+                                            <Card className="p-4 bg-blue-50 border-blue-200 text-center">
+                                                <p className="text-blue-800 text-sm font-medium">
+                                                    ⏳ Processing payment…
+                                                </p>
+                                            </Card>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Step 1: Select date + children */}
+                                {afterDarkStep === "select" && (
+                                    <>
+                                        {afterDarkLoading && afterDarkEvents.length === 0 ? (
+                                            <Card className="p-8 text-center">
+                                                <p className="text-gray-500">Loading upcoming dates…</p>
+                                            </Card>
+                                        ) : afterDarkEvents.length === 0 ? (
+                                            <Card className="p-8 text-center">
+                                                <p className="text-gray-500">
+                                                    No upcoming After Dark dates.
+                                                </p>
+                                            </Card>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {afterDarkEvents.map((evt) => {
+                                                    const isBooking =
+                                                        afterDarkBookingDate === evt.date;
+                                                    const dateLabel = parseDateString(
+                                                        evt.date
+                                                    ).toLocaleDateString("en-US", {
+                                                        weekday: "long",
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        year: "numeric",
+                                                    });
+                                                    return (
+                                                        <Card
+                                                            key={evt.date}
+                                                            className={`p-4 border-l-8 ${
+                                                                evt.isFull
+                                                                    ? "border-l-gray-400 opacity-70"
+                                                                    : "border-l-indigo-500"
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                                        <h4 className="text-lg font-bold">
+                                                                            {dateLabel}
+                                                                        </h4>
+                                                                        {evt.movieTitle && (
+                                                                            <span className="text-sm text-gray-700">
+                                                                                🎬 {evt.movieTitle}
+                                                                                {evt.movieRating
+                                                                                    ? ` (${evt.movieRating})`
+                                                                                    : ""}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p
+                                                                        className={`text-sm mt-1 ${
+                                                                            evt.isFull
+                                                                                ? "text-red-600"
+                                                                                : evt.remaining <= 5
+                                                                                ? "text-orange-600"
+                                                                                : "text-green-700"
+                                                                        }`}
+                                                                    >
+                                                                        {evt.isFull
+                                                                            ? "Fully booked"
+                                                                            : `${evt.remaining} spot${
+                                                                                  evt.remaining === 1
+                                                                                      ? ""
+                                                                                      : "s"
+                                                                              } remaining (${evt.booked}/${evt.maxKids})`}
+                                                                    </p>
+                                                                </div>
+                                                                {!evt.isFull && !isBooking && (
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            setAfterDarkBookingDate(
+                                                                                evt.date
+                                                                            );
+                                                                            setAfterDarkSelectedChildren(
+                                                                                []
+                                                                            );
+                                                                            setAfterDarkNotes("");
+                                                                            setAfterDarkError(null);
+                                                                        }}
+                                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                                        disabled={!defaultCard}
+                                                                    >
+                                                                        Book
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+
+                                                            {isBooking && (
+                                                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                                                                    <div>
+                                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                            Select Children Attending
+                                                                        </label>
+                                                                        {eligibleChildren.length ===
+                                                                        0 ? (
+                                                                            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                                                                <p className="text-sm text-amber-800">
+                                                                                    No eligible children
+                                                                                    on this account
+                                                                                    (ages 3+). Add a
+                                                                                    child in the
+                                                                                    Children tab first.
+                                                                                </p>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                                {eligibleChildren.map(
+                                                                                    (child) => {
+                                                                                        const isSelected = afterDarkSelectedChildren.includes(
+                                                                                            child.id
+                                                                                        );
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={
+                                                                                                    child.id
+                                                                                                }
+                                                                                                onClick={() =>
+                                                                                                    toggleAfterDarkChild(
+                                                                                                        child.id
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`p-3 rounded-lg text-left border-2 transition-colors ${
+                                                                                                    isSelected
+                                                                                                        ? "border-indigo-500 bg-indigo-50"
+                                                                                                        : "border-gray-200 hover:border-indigo-300 bg-white"
+                                                                                                }`}
+                                                                                            >
+                                                                                                <div className="flex items-center gap-3">
+                                                                                                    <div
+                                                                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                                                                                                            isSelected
+                                                                                                                ? "bg-indigo-500 text-white"
+                                                                                                                : "bg-gray-100 text-gray-500"
+                                                                                                        }`}
+                                                                                                    >
+                                                                                                        {isSelected
+                                                                                                            ? "✓"
+                                                                                                            : child.name.charAt(
+                                                                                                                  0
+                                                                                                              )}
+                                                                                                    </div>
+                                                                                                    <div>
+                                                                                                        <p className="font-medium text-gray-900">
+                                                                                                            {
+                                                                                                                child.name
+                                                                                                            }
+                                                                                                        </p>
+                                                                                                        <p className="text-xs text-gray-500">
+                                                                                                            Age{" "}
+                                                                                                            {
+                                                                                                                child.age
+                                                                                                            }
+                                                                                                        </p>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </button>
+                                                                                        );
+                                                                                    }
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                            Notes (optional)
+                                                                        </label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={afterDarkNotes}
+                                                                            onChange={(e) =>
+                                                                                setAfterDarkNotes(
+                                                                                    e.target.value
+                                                                                )
+                                                                            }
+                                                                            placeholder="Allergies, pickup notes, etc."
+                                                                            maxLength={500}
+                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                                                        />
+                                                                    </div>
+
+                                                                    {numKids > 0 && (
+                                                                        <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+                                                                            <span className="text-sm text-indigo-900">
+                                                                                {numKids} kid
+                                                                                {numKids > 1 ? "s" : ""}{" "}
+                                                                                × $50
+                                                                            </span>
+                                                                            <span className="font-bold text-indigo-900">
+                                                                                {formatCurrency(
+                                                                                    totalPrice
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="flex gap-2 justify-end">
+                                                                        <Button
+                                                                            onClick={
+                                                                                resetAfterDarkBooking
+                                                                            }
+                                                                            variant="outline"
+                                                                        >
+                                                                            Cancel
+                                                                        </Button>
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                setAfterDarkError(
+                                                                                    null
+                                                                                );
+                                                                                setAfterDarkStep(
+                                                                                    "waiver"
+                                                                                );
+                                                                            }}
+                                                                            disabled={
+                                                                                numKids === 0 ||
+                                                                                !defaultCard
+                                                                            }
+                                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                                        >
+                                                                            Continue to Waiver →
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </Card>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
