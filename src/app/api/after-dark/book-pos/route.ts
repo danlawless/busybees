@@ -39,22 +39,12 @@ const PosBookingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authenticated staff/admin
+    // Verify authenticated user (must be staff/admin OR the customer themselves)
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: staff } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!staff || !['staff', 'admin'].includes(staff.role)) {
-      return NextResponse.json({ error: 'Forbidden - Staff only' }, { status: 403 });
     }
 
     const parsed = PosBookingSchema.safeParse(await request.json());
@@ -66,6 +56,22 @@ export async function POST(request: NextRequest) {
     }
 
     const { customer_id, event_date, num_kids, paymentMethodId, kid_details, notes, useGiftCardBalance, waiver } = parsed.data;
+
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const isStaffOrAdmin = authUser && ['staff', 'admin'].includes(authUser.role);
+    const isSelfBooking = user.id === customer_id;
+
+    if (!isStaffOrAdmin && !isSelfBooking) {
+      return NextResponse.json(
+        { error: 'Forbidden — must be staff, or booking for yourself.' },
+        { status: 403 }
+      );
+    }
     const adminSupabase = createAdminClient();
     const customerIdColumn = await getStripeCustomerIdColumn();
 
@@ -135,7 +141,8 @@ export async function POST(request: NextRequest) {
           payment_method: paymentMethodId,
           metadata: {
             customer_id: customer.id,
-            staff_id: user.id,
+            initiated_by: user.id,
+            initiated_by_role: isStaffOrAdmin ? (authUser?.role || 'staff') : 'customer',
             type: 'after_dark',
             event_date,
             num_kids: String(num_kids),
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
             pos_transaction: 'true',
           },
           confirm: true,
-          off_session: true,
+          off_session: isStaffOrAdmin,
         });
 
         if (paymentIntent.status !== 'succeeded') {
@@ -252,14 +259,15 @@ export async function POST(request: NextRequest) {
       {
         bookingId: booking.id,
         customer_id,
-        staff_id: user.id,
+        initiated_by: user.id,
+        initiated_by_role: isStaffOrAdmin ? (authUser?.role || 'staff') : 'customer',
         event_date,
         num_kids,
         totalAmount,
         amountCharged: amountToCharge,
         giftCardUsed: giftCardAmountUsed,
       },
-      '🌙 POS-initiated After Dark booking created'
+      '🌙 POS After Dark booking created'
     );
 
     return NextResponse.json({
