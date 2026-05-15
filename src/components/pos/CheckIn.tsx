@@ -140,7 +140,7 @@ export function CheckIn({
         message: "",
     });
     const [activeTab, setActiveTab] = useState<
-        "children" | "passes" | "parties" | "snacks"
+        "children" | "passes" | "parties" | "snacks" | "afterdark"
     >("children");
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -215,6 +215,24 @@ export function CheckIn({
     const [complimentaryPassId, setComplimentaryPassId] = useState<string>("");
     const [complimentaryReason, setComplimentaryReason] = useState<string>("");
     const [isIssuingComplimentary, setIsIssuingComplimentary] = useState(false);
+
+    // After Dark POS booking state
+    type AfterDarkAvailability = {
+        date: string;
+        maxKids: number;
+        booked: number;
+        remaining: number;
+        isFull: boolean;
+        movieTitle: string | null;
+        movieRating: string | null;
+    };
+    const [afterDarkEvents, setAfterDarkEvents] = useState<AfterDarkAvailability[]>([]);
+    const [afterDarkLoading, setAfterDarkLoading] = useState(false);
+    const [afterDarkError, setAfterDarkError] = useState<string | null>(null);
+    const [afterDarkBookingDate, setAfterDarkBookingDate] = useState<string | null>(null);
+    const [afterDarkNumKids, setAfterDarkNumKids] = useState(1);
+    const [afterDarkNotes, setAfterDarkNotes] = useState("");
+    const [afterDarkSubmitting, setAfterDarkSubmitting] = useState(false);
 
     // Group children manager state (for group rate bookings)
     const [showGroupChildrenManager, setShowGroupChildrenManager] = useState(false);
@@ -1336,6 +1354,88 @@ export function CheckIn({
         }
     }, [selectedCustomer?.id, currentCustomer?.id]);
 
+    // After Dark availability — fetch when tab activated
+    const fetchAfterDarkAvailability = async () => {
+        setAfterDarkLoading(true);
+        setAfterDarkError(null);
+        try {
+            const res = await fetch("/api/after-dark/availability");
+            if (!res.ok) throw new Error("Failed to load After Dark dates");
+            const data = await res.json();
+            setAfterDarkEvents(data.availability || []);
+        } catch (err) {
+            setAfterDarkError(err instanceof Error ? err.message : "Failed to load");
+        } finally {
+            setAfterDarkLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "afterdark" && afterDarkEvents.length === 0 && !afterDarkLoading) {
+            fetchAfterDarkAvailability();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    const handleAfterDarkBookPos = async () => {
+        const customer = selectedCustomer || currentCustomer;
+        if (!customer || !afterDarkBookingDate) return;
+
+        const defaultCard =
+            customer.savedCards.find((c) => c.isDefault) || customer.savedCards[0];
+
+        if (!defaultCard) {
+            setAfterDarkError(
+                "No saved card on file. Add a payment method on the Payment tab first."
+            );
+            return;
+        }
+
+        setAfterDarkSubmitting(true);
+        setAfterDarkError(null);
+
+        try {
+            const res = await fetch("/api/after-dark/book-pos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    event_date: afterDarkBookingDate,
+                    num_kids: afterDarkNumKids,
+                    paymentMethodId: defaultCard.id,
+                    notes: afterDarkNotes || undefined,
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Booking failed");
+            }
+
+            const charged = (data.amountPaid || 0) - (data.giftCardAmountUsed || 0);
+            setSuccessDetails({
+                title: "🌙 After Dark Booked!",
+                message: `${afterDarkNumKids} kid${afterDarkNumKids > 1 ? "s" : ""} booked for ${afterDarkBookingDate}.`,
+                details:
+                    `💳 Charged •••• ${defaultCard.last4}: ${formatCurrency(charged)}` +
+                    ((data.giftCardAmountUsed || 0) > 0
+                        ? `\n🎁 Gift card applied: ${formatCurrency(data.giftCardAmountUsed)}`
+                        : ""),
+            });
+            setShowSuccessModal(true);
+
+            // Reset booking form + refresh capacity
+            setAfterDarkBookingDate(null);
+            setAfterDarkNumKids(1);
+            setAfterDarkNotes("");
+            await fetchAfterDarkAvailability();
+        } catch (err) {
+            setAfterDarkError(err instanceof Error ? err.message : "Booking failed");
+        } finally {
+            setAfterDarkSubmitting(false);
+        }
+    };
+
     const handleAddPaymentMethodSuccess = async () => {
         // Fetch updated saved cards from API
         await fetchSavedCards();
@@ -2267,6 +2367,16 @@ export function CheckIn({
                                 }`}
                             >
                                 🍎 Snacks
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("afterdark")}
+                                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
+                                    activeTab === "afterdark"
+                                        ? "bg-indigo-700 text-white shadow-md"
+                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                                }`}
+                            >
+                                🌙 After Dark
                             </button>
                         </div>
                     </Card>
@@ -4487,6 +4597,238 @@ export function CheckIn({
                                 </Button>
                             </div>
                         </Card>
+                    )}
+
+                    {/* After Dark Tab — staff books on behalf of customer */}
+                    {activeTab === "afterdark" && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-bold">🌙 Book After Dark</h3>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    $50/kid · ages 4–12 · Friday 6pm–10pm
+                                </p>
+                            </div>
+                            <Button
+                                onClick={fetchAfterDarkAvailability}
+                                variant="outline"
+                                disabled={afterDarkLoading}
+                            >
+                                {afterDarkLoading ? "⏳" : "🔄"} Refresh
+                            </Button>
+                        </div>
+    
+                        {(() => {
+                            const defaultCard =
+                                displayCustomer.savedCards.find((c) => c.isDefault) ||
+                                displayCustomer.savedCards[0];
+                            if (!defaultCard) {
+                                return (
+                                    <Card className="p-6 bg-yellow-50 border-yellow-200">
+                                        <p className="text-yellow-900 font-medium">
+                                            ⚠️ No saved card on file for {displayCustomer.name}.
+                                        </p>
+                                        <p className="text-sm text-yellow-800 mt-1">
+                                            Add a payment method before booking — the customer's
+                                            saved card is required for the off-session charge.
+                                        </p>
+                                    </Card>
+                                );
+                            }
+                            return (
+                                <Card className="p-4 bg-indigo-50 border-indigo-200">
+                                    <p className="text-sm text-indigo-900">
+                                        Will charge{" "}
+                                        <span className="font-semibold">
+                                            {defaultCard.brand} •••• {defaultCard.last4}
+                                        </span>{" "}
+                                        (default card). Change it from the card dropdown in the
+                                        header to use a different one.
+                                    </p>
+                                </Card>
+                            );
+                        })()}
+    
+                        {afterDarkError && (
+                            <Card className="p-4 bg-red-50 border-red-200">
+                                <p className="text-red-800 text-sm">{afterDarkError}</p>
+                            </Card>
+                        )}
+    
+                        {afterDarkLoading && afterDarkEvents.length === 0 ? (
+                            <Card className="p-8 text-center">
+                                <p className="text-gray-500">Loading upcoming dates…</p>
+                            </Card>
+                        ) : afterDarkEvents.length === 0 ? (
+                            <Card className="p-8 text-center">
+                                <p className="text-gray-500">No upcoming After Dark dates.</p>
+                            </Card>
+                        ) : (
+                            <div className="space-y-3">
+                                {afterDarkEvents.map((evt) => {
+                                    const isBooking = afterDarkBookingDate === evt.date;
+                                    const dateLabel = parseDateString(evt.date).toLocaleDateString(
+                                        "en-US",
+                                        {
+                                            weekday: "long",
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                        }
+                                    );
+                                    return (
+                                        <Card
+                                            key={evt.date}
+                                            className={`p-4 border-l-8 ${
+                                                evt.isFull
+                                                    ? "border-l-gray-400 opacity-70"
+                                                    : "border-l-indigo-500"
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                        <h4 className="text-lg font-bold">
+                                                            {dateLabel}
+                                                        </h4>
+                                                        {evt.movieTitle && (
+                                                            <span className="text-sm text-gray-700">
+                                                                🎬 {evt.movieTitle}
+                                                                {evt.movieRating
+                                                                    ? ` (${evt.movieRating})`
+                                                                    : ""}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p
+                                                        className={`text-sm mt-1 ${
+                                                            evt.isFull
+                                                                ? "text-red-600"
+                                                                : evt.remaining <= 5
+                                                                ? "text-orange-600"
+                                                                : "text-green-700"
+                                                        }`}
+                                                    >
+                                                        {evt.isFull
+                                                            ? "Fully booked"
+                                                            : `${evt.remaining} spot${
+                                                                  evt.remaining === 1 ? "" : "s"
+                                                              } remaining (${evt.booked}/${evt.maxKids})`}
+                                                    </p>
+                                                </div>
+                                                {!evt.isFull && !isBooking && (
+                                                    <Button
+                                                        onClick={() => {
+                                                            setAfterDarkBookingDate(evt.date);
+                                                            setAfterDarkNumKids(1);
+                                                            setAfterDarkNotes("");
+                                                            setAfterDarkError(null);
+                                                        }}
+                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                        disabled={
+                                                            !displayCustomer.savedCards.length
+                                                        }
+                                                    >
+                                                        Book
+                                                    </Button>
+                                                )}
+                                            </div>
+    
+                                            {isBooking && (
+                                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                        <label className="text-sm font-medium text-gray-700">
+                                                            Kids:
+                                                        </label>
+                                                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                                                            <button
+                                                                onClick={() =>
+                                                                    setAfterDarkNumKids((n) =>
+                                                                        Math.max(1, n - 1)
+                                                                    )
+                                                                }
+                                                                className="px-3 py-1.5 hover:bg-gray-100"
+                                                                disabled={afterDarkSubmitting}
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <span className="px-4 py-1.5 font-semibold border-x border-gray-300">
+                                                                {afterDarkNumKids}
+                                                            </span>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setAfterDarkNumKids((n) =>
+                                                                        Math.min(
+                                                                            Math.min(10, evt.remaining),
+                                                                            n + 1
+                                                                        )
+                                                                    )
+                                                                }
+                                                                className="px-3 py-1.5 hover:bg-gray-100"
+                                                                disabled={afterDarkSubmitting}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                        <span className="text-sm text-gray-600">
+                                                            Total:{" "}
+                                                            <span className="font-semibold">
+                                                                {formatCurrency(
+                                                                    afterDarkNumKids * 50
+                                                                )}
+                                                            </span>
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Notes (optional)
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={afterDarkNotes}
+                                                            onChange={(e) =>
+                                                                setAfterDarkNotes(e.target.value)
+                                                            }
+                                                            placeholder="Allergies, pickup notes, etc."
+                                                            maxLength={500}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                                            disabled={afterDarkSubmitting}
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button
+                                                            onClick={() => {
+                                                                setAfterDarkBookingDate(null);
+                                                                setAfterDarkError(null);
+                                                            }}
+                                                            variant="outline"
+                                                            disabled={afterDarkSubmitting}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            onClick={handleAfterDarkBookPos}
+                                                            disabled={
+                                                                afterDarkSubmitting ||
+                                                                afterDarkNumKids < 1
+                                                            }
+                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                        >
+                                                            {afterDarkSubmitting
+                                                                ? "⏳ Charging…"
+                                                                : `💳 Book & Charge ${formatCurrency(
+                                                                      afterDarkNumKids * 50
+                                                                  )}`}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                     )}
                 </div>
             )}

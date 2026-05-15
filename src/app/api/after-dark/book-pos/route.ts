@@ -1,0 +1,241 @@
+/**
+ * POS API: Staff-initiated After Dark booking
+ * Lets POS staff create + pay for an After Dark booking on behalf of a customer
+ * using one of the customer's saved cards (off-session charge).
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
+import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
+import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const MAX_KIDS = 40;
+const PRICE_PER_KID = 50;
+
+const PosBookingSchema = z.object({
+  customer_id: z.string().uuid(),
+  event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  num_kids: z.number().int().min(1).max(10),
+  paymentMethodId: z.string().min(1),
+  kid_details: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  useGiftCardBalance: z.boolean().optional().default(true),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify authenticated staff/admin
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: staff } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!staff || !['staff', 'admin'].includes(staff.role)) {
+      return NextResponse.json({ error: 'Forbidden - Staff only' }, { status: 403 });
+    }
+
+    const parsed = PosBookingSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { customer_id, event_date, num_kids, paymentMethodId, kid_details, notes, useGiftCardBalance } = parsed.data;
+    const adminSupabase = createAdminClient();
+    const customerIdColumn = await getStripeCustomerIdColumn();
+
+    const { data: customer } = await adminSupabase
+      .from('users')
+      .select(`id, name, email, phone, ${customerIdColumn}`)
+      .eq('id', customer_id)
+      .single();
+
+    if (!customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    }
+
+    // Check event capacity
+    const { data: existing } = await adminSupabase
+      .from('after_dark_bookings')
+      .select('num_kids')
+      .eq('event_date', event_date)
+      .neq('status', 'cancelled');
+
+    const currentBooked = (existing || []).reduce((sum, b) => sum + b.num_kids, 0);
+    const remaining = MAX_KIDS - currentBooked;
+
+    if (num_kids > remaining) {
+      return NextResponse.json({
+        error: remaining === 0
+          ? 'This event is fully booked.'
+          : `Only ${remaining} spot${remaining === 1 ? '' : 's'} remaining.`,
+      }, { status: 400 });
+    }
+
+    // Compute charge after optional gift-card application
+    const totalAmount = num_kids * PRICE_PER_KID;
+    let amountToCharge = totalAmount;
+    let giftCardAmountUsed = 0;
+
+    if (useGiftCardBalance) {
+      const giftCardBalance = await getUserGiftCardBalance(customer_id);
+      if (giftCardBalance > 0) {
+        giftCardAmountUsed = Math.min(giftCardBalance, totalAmount);
+        amountToCharge = totalAmount - giftCardAmountUsed;
+      }
+    }
+
+    // Resolve Stripe customer ID (create if missing)
+    const customerRecord = customer as Record<string, string | null>;
+    const stripeCustomerId =
+      customerRecord[customerIdColumn] ||
+      await getOrCreateStripeCustomer(
+        customer.id,
+        customer.email || '',
+        customer.name || 'Customer',
+        customer.phone || undefined
+      );
+
+    let stripePaymentIntentId: string | null = null;
+
+    if (amountToCharge > 0) {
+      const stripe = await getStripeClient();
+      const amountInCents = Math.round(amountToCharge * 100);
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountInCents,
+          currency: 'usd',
+          customer: stripeCustomerId,
+          payment_method: paymentMethodId,
+          metadata: {
+            customer_id: customer.id,
+            staff_id: user.id,
+            type: 'after_dark',
+            event_date,
+            num_kids: String(num_kids),
+            gift_card_amount: String(giftCardAmountUsed),
+            original_amount: String(totalAmount),
+            pos_transaction: 'true',
+          },
+          confirm: true,
+          off_session: true,
+        });
+
+        if (paymentIntent.status !== 'succeeded') {
+          logger.warn(
+            { paymentIntentId: paymentIntent.id, status: paymentIntent.status },
+            'POS After Dark payment did not succeed'
+          );
+          return NextResponse.json({
+            error: paymentIntent.status === 'requires_action'
+              ? 'This card requires customer verification — ask the customer to complete the booking from their account.'
+              : 'Payment failed. Try a different card.',
+          }, { status: 400 });
+        }
+
+        stripePaymentIntentId = paymentIntent.id;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Payment failed';
+        logger.error({ error: err, customer_id, paymentMethodId }, 'POS After Dark off-session charge failed');
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+    } else {
+      stripePaymentIntentId = `giftcard_${Date.now()}`;
+    }
+
+    // Create the booking
+    const { data: booking, error: bookingError } = await adminSupabase
+      .from('after_dark_bookings')
+      .insert({
+        event_date,
+        parent_name: customer.name || 'Customer',
+        parent_email: customer.email || '',
+        parent_phone: customer.phone || '',
+        num_kids,
+        kid_details: kid_details || null,
+        notes: notes ? `[POS] ${notes}` : '[POS booking]',
+        status: 'confirmed',
+        amount_paid: totalAmount,
+        stripe_payment_intent_id: stripePaymentIntentId,
+        waiver_signed: false,
+      })
+      .select()
+      .single();
+
+    if (bookingError || !booking) {
+      logger.error(
+        { error: bookingError, customer_id, paymentIntentId: stripePaymentIntentId },
+        'POS After Dark: payment succeeded but booking insert failed'
+      );
+      return NextResponse.json(
+        { error: 'Payment processed but booking record failed — please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    // Deduct gift card balance after booking is persisted
+    if (giftCardAmountUsed > 0) {
+      await applyGiftCardBalance(customer_id, giftCardAmountUsed);
+    }
+
+    // Record purchases row so AfterDark revenue lands in reports
+    const { error: purchaseError } = await adminSupabase
+      .from('purchases')
+      .insert({
+        customer_id,
+        type: 'after_dark',
+        product_id: booking.id,
+        name: `After Dark — ${event_date} (${num_kids} kid${num_kids > 1 ? 's' : ''})`,
+        price: totalAmount,
+        purchase_date: new Date().toISOString(),
+        used_sessions: 0,
+        total_sessions: num_kids,
+        status: 'active',
+        stripe_payment_intent_id: stripePaymentIntentId,
+        gift_card_amount_used: giftCardAmountUsed,
+      });
+
+    if (purchaseError) {
+      logger.error({ error: purchaseError, bookingId: booking.id }, 'POS After Dark: failed to record purchases row');
+    }
+
+    logger.info(
+      {
+        bookingId: booking.id,
+        customer_id,
+        staff_id: user.id,
+        event_date,
+        num_kids,
+        totalAmount,
+        amountCharged: amountToCharge,
+        giftCardUsed: giftCardAmountUsed,
+      },
+      '🌙 POS-initiated After Dark booking created'
+    );
+
+    return NextResponse.json({
+      booking,
+      amountPaid: totalAmount,
+      giftCardAmountUsed,
+      remaining: remaining - num_kids,
+    }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ error, message }, 'POS After Dark booking error');
+    return NextResponse.json({ error: 'Internal server error', detail: message }, { status: 500 });
+  }
+}
