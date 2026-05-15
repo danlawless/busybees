@@ -15,6 +15,17 @@ import { z } from 'zod';
 const MAX_KIDS = 40;
 const PRICE_PER_KID = 50;
 
+const WaiverDataSchema = z.object({
+  emergency_contact_name: z.string().min(1),
+  emergency_contact_phone: z.string().min(1),
+  emergency_contact_relationship: z.string().min(1),
+  authorized_pickup: z.string().min(1),
+  allergies: z.string().optional().default(''),
+  medical_conditions: z.string().optional().default(''),
+  photo_consent: z.boolean(),
+  signature: z.string().min(1),
+});
+
 const PosBookingSchema = z.object({
   customer_id: z.string().uuid(),
   event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -23,6 +34,7 @@ const PosBookingSchema = z.object({
   kid_details: z.string().max(500).optional(),
   notes: z.string().max(500).optional(),
   useGiftCardBalance: z.boolean().optional().default(true),
+  waiver: WaiverDataSchema,
 });
 
 export async function POST(request: NextRequest) {
@@ -53,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { customer_id, event_date, num_kids, paymentMethodId, kid_details, notes, useGiftCardBalance } = parsed.data;
+    const { customer_id, event_date, num_kids, paymentMethodId, kid_details, notes, useGiftCardBalance, waiver } = parsed.data;
     const adminSupabase = createAdminClient();
     const customerIdColumn = await getStripeCustomerIdColumn();
 
@@ -171,7 +183,7 @@ export async function POST(request: NextRequest) {
         status: 'confirmed',
         amount_paid: totalAmount,
         stripe_payment_intent_id: stripePaymentIntentId,
-        waiver_signed: false,
+        waiver_signed: true,
       })
       .select()
       .single();
@@ -185,6 +197,29 @@ export async function POST(request: NextRequest) {
         { error: 'Payment processed but booking record failed — please contact support.' },
         { status: 500 }
       );
+    }
+
+    // Save waiver (always required for POS bookings)
+    const { error: waiverError } = await adminSupabase
+      .from('after_dark_waivers')
+      .insert({
+        booking_id: booking.id,
+        parent_name: customer.name || 'Customer',
+        parent_email: customer.email || '',
+        parent_phone: customer.phone || '',
+        child_names: kid_details || '',
+        emergency_contact_name: waiver.emergency_contact_name,
+        emergency_contact_phone: waiver.emergency_contact_phone,
+        emergency_contact_relationship: waiver.emergency_contact_relationship,
+        authorized_pickup: waiver.authorized_pickup,
+        allergies: waiver.allergies || null,
+        medical_conditions: waiver.medical_conditions || null,
+        photo_consent: waiver.photo_consent,
+        signature: waiver.signature,
+        signed_at: new Date().toISOString(),
+      });
+    if (waiverError) {
+      logger.error({ error: waiverError, bookingId: booking.id }, 'POS After Dark: failed to save waiver');
     }
 
     // Deduct gift card balance after booking is persisted
