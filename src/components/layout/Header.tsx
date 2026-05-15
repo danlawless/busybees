@@ -167,7 +167,7 @@ export function Header({ activePromo, onDismissBanner }: HeaderProps = {}) {
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-primary-200 shadow-2xl px-8 py-8 sm:ring-1 sm:ring-primary-300 md:hidden rounded-l-3xl"
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-[#FFF3D0] shadow-2xl px-8 py-8 sm:ring-1 sm:ring-[#FFE08A] md:hidden rounded-l-3xl"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
