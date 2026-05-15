@@ -133,6 +133,11 @@ export async function POST(request: NextRequest) {
       const stripe = await getStripeClient();
       const amountInCents = Math.round(amountToCharge * 100);
 
+      // When on-session (customer present), Stripe requires return_url for
+      // potential 3DS redirects. Off-session staff charges don't need it.
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+      const returnUrl = siteUrl.startsWith('http') ? `${siteUrl}/pos` : `https://${siteUrl}/pos`;
+
       try {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amountInCents,
@@ -152,6 +157,7 @@ export async function POST(request: NextRequest) {
           },
           confirm: true,
           off_session: isStaffOrAdmin,
+          ...(isStaffOrAdmin ? {} : { return_url: returnUrl }),
         });
 
         if (paymentIntent.status !== 'succeeded') {
