@@ -49,8 +49,10 @@ export function getAgeGroupFromBirthdate(birthdate: string): AgeGroup {
 }
 
 /**
- * Extract the required age group from a product name
- * Looks for "Infant" or "Toddler" in the product name
+ * Extract the required age group from a product name.
+ * Looks for "Infant" (under 2) or "Toddler" / "Child" (2+) in the name.
+ * "Child" is treated as a synonym for "Toddler" — same convention the
+ * combo-pass logic in hasAgeRestriction already uses.
  * @param productName - The product name to check
  * @returns 'infant', 'toddler', or null if no age restriction
  */
@@ -61,7 +63,7 @@ export function getProductAgeGroup(productName: string): AgeGroup | null {
     return 'infant';
   }
 
-  if (lowerName.includes('toddler')) {
+  if (lowerName.includes('toddler') || lowerName.includes('child')) {
     return 'toddler';
   }
 

@@ -629,6 +629,29 @@ export function CheckIn({
     };
 
     const handleChildSelectionForPurchase = (childId: string) => {
+        // Validate age against the product the user is buying BEFORE proceeding,
+        // so an ineligible pick is rejected at selection time (not at the
+        // confirm-tap step where bad state can sneak through).
+        const customer = selectedCustomer || currentCustomer;
+        const product = [...AVAILABLE_PASS_PRODUCTS, ...AVAILABLE_PARTY_PRODUCTS].find(
+            (p) => p.id === selectedProductForPurchase,
+        );
+        const child = customer?.children.find((c) => c.id === childId);
+
+        if (product && child && hasAgeRestriction(product.name)) {
+            const ageValidation = validateAgeForProduct(child.age, product.name);
+            if (!ageValidation.valid) {
+                setSuccessDetails({
+                    title: "Age Restriction",
+                    message:
+                        ageValidation.error ||
+                        `${child.name} is age ${child.age} and isn't eligible for "${product.name}".`,
+                });
+                setShowSuccessModal(true);
+                return;
+            }
+        }
+
         setSelectedChildForPurchase(childId);
         setShowChildSelectionModal(false);
 
@@ -5742,20 +5765,31 @@ export function CheckIn({
                                                 );
                                             };
 
+                                            // Age-restriction context for this product
+                                            const productHasAgeGate =
+                                                selectedProduct && hasAgeRestriction(selectedProduct.name);
+                                            const ineligibleReason = (child: { age: number }): string | null => {
+                                                if (!productHasAgeGate || !selectedProduct) return null;
+                                                const v = validateAgeForProduct(child.age, selectedProduct.name);
+                                                return v.valid ? null : (v.error || 'Age not eligible for this pass');
+                                            };
+
                                             return customer.children
                                                 .filter((child) => child.waiverSigned)
                                                 .map((child) => {
                                                     const hasPass = childHasActivePass(child.id);
+                                                    const ageBlock = ineligibleReason(child);
+                                                    const isBlocked = hasPass || ageBlock !== null;
 
                                                     if (isFamilyProduct) {
                                                         const isSelected = selectedChildrenForFamilyPass.includes(child.id);
                                                         return (
                                                             <button
                                                                 key={child.id}
-                                                                onClick={() => !hasPass && toggleChildForFamilyPass(child.id)}
-                                                                disabled={hasPass}
+                                                                onClick={() => !isBlocked && toggleChildForFamilyPass(child.id)}
+                                                                disabled={isBlocked}
                                                                 className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                                                                    hasPass
+                                                                    isBlocked
                                                                         ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
                                                                         : isSelected
                                                                         ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
@@ -5773,8 +5807,11 @@ export function CheckIn({
                                                                         {hasPass && (
                                                                             <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
                                                                         )}
+                                                                        {!hasPass && ageBlock && (
+                                                                            <p className="text-xs text-red-600 mt-1">🚫 {ageBlock}</p>
+                                                                        )}
                                                                     </div>
-                                                                    <div className={`text-xl ${hasPass ? 'text-gray-300' : isSelected ? 'text-green-600' : 'text-gray-300'}`}>
+                                                                    <div className={`text-xl ${isBlocked ? 'text-gray-300' : isSelected ? 'text-green-600' : 'text-gray-300'}`}>
                                                                         {isSelected ? '✅' : '⬜'}
                                                                     </div>
                                                                 </div>
@@ -5785,10 +5822,10 @@ export function CheckIn({
                                                     return (
                                                         <button
                                                             key={child.id}
-                                                            onClick={() => !hasPass && handleChildSelectionForPurchase(child.id)}
-                                                            disabled={hasPass}
+                                                            onClick={() => !isBlocked && handleChildSelectionForPurchase(child.id)}
+                                                            disabled={isBlocked}
                                                             className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                                                                hasPass
+                                                                isBlocked
                                                                     ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
                                                                     : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
                                                             }`}
@@ -5804,9 +5841,12 @@ export function CheckIn({
                                                                     {hasPass && (
                                                                         <p className="text-xs text-amber-600 mt-1">Already has an active pass</p>
                                                                     )}
+                                                                    {!hasPass && ageBlock && (
+                                                                        <p className="text-xs text-red-600 mt-1">🚫 {ageBlock}</p>
+                                                                    )}
                                                                 </div>
-                                                                <div className={hasPass ? 'text-gray-300' : 'text-green-600'}>
-                                                                    {hasPass ? '⚠️ Active Pass' : '✅ Waiver Signed'}
+                                                                <div className={isBlocked ? 'text-gray-300' : 'text-green-600'}>
+                                                                    {hasPass ? '⚠️ Active Pass' : ageBlock ? '🚫 Age' : '✅ Waiver Signed'}
                                                                 </div>
                                                             </div>
                                                         </button>
