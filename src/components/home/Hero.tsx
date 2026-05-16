@@ -67,7 +67,7 @@ export function Hero() {
             animate="animate"
           >
             {/* Title */}
-            <motion.div variants={fadeInUp} className="mb-10">
+            <motion.div variants={fadeInUp} className="mb-6">
               <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
                 <span className="text-primary-600">Busy Bees</span>
                 <br />
@@ -76,6 +76,15 @@ export function Hero() {
                 </span>
               </h1>
             </motion.div>
+
+            {/* Tagline */}
+            <motion.p
+              variants={fadeInUp}
+              className="mb-10 mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-700"
+            >
+              A Safe, Engaging Indoor Play Space for Young Children —
+              <span className="block sm:inline"> Conveniently located in Lunenburg.</span>
+            </motion.p>
 
             {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-row items-center justify-center gap-4">
