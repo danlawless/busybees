@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /* Busy Bees Brand Variables - Redesigned Palette */
 :root {
