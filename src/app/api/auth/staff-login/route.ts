@@ -94,17 +94,30 @@ export async function POST(request: NextRequest) {
       // User already exists - find them and update password
       logger.info({ createError: createError?.message }, 'Staff user exists, updating password');
 
-      // List users with large page size to avoid pagination issues
-      const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({
-        perPage: 1000,
-      });
+      // Paginate through all auth users to find the staff account.
+      // listUsers only returns one page at a time, so a single call misses
+      // the staff user once the total user count exceeds the page size.
+      const PER_PAGE = 1000;
+      let staffAuthUser: Awaited<
+        ReturnType<typeof adminClient.auth.admin.listUsers>
+      >['data']['users'][number] | undefined;
 
-      if (listError) {
-        logger.error({ error: listError }, 'Failed to list users');
-        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+      for (let page = 1; page <= 100; page++) {
+        const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({
+          page,
+          perPage: PER_PAGE,
+        });
+
+        if (listError) {
+          logger.error({ error: listError }, 'Failed to list users');
+          return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+        }
+
+        const users = listData?.users ?? [];
+        staffAuthUser = users.find(u => u.email === STAFF_EMAIL);
+
+        if (staffAuthUser || users.length < PER_PAGE) break;
       }
-
-      const staffAuthUser = listData?.users?.find(u => u.email === STAFF_EMAIL);
 
       if (!staffAuthUser) {
         // Very unusual: create failed but user not found in list
