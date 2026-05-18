@@ -83,10 +83,16 @@ export function Hero() {
                 className="drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
               />
             </motion.div>
-            <span className="mt-2 rounded-full bg-[#6d28d9] px-4 py-1 text-sm font-bold text-white shadow-md transition-colors group-hover:bg-[#7c3aed]">
+            <span
+              className="mt-2 rounded-full px-4 py-1 text-sm font-bold text-white shadow-md"
+              style={{ backgroundColor: '#6d28d9' }}
+            >
               🌙 After Dark
             </span>
-            <span className="mt-1 text-xs font-semibold text-charcoal-600">
+            <span
+              className="mt-1 text-xs font-semibold"
+              style={{ color: '#4A4A4A' }}
+            >
               Opening June 5th
             </span>
           </Link>
