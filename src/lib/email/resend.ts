@@ -50,6 +50,41 @@ export function isEmailServiceConfigured(): boolean {
 }
 
 /**
+ * How many minutes before a party's start time guests may arrive to set up.
+ */
+const PARTY_SETUP_LEAD_MINUTES = 30;
+
+/**
+ * Compute the setup arrival time for a party — PARTY_SETUP_LEAD_MINUTES before
+ * the start time. Accepts either a raw 24-hour string ("HH:MM" / "HH:MM:SS")
+ * or a formatted 12-hour string ("h:MM AM/PM"). Returns a formatted 12-hour
+ * string, e.g. "12:30 PM".
+ */
+function getSetupArrivalTime(startTime: string): string {
+  const trimmed = startTime.trim();
+  const ampmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  let hours: number;
+  let minutes: number;
+  if (ampmMatch) {
+    hours = Number(ampmMatch[1]) % 12;
+    if (/PM/i.test(ampmMatch[3])) hours += 12;
+    minutes = Number(ampmMatch[2]);
+  } else {
+    [hours, minutes] = trimmed.split(':').map(Number);
+  }
+
+  let total = hours * 60 + minutes - PARTY_SETUP_LEAD_MINUTES;
+  if (total < 0) total += 24 * 60;
+
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const displayHours = h % 12 || 12;
+  return `${displayHours}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/**
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
@@ -1682,6 +1717,7 @@ export async function sendPartyBookingConfirmationEmail(data: {
   };
   const displayStartTime = formatEmailTime(data.startTime);
   const displayEndTime = formatEmailTime(data.endTime);
+  const setupArrivalTime = getSetupArrivalTime(data.startTime);
 
   // Plain text fallback
   const text = `
@@ -1691,9 +1727,12 @@ Hi ${data.customerName}!
 
 Great news! ${data.childName}'s birthday party is confirmed!
 
+🧦 IMPORTANT: Socks are required for everyone — children and adults — in the play area. Forgot a pair? Grippy socks can be purchased at the front desk.
+
 PARTY DETAILS:
 Date: ${formattedDate}
-Time: ${displayStartTime} - ${displayEndTime}
+Party Time: ${displayStartTime} - ${displayEndTime}
+Setup Arrival: ${setupArrivalTime} (you're welcome to arrive 30 minutes early to decorate and set up)
 Package: ${packageDisplay}
 Guests: ${data.guestCount}
 Total: $${data.totalPrice.toFixed(2)}
@@ -1747,9 +1786,20 @@ ${siteUrl}
           <!-- Body -->
           <tr>
             <td style="padding: 30px 25px; background-color: #ffffff;">
-              <p style="text-align: center; margin: 0 0 25px; font-size: 16px; color: #4b5563;">
+              <p style="text-align: center; margin: 0 0 20px; font-size: 16px; color: #4b5563;">
                 Hi ${data.customerName}! We're so excited to celebrate with you!
               </p>
+
+              <!-- Socks Required Callout -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 16px 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 15px; color: #78350f; line-height: 1.6;">
+                      🧦 <strong>Socks are required</strong> for everyone &mdash; children and adults &mdash; in the play area. Forgot a pair? <strong>Grippy socks can be purchased at the front desk.</strong>
+                    </p>
+                  </td>
+                </tr>
+              </table>
 
               <!-- Party Details Card -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 20px;">
@@ -1779,8 +1829,15 @@ ${siteUrl}
                             </tr>
                             <tr>
                               <td style="padding: 6px 0;">
-                                <span style="font-size: 12px; color: #92400e;">⏰ Time</span><br>
+                                <span style="font-size: 12px; color: #92400e;">⏰ Party Time</span><br>
                                 <span style="font-size: 14px; font-weight: 600; color: #78350f;">${displayStartTime} - ${displayEndTime}</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0;">
+                                <span style="font-size: 12px; color: #92400e;">🚪 Setup Arrival</span><br>
+                                <span style="font-size: 14px; font-weight: 600; color: #78350f;">${setupArrivalTime}</span>
+                                <span style="font-size: 12px; color: #b45309;"> &mdash; arrive 30 min early to set up</span>
                               </td>
                             </tr>
                             <tr>
@@ -3366,6 +3423,7 @@ export async function sendPartyReminderEmail(data: {
     basic_bee: 'Basic Bee',
   };
   const packageDisplay = packageLabels[data.packageName] || data.packageName;
+  const setupArrivalTime = getSetupArrivalTime(data.startTime);
 
   const subject = `🎉 ${data.childName}'s Birthday Party is 1 Week Away!`;
 
@@ -3376,16 +3434,19 @@ Hi ${data.customerName}!
 
 Just a friendly reminder that ${data.childName}'s ${packageDisplay} birthday party is coming up in 1 week!
 
+🧦 IMPORTANT: Socks are required for everyone — children and adults — in the play area. Forgot a pair? Grippy socks can be purchased at the front desk.
+
 Party Details:
 - Date: ${formattedDate}
-- Time: ${data.startTime} - ${data.endTime}
+- Party Time: ${data.startTime} - ${data.endTime}
+- Setup Arrival: ${setupArrivalTime} (arrive 30 minutes early to set up)
 - Package: ${packageDisplay}
 - Guests: ${data.guestCount}
 
 Quick Reminders:
-- You may arrive up to 20 minutes before your start time to set up the party room
+- You're welcome to arrive 30 minutes early — at ${setupArrivalTime} — to set up and decorate the party room
 - Each guest will need to sign a quick waiver upon arrival — it takes less than 10 seconds and then they're all set!
-- Socks are required for all children and adults in the play area
+- Socks are required for all children and adults in the play area — grippy socks can be purchased at the front desk if you forget
 - Outside decorations are welcome but must be approved (no confetti, glitter, or loose small items)
 
 If you need to make any changes, please contact us as soon as possible at info@busybeesipc.com or call us directly.
@@ -3407,9 +3468,16 @@ busybeesipc.com
       </div>
 
       <!-- Greeting -->
-      <div style="padding: 24px;">
+      <div style="padding: 24px 24px 8px;">
         <p style="font-size: 16px; color: #374151; line-height: 1.6; margin: 0 0 16px;">
           Hi ${data.customerName}! Just a friendly reminder that your ${packageDisplay} party is coming up in <strong>1 week</strong>. Here are your party details:
+        </p>
+      </div>
+
+      <!-- Socks Required Callout -->
+      <div style="margin: 0 24px 20px; background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px 20px; text-align: center;">
+        <p style="margin: 0; font-size: 15px; color: #78350f; line-height: 1.6;">
+          🧦 <strong>Socks are required</strong> for everyone — children and adults — in the play area. Forgot a pair? <strong>Grippy socks can be purchased at the front desk.</strong>
         </p>
       </div>
 
@@ -3421,8 +3489,12 @@ busybeesipc.com
             <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${formattedDate}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🕐 Time</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🕐 Party Time</td>
             <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${data.startTime} - ${data.endTime}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🚪 Setup Arrival</td>
+            <td style="padding: 8px 0; font-size: 14px; color: #111827; font-weight: 600; text-align: right;">${setupArrivalTime}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; font-size: 14px; color: #6b7280;">🐝 Package</td>
@@ -3443,9 +3515,9 @@ busybeesipc.com
       <div style="margin: 0 24px 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
         <p style="font-size: 16px; font-weight: 600; color: #166534; margin: 0 0 12px;">📋 Quick Reminders</p>
         <ul style="margin: 0; padding: 0 0 0 20px; color: #374151; font-size: 14px; line-height: 1.8;">
-          <li>You may arrive <strong>30 minutes early</strong> to set up the party room</li>
+          <li>You're welcome to arrive <strong>30 minutes early — at ${setupArrivalTime}</strong> — to set up and decorate the party room</li>
           <li>Each guest will need to sign a quick <strong>waiver upon arrival</strong> — it takes less than 10 seconds and then they're all set!</li>
-          <li><strong>Socks are required</strong> for all children and adults in the play area</li>
+          <li><strong>Socks are required</strong> for all children and adults in the play area — grippy socks can be purchased at the front desk if you forget</li>
           <li>Outside decorations are welcome but must be approved (no confetti, glitter, or loose small items)</li>
           <li>You are welcome to bring your own food, snacks, and drinks for the party room</li>
         </ul>
