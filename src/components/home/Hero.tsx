@@ -59,45 +59,6 @@ export function Hero() {
           />
         </motion.div>
 
-        {/* After Dark promo — beehive logo links to the After Dark page */}
-        <motion.div
-          className="absolute right-20 top-1/2 z-30 hidden -translate-y-1/2 lg:block xl:right-36"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.9, delay: 1.1 }}
-        >
-          <Link
-            href="/after-dark"
-            className="group flex flex-col items-center"
-            aria-label="Busy Bees After Dark — opening June 5th"
-          >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <Image
-                src="/hive.png"
-                alt="Busy Bees After Dark beehive"
-                width={170}
-                height={170}
-                className="drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
-              />
-            </motion.div>
-            <span
-              className="mt-2 rounded-full px-5 py-1.5 text-base font-bold text-white shadow-md"
-              style={{ backgroundColor: '#6d28d9' }}
-            >
-              🌙 After Dark
-            </span>
-            <span
-              className="mt-1 text-sm font-semibold"
-              style={{ color: '#4A4A4A' }}
-            >
-              Opening June 5th
-            </span>
-          </Link>
-        </motion.div>
-
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
           <motion.div
             className="text-center"
