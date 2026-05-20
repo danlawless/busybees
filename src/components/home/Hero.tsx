@@ -28,36 +28,40 @@ export function Hero() {
           />
         </div>
 
-        {/* Flying Bees beside Title */}
-        <motion.div
-          className="absolute left-1/2 top-32 transform -translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
-          initial={{ x: -100, opacity: 0, scale: 0.8 }}
-          animate={{ x: 0, opacity: 0.8, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.8 }}
-        >
-          <Image
-            src="/bee-flying-side2.png"
-            alt="Flying bee decoration"
-            width={180}
-            height={180}
-            className="drop-shadow-lg"
-          />
-        </motion.div>
+        {/* Flying Bees beside Title — positioning lives on the wrapper so the
+            framer-motion entrance animation (which controls `transform`) does
+            not override the placement. */}
+        <div className="absolute left-1/2 top-32 z-10 hidden -translate-x-96 -translate-y-1/2 xl:block">
+          <motion.div
+            initial={{ x: -100, opacity: 0, scale: 0.8 }}
+            animate={{ x: 0, opacity: 0.8, scale: 1 }}
+            transition={{ duration: 1.2, delay: 0.8 }}
+          >
+            <Image
+              src="/bee-flying-side2.png"
+              alt="Flying bee decoration"
+              width={180}
+              height={180}
+              className="drop-shadow-lg"
+            />
+          </motion.div>
+        </div>
 
-        <motion.div
-          className="absolute right-1/2 top-32 transform translate-x-96 -translate-y-1/2 z-10 hidden xl:block"
-          initial={{ x: 100, opacity: 0, scale: 0.8 }}
-          animate={{ x: 0, opacity: 0.8, scale: 1 }}
-          transition={{ duration: 1.2, delay: 1.0 }}
-        >
-          <Image
-            src="/bee-flying-side1.png"
-            alt="Flying bee decoration"
-            width={180}
-            height={180}
-            className="drop-shadow-lg"
-          />
-        </motion.div>
+        <div className="absolute right-1/2 top-32 z-10 hidden translate-x-96 -translate-y-1/2 xl:block">
+          <motion.div
+            initial={{ x: 100, opacity: 0, scale: 0.8 }}
+            animate={{ x: 0, opacity: 0.8, scale: 1 }}
+            transition={{ duration: 1.2, delay: 1.0 }}
+          >
+            <Image
+              src="/bee-flying-side1.png"
+              alt="Flying bee decoration"
+              width={180}
+              height={180}
+              className="drop-shadow-lg"
+            />
+          </motion.div>
+        </div>
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
           <motion.div
