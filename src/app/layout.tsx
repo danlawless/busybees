@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Gloria_Hallelujah } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AnnouncementMarquee } from "@/components/AnnouncementMarquee";
 
@@ -113,6 +114,7 @@ export default function RootLayout({
         />
         <AnnouncementMarquee />
         {children}
+        <Analytics />
       </body>
     </html>
   );
