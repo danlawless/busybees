@@ -495,24 +495,7 @@ export function Pricing() {
                     </AnimatePresence>
                 </motion.div>
 
-                {/* Photo accent strip */}
-                <motion.div
-                    className="mb-16 max-w-5xl mx-auto"
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <div className="grid grid-cols-6 gap-1.5 sm:gap-2 rounded-2xl overflow-hidden">
-                        {['/album/MH_12608.jpg', '/album/MH_12657.jpg', '/album/MH_12693.jpg', '/album/MH_12731.jpg', '/album/MH_12785.jpg', '/album/MH_12824.jpg'].map((src, i) => (
-                            <div key={i} className="relative aspect-square overflow-hidden">
-                                <Image src={src} alt="" fill className="object-cover" sizes="17vw" loading="lazy" />
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
-
-                {/* General Admission (Day Passes) */}
+                {/* Day Passes */}
                 {dayPlans.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -521,9 +504,6 @@ export function Pricing() {
                         transition={{ duration: 0.6 }}
                         className="mb-16"
                     >
-                        <h3 className="text-2xl font-bold text-charcoal-800 mb-8 text-center">
-                            General Admission
-                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                             {dayPlans.map((plan) => {
                                 const Icon = plan.icon;
