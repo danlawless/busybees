@@ -99,7 +99,25 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
   }, []);
 
   const updateFormData = useCallback((updates: Partial<BookingFormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+    setFormData((prev) => {
+      const merged = { ...prev, ...updates };
+
+      // When a package is picked (or switched), snap guest_count to that
+      // package's default included size — so e.g. Queen Bee starts at 20
+      // instead of the generic 15 and customers don't have to manually
+      // bump it on the Guest Info step.
+      if (updates.packageName && updates.packageName !== prev.packageName) {
+        const pkg = PACKAGE_PRICING[updates.packageName];
+        const defaultGuests =
+          'includedKids' in pkg ? pkg.includedKids : 10; // group_rate has no "included" tier; use the 10-guest minimum.
+        // Don't override if the caller is explicitly setting guestCount in the same update.
+        if (updates.guestCount === undefined) {
+          merged.guestCount = defaultGuests;
+        }
+      }
+
+      return merged;
+    });
     setError(null);
   }, []);
 
