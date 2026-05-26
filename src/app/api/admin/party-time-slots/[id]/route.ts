@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)');
+
 // Validation schema for updating a time slot
 const UpdateTimeSlotSchema = z.object({
   partyType: z.enum(['private', 'semi_private']).optional(),
@@ -18,6 +20,9 @@ const UpdateTimeSlotSchema = z.object({
   label: z.string().min(1).max(50).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().optional(),
+  effectiveStartDate: dateString.nullable().optional(),
+  effectiveEndDate: dateString.nullable().optional(),
+  dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -60,6 +65,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (updates.label !== undefined) updateData.label = updates.label;
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
     if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
+    if (updates.effectiveStartDate !== undefined)
+      updateData.effective_start_date = updates.effectiveStartDate;
+    if (updates.effectiveEndDate !== undefined)
+      updateData.effective_end_date = updates.effectiveEndDate;
+    if (updates.dayOfWeek !== undefined) updateData.day_of_week = updates.dayOfWeek;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

@@ -21,6 +21,7 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState<Map<string, string[]>>(new Map());
   const [totalSlots, setTotalSlots] = useState<{ weekend: number; weekday: number }>({ weekend: 0, weekday: 0 });
+  const [dateOverrides, setDateOverrides] = useState<Record<string, number>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingMonth, setLoadingMonth] = useState(false);
@@ -49,6 +50,7 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
           if (data.totalSlots) {
             setTotalSlots(data.totalSlots);
           }
+          setDateOverrides(data.dateOverrides || {});
         }
       } catch (error) {
         console.error('Error fetching availability:', error);
@@ -70,9 +72,10 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
     const fetchTimeSlots = async () => {
       setLoadingSlots(true);
       try {
-        // Fetch private party slots (most common)
+        // No partyType: show all bookable slots for this date (private +
+        // semi-private). The customer picks a party type later in the wizard.
         const response = await fetch(
-          `/api/party-booking/time-slots?date=${selectedDate}&partyType=private`
+          `/api/party-booking/time-slots?date=${selectedDate}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -136,11 +139,13 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
   const getDateStatus = (date: Date): 'available' | 'partial' | 'full' | 'past' => {
     const dateString = formatDateToYYYYMMDD(date);
     if (date < today || date < minBookingDate) return 'past';
-    const bookedTimes = bookedSlots.get(dateString);
-    if (!bookedTimes || bookedTimes.length === 0) return 'available';
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    const maxSlots = isWeekend ? totalSlots.weekend : totalSlots.weekday;
-    if (maxSlots > 0 && bookedTimes.length >= maxSlots) return 'full';
+    const maxSlots =
+      dateOverrides[dateString] ?? (isWeekend ? totalSlots.weekend : totalSlots.weekday);
+    const bookedTimes = bookedSlots.get(dateString);
+    if (maxSlots === 0) return 'full';
+    if (!bookedTimes || bookedTimes.length === 0) return 'available';
+    if (bookedTimes.length >= maxSlots) return 'full';
     return 'partial';
   };
 

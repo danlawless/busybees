@@ -69,25 +69,69 @@ export async function GET(request: NextRequest) {
       bookedSlotsByDate.set(date, times);
     });
 
-    // Fetch total slot counts per day type (weekend vs weekday) for private parties
+    // Fetch total default slot counts per day type (weekend vs weekday) for
+    // private parties. Defaults exclude date-range overrides + day-of-week pins.
     const { data: weekendSlots } = await supabase
       .from('party_time_slots')
       .select('id')
       .eq('party_type', 'private')
       .eq('day_type', 'weekend')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .is('effective_start_date', null)
+      .is('day_of_week', null);
 
     const { data: weekdaySlots } = await supabase
       .from('party_time_slots')
       .select('id')
       .eq('party_type', 'private')
       .eq('day_type', 'weekday')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .is('effective_start_date', null)
+      .is('day_of_week', null);
 
     const totalSlots = {
       weekend: weekendSlots?.length || 0,
       weekday: weekdaySlots?.length || 0,
     };
+
+    // Build per-date override map: for each date in the requested range that
+    // falls inside an active date-range slot, return the count of override
+    // slots that match that date's day_type + day_of_week (across all party
+    // types — the override fully hides defaults).
+    const { data: rangeSlots } = await supabase
+      .from('party_time_slots')
+      .select('day_type, day_of_week, effective_start_date, effective_end_date')
+      .eq('is_active', true)
+      .not('effective_start_date', 'is', null)
+      .lte('effective_start_date', endDate)
+      .gte('effective_end_date', startDate);
+
+    const dateOverrides: Record<string, number> = {};
+    if (rangeSlots && rangeSlots.length > 0) {
+      const cursor = new Date(startDate + 'T12:00:00');
+      const stop = new Date(endDate + 'T12:00:00');
+      while (cursor <= stop) {
+        const iso = cursor.toISOString().slice(0, 10);
+        const dow = cursor.getDay();
+        const dayType = dow === 0 || dow === 6 ? 'weekend' : 'weekday';
+        const matching = rangeSlots.filter(
+          (s) =>
+            s.effective_start_date !== null &&
+            s.effective_end_date !== null &&
+            s.effective_start_date <= iso &&
+            s.effective_end_date >= iso
+        );
+        if (matching.length > 0) {
+          // Override active for this date — count slots that apply today
+          dateOverrides[iso] = matching.filter(
+            (s) =>
+              s.day_type === dayType &&
+              (s.day_of_week === null || s.day_of_week === dow)
+          ).length;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
 
     // Convert to array format for response
     const groupedSlots = Array.from(bookedSlotsByDate.entries()).map(([date, times]) => ({
@@ -100,6 +144,7 @@ export async function GET(request: NextRequest) {
       bookedSlots: groupedSlots,
       totalBookings: bookedSlots?.length || 0,
       totalSlots,
+      dateOverrides,
     });
   } catch (error) {
     console.error('Availability check error:', error);

@@ -679,6 +679,9 @@ export interface Database {
           label: string;
           is_active: boolean;
           sort_order: number;
+          effective_start_date: string | null;
+          effective_end_date: string | null;
+          day_of_week: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -691,6 +694,9 @@ export interface Database {
           label: string;
           is_active?: boolean;
           sort_order?: number;
+          effective_start_date?: string | null;
+          effective_end_date?: string | null;
+          day_of_week?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -703,6 +709,9 @@ export interface Database {
           label?: string;
           is_active?: boolean;
           sort_order?: number;
+          effective_start_date?: string | null;
+          effective_end_date?: string | null;
+          day_of_week?: number | null;
           created_at?: string;
           updated_at?: string;
         };
