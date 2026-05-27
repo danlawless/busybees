@@ -305,7 +305,7 @@ export function PartyAvailabilityCalendar({ onSelectSlot }: PartyAvailabilityCal
         <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200 text-xs text-gray-600">
           <p>
             <strong>Note:</strong> Parties must be booked at least 1 week in advance.
-            Showing availability for private parties (2 hours).
+            Showing all available time slots.
           </p>
         </div>
       </Card>

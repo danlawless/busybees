@@ -349,7 +349,7 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
               <div className="mt-4 p-3 bg-honey-50 rounded-lg border border-honey-200 text-xs text-charcoal-600">
                 <p>
                   <strong>Note:</strong> Parties must be booked at least 1 week in advance.
-                  Showing availability for private parties (2 hours).
+                  Showing all available time slots.
                 </p>
               </div>
             </Card>
