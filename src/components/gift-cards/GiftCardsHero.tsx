@@ -88,6 +88,55 @@ export function GiftCardsHero() {
             </p>
           </motion.div>
 
+          {/* Decorative Gift Card Preview */}
+          <motion.div
+            variants={fadeInUp}
+            className="mb-16 flex justify-center"
+          >
+            <div className="relative">
+              <div
+                className="w-80 h-48 rounded-3xl shadow-honey p-6 transform rotate-3 hover:rotate-0 transition-transform duration-300 overflow-hidden"
+                style={{
+                  background: 'linear-gradient(to bottom right, #FFC933, #FFB900, #E6A600)',
+                }}
+              >
+                {/* Honeycomb pattern behind content */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" aria-hidden>
+                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <pattern id="gift-hero-honeycomb" patternUnits="userSpaceOnUse" width="20" height="17.32">
+                      <polygon points="10,0 20,5.77 20,17.32 10,23.09 0,17.32 0,5.77" fill="none" stroke="white" strokeWidth="0.5" />
+                    </pattern>
+                    <rect width="100%" height="100%" fill="url(#gift-hero-honeycomb)" />
+                  </svg>
+                </div>
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-white/90 text-xs uppercase tracking-wide">Gift Card</p>
+                      <p className="text-white font-bold text-sm mt-0.5">Busy Bees</p>
+                    </div>
+                    <Image
+                      src="/busy-bees-logo.png"
+                      alt=""
+                      width={48}
+                      height={48}
+                      className="opacity-95 shrink-0"
+                    />
+                  </div>
+                  <div className="mt-auto pt-4">
+                    <p className="text-white font-bold text-2xl">$50.00</p>
+                    <p className="text-white/90 text-sm mt-1.5 font-mono tracking-wide">BBGC-XXXX-XXXX-XXXX</p>
+                  </div>
+                </div>
+              </div>
+              {/* Shadow card behind */}
+              <div
+                className="absolute -bottom-2 left-4 w-80 h-48 rounded-3xl -z-10 transform -rotate-3"
+                style={{ backgroundColor: 'rgba(153, 109, 0, 0.2)' }}
+              />
+            </div>
+          </motion.div>
+
           {/* Main Action Cards */}
           <motion.div
             variants={fadeInUp}
@@ -190,27 +239,6 @@ export function GiftCardsHero() {
             </Card>
           </motion.div>
 
-          {/* Photo Accent Strip */}
-          <motion.div variants={fadeInUp} className="max-w-5xl mx-auto mb-20">
-            <div className="grid grid-cols-4 gap-2 sm:gap-3 rounded-3xl overflow-hidden">
-              {['/album/MH_12631.jpg', '/album/MH_12668.jpg', '/album/MH_12706.jpg', '/album/MH_12756.jpg'].map((src, i) => (
-                <div key={i} className="relative aspect-[3/2] overflow-hidden">
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="25vw"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="text-center text-sm text-charcoal-500 mt-3">
-              Give the gift of unforgettable play experiences
-            </p>
-          </motion.div>
-
           {/* Features */}
           <motion.div variants={fadeInUp} className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {features.map((feature, index) => {
@@ -230,54 +258,6 @@ export function GiftCardsHero() {
             })}
           </motion.div>
 
-          {/* Decorative Gift Card Preview */}
-          <motion.div
-            variants={fadeInUp}
-            className="mt-20 flex justify-center"
-          >
-            <div className="relative">
-              <div
-                className="w-80 h-48 rounded-3xl shadow-honey p-6 transform rotate-3 hover:rotate-0 transition-transform duration-300 overflow-hidden"
-                style={{
-                  background: 'linear-gradient(to bottom right, #FFC933, #FFB900, #E6A600)',
-                }}
-              >
-                {/* Honeycomb pattern behind content */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none" aria-hidden>
-                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <pattern id="gift-hero-honeycomb" patternUnits="userSpaceOnUse" width="20" height="17.32">
-                      <polygon points="10,0 20,5.77 20,17.32 10,23.09 0,17.32 0,5.77" fill="none" stroke="white" strokeWidth="0.5" />
-                    </pattern>
-                    <rect width="100%" height="100%" fill="url(#gift-hero-honeycomb)" />
-                  </svg>
-                </div>
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-white/90 text-xs uppercase tracking-wide">Gift Card</p>
-                      <p className="text-white font-bold text-sm mt-0.5">Busy Bees</p>
-                    </div>
-                    <Image
-                      src="/busy-bees-logo.png"
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="opacity-95 shrink-0"
-                    />
-                  </div>
-                  <div className="mt-auto pt-4">
-                    <p className="text-white font-bold text-2xl">$50.00</p>
-                    <p className="text-white/90 text-sm mt-1.5 font-mono tracking-wide">BBGC-XXXX-XXXX-XXXX</p>
-                  </div>
-                </div>
-              </div>
-              {/* Shadow card behind */}
-              <div
-                className="absolute -bottom-2 left-4 w-80 h-48 rounded-3xl -z-10 transform -rotate-3"
-                style={{ backgroundColor: 'rgba(153, 109, 0, 0.2)' }}
-              />
-            </div>
-          </motion.div>
         </motion.div>
       </div>
     </section>
