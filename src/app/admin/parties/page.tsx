@@ -109,6 +109,9 @@ export default function AdminPartiesPage() {
     label: '',
     isActive: true,
     sortOrder: 0,
+    effectiveStartDate: '',
+    effectiveEndDate: '',
+    dayOfWeek: '' as '' | '0' | '1' | '2' | '3' | '4' | '5' | '6',
   });
 
   // Events state (for blocking party slots)
@@ -301,12 +304,17 @@ export default function AdminPartiesPage() {
       // Auto-generate label if not provided
       const label = newSlot.label || formatTimeRange(newSlot.startTime, newSlot.endTime);
 
+      const { effectiveStartDate, effectiveEndDate, dayOfWeek, ...rest } = newSlot;
+
       const response = await fetch('/api/admin/party-time-slots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newSlot,
+          ...rest,
           label,
+          effectiveStartDate: effectiveStartDate || null,
+          effectiveEndDate: effectiveEndDate || null,
+          dayOfWeek: dayOfWeek === '' ? null : Number(dayOfWeek),
         }),
       });
 
@@ -327,6 +335,9 @@ export default function AdminPartiesPage() {
         label: '',
         isActive: true,
         sortOrder: 0,
+        effectiveStartDate: '',
+        effectiveEndDate: '',
+        dayOfWeek: '',
       });
 
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -2519,6 +2530,71 @@ export default function AdminPartiesPage() {
                       </label>
                     </div>
 
+                    {/* Special period (e.g. Summer Hours): when set, this slot
+                        replaces the default schedule for dates in range. */}
+                    <div className="border-t border-neutral-200 pt-4">
+                      <p className="text-sm font-semibold text-neutral-800 mb-1">
+                        Special period (optional)
+                      </p>
+                      <p className="text-xs text-neutral-500 mb-3">
+                        Set a date range to make this slot active only for that period. While the
+                        period is active, all default slots are hidden — only special-period slots
+                        show. Optionally pin to a specific day of the week (e.g. Saturday only).
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            Effective start date
+                          </label>
+                          <input
+                            type="date"
+                            value={newSlot.effectiveStartDate}
+                            onChange={(e) =>
+                              setNewSlot((prev) => ({ ...prev, effectiveStartDate: e.target.value }))
+                            }
+                            className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            Effective end date
+                          </label>
+                          <input
+                            type="date"
+                            value={newSlot.effectiveEndDate}
+                            onChange={(e) =>
+                              setNewSlot((prev) => ({ ...prev, effectiveEndDate: e.target.value }))
+                            }
+                            className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            Specific day (optional)
+                          </label>
+                          <select
+                            value={newSlot.dayOfWeek}
+                            onChange={(e) =>
+                              setNewSlot((prev) => ({
+                                ...prev,
+                                dayOfWeek: e.target.value as typeof prev.dayOfWeek,
+                              }))
+                            }
+                            className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500"
+                          >
+                            <option value="">Any day in {newSlot.dayType}</option>
+                            <option value="0">Sunday</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex justify-end gap-3 pt-4 border-t border-neutral-200">
                       <Button variant="outline" onClick={() => setShowSlotForm(false)}>
                         Cancel
@@ -2578,43 +2654,79 @@ export default function AdminPartiesPage() {
                                 {dayType === 'weekend' ? '📅 Weekend (Sat-Sun)' : '📅 Weekday (Mon-Fri)'}
                               </h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {slots.map((slot) => (
-                                  <div
-                                    key={slot.id}
-                                    className={`p-3 rounded-lg border ${
-                                      slot.is_active
-                                        ? 'bg-green-50 border-green-200'
-                                        : 'bg-neutral-100 border-neutral-200 opacity-60'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <div className="font-medium text-charcoal-800">{slot.label}</div>
-                                        <div className="text-xs text-neutral-600">
-                                          {slot.start_time} - {slot.end_time}
+                                {slots.map((slot) => {
+                                  const hasRange =
+                                    slot.effective_start_date && slot.effective_end_date;
+                                  const dayNames = [
+                                    'Sun',
+                                    'Mon',
+                                    'Tue',
+                                    'Wed',
+                                    'Thu',
+                                    'Fri',
+                                    'Sat',
+                                  ];
+                                  const dayPin =
+                                    typeof slot.day_of_week === 'number'
+                                      ? dayNames[slot.day_of_week]
+                                      : null;
+                                  return (
+                                    <div
+                                      key={slot.id}
+                                      className={`p-3 rounded-lg border ${
+                                        !slot.is_active
+                                          ? 'bg-neutral-100 border-neutral-200 opacity-60'
+                                          : hasRange
+                                          ? 'bg-amber-50 border-amber-300'
+                                          : 'bg-green-50 border-green-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-charcoal-800 truncate">
+                                            {slot.label}
+                                          </div>
+                                          <div className="text-xs text-neutral-600">
+                                            {slot.start_time} - {slot.end_time}
+                                          </div>
+                                          {(hasRange || dayPin) && (
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                              {hasRange && (
+                                                <span className="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-medium">
+                                                  {slot.effective_start_date} →{' '}
+                                                  {slot.effective_end_date}
+                                                </span>
+                                              )}
+                                              {dayPin && (
+                                                <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-medium">
+                                                  {dayPin} only
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 ml-2">
+                                          <button
+                                            onClick={() => toggleSlotStatus(slot)}
+                                            className={`px-2 py-1 rounded text-xs font-medium ${
+                                              slot.is_active
+                                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                                : 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300'
+                                            }`}
+                                          >
+                                            {slot.is_active ? 'ON' : 'OFF'}
+                                          </button>
+                                          <button
+                                            onClick={() => deleteTimeSlot(slot)}
+                                            className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 hover:bg-red-200"
+                                          >
+                                            ✕
+                                          </button>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={() => toggleSlotStatus(slot)}
-                                          className={`px-2 py-1 rounded text-xs font-medium ${
-                                            slot.is_active
-                                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                              : 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300'
-                                          }`}
-                                        >
-                                          {slot.is_active ? 'ON' : 'OFF'}
-                                        </button>
-                                        <button
-                                          onClick={() => deleteTimeSlot(slot)}
-                                          className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 hover:bg-red-200"
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           );

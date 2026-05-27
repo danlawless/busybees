@@ -9,16 +9,44 @@ import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)');
+
 // Validation schema for creating a time slot
-const CreateTimeSlotSchema = z.object({
-  partyType: z.enum(['private', 'semi_private']),
-  dayType: z.enum(['weekday', 'weekend']),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
-  label: z.string().min(1).max(50),
-  isActive: z.boolean().optional().default(true),
-  sortOrder: z.number().optional().default(0),
-});
+const CreateTimeSlotSchema = z
+  .object({
+    partyType: z.enum(['private', 'semi_private']),
+    dayType: z.enum(['weekday', 'weekend']),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+    label: z.string().min(1).max(50),
+    isActive: z.boolean().optional().default(true),
+    sortOrder: z.number().optional().default(0),
+    effectiveStartDate: dateString.nullable().optional(),
+    effectiveEndDate: dateString.nullable().optional(),
+    dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      (data.effectiveStartDate ?? null) === null
+        ? (data.effectiveEndDate ?? null) === null
+        : (data.effectiveEndDate ?? null) !== null,
+    { message: 'effectiveStartDate and effectiveEndDate must be provided together' }
+  )
+  .refine(
+    (data) =>
+      !data.effectiveStartDate ||
+      !data.effectiveEndDate ||
+      data.effectiveEndDate >= data.effectiveStartDate,
+    { message: 'effectiveEndDate must be on or after effectiveStartDate' }
+  )
+  .refine(
+    (data) => {
+      if (data.dayOfWeek === null || data.dayOfWeek === undefined) return true;
+      const isWeekendDow = data.dayOfWeek === 0 || data.dayOfWeek === 6;
+      return data.dayType === 'weekend' ? isWeekendDow : !isWeekendDow;
+    },
+    { message: 'dayOfWeek does not match dayType (weekend: 0|6, weekday: 1-5)' }
+  );
 
 export async function GET() {
   try {
@@ -95,7 +123,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: validation.error.errors }, { status: 400 });
     }
 
-    const { partyType, dayType, startTime, endTime, label, isActive, sortOrder } = validation.data;
+    const {
+      partyType,
+      dayType,
+      startTime,
+      endTime,
+      label,
+      isActive,
+      sortOrder,
+      effectiveStartDate,
+      effectiveEndDate,
+      dayOfWeek,
+    } = validation.data;
 
     // Insert time slot
     const { data, error } = await supabase
@@ -108,6 +147,9 @@ export async function POST(request: NextRequest) {
         label,
         is_active: isActive,
         sort_order: sortOrder,
+        effective_start_date: effectiveStartDate ?? null,
+        effective_end_date: effectiveEndDate ?? null,
+        day_of_week: dayOfWeek ?? null,
       })
       .select()
       .single();
