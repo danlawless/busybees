@@ -16,7 +16,7 @@ export async function GET() {
     // Fetch all monthly pass purchases with customer info
     const { data: purchases, error } = await supabase
       .from('purchases')
-      .select('id, customer_id, child_id, name, price, purchase_date, expiry_date, status, auto_renew, next_renewal_date, used_sessions, total_sessions')
+      .select('id, customer_id, child_id, name, price, purchase_date, expiry_date, actual_expiry_date, status, auto_renew, next_renewal_date, used_sessions, total_sessions')
       .eq('type', 'monthly_pass')
       .order('purchase_date', { ascending: false });
 
@@ -26,6 +26,28 @@ export async function GET() {
     }
 
     const allPurchases = purchases || [];
+
+    // Lazy-expire passes whose effective expiry has passed. Uses actual_expiry_date
+    // when the pass has been used, otherwise the intended expiry_date.
+    const now = new Date();
+    const idsToExpire: string[] = [];
+    for (const p of allPurchases) {
+      if (p.status !== 'active') continue;
+      const effectiveExpiry = p.actual_expiry_date ?? p.expiry_date;
+      if (effectiveExpiry && new Date(effectiveExpiry) < now) {
+        p.status = 'expired';
+        idsToExpire.push(p.id);
+      }
+    }
+    if (idsToExpire.length > 0) {
+      const { error: updateError } = await supabase
+        .from('purchases')
+        .update({ status: 'expired' })
+        .in('id', idsToExpire);
+      if (updateError) {
+        logger.error({ error: updateError, idsToExpire }, 'Failed to persist lazy expiration');
+      }
+    }
 
     // Get unique customer IDs
     const customerIds = [...new Set(allPurchases.map(p => p.customer_id))];

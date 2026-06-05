@@ -10,6 +10,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/cron/expire-passes",
+      "schedule": "30 5 * * *"
+    },
+    {
       "path": "/api/cron/weekly-party-report",
       "schedule": "0 15 * * 1"
     },

@@ -12,19 +12,19 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 /**
- * Auto-expire passes that are past their actual_expiry_date.
+ * Auto-expire passes whose effective expiry has passed.
  * Uses "lazy expiration" — updates DB status when passes are fetched.
+ * Effective expiry: actual_expiry_date (set on first use) when present,
+ * otherwise expiry_date (the deadline to start using the pass).
  */
 async function expireStalePassesInPlace(purchases: any[]): Promise<any[]> {
   const now = new Date();
   const updates: Promise<any>[] = [];
 
   for (const purchase of purchases) {
-    if (
-      purchase.status === 'active' &&
-      purchase.actual_expiry_date &&
-      new Date(purchase.actual_expiry_date) < now
-    ) {
+    if (purchase.status !== 'active') continue;
+    const effectiveExpiry = purchase.actual_expiry_date ?? purchase.expiry_date;
+    if (effectiveExpiry && new Date(effectiveExpiry) < now) {
       purchase.status = 'expired';
       updates.push(
         updatePurchase(purchase.id, { status: 'expired' }).catch((err) =>
