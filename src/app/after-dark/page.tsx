@@ -187,6 +187,40 @@ export default function AfterDarkPage() {
             </div>
 
             <div>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>While You&apos;re Out</h3>
+              <p>
+                Make a real night of it. With your kids set for the evening, here
+                are a couple of nearby spots in the plaza to enjoy.
+              </p>
+              <ul className="list-disc list-outside pl-6 space-y-3 mt-4">
+                <li>
+                  <a
+                    href="https://www.ixtapalunenburg.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold underline hover:no-underline"
+                    style={{ color: '#c4b5fd' }}
+                  >
+                    Ixtapa
+                  </a>{' '}
+                  — authentic Mexican food, right across the plaza.
+                </li>
+                <li>
+                  <a
+                    href="https://asian-imperial.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold underline hover:no-underline"
+                    style={{ color: '#c4b5fd' }}
+                  >
+                    Asian Imperial
+                  </a>{' '}
+                  — Japanese and Asian cuisine just a short walk away.
+                </li>
+              </ul>
+            </div>
+
+            <div>
               <h3 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: '#e9d5ff' }}>Safety &amp; Atmosphere</h3>
               <p>
                 All staff are trained and background-checked, and we maintain a
@@ -202,8 +236,7 @@ export default function AfterDarkPage() {
               <p>
                 To book, sign in and visit the After Dark tab in My Account, then
                 choose your preferred Friday. Spots fill up quickly. If your plans
-                change, contact us as early as possible so we can offer the spot
-                to another family.
+                change, please let us know as soon as possible.
               </p>
             </div>
 
@@ -218,60 +251,6 @@ export default function AfterDarkPage() {
                 Questions? Call us at (978) 785-0015
               </p>
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* While You're Out — nearby suggestions for parents */}
-      <section className="py-20 px-4" style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%)' }}>
-        <div className="max-w-2xl mx-auto" style={{ color: '#e2e8ff' }}>
-          <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-6 leading-tight"
-            style={{ color: '#e9d5ff' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            While You&apos;re Out
-          </motion.h2>
-
-          <motion.div
-            className="space-y-6 text-lg sm:text-xl leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p>
-              Make a real night of it. With your kids set for the evening, here
-              are a couple of nearby spots in the plaza to enjoy.
-            </p>
-
-            <ul className="list-disc list-outside pl-6 space-y-3">
-              <li>
-                <a
-                  href="https://www.ixtapalunenburg.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold underline hover:no-underline"
-                  style={{ color: '#c4b5fd' }}
-                >
-                  Ixtapa
-                </a>{' '}
-                — authentic Mexican food, right across the plaza.
-              </li>
-              <li>
-                <a
-                  href="https://asian-imperial.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold underline hover:no-underline"
-                  style={{ color: '#c4b5fd' }}
-                >
-                  Asian Imperial
-                </a>{' '}
-                — Japanese and Asian cuisine just a short walk away.
-              </li>
-            </ul>
           </motion.div>
         </div>
       </section>
