@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 /**
- * Full-width "Coming Soon" banner for Busy Bees After Dark.
+ * Full-width banner for Busy Bees After Dark.
  * Sits below the site menu bar and above the homepage hero.
  */
 export function AfterDarkBanner() {
   return (
-    <Link href="/after-dark" className="group block" aria-label="Busy Bees After Dark — coming soon, starting June 5th">
+    <Link href="/after-dark" className="group block" aria-label="Busy Bees After Dark — now serving Parents' Night Out every Friday">
       <motion.div
         className="relative overflow-hidden px-4 py-8 text-center sm:py-10"
         style={{ background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1025 45%, #0d0d1a 100%)' }}
@@ -34,7 +34,7 @@ export function AfterDarkBanner() {
             className="text-xs font-bold uppercase tracking-[0.25em] sm:text-sm"
             style={{ color: '#c4b5fd' }}
           >
-            🌙 Coming Soon
+            🌙 Now Serving
           </p>
           <h2
             className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
@@ -52,7 +52,7 @@ export function AfterDarkBanner() {
             Parents&apos; Night Out
             <span className="hidden sm:inline"> — </span>
             <br className="sm:hidden" />
-            Starting Friday, June 5th
+            Every Friday, Book Now
           </p>
           <span
             className="mt-4 inline-flex items-center gap-1 text-sm font-bold transition-transform group-hover:translate-x-1"
