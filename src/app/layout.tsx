@@ -3,6 +3,7 @@ import { Gloria_Hallelujah } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AnnouncementMarquee } from "@/components/AnnouncementMarquee";
+import { getOpeningHoursSpecification } from "@/lib/businessHours";
 
 const gloriaHallelujah = Gloria_Hallelujah({ 
   subsets: ['latin'],
@@ -93,20 +94,7 @@ export default function RootLayout({
                 'https://www.instagram.com/busybeesipc/',
                 'https://www.facebook.com/busybeesipc',
               ],
-              openingHoursSpecification: [
-                {
-                  '@type': 'OpeningHoursSpecification',
-                  dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                  opens: '09:00',
-                  closes: '18:00',
-                },
-                {
-                  '@type': 'OpeningHoursSpecification',
-                  dayOfWeek: ['Saturday', 'Sunday'],
-                  opens: '09:00',
-                  closes: '17:00',
-                },
-              ],
+              openingHoursSpecification: getOpeningHoursSpecification(),
               hasMap: 'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+Lunenburg+MA',
               additionalType: 'https://schema.org/ChildCare',
             }),

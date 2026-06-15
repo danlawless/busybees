@@ -1053,6 +1053,34 @@ ${siteUrl}
   });
 }
 
+type PartyType = 'private' | 'semi_private';
+
+function partyTypeDisplayLabel(partyType?: PartyType): string {
+  return partyType === 'semi_private' ? 'Semi-Private Party' : 'Private Party';
+}
+
+function getSemiPrivateBannerHtml(): string {
+  return `
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3e8ff; border: 2px solid #a855f7; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 18px 20px;">
+                    <p style="margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #6b21a8;">✨ Semi-Private Party</p>
+                    <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">
+                      Your party room is reserved <strong>exclusively for your guests</strong> for the full 3-hour slot. The play area remains open to other families during your party. Compared to our standard private parties, you get an <strong>extra hour</strong> together!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+`;
+}
+
+function getSemiPrivateBannerText(): string {
+  return `
+✨ SEMI-PRIVATE PARTY
+Your party room is reserved exclusively for your guests for the full 3-hour slot. The play area remains open to other families during your party. Compared to our standard private parties, you get an extra hour together!
+`;
+}
+
 /**
  * Send party booking confirmation email
  */
@@ -1645,8 +1673,10 @@ export async function sendPartyBookingConfirmationEmail(data: {
   guestCount: number;
   totalPrice: number;
   bookingId: string;
+  partyType?: PartyType;
 }): Promise<EmailResult> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+  const isSemiPrivate = data.partyType === 'semi_private';
 
   const subject = `🎂 Party Booking Confirmed - ${data.childName}'s Birthday!`;
 
@@ -1690,12 +1720,13 @@ Great news! ${data.childName}'s birthday party is confirmed!
 
 THANK YOU FOR YOUR PURCHASE!
 We're excited to host your ${packageDisplay} Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.
-
+${isSemiPrivate ? getSemiPrivateBannerText() : ''}
 PARTY DETAILS:
 Date: ${formattedDate}
 Party Time: ${displayStartTime} - ${displayEndTime}
 Setup Arrival: ${setupArrivalTime} (you're welcome to arrive 30 minutes early to decorate and set up)
 Package: ${packageDisplay}
+Party Type: ${partyTypeDisplayLabel(data.partyType)}
 Guests: ${data.guestCount}
 Total: $${data.totalPrice.toFixed(2)}
 
@@ -1763,7 +1794,7 @@ ${siteUrl}
                   </td>
                 </tr>
               </table>
-
+${isSemiPrivate ? getSemiPrivateBannerHtml() : ''}
               <!-- Party Details Card -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 20px;">
                 <tr>
@@ -1801,6 +1832,12 @@ ${siteUrl}
                                 <span style="font-size: 12px; color: #92400e;">🚪 Setup Arrival</span><br>
                                 <span style="font-size: 14px; font-weight: 600; color: #78350f;">${setupArrivalTime}</span>
                                 <span style="font-size: 12px; color: #b45309;"> &mdash; arrive 30 min early to set up</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0;">
+                                <span style="font-size: 12px; color: #92400e;">🎟️ Party Type</span><br>
+                                <span style="font-size: 14px; font-weight: 600; color: #78350f;">${partyTypeDisplayLabel(data.partyType)}</span>
                               </td>
                             </tr>
                             <tr>
@@ -2975,7 +3012,10 @@ export async function sendPostPartyThankYouEmail(data: {
   guests?: Array<{ child_name: string; age: number | null }>;
   extraKidPrice?: number;
   overageCharged?: number;
+  partyType?: PartyType;
 }): Promise<EmailResult> {
+  const isSemiPrivate = data.partyType === 'semi_private';
+  const partyRoomPhrase = isSemiPrivate ? 'your party room' : 'play area and party room';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
   const googleReviewUrl = 'https://g.page/r/CbjlkAgAnnOKEBM/review';
 
@@ -3032,7 +3072,7 @@ Hi ${data.customerName}!
 
 Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
 
-It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
+It was such a joy having your family here, and we hope the kids had a blast in the ${partyRoomPhrase}.
 ${recapText}
 If you have a moment, we'd really appreciate it if you could leave us a quick Google review. Your feedback helps other families discover Busy Bee's and means the world to our small team!
 
@@ -3085,7 +3125,7 @@ Visit us: ${siteUrl}
                 Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
               </p>
               <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
-                It was such a joy having your family here, and we hope the kids had a blast in the play area and party room.
+                It was such a joy having your family here, and we hope the kids had a blast in the ${partyRoomPhrase}.
               </p>
 
               ${hasRecap ? `
@@ -3383,7 +3423,9 @@ export async function sendPartyReminderEmail(data: {
   endTime: string;
   packageName: string;
   guestCount: number;
+  partyType?: PartyType;
 }): Promise<EmailResult> {
+  const isSemiPrivate = data.partyType === 'semi_private';
   const formattedDate = parseDateString(data.partyDate).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -3407,7 +3449,7 @@ Party Reminder - 1 Week Away!
 Hi ${data.customerName}!
 
 Just a friendly reminder that ${data.childName}'s ${packageDisplay} birthday party is coming up in 1 week!
-
+${isSemiPrivate ? getSemiPrivateBannerText() : ''}
 🧦 IMPORTANT: Socks are required for everyone — children and adults — in the play area. Forgot a pair? Grippy socks can be purchased at the front desk.
 
 Party Details:
@@ -3447,7 +3489,7 @@ busybeesipc.com
           Hi ${data.customerName}! Just a friendly reminder that your ${packageDisplay} party is coming up in <strong>1 week</strong>. Here are your party details:
         </p>
       </div>
-
+${isSemiPrivate ? `<div style="padding: 0 24px;">${getSemiPrivateBannerHtml()}</div>` : ''}
       <!-- Socks Required Callout -->
       <div style="margin: 0 24px 20px; background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px 20px; text-align: center;">
         <p style="margin: 0; font-size: 15px; color: #78350f; line-height: 1.6;">
@@ -3530,6 +3572,7 @@ export async function sendPartyRecapEmail(data: {
   guests: Array<{ child_name: string; age: number | null }>;
   extraKidPrice: number;
   overageCharged: number;
+  partyType?: PartyType;
 }): Promise<EmailResult> {
   const formattedDate = parseDateString(data.partyDate).toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -3570,6 +3613,7 @@ PARTY DETAILS:
 Date: ${formattedDate}
 Time: ${displayStartTime} - ${displayEndTime}
 Package: ${packageDisplay}
+Party Type: ${partyTypeDisplayLabel(data.partyType)}
 
 ATTENDEES (${data.guests.length} total):
 ${guestListText}
@@ -3644,6 +3688,7 @@ We hope everyone had a wonderful time! 🎉
                     <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Date:</strong> ${formattedDate}</p>
                     <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Time:</strong> ${displayStartTime} - ${displayEndTime}</p>
                     <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Package:</strong> ${packageDisplay}</p>
+                    <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Party Type:</strong> ${partyTypeDisplayLabel(data.partyType)}</p>
                     <p style="margin: 4px 0; font-size: 14px; color: #374151;"><strong>Total Guests:</strong> ${data.guests.length}</p>
                   </td>
                 </tr>

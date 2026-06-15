@@ -447,6 +447,7 @@ export async function POST(request: NextRequest) {
               guestCount: booking.guest_count,
               totalPrice: Number(booking.total_price),
               bookingId: booking.id,
+              partyType: booking.party_type,
             });
 
             if (emailResult.success) {

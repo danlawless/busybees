@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Find confirmed/done bookings from yesterday that haven't been sent a thank you
     const { data: bookings, error } = await supabase
       .from('party_bookings')
-      .select('id, customer_name, customer_email, child_name, package_name, status, party_date, start_time, end_time, base_price, total_price, additional_kids_price')
+      .select('id, customer_name, customer_email, child_name, package_name, status, party_date, start_time, end_time, base_price, total_price, additional_kids_price, party_type')
       .eq('party_date', yesterday)
       .in('status', ['confirmed', 'done'])
       .neq('payment_status', 'refunded');
@@ -123,6 +123,7 @@ export async function GET(request: NextRequest) {
         guests: guests || [],
         extraKidPrice: 15,
         overageCharged: Number(booking.additional_kids_price) || 0,
+        partyType: booking.party_type,
       });
 
       if (result.success) {

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Find confirmed bookings exactly 7 days from now
     const { data: bookings, error } = await supabase
       .from('party_bookings')
-      .select('id, customer_name, customer_email, child_name, package_name, party_date, start_time, end_time, guest_count')
+      .select('id, customer_name, customer_email, child_name, package_name, party_date, start_time, end_time, guest_count, party_type')
       .eq('party_date', targetDate)
       .in('status', ['confirmed'])
       .neq('payment_status', 'refunded');
@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
         endTime: formatTime(booking.end_time),
         packageName: booking.package_name,
         guestCount: booking.guest_count,
+        partyType: booking.party_type,
       });
 
       if (result.success) {

@@ -5,19 +5,14 @@ import Image from 'next/image'
 import { MapPin, Mail, Phone, Instagram, Facebook } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { HoneycombPattern } from '@/components/ui/BeeIcon'
-
-const businessHours = [
-  { label: 'Mon - Fri', time: '9:00 AM - 5:00 PM', type: 'Open Play', isWeekday: true },
-  { label: 'Sat / Sun', time: '9:00 AM - 12:30 PM', type: 'Open Play' },
-  { label: '', time: '1:00 PM - 3:00 PM', type: 'Private Parties' },
-  { label: '', time: '3:30 PM - 5:30 PM', type: 'Private Parties' },
-]
+import { getFooterHours } from '@/lib/businessHours'
 
 export function Footer() {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const businessHours = getFooterHours()
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

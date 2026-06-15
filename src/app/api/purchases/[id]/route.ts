@@ -208,6 +208,14 @@ async function handleUpdate(
     try {
       const recipientEmail = profile?.email || user.email;
       if (recipientEmail) {
+        // Read party_type from the just-synced booking so the email branches
+        // to semi-private copy when applicable.
+        const { data: syncedBooking } = await supabase
+          .from('party_bookings')
+          .select('party_type')
+          .eq('purchase_id', id)
+          .maybeSingle();
+
         const emailResult = await sendPartyBookingConfirmationEmail({
           to: recipientEmail,
           customerName: profile?.name || 'Valued Customer',
@@ -219,6 +227,7 @@ async function handleUpdate(
           guestCount: partyData.party_guests,
           totalPrice: Number(purchase.price),
           bookingId: id,
+          partyType: syncedBooking?.party_type,
         });
         if (emailResult.success) {
           logger.info({ to: recipientEmail, purchaseId: id }, '🎂 Party confirmation email sent');

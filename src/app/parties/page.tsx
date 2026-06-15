@@ -8,6 +8,7 @@ import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyAvailabilityPreview } from '@/components/parties/PartyAvailabilityPreview'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
+import { SummerPartyNotice } from '@/components/parties/SummerPartyNotice'
 import { motion } from 'framer-motion'
 import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -75,6 +76,9 @@ function PartiesContent() {
       )}
 
       <PartiesHero onBookParty={handleBookParty} />
+
+      {/* Summer Hours: Semi-Private notice (only renders during the summer window) */}
+      <SummerPartyNotice />
 
       {/* Book Party CTA Section */}
       <section className="relative py-16 overflow-hidden min-h-[20rem] flex items-center bg-[#FFF8E7]/70">

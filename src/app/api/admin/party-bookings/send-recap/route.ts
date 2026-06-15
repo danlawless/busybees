@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       guests: guestList,
       extraKidPrice: EXTRA_KID_PRICE,
       overageCharged,
+      partyType: booking.party_type,
     });
 
     if (result.success) {

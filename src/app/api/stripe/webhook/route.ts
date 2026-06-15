@@ -273,6 +273,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
             guestCount: booking.guest_count,
             totalPrice: Number(booking.total_price),
             bookingId: booking.id,
+            partyType: booking.party_type,
           });
 
           if (emailResult.success) {
@@ -433,6 +434,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
             guestCount: booking.guest_count,
             totalPrice: Number(booking.total_price),
             bookingId: booking.id,
+            partyType: booking.party_type,
           });
           console.log('🎂 Party confirmation email sent via webhook safety net');
         }

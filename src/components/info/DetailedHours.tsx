@@ -5,37 +5,17 @@ import { motion } from 'framer-motion'
 import { Clock, Calendar, PartyPopper, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
+import { getWeeklySchedule, getSpecialPrograms, getHoursNotice } from '@/lib/businessHours'
 
-const weeklySchedule = [
-  { day: 'Monday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Tuesday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Wednesday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Thursday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Friday', hours: '9:00 AM - 5:00 PM', type: 'open-play' },
-  { day: 'Saturday', hours: '9:00 AM - 12:30 PM', type: 'open-play', additional: 'Open Play' },
-  { day: 'Saturday', hours: '1:00 PM - 3:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
-  { day: 'Saturday', hours: '3:30 PM - 5:30 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
-  { day: 'Sunday', hours: '9:00 AM - 12:30 PM', type: 'open-play', additional: 'Open Play' },
-  { day: 'Sunday', hours: '1:00 PM - 3:00 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' },
-  { day: 'Sunday', hours: '3:30 PM - 5:30 PM', type: 'private-booking', additional: 'Private Parties (2-hour slot)' }
-]
-
-const specialPrograms = [
-  {
-    icon: Calendar,
-    title: 'Open Play Times',
-    description: 'Drop-in play sessions where families can enjoy all play areas',
-    schedule: 'Mon-Fri: 9AM-5PM | Sat-Sun: 9AM-12:30PM'
-  },
-  {
-    icon: PartyPopper,
-    title: 'Private Party Bookings',
-    description: 'Exclusive birthday parties and celebrations in 2-hour time slots',
-    schedule: 'Sat-Sun: 1PM-3PM or 3:30PM-5:30PM (2-hour slots)'
-  }
-]
+const PROGRAM_ICONS = {
+  calendar: Calendar,
+  party: PartyPopper,
+} as const
 
 export function DetailedHours() {
+  const weeklySchedule = getWeeklySchedule()
+  const specialPrograms = getSpecialPrograms()
+  const noticeText = getHoursNotice()
   const getCurrentDay = () => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     return days[new Date().getDay()]
@@ -129,7 +109,7 @@ export function DetailedHours() {
             viewport={{ once: true }}
           >
             {specialPrograms.map((program, index) => {
-              const Icon = program.icon
+              const Icon = PROGRAM_ICONS[program.iconKey]
               return (
                 <motion.div key={index} variants={fadeInUp}>
                   <Card className="rounded-3xl">
@@ -161,8 +141,7 @@ export function DetailedHours() {
                     <div>
                       <h4 className="font-semibold text-charcoal-800 mb-2">Important Notice</h4>
                       <p className="text-charcoal-700 text-sm leading-relaxed">
-                        Weekends offer both Open Play (9AM-12:30PM) and Private Party Bookings (1PM-3PM and 3:30PM-5:30PM).
-                        We have TWO 2-hour time slots available each weekend afternoon for birthday parties, allowing us to accommodate multiple celebrations each day. Please book in advance to secure your preferred time slot.
+                        {noticeText}
                       </p>
                     </div>
                   </div>
