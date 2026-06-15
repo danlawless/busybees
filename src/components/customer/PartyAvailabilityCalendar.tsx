@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
+import { isSummerHoursActive } from '@/lib/businessHours';
 
 interface TimeSlot {
   startTime: string;
@@ -252,6 +253,13 @@ export function PartyAvailabilityCalendar({ onSelectSlot }: PartyAvailabilityCal
             </div>
           ) : timeSlots.length > 0 ? (
             <div className="space-y-2 mt-3">
+              {isSummerHoursActive(parseDateString(selectedDate)) && (
+                <div className="p-3 rounded-lg border border-purple-200 bg-purple-50 text-xs sm:text-sm text-purple-900 leading-relaxed">
+                  <strong>Semi-Private Party Slot:</strong> Your party room is{' '}
+                  <strong>exclusively yours</strong>, while the play area remains{' '}
+                  <strong>open to other families</strong> during your party.
+                </div>
+              )}
               {timeSlots.map((slot, index) => {
                 const booked = isSlotBooked(slot.startTime);
                 return (
