@@ -2,10 +2,16 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Clock, Calendar, PartyPopper, AlertCircle } from 'lucide-react'
+import { Clock, Calendar, PartyPopper, AlertCircle, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-import { getWeeklySchedule, getSpecialPrograms, getHoursNotice } from '@/lib/businessHours'
+import {
+  getWeeklySchedule,
+  getSpecialPrograms,
+  getHoursNotice,
+  isSummerHoursUpcoming,
+  SUMMER_HOURS_START_LABEL,
+} from '@/lib/businessHours'
 
 const PROGRAM_ICONS = {
   calendar: Calendar,
@@ -16,6 +22,7 @@ export function DetailedHours() {
   const weeklySchedule = getWeeklySchedule()
   const specialPrograms = getSpecialPrograms()
   const noticeText = getHoursNotice()
+  const showSummerLeadIn = isSummerHoursUpcoming()
   const getCurrentDay = () => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     return days[new Date().getDay()]
@@ -41,6 +48,33 @@ export function DetailedHours() {
             Plan your visit with our detailed schedule and special program times
           </p>
         </motion.div>
+
+        {showSummerLeadIn && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-12 max-w-3xl rounded-2xl border-2 border-purple-300 bg-purple-50/70 p-6 shadow-soft"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-100">
+                <Sparkles className="h-5 w-5 text-purple-700" />
+              </div>
+              <div>
+                <h3 className="mb-1 text-lg font-bold text-purple-900">
+                  Summer Hours start {SUMMER_HOURS_START_LABEL}
+                </h3>
+                <p className="text-sm leading-relaxed text-charcoal-700 sm:text-base">
+                  Starting <strong>{SUMMER_HOURS_START_LABEL}</strong> through August 30, our schedule
+                  shifts to <strong>Mon–Fri 11 AM – 6 PM</strong> and <strong>Sat–Sun 8 AM – 4 PM</strong>.
+                  Weekend birthday parties move to a single <strong>Semi-Private 1:00 PM – 4:00 PM</strong> slot
+                  — the party room is exclusively yours while the play area remains open to other families.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
           {/* Weekly Schedule */}
