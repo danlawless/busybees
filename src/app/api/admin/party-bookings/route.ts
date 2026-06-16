@@ -18,7 +18,11 @@ type PartyType = Database['public']['Tables']['party_bookings']['Row']['party_ty
 
 const ManualBookingSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required').max(100),
-  customerEmail: z.string().email().optional().default('admin@busybees.com'),
+  // Treat empty strings as "unset" so the default kicks in — the admin form
+  // sends "" rather than omitting the field when left blank.
+  customerEmail: z
+    .preprocess((v) => (v === '' ? undefined : v), z.string().email().optional())
+    .default('admin@busybees.com'),
   customerPhone: z.string().optional().default(''),
   partyType: z.enum(['private', 'semi_private']),
   packageName: z.enum(['queen_bee', 'worker_bee', 'basic_bee', 'group_rate']),
