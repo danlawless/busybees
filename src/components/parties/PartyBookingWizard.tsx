@@ -17,6 +17,8 @@ import {
   calculateBookingPrice,
   PACKAGE_PRICING,
 } from '@/lib/validations/party-booking';
+import { getPartyTypeForDate } from '@/lib/businessHours';
+import { parseDateString } from '@/lib/utils';
 
 interface PartyBookingWizardProps {
   onClose: () => void;
@@ -116,6 +118,13 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
         }
       }
 
+      // Party type follows the chosen date: Semi-Private during Summer Hours,
+      // Private otherwise. The server re-derives this authoritatively; here it
+      // keeps the time-slot lookup and on-screen labels in sync.
+      if (updates.partyDate && updates.partyDate !== prev.partyDate) {
+        merged.partyType = getPartyTypeForDate(parseDateString(updates.partyDate));
+      }
+
       return merged;
     });
     setError(null);
@@ -190,9 +199,11 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
     }
   };
 
+  // Always price at the private rate — Summer Hours Semi-Private parties keep
+  // standard private pricing (party type affects the room/email, not the price).
   const pricing =
-    formData.partyType && formData.packageName
-      ? calculateBookingPrice(formData.packageName, formData.partyType, formData.guestCount)
+    formData.packageName
+      ? calculateBookingPrice(formData.packageName, 'private', formData.guestCount)
       : null;
 
   // Calculate member discount amount for display

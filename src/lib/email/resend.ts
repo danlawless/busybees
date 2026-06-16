@@ -1066,7 +1066,7 @@ function getSemiPrivateBannerHtml(): string {
                   <td style="padding: 18px 20px;">
                     <p style="margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #6b21a8;">✨ Semi-Private Party</p>
                     <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">
-                      Your party room is reserved <strong>exclusively for your guests</strong> for the full 3-hour slot. The play area remains open to other families during your party. Compared to our standard private parties, you get an <strong>extra hour</strong> together!
+                      Your party room is reserved <strong>exclusively for your guests</strong> for the full 3-hour slot. The play area remains open for public play.
                     </p>
                   </td>
                 </tr>
@@ -1077,7 +1077,7 @@ function getSemiPrivateBannerHtml(): string {
 function getSemiPrivateBannerText(): string {
   return `
 ✨ SEMI-PRIVATE PARTY
-Your party room is reserved exclusively for your guests for the full 3-hour slot. The play area remains open to other families during your party. Compared to our standard private parties, you get an extra hour together!
+Your party room is reserved exclusively for your guests for the full 3-hour slot. The play area remains open for public play.
 `;
 }
 
@@ -1088,7 +1088,7 @@ Your party room is reserved exclusively for your guests for the full 3-hour slot
  * Get package-specific email content sections based on the booked package.
  * Returns both HTML sections and plain text for the confirmation email.
  */
-function getPackageEmailContent(packageName: string): { html: string; text: string } {
+function getPackageEmailContent(packageName: string, isSemiPrivate = false): { html: string; text: string } {
   const sectionStyle = 'width: 100%; background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; margin-bottom: 16px;';
   const sectionPadding = 'padding: 20px;';
   const headingStyle = 'margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #1f2937;';
@@ -1097,9 +1097,8 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
   const bulletStyle = 'padding: 3px 0; font-size: 14px; color: #4b5563; line-height: 1.5;';
   const importantStyle = 'width: 100%; background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; margin-bottom: 16px;';
 
-  if (packageName === 'basic_bee') {
-    const html = `
-              <!-- Party Schedule -->
+  // Schedule & arrival logistics apply to standard private parties only; semi-private (Summer Hours) parties omit them.
+  const scheduleArrivalHtml = isSemiPrivate ? '' : `<!-- Party Schedule -->
               <table cellpadding="0" cellspacing="0" style="${importantStyle}">
                 <tr>
                   <td style="${sectionPadding}">
@@ -1136,7 +1135,36 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
                 </tr>
               </table>
 
-              <!-- Supplies & Customization -->
+              `;
+  const scheduleArrivalText = isSemiPrivate ? '' : `PARTY SCHEDULE & TIMELY DEPARTURE (Important)
+To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
+
+Your party will follow this timeline:
+
+Play Time - 1 Hour, 30 Minutes
+Children will enjoy full access to the play area, including the bounce house and music.
+
+Pizza and Cake - Final 30 Minutes
+The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
+To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room.
+
+Departure
+At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+
+Busy Bee Sticker Stop
+Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
+
+Your cooperation with the schedule helps us ensure every family gets the same great party experience!
+
+ARRIVAL & SET-UP
+You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
+Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
+
+`;
+
+  if (packageName === 'basic_bee') {
+    const html = `
+              ${scheduleArrivalHtml}<!-- Supplies & Customization -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
                 <tr>
                   <td style="${sectionPadding}">
@@ -1218,31 +1246,7 @@ function getPackageEmailContent(packageName: string): { html: string; text: stri
                 </tr>
               </table>`;
 
-    const text = `PARTY SCHEDULE & TIMELY DEPARTURE (Important)
-To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
-
-Your party will follow this timeline:
-
-Play Time - 1 Hour, 30 Minutes
-Children will enjoy full access to the play area, including the bounce house and music.
-
-Pizza and Cake - Final 30 Minutes
-The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
-To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room.
-
-Departure
-At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
-
-Busy Bee Sticker Stop
-Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
-
-Your cooperation with the schedule helps us ensure every family gets the same great party experience!
-
-ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
-Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
-
-SUPPLIES & CUSTOMIZATION
+    const text = `${scheduleArrivalText}SUPPLIES & CUSTOMIZATION
 Your Basic Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).
 If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
 
@@ -1274,44 +1278,7 @@ Busy Bee's Party Team`;
 
   if (packageName === 'worker_bee') {
     const html = `
-              <!-- Party Schedule -->
-              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">⏰ Party Schedule &amp; Timely Departure (Important)</p>
-                    <p style="${textStyle}">To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.</p>
-                    <p style="${textStyle}">Your party will follow this timeline:</p>
-
-                    <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour, 30 Minutes</p>
-                    <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
-
-                    <p style="${subheadingStyle}">🍕 Pizza and Cake &ndash; Final 30 Minutes</p>
-                    <p style="${textStyle}">The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
-                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room. This helps shift everyone toward the pizza and cake portion of the party and ensures we can prepare the play area for the next group.</p>
-
-                    <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
-
-                    <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
-                    <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
-
-                    <p style="margin: 16px 0 0; font-size: 14px; color: #854d0e; font-weight: 600; line-height: 1.6;">Your cooperation with the schedule helps us ensure every family gets the same great party experience. Thank you for helping us keep the party flow organized and fun for everyone!</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Arrival & Set-Up -->
-              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
-                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
-                    <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Supplies & Customization -->
+              ${scheduleArrivalHtml}<!-- Supplies & Customization -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
                 <tr>
                   <td style="${sectionPadding}">
@@ -1393,31 +1360,7 @@ Busy Bee's Party Team`;
                 </tr>
               </table>`;
 
-    const text = `PARTY SCHEDULE & TIMELY DEPARTURE (Important)
-To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
-
-Your party will follow this timeline:
-
-Play Time - 1 Hour, 30 Minutes
-Children will enjoy full access to the play area, including the bounce house and music.
-
-Pizza and Cake - Final 30 Minutes
-The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
-To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room.
-
-Departure
-At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
-
-Busy Bee Sticker Stop
-Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
-
-Your cooperation with the schedule helps us ensure every family gets the same great party experience!
-
-ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
-Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
-
-SUPPLIES & CUSTOMIZATION
+    const text = `${scheduleArrivalText}SUPPLIES & CUSTOMIZATION
 Your Worker Bee Party includes standard "Happy Birthday" themed paper goods (plates, napkins, and utensils).
 If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
 
@@ -1449,44 +1392,7 @@ Busy Bee's Party Team`;
 
   if (packageName === 'queen_bee') {
     const html = `
-              <!-- Party Schedule -->
-              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">⏰ Party Schedule &amp; Timely Departure (Important)</p>
-                    <p style="${textStyle}">To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.</p>
-                    <p style="${textStyle}">Your party will follow this timeline:</p>
-
-                    <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour, 30 Minutes</p>
-                    <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
-
-                    <p style="${subheadingStyle}">🍕 Pizza and Cake &ndash; Final 30 Minutes</p>
-                    <p style="${textStyle}">The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
-                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room. This helps shift everyone toward the pizza and cake portion of the party and ensures we can prepare the play area for the next group.</p>
-
-                    <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
-
-                    <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
-                    <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
-
-                    <p style="margin: 16px 0 0; font-size: 14px; color: #854d0e; font-weight: 600; line-height: 1.6;">Your cooperation with the schedule helps us ensure every family gets the same great party experience. Thank you for helping us keep the party flow organized and fun for everyone!</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Arrival & Set-Up -->
-              <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">🚪 Arrival &amp; Set-Up</p>
-                    <p style="${textStyle}">You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.</p>
-                    <p style="${textStyle}">Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Supplies & Customization -->
+              ${scheduleArrivalHtml}<!-- Supplies & Customization -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
                 <tr>
                   <td style="${sectionPadding}">
@@ -1568,31 +1474,7 @@ Busy Bee's Party Team`;
                 </tr>
               </table>`;
 
-    const text = `PARTY SCHEDULE & TIMELY DEPARTURE (Important)
-To keep parties running smoothly throughout the day, we operate on a structured party schedule so our team has time to clean and prepare the space for the next celebration.
-
-Your party will follow this timeline:
-
-Play Time - 1 Hour, 30 Minutes
-Children will enjoy full access to the play area, including the bounce house and music.
-
-Pizza and Cake - Final 30 Minutes
-The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
-To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room.
-
-Departure
-At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
-
-Busy Bee Sticker Stop
-Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.
-
-Your cooperation with the schedule helps us ensure every family gets the same great party experience!
-
-ARRIVAL & SET-UP
-You may arrive up to 30 minutes before your scheduled start time to begin setting up in the party room.
-Please note that we must adhere to strict time blocks so our staff can properly clean and reset between parties.
-
-SUPPLIES & CUSTOMIZATION
+    const text = `${scheduleArrivalText}SUPPLIES & CUSTOMIZATION
 Your Queen Bee Party includes "Happy Birthday" themed paper goods (plates, napkins, and utensils).
 If you prefer to bring your own themed tableware, please let us know in advance so we can plan accordingly.
 
@@ -1689,7 +1571,7 @@ export async function sendPartyBookingConfirmationEmail(data: {
   });
 
   // Get package-specific content
-  const packageContent = getPackageEmailContent(data.packageName);
+  const packageContent = getPackageEmailContent(data.packageName, isSemiPrivate);
 
   // Format package name for display
   const packageLabels: Record<string, string> = {

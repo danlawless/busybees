@@ -154,7 +154,7 @@ export function ReviewStep({ formData, pricing, onValidChange, isMember, memberD
                 {packageInfo?.name || 'Package'} Package
               </div>
               <div className="text-sm text-gray-600">
-                Private Party
+                {formData.partyType === 'semi_private' ? 'Semi-Private Party' : 'Private Party'}
               </div>
             </div>
             <div className="text-right font-semibold">${pricing?.basePrice || 0}</div>
