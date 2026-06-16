@@ -12,6 +12,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
+import { getPartyTypeForDate } from '@/lib/businessHours';
 
 const MEMBERSHIP_COUPON_ID = 'MEMBER10';
 const MEMBERSHIP_DISCOUNT_PERCENT = 10;
@@ -46,7 +47,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bookingData = validationResult.data;
+    // Party type is derived from the party date, not the client: Semi-Private
+    // during Summer Hours, Private otherwise. This is the server-authoritative
+    // source of truth for the booking record, time slots, and email copy.
+    const bookingData = {
+      ...validationResult.data,
+      partyType: getPartyTypeForDate(parseDateString(validationResult.data.partyDate)),
+    };
 
     // Check if user is logged in
     const supabase = await createClient();
@@ -106,10 +113,12 @@ export async function POST(request: NextRequest) {
       throw bookingError;
     }
 
-    // Calculate pricing for Stripe
+    // Calculate pricing for Stripe. Customer parties are always billed at the
+    // private rate regardless of the (date-derived) party type, so Summer Hours
+    // Semi-Private parties keep standard private pricing.
     const pricing = calculateBookingPrice(
       bookingData.packageName,
-      bookingData.partyType,
+      'private',
       bookingData.guestCount
     );
     const packageInfo = PACKAGE_PRICING[bookingData.packageName];

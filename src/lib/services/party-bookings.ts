@@ -438,10 +438,12 @@ export async function createPartyBooking(
 ): Promise<PartyBooking> {
   const supabase = createAdminClient();
 
-  // Calculate pricing
+  // Calculate pricing. Customer parties are always billed at the private rate;
+  // the (date-derived) party_type stored below only affects the room setup,
+  // time slots, and confirmation email — not the price.
   const pricing = calculateBookingPrice(
     bookingData.packageName,
-    bookingData.partyType,
+    'private',
     bookingData.guestCount
   );
 

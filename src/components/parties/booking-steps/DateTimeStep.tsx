@@ -279,6 +279,13 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                     formData.startTime === slot.startTime && formData.endTime === slot.endTime;
                   const isBooked = status === 'booked';
 
+                  // Derive the duration from the slot itself so it stays accurate
+                  // across slot types (e.g. the 3-hour Summer Hours semi-private slot).
+                  const [startH, startM] = slot.startTime.split(':').map(Number);
+                  const [endH, endM] = slot.endTime.split(':').map(Number);
+                  const durationHours = (endH * 60 + endM - (startH * 60 + startM)) / 60;
+                  const durationLabel = `${Number.isInteger(durationHours) ? durationHours : durationHours.toFixed(1)} hour party`;
+
                   return (
                     <motion.button
                       key={index}
@@ -298,7 +305,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                       <div className="flex justify-between items-center">
                         <div>
                           <div className="font-semibold text-charcoal-800">{slot.label}</div>
-                          <div className="text-sm text-gray-600">2 hour party</div>
+                          <div className="text-sm text-gray-600">{durationLabel}</div>
                         </div>
                         <div
                           className={`
@@ -318,7 +325,7 @@ export function DateTimeStep({ formData, onUpdate, onValidChange }: DateTimeStep
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No time slots available for this date.</p>
                 <p className="text-sm mt-2">
-                  Private parties are available on weekends.
+                  Parties are available on weekends. Try selecting a weekend date.
                 </p>
               </div>
             )

@@ -23,6 +23,20 @@ export function isSummerHoursActive(now: Date = new Date()): boolean {
 }
 
 /**
+ * The party type a customer booking takes, based on the party's date.
+ * During Summer Hours parties run as Semi-Private (party room is exclusive to
+ * guests while the play area stays open for public play); the rest of the year
+ * they are Private. This drives the booking record, time-slot lookup, and
+ * confirmation email — NOT pricing. Customer parties are always billed at the
+ * private rate (see the calculateBookingPrice callers in the booking flow).
+ *
+ * Pass the party date (not "now") so the type reflects when the party happens.
+ */
+export function getPartyTypeForDate(date: Date): 'private' | 'semi_private' {
+  return isSummerHoursActive(date) ? 'semi_private' : 'private';
+}
+
+/**
  * True during the lead-in window before Summer Hours start, so the site can
  * surface an "upcoming change" notice while still displaying the regular
  * schedule that's actually in effect today.
