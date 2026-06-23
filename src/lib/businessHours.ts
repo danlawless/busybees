@@ -3,7 +3,7 @@
  *
  * Summer Hours window: 2026-06-29 through 2026-08-30 (inclusive). During this
  * window:
- *   - Mon–Fri: 11:00 AM – 6:00 PM
+ *   - Mon–Fri: 9:00 AM – 3:00 PM
  *   - Sat/Sun: 8:00 AM – 4:00 PM
  *   - The only party offering is a Semi-Private 1:00 PM – 4:00 PM slot on
  *     Sat/Sun (party room exclusive to guests; play area remains open to
@@ -67,7 +67,7 @@ const REGULAR_FOOTER_HOURS: FooterScheduleEntry[] = [
 ];
 
 const SUMMER_FOOTER_HOURS: FooterScheduleEntry[] = [
-  { label: 'Mon - Fri', time: '11:00 AM - 6:00 PM', type: 'Open Play', isWeekday: true },
+  { label: 'Mon - Fri', time: '9:00 AM - 3:00 PM', type: 'Open Play', isWeekday: true },
   { label: 'Sat / Sun', time: '8:00 AM - 4:00 PM', type: 'Open Play' },
   { label: '', time: '1:00 PM - 4:00 PM', type: 'Semi-Private Party' },
 ];
@@ -100,11 +100,11 @@ const REGULAR_WEEKLY_SCHEDULE: WeeklyScheduleEntry[] = [
 ];
 
 const SUMMER_WEEKLY_SCHEDULE: WeeklyScheduleEntry[] = [
-  { day: 'Monday', hours: '11:00 AM - 6:00 PM', type: 'open-play' },
-  { day: 'Tuesday', hours: '11:00 AM - 6:00 PM', type: 'open-play' },
-  { day: 'Wednesday', hours: '11:00 AM - 6:00 PM', type: 'open-play' },
-  { day: 'Thursday', hours: '11:00 AM - 6:00 PM', type: 'open-play' },
-  { day: 'Friday', hours: '11:00 AM - 6:00 PM', type: 'open-play' },
+  { day: 'Monday', hours: '9:00 AM - 3:00 PM', type: 'open-play' },
+  { day: 'Tuesday', hours: '9:00 AM - 3:00 PM', type: 'open-play' },
+  { day: 'Wednesday', hours: '9:00 AM - 3:00 PM', type: 'open-play' },
+  { day: 'Thursday', hours: '9:00 AM - 3:00 PM', type: 'open-play' },
+  { day: 'Friday', hours: '9:00 AM - 3:00 PM', type: 'open-play' },
   { day: 'Saturday', hours: '8:00 AM - 4:00 PM', type: 'open-play', additional: 'Open Play (play area stays open all day)' },
   { day: 'Saturday', hours: '1:00 PM - 4:00 PM', type: 'private-booking', additional: 'Semi-Private Party (party room exclusive; play area remains open)' },
   { day: 'Sunday', hours: '8:00 AM - 4:00 PM', type: 'open-play', additional: 'Open Play (play area stays open all day)' },
@@ -144,7 +144,7 @@ const SUMMER_SPECIAL_PROGRAMS: SpecialProgramEntry[] = [
     iconKey: 'calendar',
     title: 'Open Play Times (Summer Hours)',
     description: 'Drop-in play sessions where families can enjoy all play areas',
-    schedule: 'Mon-Fri: 11AM-6PM | Sat-Sun: 8AM-4PM',
+    schedule: 'Mon-Fri: 9AM-3PM | Sat-Sun: 8AM-4PM',
   },
   {
     iconKey: 'party',
@@ -197,8 +197,8 @@ const SUMMER_SCHEMA_HOURS: OpeningHoursSpec[] = [
   {
     '@type': 'OpeningHoursSpecification',
     dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    opens: '11:00',
-    closes: '18:00',
+    opens: '09:00',
+    closes: '15:00',
   },
   {
     '@type': 'OpeningHoursSpecification',
