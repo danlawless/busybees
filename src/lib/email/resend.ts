@@ -260,6 +260,50 @@ Submitted at: ${new Date().toLocaleString()}
 }
 
 /**
+ * Send After Dark booking notification to business email
+ */
+export async function sendAfterDarkBookingEmail(data: {
+  eventDate: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  numKids: number;
+  kidDetails?: string | null;
+  notes?: string | null;
+  remainingSpots?: number;
+}): Promise<EmailResult> {
+  const subject = `New After Dark Booking - ${data.eventDate} (${data.numKids} kid${data.numKids === 1 ? '' : 's'})`;
+  const text = `
+New After Dark booking from the Busy Bees website:
+
+BOOKING DETAILS:
+Event Date: ${data.eventDate}
+Number of Kids: ${data.numKids}
+Kid Details: ${data.kidDetails?.trim() || 'None provided'}
+${typeof data.remainingSpots === 'number' ? `Spots Remaining After This Booking: ${data.remainingSpots}` : ''}
+
+CONTACT INFORMATION:
+Parent Name: ${data.parentName}
+Email: ${data.parentEmail}
+Phone: ${data.parentPhone}
+
+NOTES:
+${data.notes?.trim() || 'None provided'}
+
+---
+Sent from Busy Bees Indoor Play Center website
+Booked at: ${new Date().toLocaleString()}
+`;
+
+  return sendEmail({
+    to: BUSINESS_EMAIL,
+    subject,
+    text,
+    replyTo: data.parentEmail,
+  });
+}
+
+/**
  * Send gift card to recipient
  */
 export async function sendGiftCardEmail(data: {
