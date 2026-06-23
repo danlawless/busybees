@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { sendAfterDarkBookingEmail } from '@/lib/email/resend';
 import { z } from 'zod';
 
 const MAX_KIDS = 40;
@@ -81,6 +82,32 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info({ bookingId: data.id, event_date, num_kids }, 'After Dark booking created');
+
+    // Notify the business of the new booking. Non-blocking: a failed
+    // notification must never prevent a confirmed booking from succeeding.
+    try {
+      const emailResult = await sendAfterDarkBookingEmail({
+        eventDate: parsed.data.event_date,
+        parentName: parsed.data.parent_name,
+        parentEmail: parsed.data.parent_email,
+        parentPhone: parsed.data.parent_phone,
+        numKids: parsed.data.num_kids,
+        kidDetails: parsed.data.kid_details,
+        notes: parsed.data.notes,
+        remainingSpots: remaining - num_kids,
+      });
+      if (!emailResult.success) {
+        logger.error(
+          { error: emailResult.error, bookingId: data.id },
+          'Failed to send After Dark booking notification email'
+        );
+      }
+    } catch (emailError) {
+      logger.error(
+        { error: emailError, bookingId: data.id },
+        'After Dark booking notification email threw'
+      );
+    }
 
     return NextResponse.json({
       booking: data,
