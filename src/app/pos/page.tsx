@@ -50,6 +50,7 @@ interface Customer {
     purchases: Purchase[];
     activeSessions: Session[];
     savedCards: SavedCard[];
+    giftCardBalance?: number; // Account credit from redeemed gift cards
     createdAt: string;
     lastVisit?: string;
 }
