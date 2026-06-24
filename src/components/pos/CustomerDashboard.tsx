@@ -39,6 +39,7 @@ interface Customer {
   purchases: Purchase[];
   activeSessions: Session[]; // Multiple active sessions for different passes
   savedCards: SavedCard[];
+  giftCardBalance?: number; // Account credit from redeemed gift cards
   createdAt: string;
   lastVisit?: string;
 }

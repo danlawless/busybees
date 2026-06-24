@@ -41,6 +41,7 @@ interface Customer {
     purchases: Purchase[];
     activeSessions: Session[];
     savedCards: SavedCard[];
+    giftCardBalance?: number; // Account credit from redeemed gift cards
     createdAt: string;
     lastVisit?: string;
 }
@@ -2256,6 +2257,12 @@ export function CheckIn({
                                 ✅ Found: <strong>{selectedCustomer.name}</strong> -{" "}
                                 {formatPhoneNumber(selectedCustomer.phone)}
                             </p>
+                            {(selectedCustomer.giftCardBalance || 0) > 0 && (
+                                <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-yellow-100 border border-yellow-300 px-3 py-1 text-sm font-semibold text-yellow-800">
+                                    🎁 Gift card credit: {formatCurrency(selectedCustomer.giftCardBalance || 0)}
+                                    <span className="font-normal text-yellow-700">— applies automatically at checkout</span>
+                                </p>
+                            )}
                         </div>
                     )}
 
