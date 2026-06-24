@@ -25,6 +25,7 @@ import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageU
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
 import { decrementInventoryAfterPurchase } from "@/lib/services/products";
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from "@/lib/services/coupons";
+import { getUserGiftCardBalance, applyGiftCardBalance } from "@/lib/services/gift-cards";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
             paymentMethodId,
             metadata = {},
             couponCode, // Optional: single-use coupon code (day-pass purchases only)
+            useGiftCardBalance = true, // Apply the customer's account gift card credit (default on)
         } = body;
 
         // Validate required fields
@@ -188,12 +190,30 @@ export async function POST(request: NextRequest) {
 
         // productPrice already includes quantity × discount from frontend
         const finalTotal = Math.max(0, Number(productPrice) - couponDiscount);
-        const amountInCents = Math.round(finalTotal * 100);
-        const couponCoversFull = couponCode != null && finalTotal === 0;
 
-        // Create and confirm payment intent with saved card (skipped if coupon fully covers)
+        // Apply the customer's gift card balance (account credit) to the remaining
+        // total, after any coupon. Mirrors the web and After Dark checkout flows so a
+        // customer's credit is honored at the kiosk instead of being silently skipped.
+        let giftCardAmountUsed = 0;
+        if (useGiftCardBalance && finalTotal > 0) {
+            const giftCardBalance = await getUserGiftCardBalance(customerId);
+            if (giftCardBalance > 0) {
+                giftCardAmountUsed = Math.min(giftCardBalance, finalTotal);
+                logger.info(
+                    { ...logContext, finalTotal, giftCardBalance, giftCardAmountUsed },
+                    "🎁 Applying gift card credit to kiosk purchase"
+                );
+            }
+        }
+
+        const amountToCharge = Math.max(0, finalTotal - giftCardAmountUsed);
+        const amountInCents = Math.round(amountToCharge * 100);
+        // Skip the card charge when coupon + gift card credit cover the full total
+        const skipCardCharge = amountToCharge === 0;
+
+        // Create and confirm payment intent with saved card (skipped if fully covered)
         let paymentIntent: { id: string; status: string } | null = null;
-        if (!couponCoversFull) {
+        if (!skipCardCharge) {
         try {
             // Build description with quantity
             const paymentDescription =
@@ -215,6 +235,7 @@ export async function POST(request: NextRequest) {
                     product_name: productName,
                     quantity: quantity.toString(),
                     kiosk_transaction: "true",
+                    gift_card_amount: giftCardAmountUsed.toString(),
                     ...metadata,
                 },
                 confirm: true,
@@ -271,7 +292,10 @@ export async function POST(request: NextRequest) {
             "💳 Kiosk payment succeeded"
         );
         } else {
-            logger.info({ ...logContext }, "🎟️ Coupon fully covered kiosk purchase — Stripe skipped");
+            logger.info(
+                { ...logContext, giftCardAmountUsed },
+                "🎟️ Coupon/gift card credit fully covered kiosk purchase — Stripe skipped"
+            );
         }
 
         // Resolve purchase defaults from passes table (throws if pass not found)
@@ -294,6 +318,7 @@ export async function POST(request: NextRequest) {
         if (comboChildrenIds) {
             // Create a separate purchase for each child in the combo
             const pricePerChild = finalTotal / comboChildrenIds.length;
+            const giftCardPerChild = giftCardAmountUsed / comboChildrenIds.length;
             const purchases = [];
 
             for (const comboChildId of comboChildrenIds) {
@@ -312,6 +337,7 @@ export async function POST(request: NextRequest) {
                         total_sessions: 1,
                         status: "active",
                         stripe_payment_intent_id: paymentIntent?.id || null,
+                        gift_card_amount_used: giftCardPerChild,
                     })
                     .select()
                     .single();
@@ -356,7 +382,8 @@ export async function POST(request: NextRequest) {
                     used_sessions: 0,
                     total_sessions: totalSessions,
                     status: purchaseType === "food_beverage" ? "used" : "active",
-                    stripe_payment_intent_id: paymentIntent.id,
+                    stripe_payment_intent_id: paymentIntent?.id || null,
+                    gift_card_amount_used: giftCardAmountUsed,
                 })
                 .select()
                 .single();
@@ -415,6 +442,24 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Deduct the applied gift card credit from the customer's balance now that the
+        // purchase record(s) exist. Logged for manual reconciliation on failure, mirroring
+        // the coupon redemption ordering above (purchase is the source of truth).
+        if (giftCardAmountUsed > 0) {
+            try {
+                await applyGiftCardBalance(customerId, giftCardAmountUsed, purchase.id);
+            } catch (giftCardError) {
+                logger.error(
+                    { ...logContext, giftCardAmountUsed, purchaseId: purchase.id, error: giftCardError },
+                    "⚠️ Gift card balance deduction failed after kiosk purchase succeeded — manual reconciliation needed"
+                );
+                Sentry.captureException(giftCardError, {
+                    tags: { component: "kiosk-payment", action: "apply_gift_card" },
+                    extra: { customerId, purchaseId: purchase.id, giftCardAmountUsed },
+                });
+            }
+        }
+
         // Decrement inventory for food/beverage purchases
         await decrementInventoryAfterPurchase(adminSupabase, productId, productName, quantity, purchaseType);
 
@@ -436,6 +481,8 @@ export async function POST(request: NextRequest) {
                 price: purchase.price,
                 status: purchase.status,
             },
+            giftCardAmountUsed,
+            amountCharged: amountToCharge,
             payment: {
                 id: paymentIntent?.id || null,
                 amount: amountInCents,

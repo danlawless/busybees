@@ -1828,7 +1828,12 @@ export function CheckIn({
                 }));
 
                 // Build success message with quantity and savings
-                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(totalPrice)}`;
+                const giftCardUsed = data.giftCardAmountUsed || 0;
+                const amountCharged = data.amountCharged ?? (totalPrice - giftCardUsed);
+                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(amountCharged)}`;
+                if (giftCardUsed > 0) {
+                    successDetails += `\n🎁 Gift card applied: ${formatCurrency(giftCardUsed)}`;
+                }
                 if (quantity > 1) {
                     successDetails += `\n📦 Quantity: ${quantity}`;
                     if (pricing.savings > 0) {
@@ -1879,7 +1884,7 @@ export function CheckIn({
                 throw new Error(errorData.error || "Purchase failed");
             }
 
-            const { purchase } = await response.json();
+            const { purchase, gift_card_amount_used: staffGiftCardUsed } = await response.json();
 
             // Clear family pass selection
             setSelectedChildrenForFamilyPass([]);
@@ -1959,7 +1964,11 @@ export function CheckIn({
                 setGroupRateTotalPrice(null);
             }
 
-            setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
+            setPurchaseSuccess(
+                (staffGiftCardUsed || 0) > 0
+                    ? `✅ ${product.name} purchased! 🎁 ${formatCurrency(staffGiftCardUsed)} gift card credit applied.`
+                    : `✅ ${product.name} purchased successfully!`
+            );
 
             // Clear success message after 3 seconds
             setTimeout(() => setPurchaseSuccess(""), 3000);
