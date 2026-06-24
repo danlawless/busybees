@@ -1828,7 +1828,12 @@ export function CheckIn({
                 }));
 
                 // Build success message with quantity and savings
-                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(totalPrice)}`;
+                const giftCardUsed = data.giftCardAmountUsed || 0;
+                const amountCharged = data.amountCharged ?? (totalPrice - giftCardUsed);
+                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(amountCharged)}`;
+                if (giftCardUsed > 0) {
+                    successDetails += `\n🎁 Gift card applied: ${formatCurrency(giftCardUsed)}`;
+                }
                 if (quantity > 1) {
                     successDetails += `\n📦 Quantity: ${quantity}`;
                     if (pricing.savings > 0) {
