@@ -115,6 +115,9 @@ export function CheckIn({
     const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null);
     const [purchaseSuccess, setPurchaseSuccess] = useState<string>("");
     const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
+    // Authoritative gift card credit for the on-screen customer. Fetched fresh so it
+    // never depends on the (sometimes rebuilt) customers array carrying the field.
+    const [headerGiftCardBalance, setHeaderGiftCardBalance] = useState<number | null>(null);
     // Per-product coupon UI state (day-pass products only)
     const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
     const [couponLoading, setCouponLoading] = useState<Record<string, boolean>>({});
@@ -270,6 +273,29 @@ export function CheckIn({
         };
         fetchPosMode();
     }, []);
+
+    // Fetch the on-screen customer's gift card credit authoritatively (staff may read
+    // any customer's balance). Re-runs when the selected customer changes or after a
+    // purchase, so the header badge always reflects the true current balance.
+    const activeCustomerId = isStaffMode
+        ? selectedCustomer?.id
+        : currentCustomer?.id || selectedCustomer?.id;
+    useEffect(() => {
+        if (!activeCustomerId) {
+            setHeaderGiftCardBalance(null);
+            return;
+        }
+        let cancelled = false;
+        fetch(`/api/gift-cards/balance?customerId=${activeCustomerId}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!cancelled && d) setHeaderGiftCardBalance(d.balance ?? 0);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [activeCustomerId, purchaseSuccess]);
 
     // Fetch auto-checkout settings on mount
     useEffect(() => {
@@ -2355,12 +2381,12 @@ export function CheckIn({
                                             displayCustomer.lastVisit
                                         )}`}
                                 </p>
-                                {(displayCustomer.giftCardBalance || 0) > 0 && (
+                                {(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0) > 0 && (
                                     <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">
                                         <span className="text-xl">🎁</span>
                                         <span className="text-sm font-bold text-yellow-800">
                                             Gift Card Credit:{" "}
-                                            {formatCurrency(displayCustomer.giftCardBalance || 0)}
+                                            {formatCurrency(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0)}
                                         </span>
                                         <span className="text-xs text-yellow-700">
                                             applies automatically at checkout
