@@ -2355,6 +2355,18 @@ export function CheckIn({
                                             displayCustomer.lastVisit
                                         )}`}
                                 </p>
+                                {(displayCustomer.giftCardBalance || 0) > 0 && (
+                                    <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">
+                                        <span className="text-xl">🎁</span>
+                                        <span className="text-sm font-bold text-yellow-800">
+                                            Gift Card Credit:{" "}
+                                            {formatCurrency(displayCustomer.giftCardBalance || 0)}
+                                        </span>
+                                        <span className="text-xs text-yellow-700">
+                                            applies automatically at checkout
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {displayCustomer.activeSessions &&

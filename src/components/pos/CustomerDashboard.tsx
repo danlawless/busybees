@@ -246,14 +246,22 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
   }>({ title: '', message: '' });
 
   // Gift card state
-  const [giftCardBalance, setGiftCardBalance] = useState<number>(0);
+  const [giftCardBalance, setGiftCardBalance] = useState<number>(customer.giftCardBalance ?? 0);
   const [giftCardCode, setGiftCardCode] = useState('');
   const [redeemingGiftCard, setRedeemingGiftCard] = useState(false);
   const [giftCardError, setGiftCardError] = useState<string | null>(null);
   const [giftCardSuccess, setGiftCardSuccess] = useState<string | null>(null);
 
-  // Fetch gift card balance
+  // Determine the displayed gift card balance.
+  // When the customer record already carries the balance (e.g. staff POS lookup of
+  // another customer), use it directly — the /api/gift-cards/balance endpoint returns
+  // the *authenticated* user's balance, which would be the staff member's, not theirs.
+  // Otherwise (kiosk self-serve, where the logged-in user IS the customer) fetch it.
   useEffect(() => {
+    if (typeof customer.giftCardBalance === 'number') {
+      setGiftCardBalance(customer.giftCardBalance);
+      return;
+    }
     const fetchBalance = async () => {
       try {
         const response = await fetch('/api/gift-cards/balance');
@@ -266,7 +274,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
       }
     };
     fetchBalance();
-  }, [customer.id]);
+  }, [customer.id, customer.giftCardBalance]);
 
   const handleRedeemGiftCard = async () => {
     if (!giftCardCode.trim()) {
