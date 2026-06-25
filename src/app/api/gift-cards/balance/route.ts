@@ -10,7 +10,9 @@ import { logger } from '@/lib/logger';
 
 /**
  * GET /api/gift-cards/balance
- * Get the current user's gift card balance
+ * Get the current user's gift card balance.
+ * Staff/admin may pass ?customerId=<id> to read another customer's balance
+ * (used by the POS to display a looked-up customer's credit).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +26,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const balance = await getUserGiftCardBalance(user.id);
+    // Resolve whose balance to return. Default to the authenticated user.
+    let targetUserId = user.id;
+    const requestedCustomerId = request.nextUrl.searchParams.get('customerId');
+
+    if (requestedCustomerId && requestedCustomerId !== user.id) {
+      // Only staff/admin may read another customer's balance.
+      const { data: requester } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!requester || !['staff', 'admin'].includes(requester.role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      targetUserId = requestedCustomerId;
+    }
+
+    const balance = await getUserGiftCardBalance(targetUserId);
 
     return NextResponse.json({
       balance,
