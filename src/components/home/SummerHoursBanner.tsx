@@ -29,8 +29,7 @@ export function SummerHoursBanner() {
             <p className="text-sm leading-relaxed text-charcoal-700 sm:text-base">
               Starting <strong>{SUMMER_HOURS_START_LABEL}</strong> through August 30, our schedule
               shifts to <strong>Mon–Fri 9 AM – 3 PM</strong> and <strong>Sat–Sun 8 AM – 4 PM</strong>.
-              Weekend birthday parties move to a single <strong>Semi-Private 1:00 PM – 4:00 PM</strong> slot
-              — the party room is exclusively yours while the play area remains open to other families.
+              Weekend birthday parties move to a single <strong>Semi-Private 1:00 PM – 4:00 PM</strong> slot.
             </p>
           </div>
         </div>
