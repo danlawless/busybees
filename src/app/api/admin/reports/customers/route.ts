@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
           visitCount: data.visitCount,
         };
       })
-      .sort((a, b) => b.totalSpend - a.totalSpend)
+      .sort((a, b) => b.visitCount - a.visitCount || b.totalSpend - a.totalSpend)
       .slice(0, 20);
 
     // Children age distribution
