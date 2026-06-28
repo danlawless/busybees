@@ -12,6 +12,7 @@ import {
   bucketDate,
   purchaseTypeLabel,
   formatDateET,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -35,36 +36,43 @@ export async function GET(request: NextRequest) {
     const fmt = (d: Date) => formatDateET(d);
 
     // Fetch current and previous period in parallel, plus gift cards
-    const [currentRes, previousRes, currentGiftCardsRes, previousGiftCardsRes] = await Promise.all([
-      supabase
-        .from('purchases')
-        .select('purchase_date, price, type, gift_card_amount_used')
-        .gte('purchase_date', range.startDate)
-        .lte('purchase_date', range.endDate + 'T23:59:59')
-        .order('purchase_date', { ascending: true }),
-      supabase
-        .from('purchases')
-        .select('price, gift_card_amount_used')
-        .gte('purchase_date', fmt(prevStart))
-        .lte('purchase_date', fmt(prevEnd) + 'T23:59:59'),
-      supabase
-        .from('gift_cards')
-        .select('created_at, amount')
-        .gte('created_at', range.startDate)
-        .lte('created_at', range.endDate + 'T23:59:59')
-        .neq('status', 'pending'),
-      supabase
-        .from('gift_cards')
-        .select('amount')
-        .gte('created_at', fmt(prevStart))
-        .lte('created_at', fmt(prevEnd) + 'T23:59:59')
-        .neq('status', 'pending'),
+    const [purchases, previousPurchases, giftCards, previousGiftCards] = await Promise.all([
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('purchase_date, price, type, gift_card_amount_used')
+          .gte('purchase_date', range.startDate)
+          .lte('purchase_date', range.endDate + 'T23:59:59')
+          .order('purchase_date', { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, gift_card_amount_used')
+          .gte('purchase_date', fmt(prevStart))
+          .lte('purchase_date', fmt(prevEnd) + 'T23:59:59')
+          .range(from, to)
+      ),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('created_at, amount')
+          .gte('created_at', range.startDate)
+          .lte('created_at', range.endDate + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('amount')
+          .gte('created_at', fmt(prevStart))
+          .lte('created_at', fmt(prevEnd) + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
     ]);
-
-    const purchases = currentRes.data || [];
-    const previousPurchases = previousRes.data || [];
-    const giftCards = currentGiftCardsRes.data || [];
-    const previousGiftCards = previousGiftCardsRes.data || [];
 
     // Build time series grouped by granularity
     const timeSeriesMap = new Map<

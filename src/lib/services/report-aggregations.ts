@@ -3,10 +3,39 @@
  * Provides date utilities and common query patterns
  */
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient, PostgrestError } from '@supabase/supabase-js';
 import { Database } from '@/lib/supabase/database.types';
 
 type AdminClient = SupabaseClient<Database>;
+
+const PAGE_SIZE = 1000;
+
+/**
+ * Supabase/PostgREST caps every query at 1000 rows. Report routes aggregate
+ * over the full result set, so they must page through all matching rows.
+ *
+ * Pass a builder that applies `.range(from, to)` to your query; this calls it
+ * repeatedly until a partial page is returned. A query that fits in one page
+ * costs exactly one request, so it's safe to wrap every aggregation query.
+ */
+export async function fetchAllRows<T>(
+  makeQuery: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await makeQuery(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return rows;
+}
 
 const TIMEZONE = 'America/New_York';
 
@@ -152,15 +181,15 @@ export async function fetchPurchasesInRange(
   supabase: AdminClient,
   range: DateRange
 ) {
-  const { data, error } = await supabase
-    .from('purchases')
-    .select('*')
-    .gte('purchase_date', range.startDate)
-    .lte('purchase_date', range.endDate + 'T23:59:59')
-    .order('purchase_date', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows((from, to) =>
+    supabase
+      .from('purchases')
+      .select('*')
+      .gte('purchase_date', range.startDate)
+      .lte('purchase_date', range.endDate + 'T23:59:59')
+      .order('purchase_date', { ascending: true })
+      .range(from, to)
+  );
 }
 
 /**
@@ -170,15 +199,15 @@ export async function fetchSessionsInRange(
   supabase: AdminClient,
   range: DateRange
 ) {
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('*')
-    .gte('start_time', range.startDate)
-    .lte('start_time', range.endDate + 'T23:59:59')
-    .order('start_time', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows((from, to) =>
+    supabase
+      .from('sessions')
+      .select('*')
+      .gte('start_time', range.startDate)
+      .lte('start_time', range.endDate + 'T23:59:59')
+      .order('start_time', { ascending: true })
+      .range(from, to)
+  );
 }
 
 /**
@@ -188,15 +217,15 @@ export async function fetchPartiesInRange(
   supabase: AdminClient,
   range: DateRange
 ) {
-  const { data, error } = await supabase
-    .from('party_bookings')
-    .select('*')
-    .gte('party_date', range.startDate)
-    .lte('party_date', range.endDate)
-    .order('party_date', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows((from, to) =>
+    supabase
+      .from('party_bookings')
+      .select('*')
+      .gte('party_date', range.startDate)
+      .lte('party_date', range.endDate)
+      .order('party_date', { ascending: true })
+      .range(from, to)
+  );
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   parseGranularity,
   bucketDate,
   todayStr,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -41,32 +42,41 @@ export async function GET(request: NextRequest) {
     };
 
     const [
-      giftCardsRes,
-      redemptionsRes,
-      allGiftCardsRes,
+      giftCards,
+      redemptions,
+      allGiftCards,
       subscribers,
       promosRes,
     ] = await Promise.all([
       // Gift cards in range
-      supabase
-        .from('gift_cards')
-        .select('*')
-        .gte('created_at', range.startDate)
-        .lte('created_at', range.endDate + 'T23:59:59')
-        .neq('status', 'pending')
-        .order('created_at', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('*')
+          .gte('created_at', range.startDate)
+          .lte('created_at', range.endDate + 'T23:59:59')
+          .neq('status', 'pending')
+          .order('created_at', { ascending: true })
+          .range(from, to)
+      ),
       // Redemptions in range
-      supabase
-        .from('gift_card_redemptions')
-        .select('*')
-        .gte('created_at', range.startDate)
-        .lte('created_at', range.endDate + 'T23:59:59')
-        .order('created_at', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_card_redemptions')
+          .select('*')
+          .gte('created_at', range.startDate)
+          .lte('created_at', range.endDate + 'T23:59:59')
+          .order('created_at', { ascending: true })
+          .range(from, to)
+      ),
       // All gift cards for outstanding balance
-      supabase
-        .from('gift_cards')
-        .select('remaining_amount, status')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('remaining_amount, status')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
       // Newsletter subscribers (paginated to bypass 1000-row cap)
       fetchAllSubscribers(),
       // Active promos
@@ -77,9 +87,6 @@ export async function GET(request: NextRequest) {
         .gte('end_date', todayStr()),
     ]);
 
-    const giftCards = giftCardsRes.data || [];
-    const redemptions = redemptionsRes.data || [];
-    const allGiftCards = allGiftCardsRes.data || [];
     const promos = promosRes.data || [];
 
     // Gift card sales & redemptions over time

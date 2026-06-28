@@ -14,6 +14,7 @@ import {
   monthStartStr,
   daysAgoStr,
   formatDateET,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,58 +30,75 @@ export async function GET(_request: NextRequest) {
 
     // Run all queries in parallel
     const [
-      todayPurchasesRes,
-      mtdPurchasesRes,
-      activeSessionsRes,
+      todayPurchases,
+      mtdPurchases,
+      activeSessions,
       totalCustomersRes,
-      trendPurchasesRes,
-      thisWeekPurchasesRes,
-      lastWeekPurchasesRes,
+      trendPurchases,
+      thisWeekPurchases,
+      lastWeekPurchases,
       newCustomersRes,
-      todayGiftCardsRes,
-      mtdGiftCardsRes,
-      trendGiftCardsRes,
-      thisWeekGiftCardsRes,
-      lastWeekGiftCardsRes,
+      todayGiftCards,
+      mtdGiftCards,
+      trendGiftCards,
+      thisWeekGiftCards,
+      lastWeekGiftCards,
     ] = await Promise.all([
       // Today's revenue from purchases
-      supabase
-        .from('purchases')
-        .select('price, type, name, gift_card_amount_used, purchase_date')
-        .gte('purchase_date', today)
-        .lte('purchase_date', today + 'T23:59:59'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, type, name, gift_card_amount_used, purchase_date')
+          .gte('purchase_date', today)
+          .lte('purchase_date', today + 'T23:59:59')
+          .range(from, to)
+      ),
       // MTD revenue from purchases
-      supabase
-        .from('purchases')
-        .select('price, gift_card_amount_used')
-        .gte('purchase_date', mtdStart)
-        .lte('purchase_date', today + 'T23:59:59'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, gift_card_amount_used')
+          .gte('purchase_date', mtdStart)
+          .lte('purchase_date', today + 'T23:59:59')
+          .range(from, to)
+      ),
       // Active sessions (no end_time)
-      supabase.from('sessions').select('id').is('end_time', null),
+      fetchAllRows((from, to) =>
+        supabase.from('sessions').select('id').is('end_time', null).range(from, to)
+      ),
       // Total customers
       supabase
         .from('users')
         .select('id', { count: 'exact', head: true })
         .eq('role', 'customer' as const),
       // 30-day revenue trend from purchases
-      supabase
-        .from('purchases')
-        .select('purchase_date, price, gift_card_amount_used')
-        .gte('purchase_date', thirtyDaysAgo)
-        .lte('purchase_date', today + 'T23:59:59')
-        .order('purchase_date', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('purchase_date, price, gift_card_amount_used')
+          .gte('purchase_date', thirtyDaysAgo)
+          .lte('purchase_date', today + 'T23:59:59')
+          .order('purchase_date', { ascending: true })
+          .range(from, to)
+      ),
       // This week revenue from purchases
-      supabase
-        .from('purchases')
-        .select('price, gift_card_amount_used')
-        .gte('purchase_date', thisWeekStart)
-        .lte('purchase_date', today + 'T23:59:59'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, gift_card_amount_used')
+          .gte('purchase_date', thisWeekStart)
+          .lte('purchase_date', today + 'T23:59:59')
+          .range(from, to)
+      ),
       // Last week revenue from purchases
-      supabase
-        .from('purchases')
-        .select('price, gift_card_amount_used')
-        .gte('purchase_date', lastWeekStart)
-        .lte('purchase_date', lastWeekEnd + 'T23:59:59'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, gift_card_amount_used')
+          .gte('purchase_date', lastWeekStart)
+          .lte('purchase_date', lastWeekEnd + 'T23:59:59')
+          .range(from, to)
+      ),
       // New customers this week
       supabase
         .from('users')
@@ -88,54 +106,57 @@ export async function GET(_request: NextRequest) {
         .eq('role', 'customer' as const)
         .gte('created_at', thisWeekStart),
       // Today's gift card sales
-      supabase
-        .from('gift_cards')
-        .select('amount')
-        .gte('created_at', today)
-        .lte('created_at', today + 'T23:59:59')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('amount')
+          .gte('created_at', today)
+          .lte('created_at', today + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
       // MTD gift card sales
-      supabase
-        .from('gift_cards')
-        .select('amount')
-        .gte('created_at', mtdStart)
-        .lte('created_at', today + 'T23:59:59')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('amount')
+          .gte('created_at', mtdStart)
+          .lte('created_at', today + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
       // 30-day gift card sales trend
-      supabase
-        .from('gift_cards')
-        .select('created_at, amount')
-        .gte('created_at', thirtyDaysAgo)
-        .lte('created_at', today + 'T23:59:59')
-        .neq('status', 'pending')
-        .order('created_at', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('created_at, amount')
+          .gte('created_at', thirtyDaysAgo)
+          .lte('created_at', today + 'T23:59:59')
+          .neq('status', 'pending')
+          .order('created_at', { ascending: true })
+          .range(from, to)
+      ),
       // This week gift card sales
-      supabase
-        .from('gift_cards')
-        .select('amount')
-        .gte('created_at', thisWeekStart)
-        .lte('created_at', today + 'T23:59:59')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('amount')
+          .gte('created_at', thisWeekStart)
+          .lte('created_at', today + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
       // Last week gift card sales
-      supabase
-        .from('gift_cards')
-        .select('amount')
-        .gte('created_at', lastWeekStart)
-        .lte('created_at', lastWeekEnd + 'T23:59:59')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('amount')
+          .gte('created_at', lastWeekStart)
+          .lte('created_at', lastWeekEnd + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
     ]);
-
-    const todayPurchases = todayPurchasesRes.data || [];
-    const mtdPurchases = mtdPurchasesRes.data || [];
-    const activeSessions = activeSessionsRes.data || [];
-    const trendPurchases = trendPurchasesRes.data || [];
-    const thisWeekPurchases = thisWeekPurchasesRes.data || [];
-    const lastWeekPurchases = lastWeekPurchasesRes.data || [];
-    const todayGiftCards = todayGiftCardsRes.data || [];
-    const mtdGiftCards = mtdGiftCardsRes.data || [];
-    const trendGiftCards = trendGiftCardsRes.data || [];
-    const thisWeekGiftCards = thisWeekGiftCardsRes.data || [];
-    const lastWeekGiftCards = lastWeekGiftCardsRes.data || [];
 
     // Coerce NUMERIC fields - Supabase returns NUMERIC(10,2) as strings
     // Subtract gift card amount already counted when the gift card was sold
