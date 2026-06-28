@@ -5,13 +5,11 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 import { Hero } from '@/components/home/Hero'
-import { SummerHoursBanner } from '@/components/home/SummerHoursBanner'
 import { Gallery } from '@/components/home/Gallery'
 
 export default function Home() {
   return (
     <Layout>
-      <SummerHoursBanner />
       <Hero />
       <Gallery />
     </Layout>
