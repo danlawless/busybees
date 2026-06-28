@@ -10,8 +10,24 @@ import { parseDateString } from '@/lib/utils';
 
 // Business email addresses
 const BUSINESS_EMAIL = 'info@busybeesipc.com';
-const DEFAULT_FROM_EMAIL = 'Busy Bees Indoor Play Center <noreply@busybeesipc.com>';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL;
+// Display name shown in recipients' inboxes instead of the raw address
+const FROM_DISPLAY_NAME = "Busy Bee's";
+const DEFAULT_FROM_EMAIL = `${FROM_DISPLAY_NAME} <noreply@busybeesipc.com>`;
+
+/**
+ * Ensure the from address carries a display name. Resend (and email clients)
+ * show the raw address when given a bare `noreply@…`; if the configured value
+ * has no `Name <addr>` form, wrap it with the business display name so inboxes
+ * render "Busy Bee's" rather than the email address.
+ */
+function withDisplayName(from: string): string {
+  const value = from.trim();
+  if (!value) return DEFAULT_FROM_EMAIL;
+  if (value.includes('<')) return value; // already has a display name
+  return `${FROM_DISPLAY_NAME} <${value}>`;
+}
+
+const FROM_EMAIL = withDisplayName(process.env.RESEND_FROM_EMAIL || DEFAULT_FROM_EMAIL);
 
 // Lazy-initialize Resend client to prevent crashes when API key is missing
 let resendClient: Resend | null = null;
