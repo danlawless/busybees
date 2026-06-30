@@ -8,6 +8,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
+import { sendAfterDarkBookingEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -267,6 +268,34 @@ export async function POST(request: NextRequest) {
 
     if (purchaseError) {
       logger.error({ error: purchaseError, bookingId: booking.id }, 'Failed to record After Dark purchase');
+    }
+
+    // Notify the business of the new booking. Non-blocking: a failed
+    // notification must never affect the customer's confirmed, paid booking.
+    try {
+      const emailResult = await sendAfterDarkBookingEmail({
+        eventDate: event_date,
+        parentName: profile.name || 'Customer',
+        parentEmail: profile.email || user.email || '',
+        parentPhone: profile.phone || '',
+        numKids: num_kids,
+        kidDetails: kid_details,
+        notes,
+        remainingSpots: remaining - num_kids,
+        amountPaid: totalAmount,
+        giftCardAmountUsed,
+      });
+      if (!emailResult.success) {
+        logger.error(
+          { error: emailResult.error, bookingId: booking.id },
+          'Failed to send After Dark booking notification email'
+        );
+      }
+    } catch (emailError) {
+      logger.error(
+        { error: emailError, bookingId: booking.id },
+        'After Dark booking notification email threw'
+      );
     }
 
     logger.info({

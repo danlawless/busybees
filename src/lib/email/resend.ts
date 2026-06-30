@@ -322,8 +322,16 @@ export async function sendAfterDarkBookingEmail(data: {
   kidDetails?: string | null;
   notes?: string | null;
   remainingSpots?: number;
+  amountPaid?: number;
+  giftCardAmountUsed?: number;
 }): Promise<EmailResult> {
   const subject = `New After Dark Booking - ${data.eventDate} (${data.numKids} kid${data.numKids === 1 ? '' : 's'})`;
+  const paymentLine =
+    typeof data.amountPaid === 'number'
+      ? `Amount Paid: $${data.amountPaid.toFixed(2)}${
+          data.giftCardAmountUsed ? ` (incl. $${data.giftCardAmountUsed.toFixed(2)} gift card)` : ''
+        }`
+      : '';
   const text = `
 New After Dark booking from the Busy Bees website:
 
@@ -332,6 +340,7 @@ Event Date: ${data.eventDate}
 Number of Kids: ${data.numKids}
 Kid Details: ${data.kidDetails?.trim() || 'None provided'}
 ${typeof data.remainingSpots === 'number' ? `Spots Remaining After This Booking: ${data.remainingSpots}` : ''}
+${paymentLine}
 
 CONTACT INFORMATION:
 Parent Name: ${data.parentName}
