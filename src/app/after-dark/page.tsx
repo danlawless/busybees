@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Layout } from '@/components/layout/Layout';
+import { SHOW_AFTER_DARK } from '@/lib/feature-flags';
 
 interface Movie {
   id: string;
@@ -22,6 +24,15 @@ function formatMovieDate(dateStr: string): string {
 }
 
 export default function AfterDarkPage() {
+  // Hidden until we're ready to run After Dark again — send visitors home.
+  if (!SHOW_AFTER_DARK) {
+    redirect('/');
+  }
+
+  return <AfterDarkContent />;
+}
+
+function AfterDarkContent() {
   const [movies, setMovies] = useState<Movie[]>([]);
 
   useEffect(() => {

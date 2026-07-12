@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { SHOW_AFTER_DARK } from '@/lib/feature-flags';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://busybeesipc.com';
@@ -28,12 +29,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      url: `${baseUrl}/after-dark`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
+    ...(SHOW_AFTER_DARK
+      ? [
+          {
+            url: `${baseUrl}/after-dark`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+          },
+        ]
+      : []),
     {
       url: `${baseUrl}/gift-cards`,
       lastModified: new Date(),

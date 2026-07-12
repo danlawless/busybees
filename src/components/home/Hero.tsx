@@ -143,7 +143,6 @@ export function Hero() {
               <li>Toddler &amp; Infant Play Areas</li>
               <li>Birthday Parties &amp; Private Events</li>
               <li>Summer Programs &amp; Special Events</li>
-              <li>Busy Bee&apos;s After Dark Parent Drop-Off Nights</li>
               <li>Seasonal &amp; Holiday-Themed Events</li>
               <li>Group Visits &amp; Summer Camp Field Trips</li>
               <li>Rainy Day Play Adventures</li>
