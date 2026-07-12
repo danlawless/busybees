@@ -3557,51 +3557,7 @@ export function CheckIn({
                                                         {product.description}
                                                     </p>
                                                     <div className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${product.price.toFixed(2)} each
-                                                        {(quantities[product.id] || 0) >
-                                                            1 &&
-                                                            (() => {
-                                                                const isMonthlyMembership = product.category === 'monthly';
-                                                                const pricing =
-                                                                    getPricingBreakdown(
-                                                                        product.price,
-                                                                        quantities[
-                                                                            product.id
-                                                                        ] || 0,
-                                                                        isMonthlyMembership
-                                                                    );
-                                                                return (
-                                                                    <div className="mt-1">
-                                                                        <div className="text-green-600 text-base">
-                                                                            Total: $
-                                                                            {pricing.total.toFixed(
-                                                                                2
-                                                                            )}
-                                                                            {pricing.savings >
-                                                                                0 && (
-                                                                                <span className="text-orange-600 ml-2 font-semibold">
-                                                                                    (Save
-                                                                                    $
-                                                                                    {pricing.savings.toFixed(
-                                                                                        2
-                                                                                    )}
-                                                                                    !)
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="text-sm text-gray-600">
-                                                                            {
-                                                                                pricing.breakdown
-                                                                            }
-                                                                        </div>
-                                                                        {pricing.hasDiscount && isMonthlyMembership && (
-                                                                            <div className="text-xs text-orange-500 font-medium">
-                                                                                🎉 Sibling discount applied!
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })()}
+                                                        ${product.price.toFixed(2)}
                                                     </div>
                                                 </div>
 
@@ -3663,37 +3619,6 @@ export function CheckIn({
                                                     </div>
                                                 )}
 
-                                                {/* Quantity Controls */}
-                                                <div className="flex items-center space-x-3 mr-4">
-                                                    <button
-                                                        onClick={() =>
-                                                            decreaseQuantity(product.id)
-                                                        }
-                                                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        disabled={
-                                                            (quantities[product.id] ||
-                                                                0) <= 0
-                                                        }
-                                                    >
-                                                        −
-                                                    </button>
-                                                    <span className="w-8 text-center font-semibold text-lg">
-                                                        {quantities[product.id] || 0}
-                                                    </span>
-                                                    <button
-                                                        onClick={() =>
-                                                            increaseQuantity(product.id)
-                                                        }
-                                                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        disabled={
-                                                            (quantities[product.id] ||
-                                                                0) >= 10
-                                                        }
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
-
                                                 <Button
                                                     onClick={() => {
                                                         const customer =
@@ -3744,9 +3669,7 @@ export function CheckIn({
                                                     size="lg"
                                                     disabled={
                                                         purchasingProduct ===
-                                                            product.id ||
-                                                        (quantities[product.id] || 0) <=
-                                                            0
+                                                        product.id
                                                     }
                                                     className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${(() => {
                                                         const customer =
