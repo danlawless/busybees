@@ -40,3 +40,17 @@ export const SHOW_ACCOUNT_IN_HEADER = true;
  */
 export const SHOW_GIFT_CARDS = true;
 
+/**
+ * Controls whether Busy Bees After Dark is publicly visible on the website.
+ * When false:
+ * - The After Dark link is hidden from the header nav
+ * - The After Dark bullet is hidden from the homepage welcome list
+ * - The /after-dark page redirects to the homepage
+ * - The After Dark tab is hidden from My Account
+ * - The After Dark URL is dropped from the sitemap
+ *
+ * Admin/POS management and the backend booking APIs are left intact so the
+ * event can be prepped and re-launched by flipping this back to `true`.
+ */
+export const SHOW_AFTER_DARK = false;
+

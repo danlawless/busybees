@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { PromoSpecial } from '@/lib/utils/promoHelpers'
 import { PromoBanner } from '@/components/home/PromoBanner'
 import { createClient } from '@/lib/supabase/client'
-import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED, SHOW_GIFT_CARDS } from '@/lib/feature-flags'
+import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED, SHOW_GIFT_CARDS, SHOW_AFTER_DARK } from '@/lib/feature-flags'
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -18,7 +18,7 @@ const navigation = [
   { name: 'Events', href: '/events' },
   { name: 'Parties', href: '/parties' },
   { name: 'Groups', href: '/groups' },
-  { name: 'After Dark', href: '/after-dark' },
+  ...(SHOW_AFTER_DARK ? [{ name: 'After Dark', href: '/after-dark' }] : []),
   ...(SHOW_GIFT_CARDS ? [{ name: 'Gift Cards', href: '/gift-cards' }] : []),
   { name: 'About Us', href: '/about' },
   // { name: 'Jobs', href: '/jobs' },

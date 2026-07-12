@@ -15,6 +15,7 @@ import { CountdownTimer } from '@/components/pos/CountdownTimer';
 import { PartySchedulingModal } from '@/components/pos/PartySchedulingModal';
 import { AfterDarkBooking } from './AfterDarkBooking';
 import { EventBooking } from './EventBooking';
+import { SHOW_AFTER_DARK } from '@/lib/feature-flags';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { WaiverModal } from '@/components/ui/WaiverModal';
 import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
@@ -54,7 +55,9 @@ function WebMyAccountContent() {
   // Read tab from URL on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab') as TabType;
-    if (tabParam && ['children', 'passes', 'parties', 'groups', 'events', 'after-dark', 'payments'].includes(tabParam)) {
+    const allowedTabs = ['children', 'passes', 'parties', 'groups', 'events', 'payments'];
+    if (SHOW_AFTER_DARK) allowedTabs.push('after-dark');
+    if (tabParam && allowedTabs.includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -1119,19 +1122,21 @@ function WebMyAccountContent() {
                 <span>Events</span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('after-dark')}
-              className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
-                activeTab === 'after-dark'
-                  ? 'bg-indigo-600 text-white shadow-lg transform scale-105 border-2 border-indigo-700'
-                  : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
-                <span className="text-lg sm:text-2xl">🌙</span>
-                <span>After Dark</span>
-              </div>
-            </button>
+            {SHOW_AFTER_DARK && (
+              <button
+                onClick={() => setActiveTab('after-dark')}
+                className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
+                  activeTab === 'after-dark'
+                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105 border-2 border-indigo-700'
+                    : 'bg-white text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-transparent shadow-sm'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-2">
+                  <span className="text-lg sm:text-2xl">🌙</span>
+                  <span>After Dark</span>
+                </div>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('payments')}
               className={`flex-1 min-w-0 py-2.5 px-2 sm:py-4 sm:px-6 rounded-lg font-bold text-xs sm:text-lg transition-all duration-200 ${
@@ -2238,7 +2243,7 @@ function WebMyAccountContent() {
         )}
 
         {/* After Dark Tab */}
-        {activeTab === 'after-dark' && (
+        {SHOW_AFTER_DARK && activeTab === 'after-dark' && (
           <AfterDarkBooking
             customerName={profile?.name || ''}
             customerEmail={profile?.email || user?.email || ''}
