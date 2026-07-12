@@ -41,6 +41,7 @@ interface Customer {
     purchases: Purchase[];
     activeSessions: Session[];
     savedCards: SavedCard[];
+    giftCardBalance?: number; // Account credit from redeemed gift cards
     createdAt: string;
     lastVisit?: string;
 }
@@ -114,6 +115,9 @@ export function CheckIn({
     const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null);
     const [purchaseSuccess, setPurchaseSuccess] = useState<string>("");
     const [confirmingProduct, setConfirmingProduct] = useState<string | null>(null);
+    // Authoritative gift card credit for the on-screen customer. Fetched fresh so it
+    // never depends on the (sometimes rebuilt) customers array carrying the field.
+    const [headerGiftCardBalance, setHeaderGiftCardBalance] = useState<number | null>(null);
     // Per-product coupon UI state (day-pass products only)
     const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
     const [couponLoading, setCouponLoading] = useState<Record<string, boolean>>({});
@@ -269,6 +273,29 @@ export function CheckIn({
         };
         fetchPosMode();
     }, []);
+
+    // Fetch the on-screen customer's gift card credit authoritatively (staff may read
+    // any customer's balance). Re-runs when the selected customer changes or after a
+    // purchase, so the header badge always reflects the true current balance.
+    const activeCustomerId = isStaffMode
+        ? selectedCustomer?.id
+        : currentCustomer?.id || selectedCustomer?.id;
+    useEffect(() => {
+        if (!activeCustomerId) {
+            setHeaderGiftCardBalance(null);
+            return;
+        }
+        let cancelled = false;
+        fetch(`/api/gift-cards/balance?customerId=${activeCustomerId}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!cancelled && d) setHeaderGiftCardBalance(d.balance ?? 0);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [activeCustomerId, purchaseSuccess]);
 
     // Fetch auto-checkout settings on mount
     useEffect(() => {
@@ -1828,7 +1855,12 @@ export function CheckIn({
                 }));
 
                 // Build success message with quantity and savings
-                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(totalPrice)}`;
+                const giftCardUsed = data.giftCardAmountUsed || 0;
+                const amountCharged = data.amountCharged ?? (totalPrice - giftCardUsed);
+                let successDetails = `💳 Charged •••• ${defaultCard.last4}\n💰 ${formatCurrency(amountCharged)}`;
+                if (giftCardUsed > 0) {
+                    successDetails += `\n🎁 Gift card applied: ${formatCurrency(giftCardUsed)}`;
+                }
                 if (quantity > 1) {
                     successDetails += `\n📦 Quantity: ${quantity}`;
                     if (pricing.savings > 0) {
@@ -1879,7 +1911,7 @@ export function CheckIn({
                 throw new Error(errorData.error || "Purchase failed");
             }
 
-            const { purchase } = await response.json();
+            const { purchase, gift_card_amount_used: staffGiftCardUsed } = await response.json();
 
             // Clear family pass selection
             setSelectedChildrenForFamilyPass([]);
@@ -1959,7 +1991,11 @@ export function CheckIn({
                 setGroupRateTotalPrice(null);
             }
 
-            setPurchaseSuccess(`✅ ${product.name} purchased successfully!`);
+            setPurchaseSuccess(
+                (staffGiftCardUsed || 0) > 0
+                    ? `✅ ${product.name} purchased! 🎁 ${formatCurrency(staffGiftCardUsed)} gift card credit applied.`
+                    : `✅ ${product.name} purchased successfully!`
+            );
 
             // Clear success message after 3 seconds
             setTimeout(() => setPurchaseSuccess(""), 3000);
@@ -2247,6 +2283,12 @@ export function CheckIn({
                                 ✅ Found: <strong>{selectedCustomer.name}</strong> -{" "}
                                 {formatPhoneNumber(selectedCustomer.phone)}
                             </p>
+                            {(selectedCustomer.giftCardBalance || 0) > 0 && (
+                                <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-yellow-100 border border-yellow-300 px-3 py-1 text-sm font-semibold text-yellow-800">
+                                    🎁 Gift card credit: {formatCurrency(selectedCustomer.giftCardBalance || 0)}
+                                    <span className="font-normal text-yellow-700">— applies automatically at checkout</span>
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -2339,6 +2381,18 @@ export function CheckIn({
                                             displayCustomer.lastVisit
                                         )}`}
                                 </p>
+                                {(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0) > 0 && (
+                                    <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">
+                                        <span className="text-xl">🎁</span>
+                                        <span className="text-sm font-bold text-yellow-800">
+                                            Gift Card Credit:{" "}
+                                            {formatCurrency(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0)}
+                                        </span>
+                                        <span className="text-xs text-yellow-700">
+                                            applies automatically at checkout
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {displayCustomer.activeSessions &&

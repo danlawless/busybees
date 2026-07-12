@@ -10,6 +10,7 @@ import {
   parseDateRange,
   parseGranularity,
   bucketDate,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -19,24 +20,27 @@ export async function GET(request: NextRequest) {
     const range = parseDateRange(searchParams);
     const granularity = parseGranularity(searchParams);
 
-    const [purchasesRes, allPassPurchasesRes] = await Promise.all([
+    const [purchases, allPassPurchases] = await Promise.all([
       // Pass purchases in date range
-      supabase
-        .from('purchases')
-        .select('*')
-        .in('type', ['day_pass', 'weekly_pass', 'monthly_pass'])
-        .gte('purchase_date', range.startDate)
-        .lte('purchase_date', range.endDate + 'T23:59:59')
-        .order('purchase_date', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('*')
+          .in('type', ['day_pass', 'weekly_pass', 'monthly_pass'])
+          .gte('purchase_date', range.startDate)
+          .lte('purchase_date', range.endDate + 'T23:59:59')
+          .order('purchase_date', { ascending: true })
+          .range(from, to)
+      ),
       // All pass purchases for active/expired counts
-      supabase
-        .from('purchases')
-        .select('type, status, used_sessions, total_sessions')
-        .in('type', ['day_pass', 'weekly_pass', 'monthly_pass']),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('type, status, used_sessions, total_sessions')
+          .in('type', ['day_pass', 'weekly_pass', 'monthly_pass'])
+          .range(from, to)
+      ),
     ]);
-
-    const purchases = purchasesRes.data || [];
-    const allPassPurchases = allPassPurchasesRes.data || [];
 
     // Active passes by type (donut chart)
     const activeByType: Record<string, number> = {

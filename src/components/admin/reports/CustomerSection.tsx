@@ -122,7 +122,7 @@ export function CustomerSection() {
 
       {/* Top Customers Table */}
       {data && data.topCustomers.length > 0 && (
-        <ReportChartCard title="Top Customers by Spend">
+        <ReportChartCard title="Top Customers by Visits">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -130,8 +130,8 @@ export function CustomerSection() {
                   <th className="text-left py-2 pr-4 font-medium text-neutral-600">#</th>
                   <th className="text-left py-2 pr-4 font-medium text-neutral-600">Name</th>
                   <th className="text-left py-2 pr-4 font-medium text-neutral-600">Phone</th>
-                  <th className="text-right py-2 px-4 font-medium text-neutral-600">Total Spend</th>
-                  <th className="text-right py-2 pl-4 font-medium text-neutral-600">Visits</th>
+                  <th className="text-right py-2 px-4 font-medium text-neutral-600">Visits</th>
+                  <th className="text-right py-2 pl-4 font-medium text-neutral-600">Total Spend</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,9 +141,11 @@ export function CustomerSection() {
                     <td className="py-2 pr-4 text-charcoal-800 font-medium">{c.name}</td>
                     <td className="py-2 pr-4 text-neutral-500">{c.phone}</td>
                     <td className="py-2 px-4 text-right font-medium text-honey-600">
+                      {c.visitCount}
+                    </td>
+                    <td className="py-2 pl-4 text-right text-neutral-600">
                       {formatCurrency(c.totalSpend)}
                     </td>
-                    <td className="py-2 pl-4 text-right">{c.visitCount}</td>
                   </tr>
                 ))}
               </tbody>

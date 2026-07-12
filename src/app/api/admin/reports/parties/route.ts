@@ -12,6 +12,7 @@ import {
   bucketDate,
   dayOfWeekLabel,
   todayStr,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 const PACKAGE_LABELS: Record<string, string> = {
@@ -28,13 +29,16 @@ export async function GET(request: NextRequest) {
     const range = parseDateRange(searchParams);
     const granularity = parseGranularity(searchParams);
 
-    const [bookingsRes, upcomingRes] = await Promise.all([
-      supabase
-        .from('party_bookings')
-        .select('*')
-        .gte('party_date', range.startDate)
-        .lte('party_date', range.endDate)
-        .order('party_date', { ascending: true }),
+    const [bookings, upcomingRes] = await Promise.all([
+      fetchAllRows((from, to) =>
+        supabase
+          .from('party_bookings')
+          .select('*')
+          .gte('party_date', range.startDate)
+          .lte('party_date', range.endDate)
+          .order('party_date', { ascending: true })
+          .range(from, to)
+      ),
       // Upcoming confirmed parties (next 30 days)
       supabase
         .from('party_bookings')
@@ -45,7 +49,6 @@ export async function GET(request: NextRequest) {
         .limit(10),
     ]);
 
-    const bookings = bookingsRes.data || [];
     const upcomingParties = (upcomingRes.data || []).map((p) => ({
       ...p,
       packageName: PACKAGE_LABELS[p.package_name] || p.package_name,

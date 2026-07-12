@@ -11,6 +11,7 @@ import {
   parseGranularity,
   bucketDate,
   dayOfWeekLabel,
+  fetchSessionsInRange,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -20,15 +21,7 @@ export async function GET(request: NextRequest) {
     const range = parseDateRange(searchParams);
     const granularity = parseGranularity(searchParams);
 
-    const { data: sessionsData, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .gte('start_time', range.startDate)
-      .lte('start_time', range.endDate + 'T23:59:59')
-      .order('start_time', { ascending: true });
-
-    if (error) throw error;
-    const sessions = sessionsData || [];
+    const sessions = await fetchSessionsInRange(supabase, range);
 
     // Daily attendance
     const attendanceMap = new Map<string, number>();

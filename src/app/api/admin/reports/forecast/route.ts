@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import { formatDateET, easternNow } from '@/lib/services/report-aggregations';
+import { formatDateET, easternNow, fetchAllRows } from '@/lib/services/report-aggregations';
 
 function formatDate(d: Date): string {
   return formatDateET(d);
@@ -39,89 +39,115 @@ export async function GET() {
 
     // Fetch everything in parallel
     const [
-      expensesRes,
-      futureBookingsRes,
-      activeSubscriptionsRes,
-      historicalPurchasesRes,
-      historicalPartiesRes,
-      historicalGiftCardsRes,
-      prevYearPurchasesRes,
-      prevYearPartiesRes,
-      prevYearGiftCardsRes,
+      expenses,
+      futureBookings,
+      activeSubscriptions,
+      historicalPurchases,
+      historicalParties,
+      historicalGiftCards,
+      prevYearPurchases,
+      prevYearParties,
+      prevYearGiftCards,
     ] = await Promise.all([
       // Active fixed expenses
-      supabase
-        .from('fixed_expenses')
-        .select('*')
-        .lte('effective_from', today)
-        .or(`effective_to.is.null,effective_to.gte.${today}`),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('fixed_expenses')
+          .select('*')
+          .lte('effective_from', today)
+          .or(`effective_to.is.null,effective_to.gte.${today}`)
+          .range(from, to)
+      ),
 
       // Confirmed future party bookings (next 90 days)
-      supabase
-        .from('party_bookings')
-        .select('party_date, total_price, discount_amount, package_name, status')
-        .gte('party_date', today)
-        .lte('party_date', future90)
-        .in('status', ['confirmed', 'pending']),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('party_bookings')
+          .select('party_date, total_price, discount_amount, package_name, status')
+          .gte('party_date', today)
+          .lte('party_date', future90)
+          .in('status', ['confirmed', 'pending'])
+          .range(from, to)
+      ),
 
       // Active auto-renewing memberships
-      supabase
-        .from('purchases')
-        .select('price, type, purchase_date')
-        .eq('type', 'monthly_pass')
-        .eq('status', 'active'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('price, type, purchase_date')
+          .eq('type', 'monthly_pass')
+          .eq('status', 'active')
+          .range(from, to)
+      ),
 
       // Historical purchases (last 12 months)
-      supabase
-        .from('purchases')
-        .select('purchase_date, price, type')
-        .gte('purchase_date', monthsBetween(12).start)
-        .lte('purchase_date', today + 'T23:59:59')
-        .order('purchase_date', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('purchase_date, price, type')
+          .gte('purchase_date', monthsBetween(12).start)
+          .lte('purchase_date', today + 'T23:59:59')
+          .order('purchase_date', { ascending: true })
+          .range(from, to)
+      ),
 
       // Historical party bookings (last 12 months)
-      supabase
-        .from('party_bookings')
-        .select('party_date, total_price, discount_amount, status')
-        .gte('party_date', monthsBetween(12).start)
-        .lte('party_date', today)
-        .in('status', ['confirmed', 'done']),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('party_bookings')
+          .select('party_date, total_price, discount_amount, status')
+          .gte('party_date', monthsBetween(12).start)
+          .lte('party_date', today)
+          .in('status', ['confirmed', 'done'])
+          .range(from, to)
+      ),
 
       // Historical gift card sales (last 12 months)
-      supabase
-        .from('gift_cards')
-        .select('created_at, amount')
-        .gte('created_at', monthsBetween(12).start)
-        .lte('created_at', today + 'T23:59:59')
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('created_at, amount')
+          .gte('created_at', monthsBetween(12).start)
+          .lte('created_at', today + 'T23:59:59')
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
 
       // Previous year purchases (for seasonal comparison)
-      supabase
-        .from('purchases')
-        .select('purchase_date, price, type')
-        .gte('purchase_date', monthsBetween(24).start)
-        .lt('purchase_date', monthsBetween(12).start)
-        .order('purchase_date', { ascending: true }),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('purchase_date, price, type')
+          .gte('purchase_date', monthsBetween(24).start)
+          .lt('purchase_date', monthsBetween(12).start)
+          .order('purchase_date', { ascending: true })
+          .range(from, to)
+      ),
 
       // Previous year parties
-      supabase
-        .from('party_bookings')
-        .select('party_date, total_price, discount_amount, status')
-        .gte('party_date', monthsBetween(24).start)
-        .lt('party_date', monthsBetween(12).start)
-        .in('status', ['confirmed', 'done']),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('party_bookings')
+          .select('party_date, total_price, discount_amount, status')
+          .gte('party_date', monthsBetween(24).start)
+          .lt('party_date', monthsBetween(12).start)
+          .in('status', ['confirmed', 'done'])
+          .range(from, to)
+      ),
 
       // Previous year gift cards
-      supabase
-        .from('gift_cards')
-        .select('created_at, amount')
-        .gte('created_at', monthsBetween(24).start)
-        .lt('created_at', monthsBetween(12).start)
-        .neq('status', 'pending'),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('gift_cards')
+          .select('created_at, amount')
+          .gte('created_at', monthsBetween(24).start)
+          .lt('created_at', monthsBetween(12).start)
+          .neq('status', 'pending')
+          .range(from, to)
+      ),
     ]);
 
     // --- Fixed Expenses ---
-    const expenses = expensesRes.data || [];
     const monthlyFixedExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const expenseBreakdown = expenses.map(e => ({
       category: e.category,
@@ -136,8 +162,6 @@ export async function GET() {
     });
 
     // --- Revenue Projections (30/60/90 days) ---
-    const futureBookings = futureBookingsRes.data || [];
-    const activeSubscriptions = activeSubscriptionsRes.data || [];
     const monthlySubscriptionRevenue = activeSubscriptions.reduce((sum, s) => sum + Number(s.price), 0);
 
     const projections = [30, 60, 90].map(days => {
@@ -168,10 +192,6 @@ export async function GET() {
     });
 
     // --- Monthly History (last 12 months) ---
-    const historicalPurchases = historicalPurchasesRes.data || [];
-    const historicalParties = historicalPartiesRes.data || [];
-    const historicalGiftCards = historicalGiftCardsRes.data || [];
-
     // Build month buckets
     const monthBuckets: Record<string, {
       revenue: number;
@@ -237,9 +257,6 @@ export async function GET() {
     }));
 
     // --- Seasonal Comparison (current vs previous year) ---
-    const prevYearPurchases = prevYearPurchasesRes.data || [];
-    const prevYearParties = prevYearPartiesRes.data || [];
-    const prevYearGiftCards = prevYearGiftCardsRes.data || [];
 
     // Build previous year month buckets
     const prevYearBuckets: Record<string, number> = {};

@@ -21,6 +21,7 @@ import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageU
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
+import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
       payment_method_id, // For saved_card
       terminal_payment_intent_id, // For terminal (already confirmed via Terminal SDK)
       coupon_code, // Optional: single-use coupon code (day-pass purchases only)
+      use_gift_card_balance = true, // Apply the customer's account gift card credit (default on)
     } = body;
 
     // Validate required fields
@@ -162,18 +164,49 @@ export async function POST(request: NextRequest) {
     const stripeMode = await getStripeMode();
     const finalUnitPrice = Math.max(0, Number(product_price) - couponDiscount);
     const finalTotal = finalUnitPrice * quantity;
-    const amountInCents = Math.round(finalTotal * 100);
+
+    // Apply the customer's gift card balance (account credit) to the remaining total,
+    // after any coupon. Mirrors the kiosk and web checkout flows so a staff-rung purchase
+    // honors the customer's credit. Not applied to complimentary (free) passes.
+    let giftCardAmountUsed = 0;
+    if (use_gift_card_balance && payment_method !== 'complimentary' && finalTotal > 0) {
+      const giftCardBalance = await getUserGiftCardBalance(customer_id);
+      if (giftCardBalance > 0) {
+        if (payment_method === 'terminal') {
+          // The Terminal PaymentIntent amount is locked at creation time on the client
+          // (same constraint as coupons), so credit can't be applied to the charge after
+          // the fact. Steer staff to cash or saved card so the charge reflects the credit.
+          return NextResponse.json(
+            { error: 'Gift card credit cannot be applied to a terminal payment — use cash or saved card to apply the customer\'s balance' },
+            { status: 400 }
+          );
+        }
+        giftCardAmountUsed = Math.min(giftCardBalance, finalTotal);
+        logger.info(
+          { customer_id, finalTotal, giftCardBalance, giftCardAmountUsed },
+          '🎁 Applying gift card credit to POS purchase'
+        );
+      }
+    }
+
+    const amountToCharge = finalTotal - giftCardAmountUsed;
+    const amountInCents = Math.round(amountToCharge * 100);
     const couponCoversFull = coupon_code != null && finalTotal === 0;
+    // Gift card credit (after any coupon) covers the whole remaining total
+    const creditCoversFull = giftCardAmountUsed > 0 && amountToCharge === 0;
 
     let paymentIntentId: string | null = null;
     let paymentStatus: string = 'succeeded';
 
     // Handle different payment methods
-    if (couponCoversFull) {
-      // Coupon fully covers price — skip Stripe (mirrors the complimentary path)
+    if (couponCoversFull || creditCoversFull) {
+      // Coupon and/or gift card credit fully covers price — skip Stripe (mirrors complimentary path)
       paymentIntentId = null;
-      paymentStatus = 'coupon_full_redeem';
-      logger.info({ customer_id, product_name }, '🎟️ Coupon fully covered purchase — Stripe skipped');
+      paymentStatus = couponCoversFull ? 'coupon_full_redeem' : 'gift_card_full_redeem';
+      logger.info(
+        { customer_id, product_name, giftCardAmountUsed },
+        '🎟️ Coupon/gift card credit fully covered purchase — Stripe skipped'
+      );
     } else if (payment_method === 'terminal') {
       // Terminal payment - PaymentIntent already created and confirmed via Terminal SDK
       if (!terminal_payment_intent_id) {
@@ -225,6 +258,7 @@ export async function POST(request: NextRequest) {
           quantity: quantity.toString(),
           pos_transaction: 'true',
           payment_method_type: 'saved_card',
+          gift_card_amount: giftCardAmountUsed.toString(),
           ...metadata,
         },
         confirm: true,
@@ -277,6 +311,7 @@ export async function POST(request: NextRequest) {
           quantity: quantity.toString(),
           pos_transaction: 'true',
           payment_method_type: 'test',
+          gift_card_amount: giftCardAmountUsed.toString(),
           ...metadata,
         },
         automatic_payment_methods: {
@@ -326,6 +361,7 @@ export async function POST(request: NextRequest) {
     if (comboChildrenIds) {
       // Create a separate purchase for each child in the combo
       const pricePerChild = (payment_method === 'complimentary' ? 0 : product_price) / comboChildrenIds.length;
+      const giftCardPerChild = giftCardAmountUsed / comboChildrenIds.length;
       const purchases = [];
 
       for (const comboChildId of comboChildrenIds) {
@@ -344,6 +380,7 @@ export async function POST(request: NextRequest) {
             total_sessions: 1,
             status: 'active',
             stripe_payment_intent_id: paymentIntentId,
+            gift_card_amount_used: giftCardPerChild,
           })
           .select()
           .single();
@@ -378,6 +415,7 @@ export async function POST(request: NextRequest) {
           total_sessions: totalSessions,
           status: purchase_type === 'food_beverage' ? 'used' : 'active',
           stripe_payment_intent_id: paymentIntentId,
+          gift_card_amount_used: giftCardAmountUsed,
           auto_renew: isMonthlyPass,
           next_renewal_date: nextRenewalDate,
           party_date: metadata.party_date || null,
@@ -430,11 +468,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Deduct the applied gift card credit from the customer's balance now that the
+    // purchase record(s) exist. Logged for manual reconciliation on failure, mirroring
+    // the coupon redemption ordering above (purchase is the source of truth).
+    if (giftCardAmountUsed > 0) {
+      try {
+        await applyGiftCardBalance(customer_id, giftCardAmountUsed, purchase.id);
+      } catch (giftCardError) {
+        logger.error(
+          { customer_id, giftCardAmountUsed, purchaseId: purchase.id, error: giftCardError },
+          '⚠️ Gift card balance deduction failed after POS purchase succeeded — manual reconciliation needed'
+        );
+      }
+    }
+
     // Decrement inventory for food/beverage purchases
     await decrementInventoryAfterPurchase(adminSupabase, product_id, product_name, quantity, purchase_type);
 
     logger.info(
-      { purchaseId: purchase.id, customer_id, payment_method },
+      { purchaseId: purchase.id, customer_id, payment_method, giftCardAmountUsed },
       'Purchase saved successfully'
     );
 
@@ -444,6 +496,8 @@ export async function POST(request: NextRequest) {
       payment_intent_id: paymentIntentId,
       payment_status: paymentStatus,
       payment_method,
+      gift_card_amount_used: giftCardAmountUsed,
+      amount_charged: amountToCharge,
     }, { status: 201 });
 
   } catch (error) {

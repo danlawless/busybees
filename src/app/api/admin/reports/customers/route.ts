@@ -10,6 +10,7 @@ import {
   parseDateRange,
   parseGranularity,
   bucketDate,
+  fetchAllRows,
 } from '@/lib/services/report-aggregations';
 
 export async function GET(request: NextRequest) {
@@ -19,23 +20,34 @@ export async function GET(request: NextRequest) {
     const range = parseDateRange(searchParams);
     const granularity = parseGranularity(searchParams);
 
-    const [customersRes, purchasesRes, childrenRes] = await Promise.all([
+    const [totalCustomersRes, customers, purchases, children] = await Promise.all([
+      // True total count (bypasses the 1000-row data cap)
       supabase
         .from('users')
-        .select('id, name, phone, created_at')
-        .eq('role', 'customer' as const)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('purchases')
-        .select('customer_id, price, purchase_date')
-        .gte('purchase_date', range.startDate)
-        .lte('purchase_date', range.endDate + 'T23:59:59'),
-      supabase.from('children').select('birthdate'),
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'customer' as const),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('users')
+          .select('id, name, phone, created_at')
+          .eq('role', 'customer' as const)
+          .order('created_at', { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllRows((from, to) =>
+        supabase
+          .from('purchases')
+          .select('customer_id, price, purchase_date')
+          .gte('purchase_date', range.startDate)
+          .lte('purchase_date', range.endDate + 'T23:59:59')
+          .range(from, to)
+      ),
+      fetchAllRows((from, to) =>
+        supabase.from('children').select('birthdate').range(from, to)
+      ),
     ]);
 
-    const customers = customersRes.data || [];
-    const purchases = purchasesRes.data || [];
-    const children = childrenRes.data || [];
+    const totalCustomers = totalCustomersRes.count ?? customers.length;
 
     // Customer growth over time
     const growthMap = new Map<string, { total: number; new: number }>();
@@ -112,7 +124,7 @@ export async function GET(request: NextRequest) {
           visitCount: data.visitCount,
         };
       })
-      .sort((a, b) => b.totalSpend - a.totalSpend)
+      .sort((a, b) => b.visitCount - a.visitCount || b.totalSpend - a.totalSpend)
       .slice(0, 20);
 
     // Children age distribution
@@ -151,11 +163,13 @@ export async function GET(request: NextRequest) {
     // New vs returning by period
     const firstPurchaseDate = new Map<string, string>();
     // We need all purchases to determine first visit, not just in range
-    const allPurchasesRes = await supabase
-      .from('purchases')
-      .select('customer_id, purchase_date')
-      .order('purchase_date', { ascending: true });
-    const allPurchases = allPurchasesRes.data || [];
+    const allPurchases = await fetchAllRows((from, to) =>
+      supabase
+        .from('purchases')
+        .select('customer_id, purchase_date')
+        .order('purchase_date', { ascending: true })
+        .range(from, to)
+    );
 
     for (const p of allPurchases) {
       if (!firstPurchaseDate.has(p.customer_id)) {
@@ -185,7 +199,7 @@ export async function GET(request: NextRequest) {
       visitFrequency,
       topCustomers,
       ageDistribution,
-      totalCustomers: customers.length,
+      totalCustomers,
       newVsReturning,
     });
   } catch (error) {
