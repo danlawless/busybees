@@ -3727,12 +3727,17 @@ export async function sendBirthdayPromoEmail(data: {
   const bookPartyUrl = `${siteUrl}/customer/dashboard?tab=parties`;
   const turningAge = data.childAge + 1;
 
-  const subject = `🎂 ${data.childName}'s birthday is coming up!`;
+  // Use first names only so the reminder reads warmly and personally
+  // (e.g. "Nolan" and "Mikayla" rather than "Nolan Piazzi" / "Mikayla Piazzi").
+  const childFirst = (data.childName || '').trim().split(/\s+/)[0] || data.childName;
+  const parentFirst = (data.parentName || '').trim().split(/\s+/)[0] || data.parentName;
+
+  const subject = `🎂 ${childFirst}'s birthday is coming up!`;
 
   const text = `
-Hi ${data.parentName}!
+Hi ${parentFirst}!
 
-${data.childName}'s birthday is right around the corner, and we'd love to be part of the celebration!
+${childFirst}'s birthday is right around the corner, and we'd love to be part of the celebration!
 
 At Busy Bees Indoor Play Center, we take the stress out of party planning so you can focus on what matters most — celebrating your little one. From setup to cleanup, our dedicated party hosts handle everything while the kids have a blast in our play areas.
 
@@ -3743,9 +3748,9 @@ Our party packages include:
 - Play area, cafe, and party room access
 - Paper goods and decorations (select packages)
 
-Book ${data.childName}'s party today: ${bookPartyUrl}
+Book ${childFirst}'s party today: ${bookPartyUrl}
 
-We can't wait to help make ${data.childName}'s birthday unforgettable!
+We can't wait to help make ${childFirst}'s birthday unforgettable!
 
 Warm regards,
 The Busy Bees Party Team
@@ -3759,7 +3764,7 @@ Visit us: ${siteUrl}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${data.childName}'s Birthday is Coming!</title>
+  <title>${childFirst}'s Birthday is Coming!</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f0e1; padding: 20px 0;">
@@ -3774,7 +3779,7 @@ Visit us: ${siteUrl}
                 <span style="font-size: 36px;">🎂</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
-                ${data.childName}'s Birthday is Coming!
+                ${childFirst}'s Birthday is Coming!
               </h1>
               <p style="margin: 8px 0 0; color: #fef3c7; font-size: 16px;">
                 ${turningAge > 0 ? `Turning ${turningAge} soon` : 'A special day is approaching'}
@@ -3786,10 +3791,10 @@ Visit us: ${siteUrl}
           <tr>
             <td style="padding: 30px 25px;">
               <p style="margin: 0 0 20px; font-size: 16px; color: #374151; line-height: 1.6;">
-                Hi ${data.parentName}!
+                Hi ${parentFirst}!
               </p>
               <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6;">
-                ${data.childName}'s birthday is right around the corner, and we'd love to be considered for the celebration!
+                ${childFirst}'s birthday is right around the corner, and we'd love to be considered for the celebration!
               </p>
               <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
                 At Busy Bees Indoor Play Center, we take the stress out of party planning so you can focus on what matters most — celebrating your little one. From setup to cleanup, our dedicated party hosts handle everything while the kids have a blast!
@@ -3816,14 +3821,14 @@ Visit us: ${siteUrl}
                 <tr>
                   <td align="center">
                     <a href="${bookPartyUrl}" style="display: inline-block; background-color: #d97706; color: #ffffff; font-size: 18px; font-weight: 700; text-decoration: none; padding: 16px 40px; border-radius: 30px;">
-                      🎉 Book ${data.childName}'s Party
+                      🎉 Book ${childFirst}'s Party
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6; text-align: center;">
-                We can't wait to help make ${data.childName}'s birthday unforgettable!
+                We can't wait to help make ${childFirst}'s birthday unforgettable!
               </p>
 
               <!-- Footer -->
