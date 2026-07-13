@@ -29,7 +29,7 @@ import {
 } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
-import { sendPurchaseConfirmationEmail } from '@/lib/email/resend';
+import { sendPurchaseConfirmationEmail, BUSINESS_EMAIL } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 
@@ -342,7 +342,8 @@ async function renewPass(
   // naturally on its own expiry_date.
   await deactivateOldPass(supabase, pass.id);
 
-  // Send the renewal receipt (best-effort)
+  // Send the renewal receipt (best-effort). CC the business so staff keep a
+  // copy of every automated renewal.
   if (customer.email) {
     try {
       await sendPurchaseConfirmationEmail({
@@ -352,6 +353,7 @@ async function renewPass(
         purchasePrice: Number(pass.price),
         purchaseType: pass.type,
         expiryDate: newExpiry.toISOString(),
+        cc: BUSINESS_EMAIL,
       });
     } catch (emailError) {
       logger.error({ ...logContext, error: emailError }, 'Auto-renew: failed to send renewal receipt');

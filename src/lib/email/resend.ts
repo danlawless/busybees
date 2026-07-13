@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
 
 // Business email addresses
-const BUSINESS_EMAIL = 'info@busybeesipc.com';
+export const BUSINESS_EMAIL = 'info@busybeesipc.com';
 // Display name shown in recipients' inboxes instead of the raw address
 const FROM_DISPLAY_NAME = "Busy Bee's";
 const DEFAULT_FROM_EMAIL = `${FROM_DISPLAY_NAME} <noreply@busybeesipc.com>`;
@@ -960,6 +960,7 @@ export async function sendPurchaseConfirmationEmail(data: {
   purchasePrice: number;
   purchaseType: string;
   expiryDate?: string;
+  cc?: string | string[];
 }): Promise<EmailResult> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
 
@@ -1119,6 +1120,7 @@ ${siteUrl}
     subject,
     text,
     html,
+    cc: data.cc,
   });
 }
 
