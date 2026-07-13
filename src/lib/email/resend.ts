@@ -3775,8 +3775,8 @@ Visit us: ${siteUrl}
           <!-- Header -->
           <tr>
             <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
-                <span style="font-size: 36px;">🎂</span>
+              <div style="display: inline-block; background-color: #ffffff; border-radius: 16px; padding: 12px 20px; margin: 0 auto 18px;">
+                <img src="${siteUrl}/busy-bees-logo.png" alt="Busy Bee's Indoor Play Center" width="190" height="93" style="display: block; width: 190px; height: auto; border: 0;" />
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
                 ${childFirst}'s Birthday is Coming!
