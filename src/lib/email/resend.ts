@@ -1973,7 +1973,6 @@ Have a question for Busy Bees? Email info@busybeesipc.com
 
 GOOD TO KNOW
 - Grip socks are required for everyone on the play floor (available to purchase if you forget).
-- Please arrive about 10 minutes early so the fun can start on time.
 - Free parking is available at Lunenburg Crossing.
 - First-time visitors: a quick waiver is signed on arrival.
 
@@ -2086,7 +2085,6 @@ ${siteUrl}
                     <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #374151;">🐝 Good to Know</p>
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">🧦 Grip socks are required for everyone on the play floor (available to purchase if you forget).</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">⏱️ Please arrive about 10 minutes early so the fun starts on time.</td></tr>
                       <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">🅿️ Free parking is available at Lunenburg Crossing.</td></tr>
                       <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">📝 First-time visitors: a quick waiver is signed on arrival.</td></tr>
                     </table>
