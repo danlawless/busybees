@@ -1892,6 +1892,7 @@ ${packageContent.html}
       startTime: data.startTime,
       endTime: data.endTime,
       packageName: data.packageName,
+      bookingId: data.bookingId,
     });
   } catch (invitationError) {
     logger.error({ error: invitationError, bookingId: data.bookingId }, 'Failed to send party invitation email');
@@ -1917,8 +1918,13 @@ export async function sendPartyInvitationEmail(data: {
   startTime: string;
   endTime: string;
   packageName: string;
+  bookingId: string;
 }): Promise<EmailResult> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  // Shareable web invitation — the host sends this LINK to guests. A hosted page
+  // renders reliably everywhere, unlike a forwarded HTML email which clients strip.
+  const inviteUrl = `${siteUrl}/invite/${data.bookingId}`;
 
   // Venue details (kept in sync with the site footer)
   const venueName = "Busy Bee's Indoor Play Center";
@@ -1947,13 +1953,24 @@ export async function sendPartyInvitationEmail(data: {
   };
   const timeRange = `${formatEmailTime(data.startTime)} – ${formatEmailTime(data.endTime)}`;
 
-  // RSVP line: host name plus phone (when known) so guests can reply to the host
-  const rsvpLine = data.customerPhone ? `${data.customerName} · ${data.customerPhone}` : data.customerName;
+  // RSVP line: host name plus phone (when known) so guests can reply to the host.
+  // Format a bare 10-digit number as (XXX) XXX-XXXX; leave anything else as-is.
+  const rsvpDigits = (data.customerPhone || '').replace(/\D/g, '');
+  const rsvpPhone =
+    rsvpDigits.length === 10
+      ? `(${rsvpDigits.slice(0, 3)}) ${rsvpDigits.slice(3, 6)}-${rsvpDigits.slice(6)}`
+      : data.customerPhone;
+  const rsvpLine = rsvpPhone ? `${data.customerName} · ${rsvpPhone}` : data.customerName;
 
   const subject = `💌 You're invited to ${childFirst}'s Birthday Party!`;
 
   const text = `
-(Host tip: forward this email to your party guests!)
+Your invitation is ready to share! 🎉
+
+Send this link to your guests — it opens a full invitation that looks great on any phone or computer:
+${inviteUrl}
+
+--- Invitation preview ---
 
 You're Invited! 🎉
 
@@ -1987,6 +2004,13 @@ ${siteUrl}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Declare color-scheme support so clients (esp. Apple Mail) don't auto-invert
+       our colors in dark mode, which was washing out the white logo card. -->
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  </style>
   <title>You're invited to ${childFirst}'s Birthday Party!</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
@@ -1995,11 +2019,11 @@ ${siteUrl}
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
 
-          <!-- Host tip (for the parent; harmless if forwarded) -->
+          <!-- Share bar (for the host) -->
           <tr>
-            <td style="background-color: #fffbeb; border-bottom: 1px solid #fde68a; padding: 12px 20px; text-align: center;">
+            <td style="background-color: #fffbeb; border-bottom: 1px solid #fde68a; padding: 14px 20px; text-align: center;">
               <p style="margin: 0; font-size: 13px; color: #92400e;">
-                📩 <strong>Party host:</strong> forward this email to your guests!
+                📩 <strong>Party host:</strong> share the invitation link below with your guests
               </p>
             </td>
           </tr>
@@ -2022,6 +2046,24 @@ ${siteUrl}
           <!-- Details -->
           <tr>
             <td style="padding: 30px 25px;">
+              <!-- Share CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; margin-bottom: 22px;">
+                <tr>
+                  <td style="padding: 20px; text-align: center;">
+                    <p style="margin: 0 0 12px; font-size: 15px; color: #1e3a8a; font-weight: 600;">Your invitation is ready to share!</p>
+                    <a href="${inviteUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 30px;">
+                      🔗 View &amp; Share Invitation
+                    </a>
+                    <p style="margin: 14px 0 0; font-size: 13px; color: #4b5563; line-height: 1.5; word-break: break-all;">
+                      Send this link to your guests:<br>
+                      <a href="${inviteUrl}" style="color: #2563eb; text-decoration: none;">${inviteUrl}</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 14px; font-size: 12px; color: #9ca3af; text-align: center; text-transform: uppercase; letter-spacing: 1px;">Invitation preview</p>
+
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; margin-bottom: 20px;">
                 <tr>
                   <td style="padding: 20px;">
@@ -3999,6 +4041,13 @@ Visit us: ${siteUrl}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Declare color-scheme support so clients (esp. Apple Mail) don't auto-invert
+       our colors in dark mode, which was washing out the white logo card. -->
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  </style>
   <title>${childFirst}'s Birthday is Coming!</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
