@@ -3,10 +3,25 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { createAdminClient } from '@/lib/supabase/server';
 import { parseDateString } from '@/lib/utils';
-import { CopyLinkButton } from './CopyLinkButton';
 
 // Always render per-request from the database; never statically prerender.
 export const dynamic = 'force-dynamic';
+
+// Brand colors are applied via inline styles rather than Tailwind arbitrary
+// values (bg-[#...]) because those arbitrary utilities are not reliably emitted
+// in this project's production Tailwind build — they render fine in dev but drop
+// out in `next build`, which washed the header/button out in production.
+const COLORS = {
+  page: '#f5f0e1',
+  brand: '#d97706',
+  brandCream: '#fef3c7',
+  detailBg: '#fefce8',
+  detailBorder: '#fde68a',
+  rsvpBg: '#f0f9ff',
+  rsvpBorder: '#bae6fd',
+  rsvpLabel: '#0369a1',
+  link: '#0369a1',
+};
 
 const VENUE = {
   name: "Busy Bee's Indoor Play Center",
@@ -102,13 +117,16 @@ export default async function InvitePage({
 
   if (booking.status === 'cancelled') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f5f0e1] px-6 py-16">
+      <main
+        className="flex min-h-screen items-center justify-center px-6 py-16"
+        style={{ backgroundColor: COLORS.page }}
+      >
         <div className="max-w-md rounded-3xl bg-white p-10 text-center shadow-soft">
           <div className="mb-4 text-5xl">🐝</div>
           <h1 className="mb-2 text-2xl font-bold text-charcoal-800">Invitation unavailable</h1>
           <p className="text-charcoal-600">
             This party invitation is no longer available. Please reach out to the party host or{' '}
-            <a href="mailto:info@busybeesipc.com" className="font-semibold text-primary-600 underline">
+            <a href="mailto:info@busybeesipc.com" className="font-semibold underline" style={{ color: COLORS.link }}>
               info@busybeesipc.com
             </a>{' '}
             with any questions.
@@ -123,41 +141,37 @@ export default async function InvitePage({
   const rsvpPhone = formatPhone(booking.customer_phone);
   const rsvpLine = rsvpPhone ? `${booking.customer_name} · ${rsvpPhone}` : booking.customer_name;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
-  const shareUrl = `${siteUrl}/invite/${id}`;
 
   return (
-    <main className="min-h-screen bg-[#f5f0e1] px-4 py-8 sm:py-12">
+    <main className="min-h-screen px-4 py-8 sm:py-12" style={{ backgroundColor: COLORS.page }}>
       <div className="mx-auto max-w-xl">
-        {/* Host share bar */}
-        <div className="mb-4 flex flex-col items-center justify-between gap-2 rounded-2xl bg-primary-100/60 px-4 py-3 text-center sm:flex-row sm:text-left">
-          <p className="text-sm text-charcoal-700">
-            <span className="font-semibold">Party host:</span> share this invitation with your guests
-          </p>
-          <CopyLinkButton url={shareUrl} />
-        </div>
-
         <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
           {/* Header */}
-          <div className="bg-[#d97706] px-6 py-8 text-center">
+          <div className="px-6 py-8 text-center" style={{ backgroundColor: COLORS.brand }}>
             <div className="mx-auto mb-4 inline-block rounded-2xl bg-white px-5 py-3">
               <Image
                 src="/busy-bees-logo.png"
                 alt="Busy Bee's Indoor Play Center"
                 width={200}
                 height={98}
-                className="h-auto w-[200px]"
+                style={{ width: 200, height: 'auto' }}
                 priority
               />
             </div>
-            <h1 className="text-3xl font-extrabold text-white sm:text-4xl">You&apos;re Invited! 🎉</h1>
-            <p className="mt-2 text-lg font-medium text-[#fef3c7]">
+            <h1 className="text-3xl font-extrabold sm:text-4xl" style={{ color: '#ffffff' }}>
+              You&apos;re Invited!
+            </h1>
+            <p className="mt-2 text-lg font-medium" style={{ color: COLORS.brandCream }}>
               Join us to celebrate {child}&apos;s Birthday!
             </p>
           </div>
 
           {/* Details */}
           <div className="space-y-5 px-6 py-8 sm:px-8">
-            <div className="rounded-2xl border border-[#fde68a] bg-[#fefce8] p-5">
+            <div
+              className="rounded-2xl p-5"
+              style={{ backgroundColor: COLORS.detailBg, border: `1px solid ${COLORS.detailBorder}` }}
+            >
               <dl className="space-y-3 text-[15px]">
                 <div className="flex gap-3">
                   <dt className="w-20 shrink-0 font-medium text-charcoal-600">🗓️ When</dt>
@@ -188,15 +202,21 @@ export default async function InvitePage({
                 href={MAPS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block rounded-full bg-[#d97706] px-8 py-3.5 text-base font-bold text-white shadow-md transition hover:bg-[#b45309]"
+                className="inline-block rounded-full px-8 py-3.5 text-base font-bold shadow-md transition"
+                style={{ backgroundColor: COLORS.brand, color: '#ffffff' }}
               >
                 📍 Get Directions
               </a>
             </div>
 
             {/* RSVP */}
-            <div className="rounded-2xl border border-[#bae6fd] bg-[#f0f9ff] px-5 py-4 text-center">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#0369a1]">Please RSVP</p>
+            <div
+              className="rounded-2xl px-5 py-4 text-center"
+              style={{ backgroundColor: COLORS.rsvpBg, border: `1px solid ${COLORS.rsvpBorder}` }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: COLORS.rsvpLabel }}>
+                Please RSVP
+              </p>
               <p className="mt-1 font-semibold text-charcoal-900">{rsvpLine}</p>
             </div>
 
@@ -204,10 +224,7 @@ export default async function InvitePage({
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-5 py-3.5 text-center">
               <p className="text-sm text-charcoal-600">
                 Have a question for Busy Bees? Email{' '}
-                <a
-                  href="mailto:info@busybeesipc.com"
-                  className="font-semibold text-[#0369a1] hover:underline"
-                >
+                <a href="mailto:info@busybeesipc.com" className="font-semibold hover:underline" style={{ color: COLORS.link }}>
                   info@busybeesipc.com
                 </a>
               </p>
@@ -228,7 +245,7 @@ export default async function InvitePage({
           <div className="border-t border-gray-100 px-6 py-6 text-center">
             <p className="font-semibold text-charcoal-800">We can&apos;t wait to play! 🎈🐝</p>
             <p className="mt-1 text-sm text-charcoal-500">📍 {VENUE.name}</p>
-            <a href={siteUrl} className="text-sm font-medium text-primary-600 hover:underline">
+            <a href={siteUrl} className="text-sm font-medium" style={{ color: COLORS.brand }}>
               busybeesipc.com
             </a>
           </div>
