@@ -1904,8 +1904,9 @@ ${packageContent.html}
  * Send a forwardable birthday party invitation to the booking parent (the host).
  * Auto-sent alongside the booking confirmation. It is designed to be forwarded
  * to guests as-is: it contains everything an attendee needs — the child's name,
- * date, time, venue and address, a directions link, how to reach Busy Bees
- * with questions, and good-to-know details. No pricing or booking-admin info.
+ * date, time, venue and address, a directions link, who to RSVP to (the host),
+ * how to reach Busy Bees with questions, and good-to-know details. No pricing
+ * or booking-admin info.
  */
 export async function sendPartyInvitationEmail(data: {
   to: string;
@@ -1946,6 +1947,9 @@ export async function sendPartyInvitationEmail(data: {
   };
   const timeRange = `${formatEmailTime(data.startTime)} – ${formatEmailTime(data.endTime)}`;
 
+  // RSVP line: host name plus phone (when known) so guests can reply to the host
+  const rsvpLine = data.customerPhone ? `${data.customerName} · ${data.customerPhone}` : data.customerName;
+
   const subject = `💌 You're invited to ${childFirst}'s Birthday Party!`;
 
   const text = `
@@ -1962,6 +1966,8 @@ ${venueStreet}
 ${venueCityStateZip}
 
 Directions: ${mapsUrl}
+
+RSVP to ${rsvpLine}
 
 Have a question for Busy Bees? Email info@busybeesipc.com
 
@@ -2052,11 +2058,21 @@ ${siteUrl}
                 </tr>
               </table>
 
-              <!-- Questions -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; margin-bottom: 22px;">
+              <!-- RSVP to host -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; margin-bottom: 16px;">
                 <tr>
                   <td style="padding: 16px 20px; text-align: center;">
-                    <p style="margin: 0; font-size: 15px; color: #111827;">
+                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 1px;">Please RSVP</p>
+                    <p style="margin: 0; font-size: 15px; color: #111827; font-weight: 600;">${rsvpLine}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Questions -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 22px;">
+                <tr>
+                  <td style="padding: 14px 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 14px; color: #4b5563;">
                       Have a question for Busy Bees? Email <a href="mailto:info@busybeesipc.com" style="color: #0369a1; font-weight: 600; text-decoration: none;">info@busybeesipc.com</a>
                     </p>
                   </td>
