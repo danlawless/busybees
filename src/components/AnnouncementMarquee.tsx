@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface Announcement {
   id: string;
@@ -11,8 +12,15 @@ interface Announcement {
 
 export function AnnouncementMarquee() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const pathname = usePathname();
+
+  // Hide site-wide announcements on the shareable guest invitation page so it
+  // reads as a clean, standalone invite.
+  const hideOnInvite = pathname?.startsWith('/invite');
 
   useEffect(() => {
+    if (hideOnInvite) return;
+
     const fetchAnnouncements = async () => {
       try {
         const res = await fetch('/api/announcements/active');
@@ -29,9 +37,9 @@ export function AnnouncementMarquee() {
     // Refresh every 2 minutes to pick up new announcements
     const interval = setInterval(fetchAnnouncements, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [hideOnInvite]);
 
-  if (announcements.length === 0) return null;
+  if (hideOnInvite || announcements.length === 0) return null;
 
   // Combine all messages with a separator
   const combinedMessage = announcements.map(a => a.message).join('     ★     ');
