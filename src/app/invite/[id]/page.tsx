@@ -36,6 +36,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 interface InviteBooking {
   child_name: string;
+  child_age: number | null;
   party_date: string;
   start_time: string;
   end_time: string;
@@ -50,7 +51,7 @@ async function getBooking(id: string): Promise<InviteBooking | null> {
   // Only invite-safe columns — never pricing, emails, or Stripe identifiers.
   const { data } = await supabase
     .from('party_bookings')
-    .select('child_name, party_date, start_time, end_time, customer_name, customer_phone, status')
+    .select('child_name, child_age, party_date, start_time, end_time, customer_name, customer_phone, status')
     .eq('id', id)
     .maybeSingle();
   return (data as InviteBooking | null) ?? null;
@@ -58,6 +59,14 @@ async function getBooking(id: string): Promise<InviteBooking | null> {
 
 function firstName(name: string): string {
   return (name || '').trim().split(/\s+/)[0] || name;
+}
+
+// "4" -> "4th Birthday", null/0 -> "Birthday"
+function birthdayLabel(age: number | null): string {
+  if (!age || age <= 0) return 'Birthday';
+  const v = age % 100;
+  const suffix = v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][age % 10] || 'th';
+  return `${age}${suffix} Birthday`;
 }
 
 function formatPhone(phone: string | null): string | null {
@@ -95,7 +104,7 @@ export async function generateMetadata({
   }
   const child = firstName(booking.child_name);
   const title = `You're invited to ${child}'s Birthday Party!`;
-  const description = `Join us to celebrate ${child}'s birthday at ${VENUE.name} on ${formatDate(
+  const description = `Join us to celebrate ${child}'s ${birthdayLabel(booking.child_age)} at ${VENUE.name} on ${formatDate(
     booking.party_date,
   )}.`;
   return {
@@ -162,7 +171,7 @@ export default async function InvitePage({
               You&apos;re Invited!
             </h1>
             <p className="mt-2 text-lg font-medium" style={{ color: COLORS.brandCream }}>
-              Join us to celebrate {child}&apos;s Birthday!
+              Join us to celebrate {child}&apos;s {birthdayLabel(booking.child_age)}!
             </p>
           </div>
 

@@ -1620,6 +1620,7 @@ export async function sendPartyBookingConfirmationEmail(data: {
   customerName: string;
   customerPhone?: string;
   childName: string;
+  childAge?: number | null;
   partyDate: string;
   startTime: string;
   endTime: string;
@@ -1888,6 +1889,7 @@ ${packageContent.html}
       customerName: data.customerName,
       customerPhone: data.customerPhone,
       childName: data.childName,
+      childAge: data.childAge,
       partyDate: data.partyDate,
       startTime: data.startTime,
       endTime: data.endTime,
@@ -1914,6 +1916,7 @@ export async function sendPartyInvitationEmail(data: {
   customerName: string;
   customerPhone?: string;
   childName: string;
+  childAge?: number | null;
   partyDate: string;
   startTime: string;
   endTime: string;
@@ -1925,6 +1928,15 @@ export async function sendPartyInvitationEmail(data: {
   // Shareable web invitation — the host sends this LINK to guests. A hosted page
   // renders reliably everywhere, unlike a forwarded HTML email which clients strip.
   const inviteUrl = `${siteUrl}/invite/${data.bookingId}`;
+
+  // Include the age they're turning when we know it: "Emilia's 4th Birthday!"
+  const ordinal = (n: number) => {
+    const v = n % 100;
+    const suffix = v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th';
+    return `${n}${suffix}`;
+  };
+  const birthdayLabel =
+    data.childAge && data.childAge > 0 ? `${ordinal(data.childAge)} Birthday` : 'Birthday';
 
   // Venue details (kept in sync with the site footer)
   const venueName = "Busy Bee's Indoor Play Center";
@@ -1965,16 +1977,16 @@ export async function sendPartyInvitationEmail(data: {
   const subject = `💌 You're invited to ${childFirst}'s Birthday Party!`;
 
   const text = `
-Your invitation is ready to share! 🎉
+Your invitation is ready to share!
 
 Send this link to your guests — it opens a full invitation that looks great on any phone or computer:
 ${inviteUrl}
 
 --- Invitation preview ---
 
-You're Invited! 🎉
+You're Invited!
 
-Join us to celebrate ${childFirst}'s Birthday!
+Join us to celebrate ${childFirst}'s ${birthdayLabel}!
 
 WHEN: ${formattedDate}
 TIME: ${timeRange}
@@ -2031,14 +2043,12 @@ ${siteUrl}
           <!-- Header -->
           <tr>
             <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
-              <div style="display: inline-block; background-color: #ffffff; border-radius: 16px; padding: 12px 20px; margin: 0 auto 18px;">
-                <img src="${siteUrl}/busy-bees-logo.png" alt="Busy Bee's Indoor Play Center" width="190" height="93" style="display: block; width: 190px; height: auto; border: 0;" />
-              </div>
+              <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
               <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">
-                You're Invited! 🎉
+                You're Invited!
               </h1>
               <p style="margin: 8px 0 0; color: #fef3c7; font-size: 17px;">
-                Join us to celebrate ${childFirst}'s Birthday!
+                Join us to celebrate ${childFirst}'s ${birthdayLabel}!
               </p>
             </td>
           </tr>
@@ -4059,9 +4069,7 @@ Visit us: ${siteUrl}
           <!-- Header -->
           <tr>
             <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
-              <div style="display: inline-block; background-color: #ffffff; border-radius: 16px; padding: 12px 20px; margin: 0 auto 18px;">
-                <img src="${siteUrl}/busy-bees-logo.png" alt="Busy Bee's Indoor Play Center" width="190" height="93" style="display: block; width: 190px; height: auto; border: 0;" />
-              </div>
+              <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
                 ${childFirst}'s Birthday is Coming!
               </h1>

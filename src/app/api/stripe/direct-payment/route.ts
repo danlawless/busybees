@@ -441,6 +441,7 @@ export async function POST(request: NextRequest) {
               customerName: booking.customer_name || 'Valued Customer',
               customerPhone: booking.customer_phone,
               childName: booking.child_name,
+              childAge: booking.child_age,
               partyDate: booking.party_date,
               startTime: booking.start_time,
               endTime: booking.end_time,
