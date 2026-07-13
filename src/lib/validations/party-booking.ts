@@ -77,10 +77,12 @@ export const GuestCountSchema = z.object({
     .max(50, 'Child name must be less than 50 characters')
     .transform((val) => val.trim()),
   childAge: z
-    .number()
-    .min(0, 'Age must be 0 or greater')
-    .max(12, 'Age must be 12 or less')
-    .optional(),
+    .number({
+      required_error: 'Please enter the age the child is turning',
+      invalid_type_error: 'Please enter the age the child is turning',
+    })
+    .min(1, 'Age must be at least 1')
+    .max(12, 'Age must be 12 or less'),
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')
@@ -128,7 +130,13 @@ export const CompleteBookingSchema = z.object({
     .min(1, 'Birthday child\'s name is required')
     .max(50, 'Child name must be less than 50 characters')
     .transform((val) => val.trim()),
-  childAge: z.number().min(0).max(12).optional(),
+  childAge: z
+    .number({
+      required_error: 'Please enter the age the child is turning',
+      invalid_type_error: 'Please enter the age the child is turning',
+    })
+    .min(1, 'Age must be at least 1')
+    .max(12, 'Age must be 12 or less'),
   guestCount: z
     .number()
     .min(1, 'At least 1 guest is required')

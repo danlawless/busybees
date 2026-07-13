@@ -30,6 +30,12 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
       newErrors.childName = 'Birthday child\'s name is required';
     }
 
+    if (formData.childAge === undefined || formData.childAge === null) {
+      newErrors.childAge = 'Please enter the age the child is turning';
+    } else if (formData.childAge < 1 || formData.childAge > 12) {
+      newErrors.childAge = 'Age must be between 1 and 12';
+    }
+
     if (formData.guestCount < 1) {
       newErrors.guestCount = 'At least 1 guest is required';
     } else if (formData.guestCount > maxChildren) {
@@ -38,7 +44,7 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
 
     setErrors(newErrors);
     onValidChange(Object.keys(newErrors).length === 0);
-  }, [formData.childName, formData.guestCount, maxChildren, onValidChange]);
+  }, [formData.childName, formData.childAge, formData.guestCount, maxChildren, onValidChange]);
 
   const handleGuestCountChange = (delta: number) => {
     const newCount = Math.max(1, Math.min(maxChildren, formData.guestCount + delta));
@@ -88,23 +94,28 @@ export function GuestInfoStep({ formData, onUpdate, onValidChange }: GuestInfoSt
           )}
         </div>
 
-        {/* Child's Age */}
+        {/* Child's Age — required so guests know how old the child is turning */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Gift className="w-4 h-4 inline mr-2" />
-            Child&apos;s Age (Optional)
+            Age Turning *
           </label>
           <input
             type="number"
-            min="0"
+            min="1"
             max="12"
             value={formData.childAge ?? ''}
             onChange={(e) =>
               onUpdate({ childAge: e.target.value ? parseInt(e.target.value) : undefined })
             }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-honey-500"
-            placeholder="Age (0-12)"
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-honey-500 ${
+              errors.childAge ? 'border-red-400' : 'border-gray-300'
+            }`}
+            placeholder="Age turning (1–12)"
           />
+          {errors.childAge && (
+            <p className="text-red-500 text-sm mt-1">{errors.childAge}</p>
+          )}
         </div>
       </div>
 
