@@ -219,6 +219,7 @@ async function handleUpdate(
         const emailResult = await sendPartyBookingConfirmationEmail({
           to: recipientEmail,
           customerName: profile?.name || 'Valued Customer',
+          customerPhone: profile?.phone,
           childName: partyData.child_name,
           partyDate: partyData.party_date,
           startTime: partyData.party_start_time,

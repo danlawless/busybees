@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     const result = await sendPartyBookingConfirmationEmail({
       to: booking.customer_email,
       customerName: booking.customer_name || 'Valued Customer',
+      customerPhone: booking.customer_phone,
       childName: booking.child_name,
       partyDate: booking.party_date,
       startTime: booking.start_time,

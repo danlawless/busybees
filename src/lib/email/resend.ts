@@ -1618,6 +1618,7 @@ Our team will contact you before the event to confirm details.`;
 export async function sendPartyBookingConfirmationEmail(data: {
   to: string;
   customerName: string;
+  customerPhone?: string;
   childName: string;
   partyDate: string;
   startTime: string;
@@ -1871,13 +1872,236 @@ ${packageContent.html}
 </html>
 `;
 
-  return sendEmail({
+  const confirmationResult = await sendEmail({
     to: data.to,
     cc: BUSINESS_EMAIL,
     subject,
     text,
     html,
   });
+
+  // Also send a separate, forwardable guest invitation to the host. Best-effort:
+  // a failure here must never affect the booking confirmation the caller relies on.
+  try {
+    await sendPartyInvitationEmail({
+      to: data.to,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
+      childName: data.childName,
+      partyDate: data.partyDate,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      packageName: data.packageName,
+    });
+  } catch (invitationError) {
+    logger.error({ error: invitationError, bookingId: data.bookingId }, 'Failed to send party invitation email');
+  }
+
+  return confirmationResult;
+}
+
+/**
+ * Send a forwardable birthday party invitation to the booking parent (the host).
+ * Auto-sent alongside the booking confirmation. It is designed to be forwarded
+ * to guests as-is: it contains everything an attendee needs — the child's name,
+ * date, time, venue and address, a directions link, who to RSVP to, and
+ * good-to-know details. No pricing or booking-admin info is included.
+ */
+export async function sendPartyInvitationEmail(data: {
+  to: string;
+  customerName: string;
+  customerPhone?: string;
+  childName: string;
+  partyDate: string;
+  startTime: string;
+  endTime: string;
+  packageName: string;
+}): Promise<EmailResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
+
+  // Venue details (kept in sync with the site footer)
+  const venueName = "Busy Bee's Indoor Play Center";
+  const venuePlaza = 'Lunenburg Crossing';
+  const venueStreet = '301 Massachusetts Avenue Rt. 2A';
+  const venueCityStateZip = 'Lunenburg, MA 01462';
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${venueName}, ${venueStreet}, ${venueCityStateZip}`,
+  )}`;
+
+  // First name only reads warmer on an invitation
+  const childFirst = (data.childName || '').trim().split(/\s+/)[0] || data.childName;
+
+  const formattedDate = parseDateString(data.partyDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const formatEmailTime = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+  const timeRange = `${formatEmailTime(data.startTime)} – ${formatEmailTime(data.endTime)}`;
+
+  // RSVP line: host name, then phone (if known) and email so guests can reply to the host
+  const rsvpContact = [data.customerPhone, data.to].filter(Boolean).join(' · ');
+  const rsvpLine = rsvpContact ? `${data.customerName} · ${rsvpContact}` : data.customerName;
+
+  const subject = `💌 You're invited to ${childFirst}'s Birthday Party!`;
+
+  const text = `
+(Host tip: forward this email to your party guests!)
+
+You're Invited! 🎉
+
+Join us to celebrate ${childFirst}'s Birthday!
+
+WHEN: ${formattedDate}
+TIME: ${timeRange}
+WHERE: ${venueName}, ${venuePlaza}
+${venueStreet}
+${venueCityStateZip}
+
+Directions: ${mapsUrl}
+
+RSVP to ${rsvpLine}
+
+GOOD TO KNOW
+- Grip socks are required for everyone on the play floor (available to purchase if you forget).
+- Please arrive about 10 minutes early so the fun can start on time.
+- Free parking is available at Lunenburg Crossing.
+- First-time visitors: a quick waiver is signed on arrival.
+
+We can't wait to play! 🐝
+${venueName}
+${siteUrl}
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're invited to ${childFirst}'s Birthday Party!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f0e1;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f0e1; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
+
+          <!-- Host tip (for the parent; harmless if forwarded) -->
+          <tr>
+            <td style="background-color: #fffbeb; border-bottom: 1px solid #fde68a; padding: 12px 20px; text-align: center;">
+              <p style="margin: 0; font-size: 13px; color: #92400e;">
+                📩 <strong>Party host:</strong> forward this email to your guests!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
+              <div style="display: inline-block; background-color: #ffffff; border-radius: 16px; padding: 12px 20px; margin: 0 auto 18px;">
+                <img src="${siteUrl}/busy-bees-logo.png" alt="Busy Bee's Indoor Play Center" width="190" height="93" style="display: block; width: 190px; height: auto; border: 0;" />
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">
+                You're Invited! 🎉
+              </h1>
+              <p style="margin: 8px 0 0; color: #fef3c7; font-size: 17px;">
+                Join us to celebrate ${childFirst}'s Birthday!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Details -->
+          <tr>
+            <td style="padding: 30px 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 15px; color: #4b5563; width: 90px; vertical-align: top;">🗓️ <strong>When</strong></td>
+                        <td style="padding: 6px 0; font-size: 15px; color: #111827; font-weight: 600;">${formattedDate}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 15px; color: #4b5563; vertical-align: top;">⏰ <strong>Time</strong></td>
+                        <td style="padding: 6px 0; font-size: 15px; color: #111827; font-weight: 600;">${timeRange}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 15px; color: #4b5563; vertical-align: top;">📍 <strong>Where</strong></td>
+                        <td style="padding: 6px 0; font-size: 15px; color: #111827; font-weight: 600;">
+                          ${venueName}<br>
+                          <span style="font-weight: 400; color: #4b5563;">${venuePlaza}<br>${venueStreet}<br>${venueCityStateZip}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Directions button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 22px;">
+                <tr>
+                  <td align="center">
+                    <a href="${mapsUrl}" style="display: inline-block; background-color: #d97706; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 34px; border-radius: 30px;">
+                      📍 Get Directions
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- RSVP -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; margin-bottom: 22px;">
+                <tr>
+                  <td style="padding: 16px 20px; text-align: center;">
+                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 1px;">Please RSVP</p>
+                    <p style="margin: 0; font-size: 15px; color: #111827; font-weight: 600;">${rsvpLine}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Good to know -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px; margin-bottom: 10px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #374151;">🐝 Good to Know</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">🧦 Grip socks are required for everyone on the play floor (available to purchase if you forget).</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">⏱️ Please arrive about 10 minutes early so the fun starts on time.</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">🅿️ Free parking is available at Lunenburg Crossing.</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;">📝 First-time visitors: a quick waiver is signed on arrival.</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 16px 0 5px; font-size: 15px; color: #374151; font-weight: 600;">We can't wait to play! 🎈🐝</p>
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #6b7280;">📍 ${venueName}</p>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">🌐 <a href="${siteUrl}" style="color: #f59e0b; text-decoration: none;">busybeesipc.com</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+  return sendEmail({ to: data.to, subject, text, html });
 }
 
 /**

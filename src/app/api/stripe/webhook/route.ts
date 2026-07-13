@@ -265,6 +265,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
           const emailResult = await sendPartyBookingConfirmationEmail({
             to: booking.customer_email,
             customerName: booking.customer_name || 'Valued Customer',
+            customerPhone: booking.customer_phone,
             childName: booking.child_name,
             partyDate: booking.party_date,
             startTime: booking.start_time,
@@ -426,6 +427,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           await sendPartyBookingConfirmationEmail({
             to: booking.customer_email,
             customerName: booking.customer_name || 'Valued Customer',
+            customerPhone: booking.customer_phone,
             childName: booking.child_name,
             partyDate: booking.party_date,
             startTime: booking.start_time,
