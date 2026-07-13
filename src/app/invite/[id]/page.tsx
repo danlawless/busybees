@@ -245,7 +245,7 @@ export default async function InvitePage({
               <ul className="space-y-2 text-sm text-charcoal-600">
                 <li>🧦 Grip socks are required for everyone on the play floor (available to purchase if you forget).</li>
                 <li>🅿️ Free parking is available at Lunenburg Crossing.</li>
-                <li>📝 First-time visitors: a quick waiver is signed on arrival.</li>
+                <li>📝 Upon arrival, please check in with the receptionist to sign a quick waiver.</li>
               </ul>
             </div>
           </div>
