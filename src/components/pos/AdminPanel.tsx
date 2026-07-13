@@ -636,7 +636,9 @@ export function AdminPanel({
   };
 
   useEffect(() => {
-    if (currentView === 'gift-cards') {
+    // Sales and Dashboard fold gift card sales into their revenue/transactions,
+    // so they need the gift card data loaded too (not just the Gift Cards view).
+    if (currentView === 'gift-cards' || currentView === 'sales' || currentView === 'dashboard') {
       fetchGiftCards();
     }
   }, [currentView]);
@@ -1008,7 +1010,44 @@ export function AdminPanel({
     }
   });
 
-  const filteredRevenue = filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0);
+  // Gift card SALES for the same Sales-view date range. Gift card purchases are
+  // stored in the gift_cards table (not `purchases`), so unless they are merged
+  // in here they never appear in POS revenue or transaction counts. Exclude
+  // 'pending' (unpaid) to match the Analytics revenue report.
+  const filteredGiftCardSales = giftCards.filter((gc) => {
+    if (gc.status === 'pending') return false;
+    const created = new Date(gc.created_at);
+    const now = new Date();
+
+    switch (selectedDateRange) {
+      case 'today':
+        return created.toDateString() === now.toDateString();
+      case 'date': {
+        const selected = new Date(salesDate + 'T00:00:00');
+        return created.toDateString() === selected.toDateString();
+      }
+      case 'week': {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return created >= startOfWeek;
+      }
+      case 'month': {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return created >= startOfMonth;
+      }
+      case 'all':
+      default:
+        return true;
+    }
+  });
+  const filteredGiftCardRevenue = filteredGiftCardSales.reduce((sum, gc) => sum + Number(gc.amount), 0);
+
+  const filteredRevenue =
+    filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0) + filteredGiftCardRevenue;
+
+  // Combined transaction count for the Sales view (passes/food/etc. + gift card sales)
+  const filteredTransactionCount = filteredPurchases.length + filteredGiftCardSales.length;
 
   // Purchases for the selected dashboard date (includes refunded for display)
   const selectedDateObj = new Date(dashboardDate + 'T00:00:00');
@@ -1018,10 +1057,17 @@ export function AdminPanel({
     return purchaseDate.toDateString() === selectedDateObj.toDateString();
   });
 
-  // Revenue excludes refunded purchases
+  // Gift card sales made on the selected dashboard date (exclude unpaid 'pending')
+  const dashboardGiftCardSales = giftCards.filter((gc) => {
+    if (gc.status === 'pending') return false;
+    return new Date(gc.created_at).toDateString() === selectedDateObj.toDateString();
+  });
+  const dashboardGiftCardRevenue = dashboardGiftCardSales.reduce((sum, gc) => sum + Number(gc.amount), 0);
+
+  // Revenue excludes refunded purchases; includes gift card sales
   const dashboardRevenue = dashboardPurchases
     .filter(p => p.status !== 'refunded')
-    .reduce((sum, purchase) => sum + Number(purchase.price), 0);
+    .reduce((sum, purchase) => sum + Number(purchase.price), 0) + dashboardGiftCardRevenue;
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
@@ -1343,7 +1389,7 @@ export function AdminPanel({
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">
-            {isToday ? "Today's" : selectedDateObj.toLocaleDateString()} Purchases ({dashboardPurchases.length})
+            {isToday ? "Today's" : selectedDateObj.toLocaleDateString()} Purchases ({dashboardPurchases.length + dashboardGiftCardSales.length})
           </h3>
           <input
             type="date"
@@ -1353,7 +1399,7 @@ export function AdminPanel({
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        {dashboardPurchases.length > 0 ? (
+        {(dashboardPurchases.length + dashboardGiftCardSales.length) > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {dashboardPurchases.map((purchase) => {
               const customer = customers.find(c => c.purchases.some(p => p.id === purchase.id));
@@ -1405,6 +1451,22 @@ export function AdminPanel({
                 </div>
               );
             })}
+            {dashboardGiftCardSales.map((gc) => (
+              <div key={gc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium">🎁 Gift Card <span className="text-xs font-normal text-gray-500">({gc.code})</span></p>
+                  <p className="text-sm text-gray-600">
+                    {gc.purchaser_name} • {formatDate(gc.created_at)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrency(Number(gc.amount))}</p>
+                  <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                    Gift Card
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">{isToday ? 'No purchases today' : `No purchases on ${selectedDateObj.toLocaleDateString()}`}</p>
@@ -1658,13 +1720,13 @@ export function AdminPanel({
           <p className="text-2xl font-bold text-green-600 mt-2">
             {formatCurrency(filteredRevenue)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">{filteredPurchases.length} transactions</p>
+          <p className="text-sm text-gray-500 mt-1">{filteredTransactionCount} transactions</p>
         </Card>
 
         <Card className="p-6">
           <h4 className="font-semibold text-gray-900">Average Transaction</h4>
           <p className="text-2xl font-bold text-blue-600 mt-2">
-            {formatCurrency(filteredPurchases.length > 0 ? filteredRevenue / filteredPurchases.length : 0)}
+            {formatCurrency(filteredTransactionCount > 0 ? filteredRevenue / filteredTransactionCount : 0)}
           </p>
           <p className="text-sm text-gray-500 mt-1">Per purchase</p>
         </Card>
@@ -1692,19 +1754,30 @@ export function AdminPanel({
               { key: 'food_beverage', label: 'Food & Beverage', filter: (p: Purchase) => p.type === 'food_beverage' },
             ];
 
-            return categories.map(({ key, label, filter }) => {
-              const purchases = filteredPurchases.filter(filter);
-              const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
-              return (
-                <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            return (
+              <>
+                {categories.map(({ key, label, filter }) => {
+                  const purchases = filteredPurchases.filter(filter);
+                  const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
+                  return (
+                    <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{label}</p>
+                        <p className="text-sm text-gray-600">{purchases.length} sold</p>
+                      </div>
+                      <p className="font-semibold">{formatCurrency(revenue)}</p>
+                    </div>
+                  );
+                })}
+                <div key="gift_card" className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">{label}</p>
-                    <p className="text-sm text-gray-600">{purchases.length} sold</p>
+                    <p className="font-medium">Gift Card</p>
+                    <p className="text-sm text-gray-600">{filteredGiftCardSales.length} sold</p>
                   </div>
-                  <p className="font-semibold">{formatCurrency(revenue)}</p>
+                  <p className="font-semibold">{formatCurrency(filteredGiftCardRevenue)}</p>
                 </div>
-              );
-            });
+              </>
+            );
           })()}
         </div>
       </Card>
