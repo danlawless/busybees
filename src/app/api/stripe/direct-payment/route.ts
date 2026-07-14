@@ -25,6 +25,7 @@ import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
+import { getActivePartyPromoByCode } from '@/lib/services/promos';
 import { sendPurchaseConfirmationEmail, sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
 
 /**
@@ -162,7 +163,36 @@ export async function POST(request: NextRequest) {
 
     // Calculate amounts
     const totalAmount = productPrice * quantity;
-    let amountToCharge = totalAmount;
+
+    // Party promo code — party packages only, re-validated server-side (the client
+    // price is never trusted). Reduces the sale price before any gift-card credit.
+    let promoDiscountAmount = 0;
+    let appliedPromo: { promoId: string; discountPercent: number; code: string } | null = null;
+    if (typeof body.promoCode === 'string' && body.promoCode.trim() && purchaseType === 'party_package') {
+      try {
+        const promo = await getActivePartyPromoByCode(body.promoCode.trim());
+        if (promo && promo.discount_percent && promo.discount_percent > 0) {
+          promoDiscountAmount = (totalAmount * promo.discount_percent) / 100;
+          appliedPromo = {
+            promoId: promo.id,
+            discountPercent: promo.discount_percent,
+            code: promo.stripe_coupon_code || body.promoCode.trim(),
+          };
+          logger.info(
+            { ...logContext, code: appliedPromo.code, discountPercent: appliedPromo.discountPercent },
+            '🏷️ Party promo applied (direct payment)'
+          );
+        }
+      } catch (promoErr) {
+        logger.warn({ ...logContext, error: promoErr }, '⚠️ Promo validation failed, proceeding without discount');
+      }
+    }
+
+    // Sale price after any promo discount — drives the charge, gift-card math, and
+    // the recorded purchase price. Equals totalAmount when no promo applies.
+    const salePrice = Math.max(0, Math.round((totalAmount - promoDiscountAmount) * 100) / 100);
+
+    let amountToCharge = salePrice;
     let giftCardAmountUsed = 0;
 
     // Check and apply gift card balance if enabled
@@ -170,11 +200,11 @@ export async function POST(request: NextRequest) {
       const giftCardBalance = await getUserGiftCardBalance(user.id);
 
       if (giftCardBalance > 0) {
-        giftCardAmountUsed = Math.min(giftCardBalance, totalAmount);
-        amountToCharge = totalAmount - giftCardAmountUsed;
+        giftCardAmountUsed = Math.min(giftCardBalance, salePrice);
+        amountToCharge = salePrice - giftCardAmountUsed;
 
         logger.info(
-          { ...logContext, totalAmount, giftCardBalance, giftCardAmountUsed, amountToCharge },
+          { ...logContext, totalAmount, salePrice, giftCardBalance, giftCardAmountUsed, amountToCharge },
           '🎁 Gift card balance applied'
         );
       }
@@ -209,7 +239,7 @@ export async function POST(request: NextRequest) {
           type: purchaseType,
           product_id: productId,
           name: productName,
-          price: totalAmount,
+          price: salePrice,
           purchase_date: now.toISOString(),
           expiry_date: purchaseDefaults.expiryDate?.toISOString() || null,
           used_sessions: 0,
@@ -369,7 +399,7 @@ export async function POST(request: NextRequest) {
           type: purchaseType,
           product_id: productId,
           name: productName,
-          price: totalAmount,
+          price: salePrice,
           purchase_date: now.toISOString(),
           expiry_date: purchaseDefaults.expiryDate?.toISOString() || null,
           used_sessions: 0,
@@ -501,6 +531,13 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
       amountCharged: amountToCharge,
       giftCardUsed: giftCardAmountUsed,
+      ...(appliedPromo && {
+        promoDiscount: {
+          code: appliedPromo.code,
+          discountPercent: appliedPromo.discountPercent,
+          discountAmount: promoDiscountAmount,
+        },
+      }),
       message: giftCardAmountUsed > 0
         ? `Payment of $${amountToCharge.toFixed(2)} processed (+ $${giftCardAmountUsed.toFixed(2)} gift card credit)`
         : `Payment of $${amountToCharge.toFixed(2)} processed successfully!`,

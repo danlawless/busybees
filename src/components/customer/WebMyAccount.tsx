@@ -104,6 +104,10 @@ function WebMyAccountContent() {
   const [partyBookingGuests, setPartyBookingGuests] = useState(15);
   const [partyBookingNotes, setPartyBookingNotes] = useState('');
   const [partyBookingProcessing, setPartyBookingProcessing] = useState(false);
+  const [partyBookingPromo, setPartyBookingPromo] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [partyBookingPromoInput, setPartyBookingPromoInput] = useState('');
+  const [partyBookingPromoLoading, setPartyBookingPromoLoading] = useState(false);
+  const [partyBookingPromoError, setPartyBookingPromoError] = useState('');
 
   // Group children state
   const [groupChildName, setGroupChildName] = useState('');
@@ -1963,6 +1967,9 @@ function WebMyAccountContent() {
                     {partyBookingStep === 'review' && (() => {
                       const selectedPkg = availableParties.find((p) => p.id === partyBookingPackage);
                       const paymentMethod = getDefaultPaymentMethod();
+                      const basePrice = selectedPkg?.price || 0;
+                      const promoDiscount = partyBookingPromo ? Math.round(basePrice * partyBookingPromo.discountPercent) / 100 : 0;
+                      const discountedTotal = Math.max(0, basePrice - promoDiscount);
                       return (
                         <div>
                           <h4 className="font-semibold text-gray-800 mb-4">Review & Complete Booking</h4>
@@ -1972,11 +1979,67 @@ function WebMyAccountContent() {
                               <div className="flex justify-between"><span className="text-gray-600">Birthday Child</span><span className="font-medium">{partyBookingChild}{partyBookingChildAge ? ` (age ${partyBookingChildAge})` : ''}</span></div>
                               <div className="flex justify-between"><span className="text-gray-600">Guests</span><span className="font-medium">{partyBookingGuests} children</span></div>
                               {partyBookingNotes && <div><span className="text-gray-600">Notes:</span> <span className="text-gray-800">{partyBookingNotes}</span></div>}
+                              {partyBookingPromo && promoDiscount > 0 && (
+                                <div className="flex justify-between text-green-700">
+                                  <span>Promo ({partyBookingPromo.code})</span>
+                                  <span>−{formatCurrency(promoDiscount)}</span>
+                                </div>
+                              )}
                               <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
                                 <span>Total</span>
-                                <span>{formatCurrency(selectedPkg?.price || 0)}</span>
+                                <span>{formatCurrency(discountedTotal)}</span>
                               </div>
                             </div>
+
+                            {/* Promo code */}
+                            {partyBookingPromo ? (
+                              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                                <span className="text-green-800 font-medium">✓ Promo {partyBookingPromo.code} — {partyBookingPromo.discountPercent}% off applied</span>
+                                <button type="button" onClick={() => { setPartyBookingPromo(null); setPartyBookingPromoError(''); }} className="text-red-600 hover:underline text-xs">Remove</button>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-gray-50 rounded-lg">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Have a promo code?</label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={partyBookingPromoInput}
+                                    onChange={(e) => { setPartyBookingPromoInput(e.target.value); setPartyBookingPromoError(''); }}
+                                    placeholder="Enter code"
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-honey-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={partyBookingPromoLoading}
+                                    onClick={async () => {
+                                      const code = partyBookingPromoInput.trim();
+                                      if (!code) { setPartyBookingPromoError('Enter a promo code'); return; }
+                                      setPartyBookingPromoLoading(true);
+                                      setPartyBookingPromoError('');
+                                      try {
+                                        const res = await fetch('/api/party-booking/validate-promo', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ code }),
+                                        });
+                                        const d = await res.json();
+                                        if (d.valid) { setPartyBookingPromo({ code: d.code, discountPercent: d.discountPercent }); setPartyBookingPromoInput(''); }
+                                        else setPartyBookingPromoError(d.error || "That code isn't valid.");
+                                      } catch {
+                                        setPartyBookingPromoError('Could not validate the code. Please try again.');
+                                      } finally {
+                                        setPartyBookingPromoLoading(false);
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-honey-500 text-white text-sm font-semibold rounded-lg hover:bg-honey-600 disabled:opacity-50"
+                                  >
+                                    {partyBookingPromoLoading ? '…' : 'Apply'}
+                                  </button>
+                                </div>
+                                {partyBookingPromoError && <p className="text-xs text-red-600 mt-1">{partyBookingPromoError}</p>}
+                              </div>
+                            )}
+
                             {paymentMethod && (
                               <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
                                 💳 Charging card ending in •••• {paymentMethod.last4}
@@ -1984,9 +2047,9 @@ function WebMyAccountContent() {
                             )}
                             {giftCardBalance > 0 && selectedPkg && (
                               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                                🎁 {giftCardBalance >= selectedPkg.price
+                                🎁 {giftCardBalance >= discountedTotal
                                   ? 'Fully covered by gift card balance!'
-                                  : `$${Math.min(giftCardBalance, selectedPkg.price).toFixed(2)} gift card credit will be applied`}
+                                  : `$${Math.min(giftCardBalance, discountedTotal).toFixed(2)} gift card credit will be applied`}
                               </div>
                             )}
                           </div>
@@ -2011,6 +2074,7 @@ function WebMyAccountContent() {
                                       purchaseType: 'party_package',
                                       paymentMethodId: paymentMethod.id,
                                       quantity: 1,
+                                      promoCode: partyBookingPromo?.code,
                                     }),
                                   });
                                   const purchaseData = await purchaseRes.json();
@@ -2034,6 +2098,8 @@ function WebMyAccountContent() {
                                   }
 
                                   setPartyBookingSlot(null);
+                                  setPartyBookingPromo(null);
+                                  setPartyBookingPromoInput('');
                                   const fmtTime = (t: string) => {
                                     const [h, m] = t.split(':'); const hr = parseInt(h);
                                     return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
