@@ -36,6 +36,32 @@ async function cancelLinkedAfterDarkBooking(
   }
 }
 
+/**
+ * Cancel the party_bookings row linked to a refunded party purchase so the slot
+ * is freed on the calendar. Availability checks exclude 'cancelled' bookings.
+ */
+async function cancelLinkedPartyBooking(
+  supabase: AdminSupabase,
+  purchaseId: string,
+  logContext: Record<string, unknown>
+) {
+  const { error } = await supabase
+    .from('party_bookings')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('purchase_id', purchaseId)
+    .neq('status', 'cancelled');
+
+  if (error) {
+    logger.error({ ...logContext, error }, 'Failed to cancel party booking after refund');
+    Sentry.captureException(error, {
+      tags: { component: 'api', action: 'party_booking_cancel_on_refund' },
+      extra: { purchaseId },
+    });
+  } else {
+    logger.info({ ...logContext }, 'Party booking cancelled after purchase refund');
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -92,6 +118,9 @@ export async function POST(
       if (purchase.type === 'after_dark' && purchase.product_id) {
         await cancelLinkedAfterDarkBooking(supabase, purchase.product_id, logContext);
       }
+      if (purchase.type === 'party_package') {
+        await cancelLinkedPartyBooking(supabase, purchaseId, logContext);
+      }
 
       return NextResponse.json({
         success: true,
@@ -146,6 +175,9 @@ export async function POST(
 
     if (purchase.type === 'after_dark' && purchase.product_id) {
       await cancelLinkedAfterDarkBooking(supabase, purchase.product_id, logContext);
+    }
+    if (purchase.type === 'party_package') {
+      await cancelLinkedPartyBooking(supabase, purchaseId, logContext);
     }
 
     Sentry.addBreadcrumb({
