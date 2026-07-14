@@ -14,7 +14,7 @@ import { PURCHASING_ENABLED, SHOW_ACCOUNT_IN_HEADER, ACCOUNT_ACCESS_ENABLED, SHO
 
 const navigation = [
   { name: 'Home', href: '/' },
-  { name: 'About', href: '/info' },
+  { name: 'Hours and Pricing', href: '/info' },
   { name: 'Events', href: '/events' },
   { name: 'Parties', href: '/parties' },
   { name: 'Groups', href: '/groups' },

@@ -3,7 +3,7 @@
  * CRUD operations for promotional campaigns
  */
 
-import { createClient, createAdminClient } from '../supabase/server';
+import { createClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 import { formatDateToYYYYMMDD } from '../utils';
 
@@ -55,40 +55,42 @@ export async function getActivePromos(): Promise<Promo[]> {
 }
 
 /**
- * Look up an active, customer-facing (non staff-only) promo by the code a
- * customer types (case-insensitive exact match on stripe_coupon_code), enforcing
- * is_active and the start/end date window. Used to validate party promo codes.
- * Uses the admin client so it works for guest (non-logged-in) bookings too.
- * Returns null if no valid promo matches.
+ * Party-only promo codes are defined here in code — NOT in the promos table —
+ * so they are redeemable for birthday party bookings only, and never advertised
+ * on the homepage promo banner or the passes pricing page (those read the promos
+ * table). Redemption is further restricted to party_package purchases server-side.
  */
-export async function getActivePartyPromoByCode(code: string): Promise<Promo | null> {
-  const trimmed = (code || '').trim();
-  if (!trimmed) return null;
+const PARTY_PROMO_CODES: Record<string, { discountPercent: number; name: string }> = {
+  BIRTHDAY26: { discountPercent: 10, name: 'Birthday Early-Bird' },
+};
 
-  const supabase = createAdminClient();
-  const today = formatDateToYYYYMMDD(new Date());
+export interface PartyPromo {
+  code: string; // canonical (uppercased) code, also used as the Stripe coupon id
+  discountPercent: number;
+  name: string;
+  stripeCouponId: string;
+  promoId: string | null; // promos-table id, if the promo came from the DB (else null)
+}
 
-  const { data, error } = await supabase
-    .from('promos')
-    .select('*')
-    .eq('is_active', true)
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .ilike('stripe_coupon_code', trimmed)
-    .limit(1)
-    .maybeSingle();
+/**
+ * Validate a customer-typed party promo code (case-insensitive). Party promos
+ * are code-defined so they never appear in general marketing surfaces.
+ * Returns null if the code isn't a recognized active party promo.
+ */
+export async function getActivePartyPromoByCode(code: string): Promise<PartyPromo | null> {
+  const upper = (code || '').trim().toUpperCase();
+  if (!upper) return null;
 
-  if (error) {
-    console.error('Error validating party promo code:', error);
-    return null;
-  }
+  const hardcoded = PARTY_PROMO_CODES[upper];
+  if (!hardcoded) return null;
 
-  // Exclude staff-only promos when that column is present. It isn't deployed in
-  // every environment; a missing column means the staff-only distinction doesn't
-  // exist there, so the promo is treated as customer-facing.
-  if (data && (data as { is_staff_only?: boolean }).is_staff_only === true) return null;
-
-  return data;
+  return {
+    code: upper,
+    discountPercent: hardcoded.discountPercent,
+    name: hardcoded.name,
+    stripeCouponId: upper,
+    promoId: null,
+  };
 }
 
 /**

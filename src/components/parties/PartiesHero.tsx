@@ -43,10 +43,10 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Content Side */}
+        <div className="max-w-3xl mx-auto">
+          {/* Content */}
           <motion.div
-            className="text-center lg:text-left"
+            className="text-center"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
@@ -83,7 +83,7 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
             </motion.div>
 
             {/* CTA Buttons */}
-            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
+            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button
                 variant="primary"
                 size="lg"
@@ -128,50 +128,6 @@ export function PartiesHero({ onBookParty }: PartiesHeroProps) {
                 )
               })}
             </motion.div> */}
-          </motion.div>
-
-          {/* Image Side */}
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="relative rounded-3xl overflow-hidden shadow-soft border border-primary-200/30">
-              {/* Main Party Image */}
-              <div className="aspect-[4/3] relative">
-                <Image
-                  src="/birthday-party-room.jpg"
-                  alt="Busy Bees birthday party room with colorful decorations"
-                  fill
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
-
-                {/* Floating party elements - honey/amber theme */}
-                <div className="absolute top-4 left-4 w-14 h-14 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
-                  <Sparkles className="w-7 h-7 text-honey-600" />
-                </div>
-
-                <div className="absolute top-4 right-4 w-12 h-12 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
-                  <Star className="w-6 h-6 text-honey-600" />
-                </div>
-
-                <div className="absolute bottom-4 left-4 w-12 h-12 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
-                  <Users className="w-6 h-6 text-honey-600" />
-                </div>
-
-                <div className="absolute bottom-4 right-4 w-14 h-14 bg-primary-100 rounded-xl shadow-soft flex items-center justify-center border border-primary-200/50">
-                  <div className="text-center text-honey-600">
-                    <Calendar className="w-6 h-6 mx-auto mb-0.5" />
-                    <p className="text-xs font-bold">BOOK</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </motion.div>
         </div>
       </div>

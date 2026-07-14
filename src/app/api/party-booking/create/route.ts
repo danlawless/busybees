@@ -226,34 +226,30 @@ export async function POST(request: NextRequest) {
     // discount — the two never stack (a member already gets their 10%). Always
     // re-validated server-side; the client-supplied amount is never trusted.
     let promoDiscount:
-      | { couponId: string; discountPercent: number; discountAmount: number; promoId: string; code: string }
+      | { couponId: string; discountPercent: number; discountAmount: number; promoId: string | null; code: string }
       | null = null;
 
     const promoCode = typeof body.promoCode === 'string' ? body.promoCode.trim() : '';
     if (!memberDiscount && promoCode) {
       try {
         const promo = await getActivePartyPromoByCode(promoCode);
-        if (promo && promo.discount_percent && promo.discount_percent > 0) {
+        if (promo && promo.discountPercent > 0) {
           const stripe = await getStripeClient();
-          // Deterministic Stripe coupon id derived from the promo (lazily created,
-          // mirroring the MEMBER10 pattern) so no manual Stripe setup is needed.
-          const couponId = (
-            promo.stripe_coupon_id ||
-            `PROMO_${(promo.stripe_coupon_code || promoCode).toUpperCase()}`
-          ).slice(0, 40);
+          // Deterministic Stripe coupon id (lazily created, mirroring MEMBER10)
+          // so no manual Stripe setup is needed.
+          const couponId = promo.stripeCouponId.slice(0, 40);
           try {
             await stripe.coupons.retrieve(couponId);
           } catch (couponError: unknown) {
             if ((couponError as { code?: string })?.code === 'resource_missing') {
               await stripe.coupons.create({
                 id: couponId,
-                name: promo.name || `Promo ${promo.stripe_coupon_code}`,
-                percent_off: promo.discount_percent,
+                name: promo.name,
+                percent_off: promo.discountPercent,
                 duration: 'once',
                 metadata: {
                   type: 'party_promo_code',
-                  promo_id: promo.id,
-                  code: promo.stripe_coupon_code || promoCode,
+                  code: promo.code,
                 },
               });
               logger.info({ couponId }, '🏷️ Created party promo coupon in Stripe');
@@ -264,10 +260,10 @@ export async function POST(request: NextRequest) {
 
           promoDiscount = {
             couponId,
-            discountPercent: promo.discount_percent,
-            discountAmount: (pricing.totalPrice * promo.discount_percent) / 100,
-            promoId: promo.id,
-            code: promo.stripe_coupon_code || promoCode,
+            discountPercent: promo.discountPercent,
+            discountAmount: (pricing.totalPrice * promo.discountPercent) / 100,
+            promoId: promo.promoId,
+            code: promo.code,
           };
           logger.info(
             { ...logContext, code: promoDiscount.code, discountPercent: promoDiscount.discountPercent },

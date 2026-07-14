@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const promo = await getActivePartyPromoByCode(parsed.data.code);
 
-    if (!promo || !promo.discount_percent || promo.discount_percent <= 0) {
+    if (!promo || promo.discountPercent <= 0) {
       return NextResponse.json({
         valid: false,
         error: "That promo code isn't valid or has expired.",
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       valid: true,
-      code: promo.stripe_coupon_code,
-      discountPercent: promo.discount_percent,
+      code: promo.code,
+      discountPercent: promo.discountPercent,
       name: promo.name,
     });
   } catch (error) {

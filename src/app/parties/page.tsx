@@ -10,7 +10,7 @@ import { PartyAvailabilityPreview } from '@/components/parties/PartyAvailability
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
 import { SummerPartyNotice } from '@/components/parties/SummerPartyNotice'
 import { motion } from 'framer-motion'
-import { Gift, Calendar, AlertCircle, X } from 'lucide-react'
+import { Gift, AlertCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -80,69 +80,7 @@ function PartiesContent() {
       {/* Summer Hours: Semi-Private notice (only renders during the summer window) */}
       <SummerPartyNotice />
 
-      {/* Book Party CTA Section */}
-      <section className="relative py-16 overflow-hidden min-h-[20rem] flex items-center bg-[#FFF8E7]/70">
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl font-bold text-charcoal-800 mb-4">
-              Ready to Plan Your Perfect Party?
-            </h2>
-            <p className="text-lg text-charcoal-600 mb-8 max-w-2xl mx-auto">
-              Book your child&apos;s birthday party at Busy Bees!
-              Our easy booking process takes just a few minutes.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => router.push('/customer/login')}
-                className="shadow-soft hover:shadow-medium transition-all duration-300"
-              >
-                <Gift className="w-6 h-6 mr-2" />
-                Purchase in My Account
-              </Button>
-
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => {
-                  document.getElementById('party-packages')?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  })
-                }}
-                className="border-2 border-primary-300 text-charcoal-700 hover:bg-primary-50"
-              >
-                <Calendar className="w-5 h-5 mr-2" />
-                View Packages First
-              </Button>
-            </div>
-
-            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-charcoal-600">
-              <span className="flex items-center gap-1">
-                ✓ Up to 20 kids included
-              </span>
-              <span className="flex items-center gap-1">
-                ✓ 2-hour party
-              </span>
-              <span className="flex items-center gap-1">
-                ✓ Dedicated party host
-              </span>
-              <span className="flex items-center gap-1">
-                ✓ Secure online payment
-              </span>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Availability Calendar */}
+      {/* Availability Calendar — moved to the top, in place of the hero party-room image */}
       <PartyAvailabilityPreview
         onBookDate={() => {
           router.push('/customer/login?redirect=/customer/dashboard?tab=parties')

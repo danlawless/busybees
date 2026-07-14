@@ -167,16 +167,16 @@ export async function POST(request: NextRequest) {
     // Party promo code — party packages only, re-validated server-side (the client
     // price is never trusted). Reduces the sale price before any gift-card credit.
     let promoDiscountAmount = 0;
-    let appliedPromo: { promoId: string; discountPercent: number; code: string } | null = null;
+    let appliedPromo: { promoId: string | null; discountPercent: number; code: string } | null = null;
     if (typeof body.promoCode === 'string' && body.promoCode.trim() && purchaseType === 'party_package') {
       try {
         const promo = await getActivePartyPromoByCode(body.promoCode.trim());
-        if (promo && promo.discount_percent && promo.discount_percent > 0) {
-          promoDiscountAmount = (totalAmount * promo.discount_percent) / 100;
+        if (promo && promo.discountPercent > 0) {
+          promoDiscountAmount = (totalAmount * promo.discountPercent) / 100;
           appliedPromo = {
-            promoId: promo.id,
-            discountPercent: promo.discount_percent,
-            code: promo.stripe_coupon_code || body.promoCode.trim(),
+            promoId: promo.promoId,
+            discountPercent: promo.discountPercent,
+            code: promo.code,
           };
           logger.info(
             { ...logContext, code: appliedPromo.code, discountPercent: appliedPromo.discountPercent },
