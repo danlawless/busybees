@@ -155,8 +155,17 @@ export default async function InvitePage({
     <main className="min-h-screen px-4 py-8 sm:py-12" style={{ backgroundColor: COLORS.page }}>
       <div className="mx-auto max-w-xl">
         <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
-          {/* Header */}
-          <div className="px-6 py-8 text-center" style={{ backgroundColor: COLORS.brand }}>
+          {/* Header — festive balloons background, matching the invitation email */}
+          <div
+            className="px-6 py-8 text-center"
+            style={{
+              backgroundColor: COLORS.brand,
+              backgroundImage: "url('/invite-balloons-header.png')",
+              backgroundPosition: 'center',
+              backgroundSize: 'cover',
+              backgroundRepeat: 'no-repeat',
+            }}
+          >
             <div className="mx-auto mb-4 inline-block rounded-2xl bg-white px-5 py-3">
               <Image
                 src="/busy-bees-logo.png"
@@ -167,10 +176,16 @@ export default async function InvitePage({
                 priority
               />
             </div>
-            <h1 className="text-3xl font-extrabold sm:text-4xl" style={{ color: '#ffffff' }}>
+            <h1
+              className="text-3xl font-extrabold sm:text-4xl"
+              style={{ color: '#ffffff', textShadow: '0 2px 6px rgba(0,0,0,0.45)' }}
+            >
               You&apos;re Invited!
             </h1>
-            <p className="mt-2 text-lg font-medium" style={{ color: COLORS.brandCream }}>
+            <p
+              className="mt-2 text-lg font-medium"
+              style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+            >
               Join us to celebrate {child}&apos;s {birthdayLabel(booking.child_age)}!
             </p>
           </div>
