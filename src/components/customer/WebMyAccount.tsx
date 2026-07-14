@@ -100,7 +100,6 @@ function WebMyAccountContent() {
   const [partyBookingStep, setPartyBookingStep] = useState<'package' | 'details' | 'review'>('package');
   const [partyBookingPackage, setPartyBookingPackage] = useState<string | null>(null);
   const [partyBookingChild, setPartyBookingChild] = useState('');
-  const [partyBookingChildAge, setPartyBookingChildAge] = useState('');
   const [partyBookingGuests, setPartyBookingGuests] = useState(15);
   const [partyBookingNotes, setPartyBookingNotes] = useState('');
   const [partyBookingProcessing, setPartyBookingProcessing] = useState(false);
@@ -1814,7 +1813,6 @@ function WebMyAccountContent() {
                   setPartyBookingStep('package');
                   setPartyBookingPackage(null);
                   setPartyBookingChild('');
-                  setPartyBookingChildAge('');
                   setPartyBookingGuests(15);
                   setPartyBookingNotes('');
                 }}
@@ -1914,18 +1912,6 @@ function WebMyAccountContent() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Child&apos;s Age (optional)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="12"
-                              value={partyBookingChildAge}
-                              onChange={(e) => setPartyBookingChildAge(e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              placeholder="Age (0-12)"
-                            />
-                          </div>
-                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Number of Children Attending</label>
                             <input
                               type="number"
@@ -1976,7 +1962,7 @@ function WebMyAccountContent() {
                           <div className="space-y-3 mb-6">
                             <div className="p-4 bg-gray-50 rounded-lg space-y-2 text-sm">
                               <div className="flex justify-between"><span className="text-gray-600">Package</span><span className="font-medium">{selectedPkg?.name}</span></div>
-                              <div className="flex justify-between"><span className="text-gray-600">Birthday Child</span><span className="font-medium">{partyBookingChild}{partyBookingChildAge ? ` (age ${partyBookingChildAge})` : ''}</span></div>
+                              <div className="flex justify-between"><span className="text-gray-600">Birthday Child</span><span className="font-medium">{partyBookingChild}</span></div>
                               <div className="flex justify-between"><span className="text-gray-600">Guests</span><span className="font-medium">{partyBookingGuests} children</span></div>
                               {partyBookingNotes && <div><span className="text-gray-600">Notes:</span> <span className="text-gray-800">{partyBookingNotes}</span></div>}
                               {partyBookingPromo && promoDiscount > 0 && (
