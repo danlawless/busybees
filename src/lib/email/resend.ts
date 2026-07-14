@@ -4031,6 +4031,7 @@ At Busy Bees Indoor Play Center, we take the stress out of party planning so you
 Our party packages include:
 - 2 hours of private party fun
 - Dedicated party host
+- Customized digital invitations for your guests
 - Up to 15-20 kids (depending on package)
 - Play area, cafe, and party room access
 - Paper goods and decorations (select packages)
@@ -4068,12 +4069,12 @@ Visit us: ${siteUrl}
 
           <!-- Header -->
           <tr>
-            <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
+            <td style="background-color: #d97706; background-image: url('${siteUrl}/invite-balloons-header.png'); background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 20px; text-align: center;">
               <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.45);">
                 ${childFirst}'s Birthday is Coming!
               </h1>
-              <p style="margin: 8px 0 0; color: #fef3c7; font-size: 16px;">
+              <p style="margin: 8px 0 0; color: #ffffff; font-size: 16px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 ${turningAge > 0 ? `Turning ${turningAge} soon` : 'A special day is approaching'}
               </p>
             </td>
@@ -4100,6 +4101,7 @@ Visit us: ${siteUrl}
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ 2 hours of private party fun</td></tr>
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Dedicated party host</td></tr>
+                      <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Customized digital invitations for your guests</td></tr>
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Up to 15-20 kids (depending on package)</td></tr>
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Play area, cafe & party room access</td></tr>
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Paper goods & decorations (select packages)</td></tr>
