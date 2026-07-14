@@ -208,11 +208,12 @@ async function handleUpdate(
     try {
       const recipientEmail = profile?.email || user.email;
       if (recipientEmail) {
-        // Read party_type from the just-synced booking so the email branches
-        // to semi-private copy when applicable.
+        // Read the just-synced booking. We need its id (not the purchase id) for
+        // the shareable invitation link, and party_type so the email branches to
+        // semi-private copy when applicable.
         const { data: syncedBooking } = await supabase
           .from('party_bookings')
-          .select('party_type')
+          .select('id, party_type')
           .eq('purchase_id', id)
           .maybeSingle();
 
@@ -227,7 +228,7 @@ async function handleUpdate(
           packageName: purchase.name,
           guestCount: partyData.party_guests,
           totalPrice: Number(purchase.price),
-          bookingId: id,
+          bookingId: syncedBooking?.id || id,
           partyType: syncedBooking?.party_type,
         });
         if (emailResult.success) {
