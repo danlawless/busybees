@@ -2042,12 +2042,12 @@ ${siteUrl}
 
           <!-- Header -->
           <tr>
-            <td style="background-color: #d97706; padding: 30px 20px; text-align: center;">
+            <td style="background-color: #d97706; background-image: url('${siteUrl}/invite-balloons-header.png'); background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 20px; text-align: center;">
               <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
-              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.45);">
                 You're Invited!
               </h1>
-              <p style="margin: 8px 0 0; color: #fef3c7; font-size: 17px;">
+              <p style="margin: 8px 0 0; color: #ffffff; font-size: 17px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 Join us to celebrate ${childFirst}'s ${birthdayLabel}!
               </p>
             </td>
