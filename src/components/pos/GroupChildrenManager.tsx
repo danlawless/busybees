@@ -537,6 +537,7 @@ export function GroupChildrenManager({
                       </label>
                       <input
                         type="tel"
+                        inputMode="numeric"
                         value={newChildParentPhone}
                         onChange={(e) => setNewChildParentPhone(e.target.value)}
                         placeholder="(XXX) XXX-XXXX"

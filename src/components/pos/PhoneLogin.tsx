@@ -463,6 +463,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               </label>
               <input
                 type="tel"
+                inputMode="numeric"
                 id="phone"
                 value={fullPhoneNumber}
                 onChange={handleFullPhoneChange}
@@ -557,6 +558,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
             </label>
             <input
               type="tel"
+              inputMode="numeric"
               id="login-phone"
               value={phoneNumber}
               onChange={handlePhoneChange}
@@ -623,6 +625,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                 <input
                   type="tel"
+                  inputMode="numeric"
                   value={staffPhone}
                   onChange={(e) => setStaffPhone(formatStaffPhoneInput(e.target.value))}
                   placeholder="(555) 123-4567"

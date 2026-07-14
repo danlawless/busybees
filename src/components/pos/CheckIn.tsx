@@ -2256,6 +2256,7 @@ export function CheckIn({
                             </label>
                             <input
                                 type="tel"
+                                inputMode="numeric"
                                 id="phone-search"
                                 value={searchPhone}
                                 onChange={handlePhoneSearch}

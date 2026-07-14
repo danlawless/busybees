@@ -564,6 +564,7 @@ export function GroupsManager() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                   <input
                     type="tel"
+                    inputMode="numeric"
                     value={editForm.phone}
                     onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -1030,6 +1031,7 @@ export function GroupsManager() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
               <input
                 type="tel"
+                inputMode="numeric"
                 value={createForm.phone}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="Phone number"
