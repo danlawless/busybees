@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -31,13 +31,52 @@ interface ReviewStepProps {
   onValidChange: (isValid: boolean) => void;
   isMember?: boolean;
   memberDiscountPercent?: number;
+  appliedPromo?: { code: string; discountPercent: number; name: string } | null;
+  onPromoApplied?: (promo: { code: string; discountPercent: number; name: string } | null) => void;
 }
 
-export function ReviewStep({ formData, pricing, onValidChange, isMember, memberDiscountPercent }: ReviewStepProps) {
+export function ReviewStep({ formData, pricing, onValidChange, isMember, memberDiscountPercent, appliedPromo, onPromoApplied }: ReviewStepProps) {
+  const [promoInput, setPromoInput] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
+
   // Always valid if we got here
   useEffect(() => {
     onValidChange(true);
   }, [onValidChange]);
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError('Enter a promo code');
+      return;
+    }
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const res = await fetch('/api/party-booking/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        onPromoApplied?.({ code: data.code, discountPercent: data.discountPercent, name: data.name });
+        setPromoInput('');
+      } else {
+        setPromoError(data.error || "That code isn't valid.");
+      }
+    } catch {
+      setPromoError('Could not validate the code. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    onPromoApplied?.(null);
+    setPromoError('');
+  };
 
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
@@ -58,8 +97,11 @@ export function ReviewStep({ formData, pricing, onValidChange, isMember, memberD
 
   const packageInfo = formData.packageName ? PACKAGE_PRICING[formData.packageName] : null;
 
-  // Calculate member discount
-  const discountPercent = isMember && memberDiscountPercent ? memberDiscountPercent : 0;
+  // Discount: automatic member discount takes precedence; otherwise an applied
+  // promo code. They never stack.
+  const discountPercent = isMember && memberDiscountPercent
+    ? memberDiscountPercent
+    : (!isMember && appliedPromo ? appliedPromo.discountPercent : 0);
   const discountAmount = pricing ? Math.round((pricing.totalPrice * discountPercent) / 100 * 100) / 100 : 0;
   const discountedTotal = pricing ? pricing.totalPrice - discountAmount : 0;
 
@@ -170,22 +212,69 @@ export function ReviewStep({ formData, pricing, onValidChange, isMember, memberD
             </div>
           )}
 
-          {isMember && discountAmount > 0 && (
+          {discountAmount > 0 && (
             <div className="flex justify-between items-start text-green-700">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
                 <div>
-                  <div className="font-medium">Member Discount</div>
-                  <div className="text-sm">{discountPercent}% off (monthly pass holder)</div>
+                  <div className="font-medium">{isMember ? 'Member Discount' : 'Promo Discount'}</div>
+                  <div className="text-sm">
+                    {isMember
+                      ? `${discountPercent}% off (monthly pass holder)`
+                      : `${discountPercent}% off (${appliedPromo?.code})`}
+                  </div>
                 </div>
               </div>
               <div className="font-semibold">-${discountAmount.toFixed(0)}</div>
             </div>
           )}
 
+          {/* Promo code — hidden for members, whose auto-discount can't be combined */}
+          {!isMember && (
+            <div className="pt-3 border-t border-honey-200">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-700">
+                    ✓ Promo code <span className="font-bold">{appliedPromo.code}</span> applied
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Have a promo code?</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => { setPromoInput(e.target.value); setPromoError(''); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyPromo(); } }}
+                      placeholder="Enter code"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-honey-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromo}
+                      disabled={promoLoading}
+                      className="px-4 py-2 bg-honey-500 text-white text-sm font-semibold rounded-lg hover:bg-honey-600 disabled:opacity-50"
+                    >
+                      {promoLoading ? '…' : 'Apply'}
+                    </button>
+                  </div>
+                  {promoError && <p className="text-xs text-red-600 mt-1">{promoError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-honey-200 pt-4 flex justify-between items-center">
             <div className="text-lg font-bold text-charcoal-800">Total</div>
-            {isMember && discountAmount > 0 ? (
+            {discountAmount > 0 ? (
               <div className="text-right">
                 <div className="text-sm text-gray-400 line-through">
                   ${pricing?.totalPrice || 0}

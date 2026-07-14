@@ -82,6 +82,8 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
   const [stepValid, setStepValid] = useState(false);
   const [isMember, setIsMember] = useState(false);
   const [memberDiscountPercent, setMemberDiscountPercent] = useState(0);
+  // Customer-applied promo code (mutually exclusive with the member discount).
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountPercent: number; name: string } | null>(null);
 
   // Check membership status on mount
   useEffect(() => {
@@ -176,6 +178,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
           childAge: formData.childAge,
           guestCount: formData.guestCount,
           notes: formData.notes,
+          promoCode: appliedPromo?.code,
         }),
       });
 
@@ -206,13 +209,21 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
       ? calculateBookingPrice(formData.packageName, 'private', formData.guestCount)
       : null;
 
-  // Calculate member discount amount for display
-  const memberDiscountAmount = pricing && isMember
-    ? Math.round((pricing.totalPrice * memberDiscountPercent) / 100 * 100) / 100
+  // Effective discount: the automatic member discount takes precedence; otherwise
+  // an applied promo code. They never stack (one discount per booking).
+  const effectiveDiscountPercent = isMember
+    ? memberDiscountPercent
+    : (appliedPromo?.discountPercent ?? 0);
+  const discountLabel = isMember
+    ? `${memberDiscountPercent}% member discount`
+    : appliedPromo
+      ? `${appliedPromo.discountPercent}% off (${appliedPromo.code})`
+      : '';
+  const discountAmount = pricing
+    ? Math.round((pricing.totalPrice * effectiveDiscountPercent) / 100 * 100) / 100
     : 0;
-  const discountedTotal = pricing
-    ? pricing.totalPrice - memberDiscountAmount
-    : 0;
+  const discountedTotal = pricing ? pricing.totalPrice - discountAmount : 0;
+  const hasDiscount = effectiveDiscountPercent > 0;
 
   const renderStep = () => {
     switch (currentStep) {
@@ -256,6 +267,8 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
             onValidChange={handleStepValidChange}
             isMember={isMember}
             memberDiscountPercent={memberDiscountPercent}
+            appliedPromo={appliedPromo}
+            onPromoApplied={setAppliedPromo}
           />
         );
       default:
@@ -373,7 +386,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
                     )}
                   </div>
                   <div className="text-right">
-                    {isMember ? (
+                    {hasDiscount ? (
                       <div>
                         <div className="text-sm text-gray-400 line-through">
                           ${pricing.totalPrice}
@@ -382,7 +395,7 @@ export function PartyBookingWizard({ onClose, onSuccess }: PartyBookingWizardPro
                           ${discountedTotal.toFixed(0)}
                         </div>
                         <div className="text-xs text-green-600 font-medium">
-                          {memberDiscountPercent}% member discount
+                          {discountLabel}
                         </div>
                       </div>
                     ) : (

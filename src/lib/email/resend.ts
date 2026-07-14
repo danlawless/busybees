@@ -4047,6 +4047,8 @@ Our party packages include:
 - Play area, cafe, and party room access
 - Paper goods and decorations (select packages)
 
+🎉 BOOK EARLY & SAVE 10%! Use promo code BIRTHDAY26 at checkout for 10% off any package.
+
 Book ${childFirst}'s party today: ${bookPartyUrl}
 
 We can't wait to help make ${childFirst}'s birthday unforgettable!
@@ -4117,6 +4119,16 @@ Visit us: ${siteUrl}
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Play area, cafe & party room access</td></tr>
                       <tr><td style="padding: 4px 0 4px 8px; font-size: 14px; color: #374151;">✓ Paper goods & decorations (select packages)</td></tr>
                     </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Promo offer -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ecfdf5; border: 2px dashed #34d399; border-radius: 12px; margin-bottom: 25px;">
+                <tr>
+                  <td style="padding: 18px 20px; text-align: center;">
+                    <p style="margin: 0 0 6px; font-size: 17px; font-weight: 700; color: #065f46;">🎉 Book Early &amp; Save 10%!</p>
+                    <p style="margin: 0; font-size: 14px; color: #047857; line-height: 1.5;">Use promo code <span style="font-weight: 700; letter-spacing: 1px; color: #065f46;">BIRTHDAY26</span> at checkout for 10% off any package.</p>
                   </td>
                 </tr>
               </table>

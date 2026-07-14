@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/nextjs';
 import { createPartyBooking, updateBookingWithStripeSession, updatePartyBooking } from '@/lib/services/party-bookings';
 import { CompleteBookingSchema, calculateBookingPrice, PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { createCheckoutSession } from '@/lib/stripe/checkout';
+import { getActivePartyPromoByCode } from '@/lib/services/promos';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
@@ -221,8 +222,70 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Customer-entered promo code. Applied only when there's no automatic member
+    // discount — the two never stack (a member already gets their 10%). Always
+    // re-validated server-side; the client-supplied amount is never trusted.
+    let promoDiscount:
+      | { couponId: string; discountPercent: number; discountAmount: number; promoId: string; code: string }
+      | null = null;
+
+    const promoCode = typeof body.promoCode === 'string' ? body.promoCode.trim() : '';
+    if (!memberDiscount && promoCode) {
+      try {
+        const promo = await getActivePartyPromoByCode(promoCode);
+        if (promo && promo.discount_percent && promo.discount_percent > 0) {
+          const stripe = await getStripeClient();
+          // Deterministic Stripe coupon id derived from the promo (lazily created,
+          // mirroring the MEMBER10 pattern) so no manual Stripe setup is needed.
+          const couponId = (
+            promo.stripe_coupon_id ||
+            `PROMO_${(promo.stripe_coupon_code || promoCode).toUpperCase()}`
+          ).slice(0, 40);
+          try {
+            await stripe.coupons.retrieve(couponId);
+          } catch (couponError: unknown) {
+            if ((couponError as { code?: string })?.code === 'resource_missing') {
+              await stripe.coupons.create({
+                id: couponId,
+                name: promo.name || `Promo ${promo.stripe_coupon_code}`,
+                percent_off: promo.discount_percent,
+                duration: 'once',
+                metadata: {
+                  type: 'party_promo_code',
+                  promo_id: promo.id,
+                  code: promo.stripe_coupon_code || promoCode,
+                },
+              });
+              logger.info({ couponId }, '🏷️ Created party promo coupon in Stripe');
+            } else {
+              throw couponError;
+            }
+          }
+
+          promoDiscount = {
+            couponId,
+            discountPercent: promo.discount_percent,
+            discountAmount: (pricing.totalPrice * promo.discount_percent) / 100,
+            promoId: promo.id,
+            code: promo.stripe_coupon_code || promoCode,
+          };
+          logger.info(
+            { ...logContext, code: promoDiscount.code, discountPercent: promoDiscount.discountPercent },
+            '🏷️ Applying customer promo code discount'
+          );
+        } else {
+          logger.info({ ...logContext, promoCode }, 'Promo code not valid/active — proceeding without discount');
+        }
+      } catch (promoError) {
+        logger.warn({ ...logContext, error: promoError }, '⚠️ Failed to apply promo code, proceeding without discount');
+      }
+    }
+
+    // Member discount takes precedence; otherwise the promo. Never both.
+    const appliedDiscount = memberDiscount || promoDiscount;
+
     logger.info(
-      { ...logContext, tempCustomerId, totalAmount: pricing.totalPrice, hasMemberDiscount: !!memberDiscount },
+      { ...logContext, tempCustomerId, totalAmount: pricing.totalPrice, hasDiscount: !!appliedDiscount },
       '💳 Creating Stripe checkout session'
     );
 
@@ -247,10 +310,11 @@ export async function POST(request: NextRequest) {
           package_name: bookingData.packageName,
           party_type: bookingData.partyType,
           ...(memberDiscount && { member_discount_applied: 'true' }),
+          ...(promoDiscount && { promo_code_applied: promoDiscount.code }),
         },
         successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://busybeesipc.com'}/parties?cancelled=true`,
-        ...(memberDiscount && { discounts: [{ coupon: memberDiscount.couponId }] }),
+        ...(appliedDiscount && { discounts: [{ coupon: appliedDiscount.couponId }] }),
       });
 
       logger.info(
@@ -279,7 +343,7 @@ export async function POST(request: NextRequest) {
     try {
       await updateBookingWithStripeSession(bookingId, checkoutSession.id);
 
-      // If member discount was applied, record it on the booking
+      // Record whichever discount was applied on the booking
       if (memberDiscount) {
         await updatePartyBooking(bookingId, {
           discount_amount: memberDiscount.discountAmount,
@@ -287,10 +351,18 @@ export async function POST(request: NextRequest) {
           discount_applied_by: 'system',
           discount_applied_at: new Date().toISOString(),
         });
+      } else if (promoDiscount) {
+        await updatePartyBooking(bookingId, {
+          applied_promo_id: promoDiscount.promoId,
+          discount_amount: promoDiscount.discountAmount,
+          discount_percent: promoDiscount.discountPercent,
+          discount_applied_by: 'customer_promo',
+          discount_applied_at: new Date().toISOString(),
+        });
       }
 
       logger.info(
-        { ...logContext, sessionId: checkoutSession.id, memberDiscount: !!memberDiscount },
+        { ...logContext, sessionId: checkoutSession.id, hasDiscount: !!appliedDiscount },
         '💾 Updated booking with Stripe session ID'
       );
     } catch (updateError) {
@@ -321,6 +393,13 @@ export async function POST(request: NextRequest) {
         memberDiscount: {
           discountPercent: memberDiscount.discountPercent,
           discountAmount: memberDiscount.discountAmount,
+        },
+      }),
+      ...(promoDiscount && {
+        promoDiscount: {
+          code: promoDiscount.code,
+          discountPercent: promoDiscount.discountPercent,
+          discountAmount: promoDiscount.discountAmount,
         },
       }),
     });

@@ -3,7 +3,7 @@
  * CRUD operations for promotional campaigns
  */
 
-import { createClient } from '../supabase/server';
+import { createClient, createAdminClient } from '../supabase/server';
 import { Database } from '../supabase/database.types';
 import { formatDateToYYYYMMDD } from '../utils';
 
@@ -50,6 +50,43 @@ export async function getActivePromos(): Promise<Promo[]> {
     console.error('Error fetching active promos:', error);
     throw error;
   }
+
+  return data;
+}
+
+/**
+ * Look up an active, customer-facing (non staff-only) promo by the code a
+ * customer types (case-insensitive exact match on stripe_coupon_code), enforcing
+ * is_active and the start/end date window. Used to validate party promo codes.
+ * Uses the admin client so it works for guest (non-logged-in) bookings too.
+ * Returns null if no valid promo matches.
+ */
+export async function getActivePartyPromoByCode(code: string): Promise<Promo | null> {
+  const trimmed = (code || '').trim();
+  if (!trimmed) return null;
+
+  const supabase = createAdminClient();
+  const today = formatDateToYYYYMMDD(new Date());
+
+  const { data, error } = await supabase
+    .from('promos')
+    .select('*')
+    .eq('is_active', true)
+    .lte('start_date', today)
+    .gte('end_date', today)
+    .ilike('stripe_coupon_code', trimmed)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error validating party promo code:', error);
+    return null;
+  }
+
+  // Exclude staff-only promos when that column is present. It isn't deployed in
+  // every environment; a missing column means the staff-only distinction doesn't
+  // exist there, so the promo is treated as customer-facing.
+  if (data && (data as { is_staff_only?: boolean }).is_staff_only === true) return null;
 
   return data;
 }
