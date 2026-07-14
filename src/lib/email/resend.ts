@@ -1691,6 +1691,8 @@ Booking Reference: ${data.bookingId}
 
 ${packageContent.text}
 
+🎈 Your customized digital invitation is on its way! We've emailed you a separate, ready-to-share invitation you can send to your guests.
+
 View your booking: ${siteUrl}/customer/parties
 
 Questions? Reply to this email or call us.
@@ -1746,6 +1748,15 @@ ${siteUrl}
                   <td style="padding: 20px;">
                     <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #1f2937;">Thank you for your Purchase!</p>
                     <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6;">We're excited to host your ${packageDisplay} Party and look forward to celebrating with you and your guests! To help your party run smoothly and ensure every family enjoys their celebration, please review the important details below.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Digital invitation note -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 16px 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 14px; color: #1e3a8a; line-height: 1.6;">🎈 <strong>Your customized digital invitation is on its way!</strong> We've emailed you a separate, ready-to-share invitation you can send to your guests.</p>
                   </td>
                 </tr>
               </table>
