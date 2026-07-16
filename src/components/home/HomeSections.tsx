@@ -141,21 +141,21 @@ const partyTiers = [
     price: 475,
     cap: 'Up to 15 kids · 2 hours',
     popular: false,
-    features: ['Exclusive use of the party room', 'Dedicated party host', 'Paper goods & birthday crown', 'Setup & cleanup handled', 'Customized digital invitations'],
+    features: ['Exclusive use of the party room', 'Dedicated party host', 'Setup & cleanup handled', 'Customized digital invitations'],
   },
   {
     name: 'Worker Bee+',
     price: 525,
     cap: 'Up to 15 kids · 2 hours',
     popular: true,
-    features: ['Everything in Basic Bee', 'Pizza for all the guests', 'Soda & drinks included', 'Play area access during your party', 'Customized digital invitations'],
+    features: ['Everything in Basic Bee', 'Table cloths for all tables', 'Paper goods — plates, cups & napkins', 'Plastic utensils'],
   },
   {
     name: 'Queen Bee+',
     price: 575,
     cap: 'Up to 20 kids · 2 hours',
     popular: false,
-    features: ['Everything in Worker Bee+', 'Birthday cake included', 'Balloon decorations', 'Extra guests & the royal treatment', 'Customized digital invitations'],
+    features: ['Everything in Worker Bee+', 'Room for up to 20 kids', 'Perfect for bigger celebrations'],
   },
 ]
 
