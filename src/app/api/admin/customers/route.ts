@@ -40,6 +40,7 @@ interface PurchaseData {
   status: string;
   childId: string | null;
   childIds: string[];
+  giftCardAmountUsed: number;
 }
 
 interface SessionData {
@@ -257,6 +258,7 @@ export async function GET(_request: NextRequest) {
         status: purchase.status,
         childId: purchase.child_id,
         childIds: childIdsByPurchase.get(purchase.id) || [],
+        giftCardAmountUsed: Number(purchase.gift_card_amount_used || 0),
       }));
 
       const activeSessions = (sessionsByCustomer.get(user.id) || []).map(session => ({

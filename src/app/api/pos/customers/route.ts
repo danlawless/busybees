@@ -85,6 +85,7 @@ interface FormattedPurchase {
   totalSessions: number;
   status: string;
   autoRenew: boolean;
+  childId: string | null; // Direct single-child link (needed to resolve check-in child names)
   childIds: string[]; // For family passes: all children covered by this purchase
   giftCardAmountUsed: number; // Portion of price paid from gift-card/account credit (not new revenue)
 }
@@ -210,6 +211,7 @@ export async function GET() {
         totalSessions: purchase.total_sessions,
         status: purchase.status,
         autoRenew: purchase.auto_renew,
+        childId: purchase.child_id,
         childIds: childIdsByPurchase.get(purchase.id) || [],
         giftCardAmountUsed: Number(purchase.gift_card_amount_used || 0),
       });
