@@ -7,158 +7,119 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
+const MAPS_URL =
+  'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+301+Massachusetts+Avenue+Lunenburg+MA'
+
+const stats = [
+  { n: '0–6', l: 'Ages welcome' },
+  { n: 'All day', l: 'Play, no time limits' },
+  { n: 'Sparkling', l: 'Cleaned & sanitized' },
+  { n: 'Comfy', l: 'Café & parent seating' },
+]
+
 export function Hero() {
   return (
-    <>
-      {/* Static Image Hero — pre-video layout with flying bees + title + CTAs */}
-      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-36 min-h-[32rem]">
-        {/* Hero background image */}
-        <div className="absolute inset-0 z-0" aria-hidden>
-          <Image
-            src="/hero-background.png"
-            alt=""
-            fill
-            className="object-cover object-center"
-            priority
-            sizes="100vw"
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/20 via-transparent to-[#FFF8E7]/15"
-            aria-hidden
-          />
-        </div>
+    <section className="relative overflow-hidden py-20 sm:py-28 lg:py-32 min-h-[34rem]">
+      {/* Hero background image */}
+      <div className="absolute inset-0 z-0" aria-hidden>
+        <Image
+          src="/hero-background.png"
+          alt=""
+          fill
+          className="object-cover object-center"
+          priority
+          sizes="100vw"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/30 via-transparent to-[#FFF8E7]/25"
+          aria-hidden
+        />
+      </div>
 
-        {/* Flying Bees beside Title — positioning lives on the wrapper so the
-            framer-motion entrance animation (which controls `transform`) does
-            not override the placement. */}
-        <div className="absolute left-1/2 top-32 z-10 hidden -translate-x-96 -translate-y-1/2 xl:block">
-          <motion.div
-            initial={{ x: -100, opacity: 0, scale: 0.8 }}
-            animate={{ x: 0, opacity: 0.8, scale: 1 }}
-            transition={{ duration: 1.2, delay: 0.8 }}
-          >
-            <Image
-              src="/bee-flying-side2.png"
-              alt="Flying bee decoration"
-              width={180}
-              height={180}
-              className="drop-shadow-lg"
-            />
+      {/* Flying Bees beside title (large screens only) */}
+      <div className="absolute left-1/2 top-28 z-10 hidden -translate-x-[26rem] -translate-y-1/2 xl:block">
+        <motion.div
+          initial={{ x: -100, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 0.8, scale: 1 }}
+          transition={{ duration: 1.2, delay: 0.8 }}
+        >
+          <Image src="/bee-flying-side2.png" alt="Flying bee decoration" width={160} height={160} className="drop-shadow-lg" />
+        </motion.div>
+      </div>
+      <div className="absolute right-1/2 top-28 z-10 hidden translate-x-[26rem] -translate-y-1/2 xl:block">
+        <motion.div
+          initial={{ x: 100, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 0.8, scale: 1 }}
+          transition={{ duration: 1.2, delay: 1.0 }}
+        >
+          <Image src="/bee-flying-side1.png" alt="Flying bee decoration" width={160} height={160} className="drop-shadow-lg" />
+        </motion.div>
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
+        <motion.div className="text-center" variants={staggerContainer} initial="initial" animate="animate">
+          {/* Brand wordmark */}
+          <motion.div variants={fadeInUp}>
+            <div className="text-4xl sm:text-5xl font-bold leading-none text-honey-600">
+              Busy Bees
+            </div>
+            <div className="mt-1 text-xl sm:text-2xl text-charcoal-700">
+              Indoor Play Center
+            </div>
           </motion.div>
-        </div>
 
-        <div className="absolute right-1/2 top-32 z-10 hidden translate-x-96 -translate-y-1/2 xl:block">
-          <motion.div
-            initial={{ x: 100, opacity: 0, scale: 0.8 }}
-            animate={{ x: 0, opacity: 0.8, scale: 1 }}
-            transition={{ duration: 1.2, delay: 1.0 }}
+          {/* Title */}
+          <motion.h1
+            variants={fadeInUp}
+            className="mt-6 text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl"
           >
-            <Image
-              src="/bee-flying-side1.png"
-              alt="Flying bee decoration"
-              width={180}
-              height={180}
-              className="drop-shadow-lg"
-            />
-          </motion.div>
-        </div>
+            Where little ones{' '}
+            <span className="text-primary-600">buzz, play &amp; grow</span>
+          </motion.h1>
 
-        <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
-          <motion.div
-            className="text-center"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
+          {/* Subhead */}
+          <motion.p
+            variants={fadeInUp}
+            className="mt-6 mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-700"
           >
-            {/* Title */}
-            <motion.div variants={fadeInUp} className="mb-6">
-              <h1 className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl">
-                <span className="text-primary-600">Busy Bees</span>
-                <br />
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-medium text-charcoal-700">
-                  Indoor Play Center
-                </span>
-              </h1>
-            </motion.div>
+            6,000 square feet of indoor playground built just for babies, toddlers, and
+            preschoolers. Open 7 days a week — no time limits on play!
+          </motion.p>
 
-            {/* Tagline */}
-            <motion.p
-              variants={fadeInUp}
-              className="mb-10 mx-auto max-w-2xl text-lg sm:text-xl text-charcoal-700"
-            >
-              A Safe, Engaging Indoor Play Space for Young Children —
-              <span className="block sm:inline"> Conveniently located in Lunenburg.</span>
-            </motion.p>
-
-            {/* CTA Buttons */}
-            <motion.div variants={fadeInUp} className="flex flex-row items-center justify-center gap-4">
-              <Link href="/customer/login">
-                <Button
-                  size="lg"
-                  className="px-8 py-4 text-lg font-semibold bg-honey-500 hover:bg-honey-600 text-charcoal-900 border-0 shadow-xl hover:shadow-2xl transition-all"
-                >
-                  Join the Hive
-                </Button>
-              </Link>
-              <Link href="/info">
-                <button
-                  className="px-8 py-4 text-lg font-semibold rounded-full shadow-xl transition-all hover:opacity-90"
-                  style={{ backgroundColor: '#1f2937', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif', border: 'none' }}
-                >
-                  Learn More
-                </button>
-              </Link>
-            </motion.div>
+          {/* CTA Buttons */}
+          <motion.div variants={fadeInUp} className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/customer/login">
+              <Button
+                size="lg"
+                className="px-8 py-4 text-lg font-semibold bg-honey-500 hover:bg-honey-600 text-charcoal-900 border-0 shadow-xl hover:shadow-2xl transition-all"
+              >
+                🍯 Join the Hive
+              </Button>
+            </Link>
+            <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
+              <button className="px-8 py-4 text-lg font-semibold rounded-full bg-white/90 text-charcoal-800 border-2 border-primary-300 shadow-lg hover:bg-white transition-all">
+                📍 Get Directions
+              </button>
+            </a>
           </motion.div>
-        </div>
-      </section>
 
-      {/* Welcome Section */}
-      <section className="py-16 sm:py-20 bg-[#FFF8E7]">
-        <div className="mx-auto max-w-6xl px-6 sm:px-8 lg:px-12">
+          {/* Stats row */}
           <motion.div
-            className="space-y-8 text-lg sm:text-xl leading-relaxed text-charcoal-800"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            variants={fadeInUp}
+            className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto"
           >
-            <p>
-              Welcome to Busy Bee&apos;s Indoor Play Center — the ultimate place for
-              little ones to play, explore, and burn off energy in a safe, clean,
-              and exciting environment! Whether you&apos;re stopping by for open
-              play, celebrating a special occasion, or looking for fun activities
-              year-round, Busy Bee&apos;s offers a welcoming space designed for
-              children to learn, socialize, and stay active while parents relax
-              and enjoy the experience.
-            </p>
-
-            <p>
-              At Busy Bee&apos;s, there&apos;s always something fun happening for
-              kids of all ages, including:
-            </p>
-
-            <ul className="list-disc list-outside pl-6 space-y-2 columns-1 sm:columns-2 sm:gap-x-10">
-              <li>Open Play Sessions</li>
-              <li>Toddler &amp; Infant Play Areas</li>
-              <li>Birthday Parties &amp; Private Events</li>
-              <li>Summer Programs &amp; Special Events</li>
-              <li>Seasonal &amp; Holiday-Themed Events</li>
-              <li>Group Visits &amp; Summer Camp Field Trips</li>
-              <li>Rainy Day Play Adventures</li>
-              <li>Sensory-Friendly Play Opportunities</li>
-              <li>Large Group Discounts &amp; Community Events</li>
-            </ul>
-
-            <p>
-              From climbing and sliding to imaginative play and making new
-              friends, Busy Bee&apos;s is the perfect destination for families
-              looking to create lasting memories while giving little ones the
-              freedom to play, move, and have fun!
-            </p>
+            {stats.map((s) => (
+              <div
+                key={s.l}
+                className="rounded-2xl border border-primary-200/40 bg-white/90 backdrop-blur-sm px-4 py-4 shadow-soft"
+              >
+                <div className="text-xl sm:text-2xl font-bold text-charcoal-800">{s.n}</div>
+                <div className="mt-1 text-xs sm:text-sm text-charcoal-600">{s.l}</div>
+              </div>
+            ))}
           </motion.div>
-        </div>
-      </section>
-    </>
+        </motion.div>
+      </div>
+    </section>
   )
 }
