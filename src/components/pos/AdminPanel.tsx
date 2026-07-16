@@ -86,6 +86,7 @@ interface Purchase {
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
   childIds?: string[]; // For family passes: all children covered by this purchase
+  giftCardAmountUsed?: number; // Portion of price paid from gift-card/account credit (already counted as revenue when the card was sold)
 }
 
 interface Session {
@@ -974,10 +975,16 @@ export function AdminPanel({
   // Analytics calculations
   const activeSessions = customers.filter(c => (c.activeSessions || []).length > 0);
   const totalCustomers = customers.length;
+
+  // Net (cash/card) revenue for a purchase: full price minus any amount paid from
+  // gift-card/account credit. That redeemed portion was already booked as revenue
+  // when the gift card was originally sold, so counting it here would double-count.
+  const netRevenue = (p: Purchase) => Math.max(0, Number(p.price) - Number(p.giftCardAmountUsed || 0));
+
   const totalRevenue = customers.reduce((sum, customer) =>
     sum + customer.purchases
       .filter(purchase => purchase.status !== 'refunded')
-      .reduce((purchaseSum, purchase) => purchaseSum + Number(purchase.price), 0), 0
+      .reduce((purchaseSum, purchase) => purchaseSum + netRevenue(purchase), 0), 0
   );
 
   const filteredPurchases = customers.flatMap(c => c.purchases).filter(p => {
@@ -1043,8 +1050,12 @@ export function AdminPanel({
   });
   const filteredGiftCardRevenue = filteredGiftCardSales.reduce((sum, gc) => sum + Number(gc.amount), 0);
 
+  // Gift-card credit redeemed against purchases in range (not new revenue — shown separately)
+  const filteredGiftCardRedeemed = filteredPurchases.reduce(
+    (sum, p) => sum + Number(p.giftCardAmountUsed || 0), 0);
+
   const filteredRevenue =
-    filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.price), 0) + filteredGiftCardRevenue;
+    filteredPurchases.reduce((sum, purchase) => sum + netRevenue(purchase), 0) + filteredGiftCardRevenue;
 
   // Combined transaction count for the Sales view (passes/food/etc. + gift card sales)
   const filteredTransactionCount = filteredPurchases.length + filteredGiftCardSales.length;
@@ -1064,10 +1075,15 @@ export function AdminPanel({
   });
   const dashboardGiftCardRevenue = dashboardGiftCardSales.reduce((sum, gc) => sum + Number(gc.amount), 0);
 
-  // Revenue excludes refunded purchases; includes gift card sales
+  // Gift-card credit redeemed against purchases on the selected date (not new revenue)
+  const dashboardGiftCardRedeemed = dashboardPurchases
+    .filter(p => p.status !== 'refunded')
+    .reduce((sum, p) => sum + Number(p.giftCardAmountUsed || 0), 0);
+
+  // Revenue excludes refunded purchases and gift-card-funded amounts; includes gift card sales
   const dashboardRevenue = dashboardPurchases
     .filter(p => p.status !== 'refunded')
-    .reduce((sum, purchase) => sum + Number(purchase.price), 0) + dashboardGiftCardRevenue;
+    .reduce((sum, purchase) => sum + netRevenue(purchase), 0) + dashboardGiftCardRevenue;
 
   // Filter customers based on search
   const filteredCustomers = customers.filter(customer =>
@@ -1283,6 +1299,11 @@ export function AdminPanel({
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">{isToday ? "Today's Revenue" : `Revenue (${selectedDateObj.toLocaleDateString()})`}</p>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(dashboardRevenue)}</p>
+                {dashboardGiftCardRedeemed > 0 && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    + {formatCurrency(dashboardGiftCardRedeemed)} gift card redeemed
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -1758,7 +1779,7 @@ export function AdminPanel({
               <>
                 {categories.map(({ key, label, filter }) => {
                   const purchases = filteredPurchases.filter(filter);
-                  const revenue = purchases.reduce((sum, p) => sum + Number(p.price), 0);
+                  const revenue = purchases.reduce((sum, p) => sum + netRevenue(p), 0);
                   return (
                     <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
@@ -1776,6 +1797,15 @@ export function AdminPanel({
                   </div>
                   <p className="font-semibold">{formatCurrency(filteredGiftCardRevenue)}</p>
                 </div>
+                {filteredGiftCardRedeemed > 0 && (
+                  <div key="gift_card_redeemed" className="flex items-center justify-between p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                    <div>
+                      <p className="font-medium text-amber-800">Gift Card Redeemed</p>
+                      <p className="text-sm text-amber-700">Paid from prior gift-card credit — not counted in sales above</p>
+                    </div>
+                    <p className="font-semibold text-amber-800">{formatCurrency(filteredGiftCardRedeemed)}</p>
+                  </div>
+                )}
               </>
             );
           })()}
