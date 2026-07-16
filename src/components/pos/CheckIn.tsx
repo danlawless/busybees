@@ -301,9 +301,13 @@ export function CheckIn({
         };
     }, [activeCustomerId, purchaseSuccess]);
 
-    // Fetch staff notes fresh for the header (staff mode only — never shown to customers)
+    // Fetch staff notes fresh for the header. The endpoint is staff/admin-only,
+    // so notes only come back when the POS device is running a staff session —
+    // a customer's own session gets 403 and sees nothing. That keeps these
+    // internal flags private while still showing them to front-desk staff on
+    // both the staff-search and phone-lookup (currentCustomer) flows.
     useEffect(() => {
-        if (!isStaffMode || !activeCustomerId) {
+        if (!activeCustomerId) {
             setHeaderNotes(null);
             return;
         }
@@ -311,13 +315,13 @@ export function CheckIn({
         fetch(`/api/pos/customer-notes?customerId=${activeCustomerId}`)
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
-                if (!cancelled && d) setHeaderNotes(d.notes ?? null);
+                if (!cancelled) setHeaderNotes(d?.notes ?? null);
             })
             .catch(() => {});
         return () => {
             cancelled = true;
         };
-    }, [activeCustomerId, isStaffMode]);
+    }, [activeCustomerId]);
 
     // Fetch auto-checkout settings on mount
     useEffect(() => {
@@ -2387,7 +2391,7 @@ export function CheckIn({
                     )}
                     {/* Customer Header */}
                     <Card className="p-8 bg-gradient-to-r from-yellow-50 to-orange-50">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-start justify-between">
                             <div>
                                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
                                     {displayCustomer.name}
@@ -2416,20 +2420,21 @@ export function CheckIn({
                                         </span>
                                     </div>
                                 )}
-                                {isStaffMode && (headerNotes ?? displayCustomer.notes) && (
-                                    <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 max-w-xl">
-                                        <span className="text-lg leading-none">📝</span>
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
-                                                Notes
-                                            </p>
-                                            <p className="text-sm whitespace-pre-wrap text-amber-900">
-                                                {headerNotes ?? displayCustomer.notes}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
+
+                            {headerNotes && (
+                                <div className="mx-6 flex-1 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 max-w-xl">
+                                    <span className="text-xl leading-none">📝</span>
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                            Notes
+                                        </p>
+                                        <p className="text-sm whitespace-pre-wrap text-amber-900">
+                                            {headerNotes}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {displayCustomer.activeSessions &&
                                 displayCustomer.activeSessions.length > 0 && (
