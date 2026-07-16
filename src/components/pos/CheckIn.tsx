@@ -44,6 +44,7 @@ interface Customer {
     giftCardBalance?: number; // Account credit from redeemed gift cards
     createdAt: string;
     lastVisit?: string;
+    notes?: string | null; // Staff notes (allergies, pickup info, etc.)
 }
 
 interface Purchase {
@@ -2392,6 +2393,19 @@ export function CheckIn({
                                         <span className="text-xs text-yellow-700">
                                             applies automatically at checkout
                                         </span>
+                                    </div>
+                                )}
+                                {displayCustomer.notes && (
+                                    <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 max-w-xl">
+                                        <span className="text-lg leading-none">📝</span>
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                                Notes
+                                            </p>
+                                            <p className="text-sm whitespace-pre-wrap text-amber-900">
+                                                {displayCustomer.notes}
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
                             </div>

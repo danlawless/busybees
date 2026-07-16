@@ -257,6 +257,8 @@ export async function GET() {
         giftCardBalance: Number(user.gift_card_balance) || 0, // Account credit from redeemed gift cards
         createdAt: user.created_at,
         lastVisit: user.last_login,
+        // `notes` exists on the row (select '*') but is absent from the stale generated type
+        notes: (user as DbUser & { notes?: string | null }).notes ?? null,
       };
     });
 

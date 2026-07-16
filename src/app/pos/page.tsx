@@ -53,6 +53,7 @@ interface Customer {
     giftCardBalance?: number; // Account credit from redeemed gift cards
     createdAt: string;
     lastVisit?: string;
+    notes?: string | null; // Staff notes (allergies, pickup info, etc.)
 }
 
 interface Purchase {
