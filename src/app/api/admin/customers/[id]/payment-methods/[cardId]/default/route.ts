@@ -6,31 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import Stripe from 'stripe';
-
-async function getStripeClient(): Promise<Stripe | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data: settings } = await supabase
-      .from('settings')
-      .select('stripe_secret_key')
-      .single();
-
-    if (!settings?.stripe_secret_key) {
-      return null;
-    }
-
-    return new Stripe(settings.stripe_secret_key, {
-      apiVersion: '2025-04-30.basil',
-    });
-  } catch {
-    return null;
-  }
-}
-
-function getStripeCustomerIdColumn(secretKey: string): string {
-  return secretKey.startsWith('sk_test_') ? 'stripe_customer_id_test' : 'stripe_customer_id_live';
-}
+import { getStripeClient, getStripeCustomerIdColumn } from '@/lib/stripe/client';
 
 export async function POST(
   request: NextRequest,
@@ -55,13 +31,46 @@ export async function POST(
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    // Unset all other defaults for this customer
+    // Update Stripe's default payment method FIRST so it stays authoritative.
+    // Previously this used a local getStripeClient() that read the wrong settings
+    // schema and returned null, so the Stripe default was never actually updated —
+    // the local flag and Stripe drifted apart. Use the shared client.
+    if (card.stripe_payment_method_id) {
+      try {
+        const stripe = await getStripeClient();
+        const stripeColumn = await getStripeCustomerIdColumn();
+
+        const { data: user } = await supabase
+          .from('users')
+          .select(stripeColumn)
+          .eq('id', customerId)
+          .single();
+
+        const stripeCustomerId = user?.[stripeColumn as keyof typeof user] as string | undefined;
+
+        if (stripeCustomerId) {
+          await stripe.customers.update(stripeCustomerId, {
+            invoice_settings: {
+              default_payment_method: card.stripe_payment_method_id,
+            },
+          });
+          logger.info({ stripeCustomerId }, '✅ Updated Stripe default payment method');
+        }
+      } catch (stripeError) {
+        logger.error({ stripeError, customerId, cardId }, 'Failed to update Stripe default — aborting');
+        return NextResponse.json(
+          { error: 'Could not update the default card with the payment processor. Please try again.' },
+          { status: 502 }
+        );
+      }
+    }
+
+    // Unset all other defaults for this customer, then set this card as default
     await supabase
       .from('saved_cards')
       .update({ is_default: false })
       .eq('customer_id', customerId);
 
-    // Set this card as default
     const { error: updateError } = await supabase
       .from('saved_cards')
       .update({ is_default: true })
@@ -71,43 +80,6 @@ export async function POST(
     if (updateError) {
       logger.error({ updateError, customerId, cardId }, 'Failed to set default card');
       return NextResponse.json({ error: 'Failed to set default card' }, { status: 500 });
-    }
-
-    // Update Stripe customer default payment method if available
-    if (card.stripe_payment_method_id) {
-      const stripe = await getStripeClient();
-      if (stripe) {
-        try {
-          // Get settings to determine which column to use
-          const { data: settings } = await supabase
-            .from('settings')
-            .select('stripe_secret_key')
-            .single();
-
-          if (settings?.stripe_secret_key) {
-            const stripeColumn = getStripeCustomerIdColumn(settings.stripe_secret_key);
-
-            const { data: user } = await supabase
-              .from('users')
-              .select(stripeColumn)
-              .eq('id', customerId)
-              .single();
-
-            const stripeCustomerId = user?.[stripeColumn as keyof typeof user] as string | undefined;
-
-            if (stripeCustomerId) {
-              await stripe.customers.update(stripeCustomerId, {
-                invoice_settings: {
-                  default_payment_method: card.stripe_payment_method_id,
-                },
-              });
-              logger.info({ stripeCustomerId }, '✅ Updated Stripe default payment method');
-            }
-          }
-        } catch (stripeError) {
-          logger.warn({ stripeError }, 'Failed to update Stripe default (local update succeeded)');
-        }
-      }
     }
 
     logger.info({ customerId, cardId }, '✅ Default card set successfully');
