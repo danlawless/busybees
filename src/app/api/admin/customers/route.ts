@@ -72,6 +72,7 @@ interface CustomerData {
   savedCards: SavedCardData[];
   createdAt: string;
   lastVisit: string | null;
+  notes: string | null;
 }
 
 /**
@@ -295,6 +296,8 @@ export async function GET(_request: NextRequest) {
         savedCards,
         createdAt: user.created_at,
         lastVisit,
+        // `notes` exists on the row (select '*') but is absent from the stale generated type
+        notes: (user as DbUser & { notes?: string | null }).notes ?? null,
       };
     });
 

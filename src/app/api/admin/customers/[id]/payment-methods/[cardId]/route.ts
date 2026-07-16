@@ -6,27 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import Stripe from 'stripe';
-
-async function getStripeClient(): Promise<Stripe | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data: settings } = await supabase
-      .from('settings')
-      .select('stripe_secret_key')
-      .single();
-
-    if (!settings?.stripe_secret_key) {
-      return null;
-    }
-
-    return new Stripe(settings.stripe_secret_key, {
-      apiVersion: '2025-04-30.basil',
-    });
-  } catch {
-    return null;
-  }
-}
+import { getStripeClient } from '@/lib/stripe/client';
 
 export async function DELETE(
   request: NextRequest,
@@ -51,20 +31,39 @@ export async function DELETE(
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    // Delete from Stripe if we have a payment method ID
+    // Detach from Stripe FIRST, and only delete the local row if that succeeds
+    // (or the card is already gone from Stripe). Stripe is the source of truth
+    // for syncPaymentMethodsToDatabase — if we delete the row while the card is
+    // still attached in Stripe, the next payment-methods sync re-adds it and the
+    // removal "reappears". Use the shared client so we hit the correct account.
     if (card.stripe_payment_method_id) {
-      const stripe = await getStripeClient();
-      if (stripe) {
-        try {
-          await stripe.paymentMethods.detach(card.stripe_payment_method_id);
-          logger.info({ paymentMethodId: card.stripe_payment_method_id }, '✅ Detached from Stripe');
-        } catch (stripeError) {
-          logger.warn({ stripeError }, 'Failed to detach from Stripe (continuing with local delete)');
+      try {
+        const stripe = await getStripeClient();
+        await stripe.paymentMethods.detach(card.stripe_payment_method_id);
+        logger.info({ paymentMethodId: card.stripe_payment_method_id }, '✅ Detached from Stripe');
+      } catch (stripeError) {
+        // 'resource_missing' means the payment method is already detached/gone —
+        // safe to proceed. Any other error means the card is still attached, so
+        // we must NOT delete the local row (it would just get re-synced back).
+        const code = (stripeError as { code?: string })?.code;
+        if (code !== 'resource_missing') {
+          logger.error(
+            { stripeError, paymentMethodId: card.stripe_payment_method_id },
+            'Failed to detach card from Stripe — aborting delete'
+          );
+          return NextResponse.json(
+            { error: 'Could not remove the card from the payment processor. Please try again.' },
+            { status: 502 }
+          );
         }
+        logger.warn(
+          { paymentMethodId: card.stripe_payment_method_id },
+          'Payment method already detached in Stripe — proceeding with local delete'
+        );
       }
     }
 
-    // Delete from database
+    // Delete from database (card is now confirmed gone from Stripe)
     const { error } = await supabase
       .from('saved_cards')
       .delete()
