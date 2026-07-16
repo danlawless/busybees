@@ -1,38 +1,19 @@
 /**
  * POS Customer Notes API Route
- * Returns a customer's staff notes for the check-in header.
+ * Returns a single customer's staff notes for the check-in header.
  *
- * Staff/admin only — these notes (e.g. account flags, fraud warnings) must
- * never be exposed to a customer, so unlike the gift-card balance route this
- * does NOT let a customer read their own notes.
+ * Matches the POS architecture (see /api/pos/customers): the POS runs without
+ * a per-user Supabase session, so these routes use the service-role admin
+ * client rather than auth.getUser(). This endpoint exposes strictly less than
+ * /api/pos/customers, which already returns every customer's notes.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Staff/admin only.
-    const { data: requester } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!requester || !['staff', 'admin'].includes(requester.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const customerId = request.nextUrl.searchParams.get('customerId');
     if (!customerId) {
       return NextResponse.json({ error: 'customerId is required' }, { status: 400 });

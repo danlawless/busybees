@@ -2423,13 +2423,13 @@ export function CheckIn({
                             </div>
 
                             {headerNotes && (
-                                <div className="mx-6 flex-1 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 max-w-xl">
-                                    <span className="text-xl leading-none">📝</span>
+                                <div className="mx-6 flex-1 flex items-start gap-2 rounded-lg border-2 border-red-300 bg-red-50 px-4 py-3 max-w-xl">
+                                    <span className="text-xl leading-none">⚠️</span>
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-red-700">
                                             Notes
                                         </p>
-                                        <p className="text-sm whitespace-pre-wrap text-amber-900">
+                                        <p className="text-sm whitespace-pre-wrap font-medium text-red-800">
                                             {headerNotes}
                                         </p>
                                     </div>
