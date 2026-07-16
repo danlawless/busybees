@@ -58,11 +58,14 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
         <motion.div className="text-center" variants={staggerContainer} initial="initial" animate="animate">
-          {/* Eyebrow */}
+          {/* Brand wordmark */}
           <motion.div variants={fadeInUp}>
-            <span className="inline-block rounded-full border border-honey-200 bg-honey-100/80 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-honey-700">
-              Lunenburg, MA · Ages 0–6
-            </span>
+            <div className="text-4xl sm:text-5xl font-bold leading-none text-honey-600">
+              Busy Bees
+            </div>
+            <div className="mt-1 text-xl sm:text-2xl text-charcoal-700">
+              Indoor Play Center
+            </div>
           </motion.div>
 
           {/* Title */}
