@@ -224,6 +224,11 @@ export function HomeParties() {
 
 /* ---------------- Membership ---------------- */
 
+const membershipTiers = [
+  { icon: '🍼', name: 'Infant', who: 'Under 2 years', amount: '$70' },
+  { icon: '🐝', name: 'Toddler', who: 'Ages 2 & up', amount: '$100' },
+]
+
 const perks = [
   { icon: '♾️', title: 'Unlimited visits', desc: 'play as often as you like' },
   { icon: '🐝', title: 'Skip the day-pass line', desc: 'just buzz on in' },
@@ -249,9 +254,21 @@ export function Membership() {
             className="rounded-3xl border border-primary-200/30 bg-white p-8 shadow-soft"
           >
             <div className="text-lg font-semibold text-charcoal-800">Monthly Membership</div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-5xl font-bold text-honey-700">$100</span>
-              <span className="text-charcoal-500">/ month, per child</span>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {membershipTiers.map((t) => (
+                <div
+                  key={t.name}
+                  className="rounded-2xl border border-primary-200/40 bg-[#FFFDF7] p-4 text-center"
+                >
+                  <div className="text-2xl">{t.icon}</div>
+                  <div className="mt-1 text-sm font-semibold text-charcoal-800">{t.name}</div>
+                  <div className="text-xs text-charcoal-500">{t.who}</div>
+                  <div className="mt-2">
+                    <span className="text-3xl font-bold text-honey-700">{t.amount}</span>
+                    <span className="text-sm text-charcoal-500"> / mo</span>
+                  </div>
+                </div>
+              ))}
             </div>
             <ul className="mt-6 mb-6 space-y-3">
               {perks.map((p) => (
