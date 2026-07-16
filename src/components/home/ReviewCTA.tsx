@@ -12,21 +12,21 @@ const GOOGLE_REVIEW_URL = 'https://g.page/r/CbjlkAgAnnOKEBM/review';
 const reviews = [
   {
     quote:
-      "Finally a spot built for the under-6 crowd. It's spotless, the staff are so warm, and my toddler naps like a champ afterward.",
-    name: 'Sarah M.',
+      'A wonderful indoor play center for kids of all ages, from infants to big kids! The space is so big they can really get their energy out. I love all of the different toys and activities. Plus comfy places for Mom to sit.',
+    name: 'Liz L.',
     tag: 'Local parent',
   },
   {
     quote:
-      "We booked a birthday party and everything was handled. I actually got to enjoy my son's day instead of running around.",
-    name: 'Jamie D.',
+      'We had our daughter’s 2nd birthday party at Busy Bee’s and all of the kids and adults had a blast! There was so much space for the kids to play, and tons of seating for the adults who were not.',
+    name: 'Shaeylyn B.',
     tag: 'Party host',
   },
   {
     quote:
-      "The membership pays for itself. Rainy day? Busy Bees. Too hot out? Busy Bees. It's become our happy place.",
-    name: 'Alex R.',
-    tag: 'Member family',
+      'My 3.5 year old had a wonderful time! I loved that there was so much space. Each station had its own area so the kids could play with whatever without being overcrowded. Buy a day pass ahead of time through their site to save some time when you get there!',
+    name: 'David C.',
+    tag: 'Local parent',
   },
 ];
 
