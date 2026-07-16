@@ -86,6 +86,7 @@ interface FormattedPurchase {
   status: string;
   autoRenew: boolean;
   childIds: string[]; // For family passes: all children covered by this purchase
+  giftCardAmountUsed: number; // Portion of price paid from gift-card/account credit (not new revenue)
 }
 
 /**
@@ -210,6 +211,7 @@ export async function GET() {
         status: purchase.status,
         autoRenew: purchase.auto_renew,
         childIds: childIdsByPurchase.get(purchase.id) || [],
+        giftCardAmountUsed: Number(purchase.gift_card_amount_used || 0),
       });
     }
 
