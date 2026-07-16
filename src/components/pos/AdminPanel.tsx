@@ -210,6 +210,48 @@ export function AdminPanel({
     error: null as string | null,
   });
 
+  // POS access PIN settings
+  const [posPin, setPosPin] = useState({
+    configured: false,
+    newPin: '',
+    confirmPin: '',
+    currentPin: '',
+    saving: false,
+    error: null as string | null,
+    success: null as string | null,
+  });
+
+  const handleSavePosPin = async () => {
+    if (posPin.newPin && posPin.newPin !== posPin.confirmPin) {
+      setPosPin(prev => ({ ...prev, error: 'PINs do not match.', success: null }));
+      return;
+    }
+    setPosPin(prev => ({ ...prev, saving: true, error: null, success: null }));
+    try {
+      const res = await fetch('/api/settings/pos-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: posPin.newPin, currentPin: posPin.currentPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPosPin(prev => ({ ...prev, saving: false, error: data.error || 'Failed to save PIN.' }));
+        return;
+      }
+      setPosPin(prev => ({
+        ...prev,
+        saving: false,
+        configured: Boolean(data.configured),
+        newPin: '',
+        confirmPin: '',
+        currentPin: '',
+        success: data.configured ? 'POS access PIN saved.' : 'POS access PIN removed.',
+      }));
+    } catch {
+      setPosPin(prev => ({ ...prev, saving: false, error: 'Failed to save PIN.' }));
+    }
+  };
+
   // Stripe sync states
   const [stripeSyncStatus, setStripeSyncStatus] = useState<{
     loading: boolean;
@@ -862,6 +904,14 @@ export function AdminPanel({
       }
     };
     fetchAutoCheckoutSettings();
+  }, []);
+
+  // Load whether a POS access PIN is currently configured
+  useEffect(() => {
+    fetch('/api/settings/pos-pin')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d) setPosPin(prev => ({ ...prev, configured: Boolean(d.configured) })); })
+      .catch(() => {});
   }, []);
 
   // Handle auto-checkout settings save
@@ -5064,6 +5114,80 @@ export function AdminPanel({
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+
+      {/* POS Access PIN */}
+      <Card className="p-6 border-2 border-red-200 bg-red-50">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+            <span>🔒</span>
+            POS Access PIN
+          </h3>
+          <p className="text-sm text-red-700 mt-1">
+            {posPin.configured
+              ? 'A PIN is required to open the POS. Staff enter it once per device session.'
+              : 'Set a PIN to require staff authorization before the POS can be used.'}
+          </p>
+        </div>
+
+        <div className="space-y-4 max-w-sm">
+          {posPin.configured && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                value={posPin.currentPin}
+                onChange={(e) => setPosPin(prev => ({ ...prev, currentPin: e.target.value.replace(/[^\d]/g, ''), error: null, success: null }))}
+                maxLength={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Enter current PIN"
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {posPin.configured ? 'New PIN' : 'PIN'} <span className="text-gray-400">(4–6 digits)</span>
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              value={posPin.newPin}
+              onChange={(e) => setPosPin(prev => ({ ...prev, newPin: e.target.value.replace(/[^\d]/g, ''), error: null, success: null }))}
+              maxLength={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder={posPin.configured ? 'Leave blank to remove the PIN' : 'Choose a PIN'}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm {posPin.configured ? 'New ' : ''}PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              value={posPin.confirmPin}
+              onChange={(e) => setPosPin(prev => ({ ...prev, confirmPin: e.target.value.replace(/[^\d]/g, ''), error: null, success: null }))}
+              maxLength={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Re-enter PIN"
+            />
+          </div>
+
+          {posPin.error && <p className="text-sm text-red-600">{posPin.error}</p>}
+          {posPin.success && <p className="text-sm text-green-700">{posPin.success}</p>}
+
+          <button
+            onClick={handleSavePosPin}
+            disabled={posPin.saving}
+            className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+              posPin.saving ? 'bg-red-300 text-white cursor-wait' : 'bg-red-500 text-white hover:bg-red-600'
+            }`}
+          >
+            {posPin.saving ? 'Saving...' : posPin.configured ? 'Update PIN' : 'Set PIN'}
+          </button>
+          <p className="text-xs text-gray-500">
+            Staff stay unlocked until the browser tab is closed. Changing the PIN won&apos;t log out already-open devices.
+          </p>
+        </div>
+      </Card>
 
       {/* Auto-Checkout Settings */}
       <Card className="p-6 border-2 border-purple-200 bg-purple-50">

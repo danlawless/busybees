@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { logger } from "@/lib/client-logger";
 import { PhoneLogin } from "@/components/pos/PhoneLogin";
+import { PosPinGate } from "@/components/pos/PosPinGate";
 import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
 import { CheckIn } from "@/components/pos/CheckIn";
 import { AdminPanel } from "../../components/pos/AdminPanel";
@@ -100,6 +101,13 @@ export default function POSPage() {
     const [currentView, setCurrentView] = useState<ViewMode>("login");
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
     const [isStaffMode, setIsStaffMode] = useState(false);
+    // POS access lock. Unlocks for the browser session once the PIN is entered.
+    const [posUnlocked, setPosUnlocked] = useState(false);
+    const [pinConfigured, setPinConfigured] = useState<boolean | null>(null); // null = still checking
+    const handlePosUnlock = () => {
+        if (typeof window !== "undefined") sessionStorage.setItem("pos_unlocked", "1");
+        setPosUnlocked(true);
+    };
     const [staffUser, setStaffUser] = useState<{ id: string; name: string; role: 'staff' | 'admin' } | null>(null);
     const [showStaffLoginModal, setShowStaffLoginModal] = useState(false);
     const [staffPhone, setStaffPhone] = useState("");
@@ -144,6 +152,27 @@ export default function POSPage() {
 
     // Realtime check-in notifications (staff/admin mode only)
     useCheckinNotifications(isStaffMode);
+
+    // Determine the POS access lock state on mount: already unlocked this
+    // browser session, or is a PIN configured that we must prompt for?
+    useEffect(() => {
+        if (typeof window !== "undefined" && sessionStorage.getItem("pos_unlocked") === "1") {
+            setPosUnlocked(true);
+            return;
+        }
+        let cancelled = false;
+        fetch("/api/settings/pos-pin")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!cancelled) setPinConfigured(Boolean(d?.configured));
+            })
+            .catch(() => {
+                if (!cancelled) setPinConfigured(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Restore staff/admin session on mount
     useEffect(() => {
@@ -632,6 +661,20 @@ export default function POSPage() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showSettingsDropdown, showPaymentDropdown]);
+
+    // POS access lock — block the whole POS behind the PIN until unlocked.
+    // While we're still checking whether a PIN is configured, render nothing to
+    // avoid flashing the POS before the lock screen.
+    if (!posUnlocked) {
+        if (pinConfigured === null) {
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50" />
+            );
+        }
+        if (pinConfigured) {
+            return <PosPinGate onUnlock={handlePosUnlock} />;
+        }
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 pos-page-static">
