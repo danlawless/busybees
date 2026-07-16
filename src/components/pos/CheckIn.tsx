@@ -119,6 +119,9 @@ export function CheckIn({
     // Authoritative gift card credit for the on-screen customer. Fetched fresh so it
     // never depends on the (sometimes rebuilt) customers array carrying the field.
     const [headerGiftCardBalance, setHeaderGiftCardBalance] = useState<number | null>(null);
+    // Staff notes for the on-screen customer, fetched fresh for the same reason
+    // (the customers array is sometimes rebuilt without notes). Staff mode only.
+    const [headerNotes, setHeaderNotes] = useState<string | null>(null);
     // Per-product coupon UI state (day-pass products only)
     const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
     const [couponLoading, setCouponLoading] = useState<Record<string, boolean>>({});
@@ -297,6 +300,24 @@ export function CheckIn({
             cancelled = true;
         };
     }, [activeCustomerId, purchaseSuccess]);
+
+    // Fetch staff notes fresh for the header (staff mode only — never shown to customers)
+    useEffect(() => {
+        if (!isStaffMode || !activeCustomerId) {
+            setHeaderNotes(null);
+            return;
+        }
+        let cancelled = false;
+        fetch(`/api/pos/customer-notes?customerId=${activeCustomerId}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!cancelled && d) setHeaderNotes(d.notes ?? null);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [activeCustomerId, isStaffMode]);
 
     // Fetch auto-checkout settings on mount
     useEffect(() => {
@@ -2395,7 +2416,7 @@ export function CheckIn({
                                         </span>
                                     </div>
                                 )}
-                                {displayCustomer.notes && (
+                                {isStaffMode && (headerNotes ?? displayCustomer.notes) && (
                                     <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 max-w-xl">
                                         <span className="text-lg leading-none">📝</span>
                                         <div>
@@ -2403,7 +2424,7 @@ export function CheckIn({
                                                 Notes
                                             </p>
                                             <p className="text-sm whitespace-pre-wrap text-amber-900">
-                                                {displayCustomer.notes}
+                                                {headerNotes ?? displayCustomer.notes}
                                             </p>
                                         </div>
                                     </div>
