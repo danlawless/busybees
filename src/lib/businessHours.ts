@@ -169,6 +169,58 @@ export function getHoursNotice(now?: Date): string {
   return isSummerHoursActive(now) ? SUMMER_HOURS_NOTICE.summer : SUMMER_HOURS_NOTICE.regular;
 }
 
+// ----- Open / Closed status (the "We Are Open / Closed" badge) -----
+
+export type OpenStatus = { isOpen: boolean; label: string };
+
+/** Day-of-week (0=Sun) and minutes-past-midnight in the business timezone (Eastern). */
+function getEasternDayAndMinutes(now: Date): { day: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const value = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = dayMap[value('weekday')] ?? 0;
+  let hour = parseInt(value('hour'), 10);
+  if (hour === 24) hour = 0; // some environments render midnight as "24" with hour12:false
+  const minute = parseInt(value('minute'), 10);
+  return { day, minutes: hour * 60 + minute };
+}
+
+/**
+ * Whether the play area is currently open for public play, evaluated in Eastern
+ * time against the schedule actually in effect (Summer Hours included). This is
+ * the source of truth for the open/closed badge so it always matches the weekly
+ * schedule shown on the Hours page.
+ *
+ * Open-play windows:
+ *   Summer  — Mon–Fri 9:00 AM–3:00 PM, Sat/Sun 8:00 AM–4:00 PM
+ *   Regular — Mon–Fri 9:00 AM–5:00 PM, Sat/Sun 9:00 AM–12:30 PM
+ */
+export function getOpenStatus(now: Date = new Date()): OpenStatus {
+  const { day, minutes } = getEasternDayAndMinutes(now);
+  const isWeekend = day === 0 || day === 6;
+  const summer = isSummerHoursActive(now);
+
+  const window = summer
+    ? isWeekend
+      ? { start: 8 * 60, end: 16 * 60 }
+      : { start: 9 * 60, end: 15 * 60 }
+    : isWeekend
+      ? { start: 9 * 60, end: 12 * 60 + 30 }
+      : { start: 9 * 60, end: 17 * 60 };
+
+  const isOpen = minutes >= window.start && minutes < window.end;
+  return {
+    isOpen,
+    label: isOpen ? 'We Are Open for Public Play' : 'We Are Currently Closed',
+  };
+}
+
 // ----- Schema.org openingHoursSpecification (SEO) -----
 
 export type OpeningHoursSpec = {

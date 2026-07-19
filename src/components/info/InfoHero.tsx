@@ -6,32 +6,18 @@ import { motion } from 'framer-motion'
 import { Info } from 'lucide-react'
 import { BeeIcon, HoneycombPattern } from '@/components/ui/BeeIcon'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-
-function getOpenStatus(): { isOpen: boolean; label: string } {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun, 6=Sat
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const time = hours * 60 + minutes;
-
-  const isWeekday = day >= 1 && day <= 5;
-  const isWeekend = day === 0 || day === 6;
-
-  // Weekday: 9:00 AM - 5:00 PM (540 - 1020)
-  if (isWeekday && time >= 540 && time < 1020) {
-    return { isOpen: true, label: 'We Are Open for Public Play' };
-  }
-
-  // Weekend: 9:00 AM - 12:30 PM public play (540 - 750)
-  if (isWeekend && time >= 540 && time < 750) {
-    return { isOpen: true, label: 'We Are Open for Public Play' };
-  }
-
-  return { isOpen: false, label: 'We Are Currently Closed' };
-}
+import { getOpenStatus } from '@/lib/businessHours'
 
 export function InfoHero() {
-  const status = getOpenStatus();
+  // Compute in Eastern time against the live schedule (Summer Hours aware), and
+  // refresh every minute so the badge flips at open/close without a reload.
+  const [status, setStatus] = React.useState(() => getOpenStatus())
+  React.useEffect(() => {
+    const update = () => setStatus(getOpenStatus())
+    update()
+    const id = setInterval(update, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <section className="relative overflow-hidden section-hexagon-medium hexagon-overlay py-10 sm:py-14">
