@@ -1480,33 +1480,6 @@ export default function AdminPartiesPage() {
                       </div>
                     </div>
 
-                    {/* Send Party Recap Email */}
-                    {selectedBooking && guests.length > 0 && (
-                      <div className="mt-4">
-                        <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch('/api/admin/party-bookings/send-recap', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ bookingId: selectedBooking.id }),
-                              });
-                              const data = await res.json();
-                              if (res.ok) {
-                                alert(`Party recap email sent to ${data.to}`);
-                              } else {
-                                alert(`Failed: ${data.error}`);
-                              }
-                            } catch {
-                              alert('Failed to send recap email');
-                            }
-                          }}
-                          className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
-                        >
-                          📧 Send Party Recap to Host
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </Card>
@@ -1632,29 +1605,6 @@ export default function AdminPartiesPage() {
                               Not Done
                             </button>
                           )}
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const res = await fetch('/api/admin/party-bookings/resend-confirmation', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ bookingId: booking.id }),
-                                });
-                                const data = await res.json();
-                                if (res.ok) {
-                                  alert(`Confirmation email resent to ${data.to}`);
-                                } else {
-                                  alert(`Failed: ${data.error}`);
-                                }
-                              } catch {
-                                alert('Failed to resend email');
-                              }
-                            }}
-                            className="text-xs px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600"
-                          >
-                            Resend Email
-                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteBooking(booking.id, booking.customer_name); }}
                             className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
