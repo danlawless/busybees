@@ -3263,8 +3263,6 @@ export async function sendPostPartyThankYouEmail(data: {
   overageCharged?: number;
   partyType?: PartyType;
 }): Promise<EmailResult> {
-  const isSemiPrivate = data.partyType === 'semi_private';
-  const partyRoomPhrase = isSemiPrivate ? 'your party room' : 'play area and party room';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
   const googleReviewUrl = 'https://g.page/r/CbjlkAgAnnOKEBM/review';
 
@@ -3319,9 +3317,9 @@ ${overageKids > 0 ? `Additional children (${overageKids} x $${extraKidPrice}): $
   const text = `
 Hi ${data.customerName}!
 
-Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
+Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the Party!
 
-It was such a joy having your family here, and we hope the kids had a blast in the ${partyRoomPhrase}.
+It was such a joy having your family here, and we hope to see you again!
 ${recapText}
 If you have a moment, we'd really appreciate it if you could leave us a quick Google review. Your feedback helps other families discover Busy Bee's and means the world to our small team!
 
@@ -3369,10 +3367,10 @@ Visit us: ${siteUrl}
                 Hi ${data.customerName}!
               </p>
               <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6;">
-                Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the ${packageDisplayName} Party!
+                Thank you so much for celebrating ${data.childName}'s birthday with us at Busy Bee's! We hope everyone had a wonderful time at the Party!
               </p>
               <p style="margin: 0 0 25px; font-size: 15px; color: #4b5563; line-height: 1.6;">
-                It was such a joy having your family here, and we hope the kids had a blast in the ${partyRoomPhrase}.
+                It was such a joy having your family here, and we hope to see you again!
               </p>
 
               ${hasRecap ? `
