@@ -3351,14 +3351,12 @@ Visit us: ${siteUrl}
 
           <!-- Header -->
           <tr>
-            <td style="background-color: #d97706; background-image: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: #fef3c7; border-radius: 50%; margin: 0 auto 15px; line-height: 70px;">
-                <span style="font-size: 36px;">🎉</span>
-              </div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+            <td style="background-color: #d97706; background-image: url('${siteUrl}/invite-balloons-header.png'); background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 20px; text-align: center;">
+              <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.45);">
                 Thank You!
               </h1>
-              <p style="margin: 10px 0 0; color: #fef3c7; font-size: 16px;">
+              <p style="margin: 8px 0 0; color: #ffffff; font-size: 17px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 We loved celebrating with ${data.childName}!
               </p>
             </td>
@@ -3843,6 +3841,7 @@ export async function sendPartyRecapEmail(data: {
 
   const overageKids = Math.max(0, data.guests.length - data.includedKids);
   const totalCharged = data.basePrice + data.overageCharged;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://busybeesipc.com';
 
   const subject = `🎂 Party Recap - ${data.childName}'s Birthday at Busy Bees`;
 
@@ -3902,14 +3901,12 @@ We hope everyone had a wonderful time! 🎉
 
           <!-- Header -->
           <tr>
-            <td style="background-color: #7c3aed; padding: 30px 20px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: #ede9fe; border-radius: 50%; margin: 0 auto 15px; line-height: 70px; text-align: center;">
-                <span style="font-size: 36px;">🎂</span>
-              </div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+            <td style="background-color: #d97706; background-image: url('${siteUrl}/invite-balloons-header.png'); background-position: center; background-size: cover; background-repeat: no-repeat; padding: 30px 20px; text-align: center;">
+              <img src="${siteUrl}/busy-bees-logo-email.png" alt="Busy Bee's Indoor Play Center" width="240" style="display: block; width: 240px; max-width: 80%; height: auto; border: 0; margin: 0 auto 18px;" />
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.45);">
                 Party Recap
               </h1>
-              <p style="margin: 8px 0 0; color: #e9d5ff; font-size: 16px;">
+              <p style="margin: 8px 0 0; color: #ffffff; font-size: 16px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 ${data.childName}'s Birthday
               </p>
             </td>
