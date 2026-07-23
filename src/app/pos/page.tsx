@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { logger } from "@/lib/client-logger";
 import { PhoneLogin } from "@/components/pos/PhoneLogin";
 import { PosPinGate } from "@/components/pos/PosPinGate";
@@ -688,15 +689,19 @@ export default function POSPage() {
                                 className="flex items-center space-x-4 hover:bg-gray-50 rounded-lg p-2 transition-colors group"
                             >
                                 <div
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                                    className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all ring-2 ${
                                         isStaffMode
-                                            ? "bg-red-400 group-hover:bg-red-500"
-                                            : "bg-yellow-400 group-hover:bg-yellow-500"
+                                            ? "ring-red-400 group-hover:ring-red-500"
+                                            : "ring-yellow-400 group-hover:ring-yellow-500"
                                     }`}
                                 >
-                                    <span className="text-2xl">
-                                        {isStaffMode ? "👨‍💼" : "🐝"}
-                                    </span>
+                                    <Image
+                                        src="/busy-bees-favicon.png"
+                                        alt="Busy Bees"
+                                        width={48}
+                                        height={48}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 <div>
                                     <h1
