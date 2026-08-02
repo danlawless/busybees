@@ -54,7 +54,7 @@ const faqs = [
       },
       {
         question: 'What\'s included in party packages?',
-        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs, and paper goods. Worker Bee and Queen Bee packages also include pizza and soda. The Queen Bee package adds sheet cake and decorations!'
+        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs. Worker Bee and Queen Bee packages also include paper goods, cutlery and table cloths. Basic Bee includes 10 kids. Worker Bee includes 15 kids. Queen Bee package includes 20 kids. Additional kids are $15 and will be automatically tallied at check in.'
       },
       {
         question: 'Can I bring my own decorations and cake?',
