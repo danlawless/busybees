@@ -19,7 +19,7 @@ const faqCategories = [
       },
       {
         question: 'Can I change my party date after booking?',
-        answer: 'One complimentary reschedule is allowed if requested at least 7 days prior to the event (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost to cover the lost birthday slot.'
+        answer: 'One complimentary reschedule is allowed if requested at least 14 days prior to the event (subject to availability). Rescheduling within the 14-day window may incur a fee of 25% of the total package cost to cover the lost birthday slot.'
       },
       {
         question: 'What if I need to cancel my party?',
