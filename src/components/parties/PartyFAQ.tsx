@@ -23,7 +23,7 @@ const faqCategories = [
       },
       {
         question: 'What if I need to cancel my party?',
-        answer: 'Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event. Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.'
+        answer: 'Cancellations or rescheduling requests must be submitted via email at least 14 days prior to the event. This gives us time to offer the slot to another family. Cancellations made within 14 days of the party will result in the 50% deposit being forfeited.'
       }
     ]
   },

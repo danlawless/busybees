@@ -72,7 +72,7 @@ const contactMethods = [
 
 const guarantees = [
   { icon: CheckCircle, text: 'No hidden fees or surprise charges' },
-  { icon: CheckCircle, text: 'Full refund if cancelled 48hrs in advance' },
+  { icon: CheckCircle, text: 'Full refund if cancelled 14+ days in advance' },
   { icon: CheckCircle, text: '100% satisfaction guarantee' },
   { icon: CheckCircle, text: 'Dedicated party coordinator assigned' }
 ]

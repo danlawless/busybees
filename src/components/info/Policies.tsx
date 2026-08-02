@@ -86,7 +86,7 @@ const importantNotices = [
     title: 'Cancellations & Refunds',
     items: [
       'Memberships: 24-hour notice required for cancellation',
-      'Parties: 48-hour notice required for full refund',
+      'Parties: 14-day notice required for a full refund; cancellations within 14 days forfeit the 50% deposit',
       'Daily passes: No refunds, but can be used another day',
       'Weather-related closures: Make-up visits or refunds available'
     ]
