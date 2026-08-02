@@ -139,7 +139,7 @@ const partyTiers = [
   {
     name: 'Basic Bee',
     price: 475,
-    cap: 'Up to 15 kids · 2 hours',
+    cap: 'Up to 10 kids · 2 hours',
     popular: false,
     features: ['Exclusive use of the party room', 'Dedicated party host', 'Setup & cleanup handled', 'Customized digital invitations'],
   },
