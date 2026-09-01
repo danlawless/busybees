@@ -235,9 +235,11 @@ const REGULAR_SCHEMA_HOURS: OpeningHoursSpec[] = [
     '@type': 'OpeningHoursSpecification',
     dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     opens: '09:00',
-    closes: '18:00',
+    closes: '17:00',
   },
   {
+    // Weekend open play runs 9:00 AM - 12:30 PM; the later close reflects the
+    // private party slots that run through 6:00 PM.
     '@type': 'OpeningHoursSpecification',
     dayOfWeek: ['Saturday', 'Sunday'],
     opens: '09:00',
