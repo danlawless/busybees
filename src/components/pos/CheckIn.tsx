@@ -13,6 +13,11 @@ import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
 import { parseDateString } from "@/lib/utils";
+import {
+    MEMBERSHIP_DISCOUNT_PERCENT,
+    applyMemberDiscount,
+    hasActiveMembership,
+} from "@/lib/membership";
 
 interface SiblingDiscount {
     id: string;
@@ -770,34 +775,33 @@ export function CheckIn({
         }));
     };
 
-    // Calculate discounted total price using sibling discounts
-    // Only applies to monthly memberships when configured
-    const calculateDiscountedTotal = (
-        basePrice: number,
-        quantity: number,
-        isMonthlyMembership: boolean = false
-    ) => {
-        if (quantity <= 0) return 0;
-        if (quantity === 1) return basePrice;
+    // Customer on screen (selected via staff search, or the logged-in customer).
+    // Resolved here rather than at render time because the pricing helpers below
+    // need to know whether this customer holds a membership.
+    const displayCustomer = isStaffMode
+        ? selectedCustomer
+        : currentCustomer || selectedCustomer;
 
-        // Build discount map for quick lookup
-        const discountMap = new Map<number, number>();
-        for (const d of siblingDiscounts) {
-            // Only apply if active and either it's a monthly membership or it's not restricted to monthly only
-            if (d.is_active && (isMonthlyMembership || !d.applies_to_monthly_only)) {
-                discountMap.set(d.child_position, d.discount_percent);
-            }
-        }
+    // Active monthly pass holders get member pricing automatically. Derived from
+    // the purchases already loaded for this customer, so it costs no extra
+    // request and can't fall out of step with what's on screen.
+    const isActiveMember = hasActiveMembership(displayCustomer?.purchases);
 
-        let total = 0;
-        for (let position = 1; position <= quantity; position++) {
-            const discountPercent = discountMap.get(position) || 0;
-            const price = basePrice * (1 - discountPercent / 100);
-            total += price;
-        }
-
-        return total;
-    };
+    /**
+     * Whether member-only sibling pricing applies to this transaction.
+     *
+     * Sibling discounts are priced per child, so they only ever apply to pass
+     * purchases — never to snacks or retail, which get the flat member discount
+     * server-side instead.
+     *
+     * Two ways to qualify: the customer already holds an active membership, or
+     * they're buying monthly passes right now (so a parent signing up two
+     * children still gets the sibling rate on the spot).
+     */
+    const qualifiesForMemberPricing = (
+        purchaseType: string | undefined,
+        isPassPurchase: boolean
+    ) => isPassPurchase && (isActiveMember || purchaseType === "monthly_pass");
 
     // Get pricing breakdown for display
     // Only shows sibling discounts for monthly memberships
@@ -1793,11 +1797,15 @@ export function CheckIn({
                 // Get the default card or first card
                 const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
 
-                // Get quantity and calculate discounted total
-                // Sibling discounts only apply to monthly memberships
+                // Get quantity and calculate discounted total. Sibling discounts
+                // apply to passes for members (or when buying memberships); the
+                // member discount on food & retail is applied server-side.
                 const quantity = quantities[productId] || 1;
-                const isMonthlyMembership = purchaseType === 'monthly_pass';
-                const pricing = getPricingBreakdown(product.price, quantity, isMonthlyMembership);
+                const pricing = getPricingBreakdown(
+                    product.price,
+                    quantity,
+                    qualifiesForMemberPricing(purchaseType, isPassPurchase)
+                );
                 const totalPrice = pricing.total;
 
                 // Use kiosk payment API with saved card (self-serve endpoint)
@@ -2261,11 +2269,6 @@ export function CheckIn({
         (c) => c.activeSessions && c.activeSessions.length > 0
     );
 
-    // Customer to display (selected via search or current logged-in customer)
-    const displayCustomer = isStaffMode
-        ? selectedCustomer
-        : currentCustomer || selectedCustomer;
-
     return (
         <div className="space-y-8">
             {/* Staff Search */}
@@ -2402,12 +2405,23 @@ export function CheckIn({
                                         ` • ${displayCustomer.email}`}
                                 </p>
                                 <p className="text-base text-gray-600">
-                                    Member since {formatDate(displayCustomer.createdAt)}
+                                    Customer since {formatDate(displayCustomer.createdAt)}
                                     {displayCustomer.lastVisit &&
                                         ` • Last visit: ${formatDate(
                                             displayCustomer.lastVisit
                                         )}`}
                                 </p>
+                                {isActiveMember && (
+                                    <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-100 border border-amber-400 px-4 py-2">
+                                        <span className="text-xl">🐝</span>
+                                        <span className="text-sm font-bold text-amber-900">
+                                            Active Member
+                                        </span>
+                                        <span className="text-xs text-amber-800">
+                                            {MEMBERSHIP_DISCOUNT_PERCENT}% off food &amp; retail, applied automatically
+                                        </span>
+                                    </div>
+                                )}
                                 {(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0) > 0 && (
                                     <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">
                                         <span className="text-xl">🎁</span>
@@ -4385,9 +4399,21 @@ export function CheckIn({
                                                     <p className="text-sm text-gray-600">
                                                         {snack.description}
                                                     </p>
-                                                    <p className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${snack.price.toFixed(2)}
-                                                    </p>
+                                                    {isActiveMember ? (
+                                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                                            <span className="line-through text-gray-400 font-normal text-base mr-2">
+                                                                ${snack.price.toFixed(2)}
+                                                            </span>
+                                                            ${applyMemberDiscount(snack.price, true).toFixed(2)}
+                                                            <span className="ml-2 text-xs font-semibold text-amber-700">
+                                                                member
+                                                            </span>
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                                            ${snack.price.toFixed(2)}
+                                                        </p>
+                                                    )}
                                                 </div>
 
                                                 {/* Quantity Controls */}
