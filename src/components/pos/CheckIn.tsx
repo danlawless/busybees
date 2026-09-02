@@ -803,35 +803,6 @@ export function CheckIn({
         isPassPurchase: boolean
     ) => isPassPurchase && (isActiveMember || purchaseType === "monthly_pass");
 
-    // Calculate discounted total price using sibling discounts
-    // Only applies to monthly memberships when configured
-    const calculateDiscountedTotal = (
-        basePrice: number,
-        quantity: number,
-        isMonthlyMembership: boolean = false
-    ) => {
-        if (quantity <= 0) return 0;
-        if (quantity === 1) return basePrice;
-
-        // Build discount map for quick lookup
-        const discountMap = new Map<number, number>();
-        for (const d of siblingDiscounts) {
-            // Only apply if active and either it's a monthly membership or it's not restricted to monthly only
-            if (d.is_active && (isMonthlyMembership || !d.applies_to_monthly_only)) {
-                discountMap.set(d.child_position, d.discount_percent);
-            }
-        }
-
-        let total = 0;
-        for (let position = 1; position <= quantity; position++) {
-            const discountPercent = discountMap.get(position) || 0;
-            const price = basePrice * (1 - discountPercent / 100);
-            total += price;
-        }
-
-        return total;
-    };
-
     // Get pricing breakdown for display
     // Only shows sibling discounts for monthly memberships
     const getPricingBreakdown = (
