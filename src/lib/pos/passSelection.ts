@@ -125,6 +125,10 @@ export interface PricedLine {
   basePrice: number;
   discountPercent: number;
   price: number;
+  /** Lines sharing a groupId are bought together on a single product. */
+  groupId: string;
+  /** This child is covered by another child's product at no extra charge. */
+  includedFree: boolean;
 }
 
 export interface PassQuote {
@@ -150,10 +154,58 @@ export function quotePasses(
   siblingRules: readonly SiblingRule[],
   qualifiesForMemberPricing: boolean
 ): PassQuote {
+  const comboLines: PricedLine[] = [];
+  let remaining: readonly ChildLike[] = children;
+
+  // A toddler-plus-infant combo isn't a positional sibling discount — it's its
+  // own product where the infant plays free — so it has to be matched before
+  // the sibling ladder is applied. Pair off as many toddler/infant couples as
+  // the selection allows and price each pair on the combo. Once the combo
+  // product retires this finds nothing and every child falls through to the
+  // sibling ladder below.
+  const combo = kind === 'day' ? findComboPass(passes) : null;
+  if (combo) {
+    const infants = children.filter((c) => getAgeGroupFromBirthdate(c.birthdate) === 'infant');
+    const toddlers = children.filter((c) => getAgeGroupFromBirthdate(c.birthdate) === 'toddler');
+    const pairCount = Math.min(infants.length, toddlers.length);
+    const pairedIds = new Set<string>();
+
+    for (let i = 0; i < pairCount; i++) {
+      const toddler = toddlers[i];
+      const infant = infants[i];
+      const groupId = `combo-${i}`;
+      pairedIds.add(toddler.id);
+      pairedIds.add(infant.id);
+
+      comboLines.push({
+        child: toddler,
+        pass: combo,
+        position: 1,
+        basePrice: combo.price,
+        discountPercent: 0,
+        price: combo.price,
+        groupId,
+        includedFree: false,
+      });
+      comboLines.push({
+        child: infant,
+        pass: combo,
+        position: 2,
+        basePrice: combo.price,
+        discountPercent: 100,
+        price: 0,
+        groupId,
+        includedFree: true,
+      });
+    }
+
+    remaining = children.filter((c) => !pairedIds.has(c.id));
+  }
+
   const resolved: { child: ChildLike; pass: SelectablePass }[] = [];
   const unresolved: ChildLike[] = [];
 
-  for (const child of children) {
+  for (const child of remaining) {
     const pass = resolvePassForChild(child, kind, passes);
     if (pass) resolved.push({ child, pass });
     else unresolved.push(child);
@@ -176,44 +228,84 @@ export function quotePasses(
     }
   }
 
-  const lines: PricedLine[] = resolved.map(({ child, pass }, index) => {
+  const siblingLines: PricedLine[] = resolved.map(({ child, pass }, index) => {
     const position = index + 1;
     const discountPercent = discountByPosition.get(position) ?? 0;
     const price = round2(pass.price * (1 - discountPercent / 100));
-    return { child, pass, position, basePrice: pass.price, discountPercent, price };
+    return {
+      child,
+      pass,
+      position,
+      basePrice: pass.price,
+      discountPercent,
+      price,
+      groupId: `pass-${pass.id}`,
+      includedFree: false,
+    };
   });
 
+  const lines = [...comboLines, ...siblingLines];
   const total = round2(lines.reduce((sum, l) => sum + l.price, 0));
-  const listTotal = round2(lines.reduce((sum, l) => sum + l.basePrice, 0));
-  const productCount = new Set(lines.map((l) => l.pass.id)).size;
+
+  // What the same children would cost bought one at a time, so the saving
+  // reflects both the combo and the sibling ladder.
+  const listTotal = round2(
+    lines.reduce((sum, l) => {
+      if (!l.includedFree) return sum + l.basePrice;
+      const standalone = resolvePassForChild(l.child, kind, passes);
+      return sum + (standalone?.price ?? 0);
+    }, 0)
+  );
 
   return {
     lines,
     unresolved,
     total,
     savings: round2(listTotal - total),
-    productCount,
+    productCount: new Set(lines.map((l) => l.groupId)).size,
   };
 }
 
+/** The child-plus-infant combo product, if the catalogue still carries one. */
+function findComboPass(passes: readonly SelectablePass[]): SelectablePass | null {
+  return (
+    passes.find((p) => {
+      const name = p.name.toLowerCase();
+      const isCombo =
+        (name.includes('child') || name.includes('toddler')) && name.includes('infant');
+      return isCombo && getPassKind(p) === 'day';
+    }) ?? null
+  );
+}
+
+export interface QuoteGroup {
+  pass: SelectablePass;
+  lines: PricedLine[];
+  total: number;
+  /** True when this group is one child+infant combo, which the purchase API
+      already knows how to split across its two children. */
+  isCombo: boolean;
+}
+
 /**
- * Group a quote's lines by product, since each distinct product is bought in
- * its own request. Once the age tiers retire this is almost always one group.
+ * Group a quote's lines into the purchases that will be made. Each group is one
+ * product bought once. Grouping is by groupId rather than product, so two
+ * combo pairs stay two purchases instead of collapsing into one four-child
+ * request the API would reject.
  */
-export function groupQuoteByProduct(
-  quote: PassQuote
-): { pass: SelectablePass; lines: PricedLine[]; total: number }[] {
+export function groupQuoteByProduct(quote: PassQuote): QuoteGroup[] {
   const groups = new Map<string, { pass: SelectablePass; lines: PricedLine[] }>();
 
   for (const line of quote.lines) {
-    const existing = groups.get(line.pass.id);
+    const existing = groups.get(line.groupId);
     if (existing) existing.lines.push(line);
-    else groups.set(line.pass.id, { pass: line.pass, lines: [line] });
+    else groups.set(line.groupId, { pass: line.pass, lines: [line] });
   }
 
   return [...groups.values()].map((g) => ({
     ...g,
     total: round2(g.lines.reduce((sum, l) => sum + l.price, 0)),
+    isCombo: g.lines.some((l) => l.includedFree),
   }));
 }
 

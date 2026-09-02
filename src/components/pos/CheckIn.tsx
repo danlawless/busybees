@@ -907,10 +907,16 @@ export function CheckIn({
                           pass: line.pass,
                           lines: [line],
                           total: line.price,
+                          isCombo: false,
                       }));
 
             for (const group of groups) {
                 const childIds = group.lines.map((l) => l.child.id);
+                // The combo product already has its own handling server-side —
+                // one payment, a row per child. Everything else uses the
+                // per-child split with the exact prices we quoted.
+                const useSplit = passKind === "day" && !group.isCombo;
+
                 const response = await fetch("/api/purchases/pos", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -928,9 +934,10 @@ export function CheckIn({
                                   : "day_pass",
                         child_id: childIds[0],
                         children_ids: childIds,
-                        split_per_child: passKind === "day",
-                        child_prices:
-                            passKind === "day" ? group.lines.map((l) => l.price) : undefined,
+                        split_per_child: useSplit,
+                        child_prices: useSplit
+                            ? group.lines.map((l) => l.price)
+                            : undefined,
                         quantity: 1,
                         metadata: {},
                     }),
@@ -2777,19 +2784,31 @@ export function CheckIn({
                                                             {" "}
                                                             · {line.pass.name}
                                                         </span>
-                                                        {line.discountPercent > 0 && (
+                                                        {line.includedFree ? (
                                                             <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                sibling −{line.discountPercent}%
+                                                                plays free
                                                             </span>
+                                                        ) : (
+                                                            line.discountPercent > 0 && (
+                                                                <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                    sibling −{line.discountPercent}%
+                                                                </span>
+                                                            )
                                                         )}
                                                     </span>
                                                     <span className="font-semibold tabular-nums">
-                                                        {line.discountPercent > 0 && (
-                                                            <span className="line-through text-gray-400 font-normal mr-2">
-                                                                {formatCurrency(line.basePrice)}
-                                                            </span>
+                                                        {line.includedFree ? (
+                                                            <span className="text-green-700">Free</span>
+                                                        ) : (
+                                                            <>
+                                                                {line.discountPercent > 0 && (
+                                                                    <span className="line-through text-gray-400 font-normal mr-2">
+                                                                        {formatCurrency(line.basePrice)}
+                                                                    </span>
+                                                                )}
+                                                                {formatCurrency(line.price)}
+                                                            </>
                                                         )}
-                                                        {formatCurrency(line.price)}
                                                     </span>
                                                 </div>
                                             ))}
