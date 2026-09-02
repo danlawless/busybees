@@ -18,6 +18,13 @@ import {
     applyMemberDiscount,
     hasActiveMembership,
 } from "@/lib/membership";
+import {
+    PASS_KINDS,
+    PASS_KIND_LABEL,
+    groupQuoteByProduct,
+    quotePasses,
+    type PassKind,
+} from "@/lib/pos/passSelection";
 
 interface SiblingDiscount {
     id: string;
@@ -98,6 +105,40 @@ interface SavedCard {
     expiryMonth: number;
     expiryYear: number;
     isDefault: boolean;
+}
+
+/** A purchase as the API returns it, in the database's snake_case. */
+interface PurchaseRow {
+    id: string;
+    type: Purchase["type"];
+    name: string;
+    price: number;
+    purchase_date?: string;
+    created_at?: string;
+    expiry_date?: string;
+    first_use_date?: string;
+    actual_expiry_date?: string;
+    used_sessions: number;
+    total_sessions: number;
+    status: Purchase["status"];
+    child_id?: string;
+}
+
+function toPurchase(row: PurchaseRow): Purchase {
+    return {
+        id: row.id,
+        type: row.type,
+        name: row.name,
+        price: row.price,
+        purchaseDate: row.purchase_date || row.created_at || "",
+        expiryDate: row.expiry_date,
+        firstUseDate: row.first_use_date,
+        actualExpiryDate: row.actual_expiry_date,
+        usedSessions: row.used_sessions,
+        totalSessions: row.total_sessions,
+        status: row.status,
+        childId: row.child_id,
+    };
 }
 
 interface CheckInProps {
@@ -194,6 +235,11 @@ export function CheckIn({
     const [comboInfantId, setComboInfantId] = useState<string | null>(null); // infant under 2 for combo pass
     const [selectedChildrenForFamilyPass, setSelectedChildrenForFamilyPass] =
         useState<string[]>([]);
+    // Child-first pass buying: pick who's playing, then the kind of pass.
+    const [passChildIds, setPassChildIds] = useState<string[]>([]);
+    const [passKind, setPassKind] = useState<PassKind>("day");
+    const [buyingPasses, setBuyingPasses] = useState(false);
+    const [passError, setPassError] = useState<string | null>(null);
     const [showAddChild, setShowAddChild] = useState(false);
     const [showWaiverModal, setShowWaiverModal] = useState(false);
     const [waiverChild, setWaiverChild] = useState<Child | null>(null);
@@ -219,9 +265,6 @@ export function CheckIn({
 
     // Filter states
     const [passFilter, setPassFilter] = useState<"all" | "infant" | "toddler">("all");
-    const [partyFilter, setPartyFilter] = useState<"all" | "semi-private" | "private">(
-        "all"
-    );
 
     // Complimentary pass state (staff only)
     const [showComplimentaryModal, setShowComplimentaryModal] = useState(false);
@@ -803,6 +846,137 @@ export function CheckIn({
         isPassPurchase: boolean
     ) => isPassPurchase && (isActiveMember || purchaseType === "monthly_pass");
 
+    // --- Child-first pass buying -------------------------------------------
+    // Staff (or the customer) picks which children are playing; the product and
+    // rate for each one are derived from their age, and siblings are priced by
+    // the configured discount ladder.
+
+    const passChildren = (displayCustomer?.children ?? []).filter((c) =>
+        passChildIds.includes(c.id)
+    );
+
+    const passQuote = quotePasses(
+        passChildren,
+        passKind,
+        availablePasses,
+        siblingDiscounts,
+        qualifiesForMemberPricing(
+            passKind === "monthly" ? "monthly_pass" : "day_pass",
+            true
+        )
+    );
+
+    const togglePassChild = (childId: string) => {
+        setPassError(null);
+        setPassChildIds((prev) =>
+            prev.includes(childId)
+                ? prev.filter((id) => id !== childId)
+                : [...prev, childId]
+        );
+    };
+
+    /**
+     * Buy the quoted passes.
+     *
+     * Day passes for siblings share one payment and record a row per child, so
+     * each child's pass is tracked at its own rate. Punch cards and monthly
+     * passes are bought per child at full price, so each is its own purchase.
+     */
+    const handleBuyPasses = async () => {
+        const customer = displayCustomer;
+        if (!customer || passQuote.lines.length === 0) return;
+
+        const missingWaiver = passQuote.lines.find((l) => !l.child.waiverSigned);
+        if (missingWaiver) {
+            setPassError(
+                `${missingWaiver.child.name} needs a signed waiver before buying a pass.`
+            );
+            return;
+        }
+
+        setBuyingPasses(true);
+        setPassError(null);
+
+        try {
+            // Day passes group onto one payment per product; punch cards and
+            // monthly passes stay one purchase per child.
+            const groups =
+                passKind === "day"
+                    ? groupQuoteByProduct(passQuote)
+                    : passQuote.lines.map((line) => ({
+                          pass: line.pass,
+                          lines: [line],
+                          total: line.price,
+                      }));
+
+            for (const group of groups) {
+                const childIds = group.lines.map((l) => l.child.id);
+                const response = await fetch("/api/purchases/pos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_id: customer.id,
+                        product_id: group.pass.id,
+                        product_name: group.pass.name,
+                        product_price: group.total,
+                        product_description: "",
+                        purchase_type:
+                            passKind === "monthly"
+                                ? "monthly_pass"
+                                : passKind === "punch"
+                                  ? "weekly_pass"
+                                  : "day_pass",
+                        child_id: childIds[0],
+                        children_ids: childIds,
+                        split_per_child: passKind === "day",
+                        child_prices:
+                            passKind === "day" ? group.lines.map((l) => l.price) : undefined,
+                        quantity: 1,
+                        metadata: {},
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Purchase failed");
+                }
+            }
+
+            const names = passQuote.lines.map((l) => l.child.name).join(", ");
+            setSuccessDetails({
+                title: "Passes Purchased ✅",
+                message: `${PASS_KIND_LABEL[passKind]} for ${names}.`,
+                details: `💰 ${formatCurrency(passQuote.total)}${
+                    passQuote.savings > 0
+                        ? `\n🎉 Sibling discount saved ${formatCurrency(passQuote.savings)}`
+                        : ""
+                }`,
+            });
+            setShowSuccessModal(true);
+            setPassChildIds([]);
+
+            // Refresh the customer so the new passes show immediately
+            const purchasesResponse = await fetch(
+                `/api/purchases?customer_id=${customer.id}`
+            );
+            if (purchasesResponse.ok) {
+                const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                    purchases: PurchaseRow[] | null;
+                };
+                onUpdateCustomer({
+                    ...customer,
+                    purchases: (purchasesData || []).map(toPurchase),
+                });
+            }
+        } catch (error) {
+            setPassError(
+                error instanceof Error ? error.message : "Purchase failed. Please try again."
+            );
+        } finally {
+            setBuyingPasses(false);
+        }
+    };
+
     // Get pricing breakdown for display
     // Only shows sibling discounts for monthly memberships
     const getPricingBreakdown = (
@@ -918,30 +1092,13 @@ export function CheckIn({
         return filtered.sort((a, b) => a.price - b.price);
     };
 
-    // Filter and sort parties based on selected filter
-    const getFilteredParties = () => {
-        let filtered = [...availableParties];
-
-        // Apply filter
-        if (partyFilter === "semi-private") {
-            filtered = filtered.filter((party) =>
-                party.name.toLowerCase().includes("semi-private")
-            );
-        } else if (partyFilter === "private") {
-            filtered = filtered.filter(
-                (party) =>
-                    party.name.toLowerCase().includes("private") &&
-                    !party.name.toLowerCase().includes("semi")
-            );
-        }
-
-        // Sort by price (lowest to highest)
-        return filtered.sort((a, b) => a.price - b.price);
-    };
-
-    // Use filtered and sorted data
+    // Party packages are no longer sold from the POS — parties are booked
+    // through the website. The catalogue is still needed so the POS can
+    // recognise a package a customer already owns and schedule it.
     const AVAILABLE_PASS_PRODUCTS = getFilteredPasses();
-    const AVAILABLE_PARTY_PRODUCTS = getFilteredParties();
+    const AVAILABLE_PARTY_PRODUCTS = [...availableParties].sort(
+        (a, b) => a.price - b.price
+    );
     const AVAILABLE_SNACKS = [...availableSnacks].sort((a, b) => a.price - b.price); // Sort snacks by price too
 
     const formatPhoneNumber = (value: string) => {
@@ -1619,13 +1776,6 @@ export function CheckIn({
     const isGroupRateProduct = (product: { name: string }) => {
         return product.name.toLowerCase().includes('group rate') ||
             product.name.toLowerCase().includes('group_rate');
-    };
-
-    // Handle group rate product - opens children manager instead of direct purchase
-    const handleGroupRatePurchase = (productId: string, product: { name: string; price: number }) => {
-        setGroupRateProductId(productId);
-        setGroupRateGuestCount(quantities[productId] || 10);
-        setShowGroupChildrenManager(true);
     };
 
     // Callback when group children assignment is complete
@@ -2548,6 +2698,149 @@ export function CheckIn({
                                     Add Child
                                 </Button>
                             </div>
+
+                            {/* Buy passes: pick who's playing, then the pass.
+                                The rate for each child comes from their age. */}
+                            {displayCustomer.children.length > 0 && (
+                                <Card className="p-6 border-l-4 border-l-amber-400">
+                                    <h4 className="text-xl font-bold mb-1">
+                                        Who&apos;s playing?
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select the children, then choose a pass. The right
+                                        rate is worked out from each child&apos;s age.
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-2 mb-5">
+                                        {displayCustomer.children.map((child) => {
+                                            const selected = passChildIds.includes(child.id);
+                                            return (
+                                                <button
+                                                    key={child.id}
+                                                    type="button"
+                                                    onClick={() => togglePassChild(child.id)}
+                                                    aria-pressed={selected}
+                                                    className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                        selected
+                                                            ? "bg-amber-100 border-amber-500"
+                                                            : "bg-white border-gray-300 hover:border-amber-400"
+                                                    }`}
+                                                >
+                                                    <span className="block font-semibold text-gray-900">
+                                                        {selected ? "✓ " : ""}
+                                                        {child.name}
+                                                    </span>
+                                                    <span className="block text-xs text-gray-600">
+                                                        Age {child.age}
+                                                        {!child.waiverSigned && " · waiver needed"}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 mb-5">
+                                        {PASS_KINDS.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPassKind(kind);
+                                                    setPassError(null);
+                                                }}
+                                                aria-pressed={passKind === kind}
+                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                    passKind === kind
+                                                        ? "bg-gray-900 text-white border-gray-900"
+                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                                                }`}
+                                            >
+                                                {PASS_KIND_LABEL[kind]}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {passChildIds.length === 0 ? (
+                                        <p className="text-sm text-gray-500">
+                                            Select at least one child to see pricing.
+                                        </p>
+                                    ) : (
+                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                                            {passQuote.lines.map((line) => (
+                                                <div
+                                                    key={line.child.id}
+                                                    className="flex justify-between items-baseline py-1"
+                                                >
+                                                    <span className="text-gray-800">
+                                                        {line.child.name}
+                                                        <span className="text-gray-500 text-sm">
+                                                            {" "}
+                                                            · {line.pass.name}
+                                                        </span>
+                                                        {line.discountPercent > 0 && (
+                                                            <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                sibling −{line.discountPercent}%
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="font-semibold tabular-nums">
+                                                        {line.discountPercent > 0 && (
+                                                            <span className="line-through text-gray-400 font-normal mr-2">
+                                                                {formatCurrency(line.basePrice)}
+                                                            </span>
+                                                        )}
+                                                        {formatCurrency(line.price)}
+                                                    </span>
+                                                </div>
+                                            ))}
+
+                                            {passQuote.unresolved.length > 0 && (
+                                                <p className="mt-2 text-sm text-red-700">
+                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
+                                                    available for{" "}
+                                                    {passQuote.unresolved
+                                                        .map((c) => c.name)
+                                                        .join(", ")}
+                                                    .
+                                                </p>
+                                            )}
+
+                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
+                                                <span className="font-bold text-lg">Total</span>
+                                                <span className="font-bold text-lg tabular-nums">
+                                                    {formatCurrency(passQuote.total)}
+                                                </span>
+                                            </div>
+                                            {passQuote.savings > 0 && (
+                                                <p className="text-sm text-green-700 text-right">
+                                                    Sibling discount saves{" "}
+                                                    {formatCurrency(passQuote.savings)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {passError && (
+                                        <p className="mt-3 text-sm font-medium text-red-700">
+                                            {passError}
+                                        </p>
+                                    )}
+
+                                    <Button
+                                        onClick={handleBuyPasses}
+                                        disabled={
+                                            buyingPasses || passQuote.lines.length === 0
+                                        }
+                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
+                                    >
+                                        {buyingPasses
+                                            ? "Processing…"
+                                            : passQuote.lines.length === 0
+                                              ? `Buy ${PASS_KIND_LABEL[passKind]}`
+                                              : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
+                                    </Button>
+                                </Card>
+                            )}
 
                             {/* Children List */}
                             {displayCustomer.children.length === 0 ? (
@@ -4124,8 +4417,9 @@ export function CheckIn({
                                                     No Party Packages
                                                 </h4>
                                                 <p className="text-gray-600 mb-4">
-                                                    Purchase party packages below to
-                                                    celebrate!
+                                                    Parties are booked on the website. Once
+                                                    a package is purchased it appears here
+                                                    to schedule.
                                                 </p>
                                             </div>
                                         )}
@@ -4133,194 +4427,6 @@ export function CheckIn({
                                 );
                             })()}
 
-                            {/* Quick Purchase Party Packages - Always Visible */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase Party Packages
-                                </h3>
-
-                                {/* Party Filter Tabs */}
-                                <div className="flex space-x-2 mb-4">
-                                    <button
-                                        onClick={() => setPartyFilter("all")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "all"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        All ({availableParties.length})
-                                    </button>
-                                    <button
-                                        onClick={() => setPartyFilter("semi-private")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "semi-private"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Semi-Private (
-                                        {
-                                            availableParties.filter((p) =>
-                                                p.name
-                                                    .toLowerCase()
-                                                    .includes("semi-private")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                    <button
-                                        onClick={() => setPartyFilter("private")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "private"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Private (
-                                        {
-                                            availableParties.filter(
-                                                (p) =>
-                                                    p.name
-                                                        .toLowerCase()
-                                                        .includes("private") &&
-                                                    !p.name
-                                                        .toLowerCase()
-                                                        .includes("semi")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                </div>
-
-                                <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
-                                    <div className="grid gap-4 text-left">
-                                        {AVAILABLE_PARTY_PRODUCTS.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                                            >
-                                                <div className="flex-1">
-                                                    <span className="font-medium text-gray-900 text-lg">
-                                                        🎉 {product.name}
-                                                    </span>
-                                                    <p className="text-sm text-gray-600">
-                                                        {product.description}
-                                                    </p>
-                                                    <p className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${product.price.toFixed(2)}
-                                                    </p>
-                                                </div>
-
-                                                {/* Group Rate: guest count selector */}
-                                                {isGroupRateProduct(product) && (
-                                                    <div className="flex items-center space-x-3 mr-4">
-                                                        <label className="text-sm font-medium text-gray-700">Kids:</label>
-                                                        <select
-                                                            value={quantities[product.id] || 10}
-                                                            onChange={(e) =>
-                                                                setQuantities((prev) => ({
-                                                                    ...prev,
-                                                                    [product.id]: parseInt(e.target.value, 10),
-                                                                }))
-                                                            }
-                                                            className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
-                                                        >
-                                                            {Array.from({ length: 21 }, (_, i) => i + 10).map((n) => (
-                                                                <option key={n} value={n}>
-                                                                    {n} kids
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-
-                                                <Button
-                                                    onClick={() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            // Show payment modal instead of alert
-                                                            setShowPaymentModal(true);
-                                                            return;
-                                                        }
-
-                                                        // Group rate: open children manager
-                                                        if (isGroupRateProduct(product)) {
-                                                            handleGroupRatePurchase(product.id, product);
-                                                            return;
-                                                        }
-
-                                                        if (
-                                                            confirmingProduct ===
-                                                            product.id
-                                                        ) {
-                                                            handleConfirmPurchase(
-                                                                product.id
-                                                            );
-                                                        } else {
-                                                            handleQuickPurchase(
-                                                                product.id
-                                                            );
-                                                        }
-                                                    }}
-                                                    size="lg"
-                                                    disabled={
-                                                        purchasingProduct === product.id
-                                                    }
-                                                    className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "bg-yellow-500 hover:bg-yellow-600";
-                                                        }
-                                                        return confirmingProduct ===
-                                                            product.id
-                                                            ? "bg-purple-600 hover:bg-purple-700 animate-pulse"
-                                                            : purchasingProduct ===
-                                                              product.id
-                                                            ? "bg-purple-500"
-                                                            : "bg-purple-600 hover:bg-purple-700";
-                                                    })()}`}
-                                                >
-                                                    {(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "💳 Add Payment First";
-                                                        }
-                                                        if (isGroupRateProduct(product)) {
-                                                            return "Assign Children";
-                                                        }
-                                                        return purchasingProduct ===
-                                                            product.id
-                                                            ? "Processing..."
-                                                            : confirmingProduct ===
-                                                              product.id
-                                                            ? "✓ Confirm Purchase"
-                                                            : "Book Party";
-                                                    })()}
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </div>
                         </div>
                     )}
 

@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
       purchase_type,
       child_id,
       children_ids, // For family passes: array of child IDs
+      split_per_child, // Record one purchase row per child in children_ids (day passes bought for siblings)
+      child_prices, // Optional exact price per child, aligned with children_ids; must sum to product_price
       quantity = 1,
       metadata = {},
       // Payment method options
@@ -392,15 +394,45 @@ export async function POST(request: NextRequest) {
       ? children_ids
       : null;
 
+    // One payment covering several children records a purchase row per child, so
+    // every child's pass is tracked and priced on its own. The combo pass has
+    // always worked this way; the child-first flow asks for it explicitly via
+    // split_per_child so that family passes — which are one pass covering many
+    // children — keep recording as a single row.
+    const requestedSplitIds = split_per_child === true && Array.isArray(children_ids) && children_ids.length > 0
+      ? (children_ids as string[])
+      : null;
+    const splitChildrenIds = requestedSplitIds ?? comboChildrenIds;
+
+    // Exact per-child prices, when the caller sends them. They must add up to
+    // the amount actually charged, otherwise the recorded revenue would drift
+    // from the payment — fall back to an even split rather than trust them.
+    let perChildPrices: number[] | null = null;
+    if (splitChildrenIds && Array.isArray(child_prices) && child_prices.length === splitChildrenIds.length) {
+      const sum = child_prices.reduce((t: number, p: number) => t + Number(p), 0);
+      if (Math.abs(sum - Number(product_price)) < 0.01) {
+        perChildPrices = child_prices.map((p: number) => Number(p));
+      } else {
+        logger.warn(
+          { customer_id, sum, product_price },
+          'child_prices do not sum to product_price — falling back to an even split'
+        );
+      }
+    }
+
     let purchase;
 
-    if (comboChildrenIds) {
-      // Create a separate purchase for each child in the combo
-      const pricePerChild = (payment_method === 'complimentary' ? 0 : product_price) / comboChildrenIds.length;
-      const giftCardPerChild = giftCardAmountUsed / comboChildrenIds.length;
+    if (splitChildrenIds) {
+      // Create a separate purchase for each child sharing this payment
+      const evenPrice = (payment_method === 'complimentary' ? 0 : Number(product_price)) / splitChildrenIds.length;
+      const giftCardPerChild = giftCardAmountUsed / splitChildrenIds.length;
       const purchases = [];
 
-      for (const comboChildId of comboChildrenIds) {
+      for (const [index, comboChildId] of splitChildrenIds.entries()) {
+        const pricePerChild = payment_method === 'complimentary'
+          ? 0
+          : (perChildPrices ? perChildPrices[index] : evenPrice);
+
         const { data: childPurchase, error: childDbError } = await adminSupabase
           .from('purchases')
           .insert({
@@ -431,8 +463,8 @@ export async function POST(request: NextRequest) {
 
       purchase = purchases[0]; // Use first for the response
       logger.info(
-        { purchaseIds: purchases.map(p => p.id), customer_id },
-        'Combo pass: created individual purchases for each child'
+        { purchaseIds: purchases.map(p => p.id), customer_id, exactPrices: perChildPrices !== null },
+        'Multi-child pass: created individual purchases for each child'
       );
     } else {
       // Standard single purchase
