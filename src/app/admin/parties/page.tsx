@@ -12,7 +12,7 @@ import { WaiverModal } from '@/components/ui/WaiverModal';
 import { StaffDiscountApplicator } from '@/components/admin/StaffDiscountApplicator';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
-import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
 import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
@@ -156,15 +156,16 @@ export default function AdminPartiesPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [overagePaid, setOveragePaid] = useState(false);
 
-  const PACKAGE_INCLUDED_KIDS: Record<string, number> = {
-    queen_bee: 20,
-    worker_bee: 15,
-    basic_bee: 15,
-    group_rate: 0,
+  // Included guest counts and the overage rate come straight from the package
+  // configuration rather than being restated here. The tiers differ only by how
+  // many children they include, so a stale copy of those numbers would quietly
+  // overcharge or undercharge on every guest list.
+  const getIncludedKids = (packageName: string) => {
+    const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
+    return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
   };
-  const getIncludedKids = (packageName: string) => PACKAGE_INCLUDED_KIDS[packageName] ?? 15;
-  const INCLUDED_KIDS = selectedBooking ? getIncludedKids(selectedBooking.package_name) : 15;
-  const EXTRA_KID_PRICE = 15;
+  const INCLUDED_KIDS = selectedBooking ? getIncludedKids(selectedBooking.package_name) : 0;
+  const EXTRA_KID_PRICE = ADDITIONAL_KIDS_PRICE;
 
   // Only fetch data after PIN is entered
   useEffect(() => {
