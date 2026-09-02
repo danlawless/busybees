@@ -25,10 +25,9 @@ const partyPackages = [
       '15 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
-      'Birthday crown for birthday child',
       'Access to play area during party',
       'Dedicated party host assistance',
-      'Basic cleanup service included',
+      'Cleanup service included',
       'Party setup & breakdown handled',
       'Bring your own food, cake and decorations'
     ],
@@ -50,6 +49,7 @@ const partyPackages = [
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
       'Dedicated party host assistance',
+      'Cleanup service included',
       'Party setup & breakdown handled',
       'Access to play area during party',
       'Bring your own food, cake and decorations'
@@ -72,6 +72,9 @@ const partyPackages = [
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
       'Dedicated party host assistance',
+      'Cleanup service included',
+      'Party setup & breakdown handled',
+      'Access to play area during party',
       'Bring your own food, cake and decorations'
     ],
     popular: false
