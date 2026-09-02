@@ -7,9 +7,9 @@ import { NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createPromotionCode } from '@/lib/stripe/coupons';
 import { logger } from '@/lib/logger';
+import { MEMBERSHIP_DISCOUNT_PERCENT } from '@/lib/membership';
 
 const MEMBERSHIP_COUPON_ID = 'MEMBER10';
-const MEMBERSHIP_DISCOUNT_PERCENT = 10;
 const MEMBERSHIP_COUPON_NAME = 'Membership Party Discount';
 
 export interface MembershipDiscountResponse {

@@ -22,6 +22,13 @@ import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
+import {
+  MEMBERSHIP_DISCOUNT_PERCENT,
+  applyMemberDiscount,
+  fromPurchaseRow,
+  hasActiveMembership,
+  isMemberDiscountable,
+} from '@/lib/membership';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
 
@@ -120,6 +127,35 @@ export async function POST(request: NextRequest) {
 
     logger.info({ customer_id, product_name, purchase_type, payment_method }, 'Processing POS purchase');
 
+    // Active members get an automatic discount on food & retail. Resolved here,
+    // server-side, from the customer's own purchase history — the client sends
+    // the list price and never decides whether the discount applies.
+    let memberDiscount = 0;
+    let unitPrice = Number(product_price);
+    if (isMemberDiscountable(purchase_type)) {
+      const { data: memberPasses, error: memberError } = await adminSupabase
+        .from('purchases')
+        .select('type, status, expiry_date, actual_expiry_date')
+        .eq('customer_id', customer_id)
+        .eq('type', 'monthly_pass')
+        .eq('status', 'active');
+
+      if (memberError) {
+        // Never block a sale on this — the customer just pays list price.
+        logger.warn(
+          { customer_id, error: memberError },
+          'Failed to check membership for counter discount, charging list price'
+        );
+      } else if (hasActiveMembership((memberPasses ?? []).map(fromPurchaseRow))) {
+        unitPrice = applyMemberDiscount(unitPrice, true);
+        memberDiscount = Number(product_price) - unitPrice;
+        logger.info(
+          { customer_id, product_name, memberDiscount, percent: MEMBERSHIP_DISCOUNT_PERCENT },
+          '🏷️ Active member — applied automatic counter discount'
+        );
+      }
+    }
+
     // Coupon validation (day-pass only; single-use; cap at one unit's price; remainder forfeited)
     let couponDiscount = 0;
     let validatedCouponId: string | null = null;
@@ -146,7 +182,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      const { applied } = computeCouponDiscount(couponResult.coupon, Number(product_price));
+      const { applied } = computeCouponDiscount(couponResult.coupon, unitPrice);
       couponDiscount = applied;
       validatedCouponId = couponResult.coupon.id;
     }
@@ -162,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     const stripe = await getStripeClient();
     const stripeMode = await getStripeMode();
-    const finalUnitPrice = Math.max(0, Number(product_price) - couponDiscount);
+    const finalUnitPrice = Math.max(0, unitPrice - couponDiscount);
     const finalTotal = finalUnitPrice * quantity;
 
     // Apply the customer's gift card balance (account credit) to the remaining total,
