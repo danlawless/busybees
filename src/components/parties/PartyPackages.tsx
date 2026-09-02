@@ -7,79 +7,53 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 import { PURCHASING_ENABLED } from '@/lib/feature-flags'
+import { partyPackages } from '@/lib/pricing/catalog'
 
-// Party packages updated per issue #101
-const partyPackages = [
-  {
-    name: 'Basic Bee',
-    description: 'Standard package with paper goods',
+// Presentation only — every price, inclusion and feature comes from the
+// package configuration that actually charges the customer, so this page
+// cannot drift from checkout.
+const packagePresentation: Record<string, {
+  icon: typeof Gift
+  color: string
+  borderColor: string
+  accentColor: string
+  popular?: boolean
+}> = {
+  basic_bee: {
     icon: Gift,
     color: 'from-blue-200 to-blue-300',
     borderColor: 'border-blue-300',
     accentColor: 'from-blue-500 to-blue-600',
-    semiPrivatePrice: 400,
-    privatePrice: 475,
-    maxGuests: 20,
-    duration: '2 hours',
-    features: [
-      '15 kids included',
-      'Paper goods (plates, cups, napkins, utensils)',
-      'Exclusive use of party room',
-      'Access to play area during party',
-      'Dedicated party host assistance',
-      'Cleanup service included',
-      'Party setup & breakdown handled',
-      'Bring your own food, cake and decorations'
-    ],
-    popular: false
   },
-  {
-    name: 'Worker Bee+',
-    description: 'Room, invitations and a dedicated host',
+  worker_bee: {
     icon: Sparkles,
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
     accentColor: 'from-purple-500 to-purple-600',
-    semiPrivatePrice: 450,
-    privatePrice: 525,
-    maxGuests: 20,
-    duration: '2 hours',
-    features: [
-      '15 kids included',
-      'Paper goods (plates, cups, napkins, utensils)',
-      'Exclusive use of party room',
-      'Dedicated party host assistance',
-      'Cleanup service included',
-      'Party setup & breakdown handled',
-      'Access to play area during party',
-      'Bring your own food, cake and decorations'
-    ],
-    popular: true
+    popular: true,
   },
-  {
-    name: 'Queen Bee+',
-    description: 'Largest package — 20 kids included',
+  queen_bee: {
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
     accentColor: 'from-pink-500 to-pink-600',
-    semiPrivatePrice: 500,
-    privatePrice: 575,
-    maxGuests: 20,
-    duration: '2 hours',
-    features: [
-      '20 kids included',
-      'Paper goods (plates, cups, napkins, utensils)',
-      'Exclusive use of party room',
-      'Dedicated party host assistance',
-      'Cleanup service included',
-      'Party setup & breakdown handled',
-      'Access to play area during party',
-      'Bring your own food, cake and decorations'
-    ],
-    popular: false
-  }
-]
+  },
+}
+
+const DEFAULT_PRESENTATION = {
+  icon: Gift,
+  color: 'from-honey-200 to-honey-300',
+  borderColor: 'border-honey-300',
+  accentColor: 'from-honey-500 to-honey-600',
+  popular: false,
+}
+
+const displayPackages = partyPackages().map((pkg) => ({
+  ...pkg,
+  ...(packagePresentation[pkg.key] ?? DEFAULT_PRESENTATION),
+  popular: packagePresentation[pkg.key]?.popular ?? false,
+  duration: `${pkg.duration} hours`,
+}))
 
 export function PartyPackages() {
   return (
@@ -114,7 +88,7 @@ export function PartyPackages() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          {partyPackages.map((pkg, index) => {
+          {displayPackages.map((pkg, index) => {
             const Icon = pkg.icon
             return (
               <motion.div key={index} variants={fadeInUp} className="relative">
@@ -147,7 +121,7 @@ export function PartyPackages() {
                       <div className="flex justify-center items-center space-x-4">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4 text-honey-600" />
-                          <span className="text-sm text-charcoal-600">{pkg.maxGuests} guests</span>
+                          <span className="text-sm text-charcoal-600">{pkg.includedKids} kids included</span>
                         </div>
                         <div className="w-1 h-1 bg-charcoal-400 rounded-full"></div>
                         <span className="text-sm text-charcoal-600">{pkg.duration}</span>
@@ -157,7 +131,7 @@ export function PartyPackages() {
                     {/* Pricing Section */}
                     <div className="text-center mb-8">
                       <div className="p-3 bg-white/70 rounded-lg">
-                        <span className="text-3xl font-bold text-charcoal-800">${pkg.privatePrice}</span>
+                        <span className="text-3xl font-bold text-charcoal-800">${pkg.price}</span>
                       </div>
                     </div>
 

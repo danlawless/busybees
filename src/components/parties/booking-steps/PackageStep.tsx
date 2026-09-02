@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Gift, Sparkles, Crown, Users, CheckCircle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PackageName, PACKAGE_PRICING } from '@/lib/validations/party-booking';
+import { partyPackages, ADDITIONAL_CHILD_PRICE } from '@/lib/pricing/catalog';
 import type { BookingFormData } from '../PartyBookingWizard';
 
 interface PackageStepProps {
@@ -145,7 +146,11 @@ export function PackageStep({ formData, onUpdate, onValidChange }: PackageStepPr
 
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-sm text-green-800">
-          <strong>15 kids included</strong> with all packages. Additional kids are $15 each (max 20 children total).
+          Each package includes a different number of children —{' '}
+          {partyPackages()
+            .map((pkg) => `${pkg.name} ${pkg.includedKids}`)
+            .join(', ')}
+          . Additional kids are ${ADDITIONAL_CHILD_PRICE} each.
         </p>
       </div>
     </div>

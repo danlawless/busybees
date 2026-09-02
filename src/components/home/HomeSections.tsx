@@ -4,6 +4,14 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Gift, Users, CalendarDays, MapPin, Phone, Mail, Clock, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useActivePasses } from '@/hooks/usePasses'
+import {
+  dayPasses,
+  memberships,
+  partyPackages,
+  includedKidsLabel,
+  type CatalogPass,
+} from '@/lib/pricing/catalog'
 
 const MAPS_URL =
   'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+301+Massachusetts+Avenue+Lunenburg+MA'
@@ -91,13 +99,30 @@ export function PlayAreas() {
 
 /* ---------------- Day Passes ---------------- */
 
-const passes = [
-  { icon: '🍼', name: 'Infant Day Pass', who: 'Under 2 years', amount: '$7', note: 'Free when visiting with a paid toddler sibling.' },
-  { icon: '🐝', name: 'Child Day Pass', who: 'Ages 2 and up', amount: '$17', note: 'Full run of every play area, all day long.' },
-  { icon: '👯', name: 'Child + Infant', who: 'Best for siblings', amount: '$17', note: "A toddler plus a little sibling play together — infant's on us." },
+/**
+ * Editorial copy for the day-pass cards, keyed to a fragment of the pass name.
+ * Names and prices come from the passes table so this section can never drift
+ * from what the till actually charges; only the tone lives here.
+ */
+const dayPassCopy: { match: string; icon: string; note: string }[] = [
+  { match: 'infant', icon: '🍼', note: 'Free when visiting with a paid toddler sibling.' },
+  { match: 'child + infant', icon: '👯', note: "A toddler plus a little sibling play together — infant's on us." },
+  { match: 'child', icon: '🐝', note: 'Full run of every play area, all day long.' },
 ]
 
+function copyForPass(name: string, table: typeof dayPassCopy, fallbackIcon: string) {
+  const lower = name.toLowerCase()
+  // Longest match first, so "child + infant" beats both "child" and "infant".
+  const hit = [...table]
+    .sort((a, b) => b.match.length - a.match.length)
+    .find((c) => lower.includes(c.match))
+  return hit ?? { match: '', icon: fallbackIcon, note: '' }
+}
+
 export function DayPasses() {
+  const { passes: allPasses } = useActivePasses()
+  const passes = dayPasses(allPasses as CatalogPass[])
+
   return (
     <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="pricing">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
@@ -107,22 +132,24 @@ export function DayPasses() {
           sub="Walk right in — no reservation needed. Come and go all day on a single admission."
         />
         <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3">
-          {passes.map((p) => (
-            <motion.div
-              key={p.name}
-              {...fadeUp}
-              className="rounded-2xl border border-primary-200/30 bg-white p-8 text-center shadow-soft"
-            >
-              <div className="text-3xl">{p.icon}</div>
-              <h3 className="mt-2 text-xl font-semibold text-charcoal-800">{p.name}</h3>
-              <div className="text-sm text-charcoal-500">{p.who}</div>
-              <div className="mt-3 text-5xl font-bold text-honey-700">
-                {p.amount}
-                <span className="text-base font-medium text-charcoal-500"> / day</span>
-              </div>
-              <p className="mt-3 text-sm text-charcoal-600">{p.note}</p>
-            </motion.div>
-          ))}
+          {passes.map((p) => {
+            const copy = copyForPass(p.name, dayPassCopy, '🎟️')
+            return (
+              <motion.div
+                key={p.id}
+                {...fadeUp}
+                className="rounded-2xl border border-primary-200/30 bg-white p-8 text-center shadow-soft"
+              >
+                <div className="text-3xl">{copy.icon}</div>
+                <h3 className="mt-2 text-xl font-semibold text-charcoal-800">{p.name}</h3>
+                <div className="mt-3 text-5xl font-bold text-honey-700">
+                  ${p.price}
+                  <span className="text-base font-medium text-charcoal-500"> / day</span>
+                </div>
+                <p className="mt-3 text-sm text-charcoal-600">{p.description || copy.note}</p>
+              </motion.div>
+            )
+          })}
         </div>
         <p className="mt-8 text-center text-charcoal-600">
           🧦 Grip socks required for everyone on the play floor (available at the front desk). Free
@@ -135,31 +162,16 @@ export function DayPasses() {
 
 /* ---------------- Birthday Parties ---------------- */
 
-const partyTiers = [
-  {
-    name: 'Basic Bee',
-    price: 475,
-    cap: 'Up to 10 kids · 2 hours',
-    popular: false,
-    features: ['Exclusive use of the party room', 'Dedicated party host', 'Setup & cleanup handled', 'Customized digital invitations'],
-  },
-  {
-    name: 'Worker Bee+',
-    price: 525,
-    cap: 'Up to 15 kids · 2 hours',
-    popular: true,
-    features: ['Everything in Basic Bee', 'Table cloths for all tables', 'Paper goods — plates, cups & napkins', 'Plastic utensils'],
-  },
-  {
-    name: 'Queen Bee+',
-    price: 575,
-    cap: 'Up to 20 kids · 2 hours',
-    popular: false,
-    features: ['Everything in Worker Bee+', 'Room for up to 20 kids', 'Perfect for bigger celebrations'],
-  },
-]
+/** Which tier carries the "most popular" flag — presentation only. */
+const POPULAR_PACKAGE_KEY = 'worker_bee'
 
 export function HomeParties() {
+  const partyTiers = partyPackages().map((pkg) => ({
+    ...pkg,
+    cap: includedKidsLabel(pkg),
+    popular: pkg.key === POPULAR_PACKAGE_KEY,
+  }))
+
   return (
     <section className="py-16 sm:py-20 bg-white" id="parties">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
@@ -171,7 +183,7 @@ export function HomeParties() {
         <div className="grid gap-6 lg:grid-cols-3 max-w-5xl mx-auto items-stretch">
           {partyTiers.map((t) => (
             <motion.div
-              key={t.name}
+              key={t.key}
               {...fadeUp}
               className={`relative flex flex-col rounded-2xl bg-[#FFFDF7] p-8 shadow-soft ${
                 t.popular ? 'border-2 border-honey-400 shadow-medium' : 'border border-primary-200/30'
@@ -224,10 +236,17 @@ export function HomeParties() {
 
 /* ---------------- Membership ---------------- */
 
-const membershipTiers = [
-  { icon: '🍼', name: 'Infant', who: 'Under 2 years', amount: '$70' },
-  { icon: '🐝', name: 'Toddler', who: 'Ages 2 & up', amount: '$100' },
+/** Icons for the membership tiles, keyed to a fragment of the pass name. */
+const membershipCopy = [
+  { match: 'infant', icon: '🍼', note: '' },
+  { match: 'family', icon: '👨‍👩‍👧‍👦', note: '' },
+  { match: 'child', icon: '🐝', note: '' },
 ]
+
+/** Strip the product prefix so the tile reads "Child", not "Monthly Membership - Child". */
+function membershipTileName(name: string): string {
+  return name.replace(/^monthly\s+membership\s*[-–—]\s*/i, '').trim() || name
+}
 
 const perks = [
   { icon: '♾️', title: 'Unlimited visits', desc: 'play as often as you like' },
@@ -237,6 +256,9 @@ const perks = [
 ]
 
 export function Membership() {
+  const { passes: allPasses } = useActivePasses()
+  const membershipTiers = memberships(allPasses as CatalogPass[])
+
   return (
     <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="membership">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
@@ -257,14 +279,15 @@ export function Membership() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               {membershipTiers.map((t) => (
                 <div
-                  key={t.name}
+                  key={t.id}
                   className="rounded-2xl border border-primary-200/40 bg-[#FFFDF7] p-4 text-center"
                 >
-                  <div className="text-2xl">{t.icon}</div>
-                  <div className="mt-1 text-sm font-semibold text-charcoal-800">{t.name}</div>
-                  <div className="text-xs text-charcoal-500">{t.who}</div>
+                  <div className="text-2xl">{copyForPass(t.name, membershipCopy, '🐝').icon}</div>
+                  <div className="mt-1 text-sm font-semibold text-charcoal-800">
+                    {membershipTileName(t.name)}
+                  </div>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold text-honey-700">{t.amount}</span>
+                    <span className="text-3xl font-bold text-honey-700">${t.price}</span>
                     <span className="text-sm text-charcoal-500"> / mo</span>
                   </div>
                 </div>

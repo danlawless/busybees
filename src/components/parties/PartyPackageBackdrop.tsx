@@ -45,7 +45,7 @@ export function PartyPackageBackdrop() {
           <div className="relative w-full rounded-2xl overflow-hidden shadow-soft border border-primary-200/30 bg-white/90">
             <Image
               src="/party-packages.png"
-              alt="Party Packages - Queen Bee $575, Worker Bee $525, Basic Bee $475 - all include 2 hours, access to play area, private party room, and more"
+              alt="Busy Bees party packages — Basic Bee, Worker Bee+ and Queen Bee+, each two hours with a private party room and access to the play area. Current prices are listed on the package cards below."
               width={1200}
               height={1500}
               className="w-full h-auto"
