@@ -29,13 +29,14 @@ const partyPackages = [
       'Access to play area during party',
       'Dedicated party host assistance',
       'Basic cleanup service included',
-      'Party setup & breakdown handled'
+      'Party setup & breakdown handled',
+      'Bring your own food, cake and decorations'
     ],
     popular: false
   },
   {
     name: 'Worker Bee+',
-    description: 'Essential package with pizza and soda',
+    description: 'Room, invitations and a dedicated host',
     icon: Sparkles,
     color: 'from-purple-200 to-purple-300',
     borderColor: 'border-purple-300',
@@ -48,17 +49,16 @@ const partyPackages = [
       '15 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
-      'Pizza for all guests',
-      'Soda for all guests',
       'Dedicated party host assistance',
       'Party setup & breakdown handled',
-      'Access to play area during party'
+      'Access to play area during party',
+      'Bring your own food, cake and decorations'
     ],
     popular: true
   },
   {
     name: 'Queen Bee+',
-    description: 'Premium package with pizza, soda, cake and decorations',
+    description: 'Largest package — 20 kids included',
     icon: Crown,
     color: 'from-pink-200 to-pink-300',
     borderColor: 'border-pink-300',
@@ -68,14 +68,11 @@ const partyPackages = [
     maxGuests: 20,
     duration: '2 hours',
     features: [
-      '15 kids included',
+      '20 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
-      'Pizza for all guests',
-      'Soda for all guests',
-      'Birthday cake included',
-      'Decorations',
-      'Dedicated party host assistance'
+      'Dedicated party host assistance',
+      'Bring your own food, cake and decorations'
     ],
     popular: false
   }
