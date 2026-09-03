@@ -54,14 +54,13 @@ export async function getCustomerChildren(customerId: string): Promise<Child[]> 
  * Get the ids of a customer's children, bypassing RLS.
  *
  * Feeds the batch check-in ownership gate, which denies a child_id that
- * isn't in this list. POS routes are PIN-gated at the application level and
- * `/api` is excluded from auth middleware, so a request here may carry no
- * Supabase auth session for RLS to evaluate `auth.uid() = customer_id`
- * against -- `getCustomerChildren` above would then silently return nothing
- * for reasons that have nothing to do with who the children belong to. Read
- * with the same admin client the insert already uses so an absent auth
- * session can't be mistaken for "this customer has no children." Do not
- * swap this back to `createClient()`.
+ * isn't in this list. That route does require a staff session -- it is not
+ * anonymous -- but that is not why this reads as admin. An RLS-scoped read
+ * returns an empty list both for "this customer has no children" and for
+ * "these children are not visible to this caller", and the gate cannot tell
+ * the two apart: the second would deny a whole family at the front desk.
+ * Read with the same admin client the insert already uses, so visibility
+ * never masquerades as ownership. Do not swap this back to `createClient()`.
  */
 export async function getCustomerChildIdsAsAdmin(customerId: string): Promise<string[]> {
   const supabase = createAdminClient();

@@ -1,8 +1,8 @@
 /**
  * Pure request-validation helpers for batch check-in.
  *
- * Split out of route.ts so the two safety checks below can be unit tested
- * without a database: callers pass in rows already fetched by the route.
+ * Split out of route.ts so the safety checks below can be unit tested without
+ * a database: callers pass in rows already fetched by the route.
  */
 
 export interface BatchEntry {
@@ -15,18 +15,18 @@ export interface OwnershipPurchase {
   customer_id: string;
 }
 
-const OWNERSHIP_MISMATCH_MESSAGE =
+export const OWNERSHIP_MISMATCH_MESSAGE =
   'One or more passes or children in this check-in do not belong to this account.';
 
 /**
  * Verify every purchase_id and child_id in the batch actually belongs to the
  * customer making the request.
  *
- * `createAdminClient()` bypasses RLS and this route is unauthenticated at the
- * middleware level, so without this check a caller could supply any
- * combination of customer_id / purchase_id / child_id and the insert (and the
- * punch-deducting trigger) would go through regardless of who actually owns
- * what -- draining one family's card with another family's check-in.
+ * The route requires a staff session, but that only says the caller works
+ * here. `createAdminClient()` bypasses RLS, so without this check any
+ * combination of customer_id / purchase_id / child_id would insert -- and the
+ * punch-deducting trigger fire -- regardless of who actually owns what,
+ * draining one family's card with another family's check-in.
  *
  * Returns one generic message on any mismatch and never says which id was
  * wrong, so the endpoint can't be used to probe for ids that belong to
@@ -47,6 +47,64 @@ export function checkBatchOwnership(
     }
     if (!ownedChildIds.has(entry.child_id)) {
       return OWNERSHIP_MISMATCH_MESSAGE;
+    }
+  }
+
+  return null;
+}
+
+const ALREADY_CHECKED_IN_MESSAGE =
+  'One or more of these children are already checked in. Refresh the screen — if they are inside, this check-in already went through.';
+
+/**
+ * Reject a batch that names the same child twice.
+ *
+ * A child can only be in the building once, so a repeated child is never a
+ * legitimate request -- it is a double-tap or a body assembled twice. Left
+ * alone it opens two sessions for one child and spends two punches.
+ *
+ * Broader than "the same {purchase_id, child_id} pair twice" on purpose: the
+ * same child against two *different* passes is just as wrong, and costs two
+ * punches rather than one.
+ */
+export function checkNoDuplicateChildren(entries: BatchEntry[]): string | null {
+  const seen = new Set<string>();
+
+  for (const entry of entries) {
+    if (seen.has(entry.child_id)) {
+      return ALREADY_CHECKED_IN_MESSAGE;
+    }
+    seen.add(entry.child_id);
+  }
+
+  return null;
+}
+
+/**
+ * Reject a batch for a child who already has a session open.
+ *
+ * This is what makes check-in idempotent under a lost response. The POS runs
+ * on wifi: the batch can commit server-side and the reply never arrive, and
+ * staff -- shown a failure -- press Confirm again. Nothing else stops the
+ * second press. `checkBatchCapacity` re-reads `used_sessions` fresh and, on a
+ * card with punches left, happily allows the same children through a second
+ * time: another punch each, another open session each. Neither is visible
+ * until someone reconciles the card.
+ *
+ * A child who is already inside cannot legitimately be checked in again, so
+ * rejecting turns the retry into a no-op instead of a second spend. The
+ * corollary is that this must be evaluated against a *fresh* read of open
+ * sessions taken in the same request, not against anything the client sent.
+ */
+export function checkNoOpenSessions(
+  entries: BatchEntry[],
+  childIdsWithOpenSessions: readonly string[]
+): string | null {
+  const open = new Set(childIdsWithOpenSessions);
+
+  for (const entry of entries) {
+    if (open.has(entry.child_id)) {
+      return ALREADY_CHECKED_IN_MESSAGE;
     }
   }
 

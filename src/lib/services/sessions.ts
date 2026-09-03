@@ -93,6 +93,40 @@ export async function getAllActiveSessions(): Promise<Session[]> {
 }
 
 /**
+ * Which of these children already have a session open, bypassing RLS.
+ *
+ * Feeds the batch check-in idempotency gate, which denies a child who is
+ * already inside. Like `getPurchaseAsAdmin` and `getCustomerChildIdsAsAdmin`,
+ * a gate that treats absence as "allow" must not be fed by a read that can
+ * return absence for an unrelated reason -- an RLS-scoped read with no auth
+ * session would report every child as free and let a retry spend a second
+ * punch on each of them. Do not swap this to `createClient()`.
+ *
+ * Returns an empty list for an empty request rather than issuing a query that
+ * would match nothing useful.
+ */
+export async function getOpenSessionChildIdsAsAdmin(childIds: string[]): Promise<string[]> {
+  if (childIds.length === 0) return [];
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('child_id')
+    .in('child_id', childIds)
+    .is('end_time', null);
+
+  if (error) {
+    console.error('Error reading open sessions for children:', error);
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => row.child_id)
+    .filter((id): id is string => id !== null);
+}
+
+/**
  * Open several sessions at once.
  *
  * One array insert is a single statement, so a family checking in on one punch

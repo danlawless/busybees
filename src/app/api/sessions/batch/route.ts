@@ -6,15 +6,23 @@
  * or none does, so a partial failure never spends punches for children left
  * outside.
  *
- * Note: POS staff access is controlled via PIN at the application level.
+ * Requires a staff/admin session: since migration 052 the insert below spends
+ * a punch, which puts this route in the same class as `/api/purchases/pos`.
+ * The POS PIN is a client-side screen lock and proves nothing to the server.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createSessions } from '@/lib/services/sessions';
+import { createSessions, getOpenSessionChildIdsAsAdmin } from '@/lib/services/sessions';
 import { getPurchaseAsAdmin, updatePurchase } from '@/lib/services/purchases';
 import { getCustomerChildIdsAsAdmin } from '@/lib/services/children';
-import { checkBatchOwnership, checkBatchCapacity } from './validation';
+import { requireStaff } from '../requireStaff';
+import {
+  checkBatchOwnership,
+  checkBatchCapacity,
+  checkNoDuplicateChildren,
+  checkNoOpenSessions,
+} from './validation';
 
 const batchSchema = z.object({
   customer_id: z.string().uuid(),
@@ -28,6 +36,9 @@ const batchSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requireStaff();
+    if (denied) return denied;
+
     const parsed = batchSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
@@ -37,12 +48,19 @@ export async function POST(request: NextRequest) {
     }
     const { customer_id, auto_checkout_time, start_time, entries } = parsed.data;
 
+    // A child named twice in one call would be checked in twice and charged
+    // twice. Pure, so it runs before any database work.
+    const duplicateError = checkNoDuplicateChildren(entries);
+    if (duplicateError) {
+      return NextResponse.json({ error: duplicateError }, { status: 409 });
+    }
+
     // Every pass is checked before anything is inserted, so an expired card
     // cannot let part of a family through. Reads here use the admin client:
-    // POS requests carry no Supabase auth session (PIN-gated, and `/api` is
-    // excluded from auth middleware), so an RLS-scoped read could return
-    // nothing for reasons unrelated to whether the purchase exists or who
-    // owns it -- see the comment on `getPurchaseAsAdmin`.
+    // under RLS a row that exists but is invisible comes back as PGRST116,
+    // exactly like a row that does not exist, and a gate that denies on
+    // absence must not be fed a read that can report absence for an unrelated
+    // reason -- see the comment on `getPurchaseAsAdmin`.
     const purchaseIds = [...new Set(entries.map((e) => e.purchase_id))];
     const purchases: NonNullable<Awaited<ReturnType<typeof getPurchaseAsAdmin>>>[] = [];
     for (const purchaseId of purchaseIds) {
@@ -65,15 +83,29 @@ export async function POST(request: NextRequest) {
       purchases.push(purchase);
     }
 
-    // Every purchase_id and child_id must actually belong to customer_id --
-    // this route has no session auth, so nothing else stands between an
-    // arbitrary request body and someone else's punch card. Also read with
-    // the admin client, and for the same reason as above: see
+    // Every purchase_id and child_id must actually belong to customer_id.
+    // Staff auth above says the caller works here; it says nothing about
+    // whether the ids in this body hang together, and a mistyped or stale
+    // customer_id would otherwise draw down another family's card. Also read
+    // with the admin client, and for the same reason as above: see
     // `getCustomerChildIdsAsAdmin`.
     const customerChildIds = await getCustomerChildIdsAsAdmin(customer_id);
     const ownershipError = checkBatchOwnership(customer_id, entries, purchases, customerChildIds);
     if (ownershipError) {
       return NextResponse.json({ error: ownershipError }, { status: 403 });
+    }
+
+    // What makes a retry safe. The POS runs on wifi: this batch can commit
+    // and the response never arrive, and staff will press Confirm again. A
+    // child who is already inside cannot be checked in again, so the second
+    // press is rejected rather than spending a second punch each. Read fresh,
+    // here, in this request -- see `checkNoOpenSessions`.
+    const openSessionChildIds = await getOpenSessionChildIdsAsAdmin(
+      entries.map((entry) => entry.child_id)
+    );
+    const openSessionError = checkNoOpenSessions(entries, openSessionChildIds);
+    if (openSessionError) {
+      return NextResponse.json({ error: openSessionError }, { status: 409 });
     }
 
     // A safety net: the POS picker is the intended gatekeeper against

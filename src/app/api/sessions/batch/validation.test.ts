@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { checkBatchOwnership, checkBatchCapacity } from './validation';
+import {
+  checkBatchOwnership,
+  checkBatchCapacity,
+  checkNoDuplicateChildren,
+  checkNoOpenSessions,
+} from './validation';
 import type { BatchEntry, OwnershipPurchase, CapacityPurchase } from './validation';
 
 const CUSTOMER = 'customer-1';
@@ -99,5 +104,72 @@ describe('checkBatchCapacity', () => {
     const purchase: CapacityPurchase = { id: 'monthly', total_sessions: 999, used_sessions: 999 };
     const entries: BatchEntry[] = [{ purchase_id: 'monthly', child_id: 'c1' }];
     expect(checkBatchCapacity(entries, [purchase])).not.toBeNull();
+  });
+});
+
+describe('checkNoDuplicateChildren', () => {
+  it('allows a normal family batch where every child appears once', () => {
+    const entries: BatchEntry[] = [
+      { purchase_id: 'p1', child_id: 'c1' },
+      { purchase_id: 'p1', child_id: 'c2' },
+      { purchase_id: 'p1', child_id: 'c3' },
+    ];
+    expect(checkNoDuplicateChildren(entries)).toBeNull();
+  });
+
+  it('rejects the same {purchase, child} pair sent twice in one call', () => {
+    const entries: BatchEntry[] = [
+      { purchase_id: 'p1', child_id: 'c1' },
+      { purchase_id: 'p1', child_id: 'c1' },
+    ];
+    expect(checkNoDuplicateChildren(entries)).not.toBeNull();
+  });
+
+  it('rejects one child drawn against two different passes in one call', () => {
+    // Two punches for one child, on two cards. Pair-wise deduplication would
+    // let this through; it is just as wrong and costs twice as much.
+    const entries: BatchEntry[] = [
+      { purchase_id: 'p1', child_id: 'c1' },
+      { purchase_id: 'p2', child_id: 'c1' },
+    ];
+    expect(checkNoDuplicateChildren(entries)).not.toBeNull();
+  });
+
+  it('allows the same pass to cover several different children', () => {
+    const entries: BatchEntry[] = [
+      { purchase_id: 'p1', child_id: 'c1' },
+      { purchase_id: 'p1', child_id: 'c2' },
+    ];
+    expect(checkNoDuplicateChildren(entries)).toBeNull();
+  });
+});
+
+describe('checkNoOpenSessions', () => {
+  const entries: BatchEntry[] = [
+    { purchase_id: 'p1', child_id: 'c1' },
+    { purchase_id: 'p1', child_id: 'c2' },
+  ];
+
+  it('allows a batch when nobody in it is already inside', () => {
+    expect(checkNoOpenSessions(entries, [])).toBeNull();
+  });
+
+  it('rejects a replay of a batch that already committed', () => {
+    // The wifi case: the insert landed, the response was lost, staff pressed
+    // Confirm again. Both children now have open sessions.
+    expect(checkNoOpenSessions(entries, ['c1', 'c2'])).not.toBeNull();
+  });
+
+  it('rejects the whole batch when only one child is already inside', () => {
+    expect(checkNoOpenSessions(entries, ['c2'])).not.toBeNull();
+  });
+
+  it('ignores open sessions belonging to children not in this batch', () => {
+    expect(checkNoOpenSessions(entries, ['c9'])).toBeNull();
+  });
+
+  it('never echoes back which child was already checked in', () => {
+    const result = checkNoOpenSessions(entries, ['c1']);
+    expect(result).not.toMatch(/c1|c2|p1/);
   });
 });
