@@ -20,6 +20,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { getPassKind } from '@/lib/pos/passSelection';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
@@ -83,8 +84,10 @@ export async function POST(request: NextRequest) {
 
     // Punch cards are bought for the account from 1 October 2026. Anything that
     // does not say so is a pass for one named child, which is what every row
-    // sold before then is.
-    const passScope: 'child' | 'account' = pass_scope === 'account' ? 'account' : 'child';
+    // sold before then is. This is provisional -- overridden below once the
+    // product itself is resolved, because a punch card must always be
+    // account-scoped no matter what (or whether) the caller sent pass_scope.
+    let passScope: 'child' | 'account' = pass_scope === 'account' ? 'account' : 'child';
 
     // Validate required fields
     if (!customer_id || !product_id || !product_name || product_price === undefined || !purchase_type) {
@@ -393,6 +396,31 @@ export async function POST(request: NextRequest) {
       purchase_type,
       adminSupabase,
     );
+
+    // A punch card is always account-scoped, regardless of what pass_scope the
+    // caller sent (or, from a screen that predates this, never sends at all).
+    // Several screens post here — the POS product grid, the customer
+    // dashboard's own purchase flow, and this route's own card-first punch
+    // flow — and a client-supplied scope on a money-bearing column is the
+    // wrong shape: any future caller that forgets to send pass_scope: 'account'
+    // would silently create a card that only works for one child. Deriving it
+    // from the product itself, by the same classification the card-first POS
+    // flow uses (getPassKind, keyed off the pass's *stored* name/category —
+    // not whatever product_name the request happens to carry), makes
+    // forgetting impossible. Day and monthly passes are untouched: they stay
+    // whatever passScope already resolved to above.
+    const { data: productForScope } = await adminSupabase
+      .from('passes')
+      .select('name, category')
+      .eq('id', product_id)
+      .single();
+
+    if (
+      productForScope &&
+      getPassKind({ id: product_id, name: productForScope.name, price: 0, category: productForScope.category }) === 'punch'
+    ) {
+      passScope = 'account';
+    }
 
     // Monthly passes default to auto-renew on (renew 7 days before expiry)
     const isMonthlyPass = purchase_type === 'monthly_pass';

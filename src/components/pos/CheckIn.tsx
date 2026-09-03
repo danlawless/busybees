@@ -2788,11 +2788,20 @@ export function CheckIn({
                             {displayCustomer.children.length > 0 && (
                                 <Card className="p-6 border-l-4 border-l-amber-400">
                                     <h4 className="text-xl font-bold mb-1">
-                                        Who&apos;s playing?
+                                        {passKind === "punch"
+                                            ? "Buy a punch card"
+                                            : "Who's playing?"}
                                     </h4>
                                     <p className="text-sm text-gray-600 mb-4">
-                                        Select the children, then choose a pass. The right
-                                        rate is worked out from each child&apos;s age.
+                                        {passKind === "punch" ? (
+                                            "Choose a card below — any child on the account can use it."
+                                        ) : (
+                                            <>
+                                                Select the children, then choose a pass. The
+                                                right rate is worked out from each
+                                                child&apos;s age.
+                                            </>
+                                        )}
                                     </p>
 
                                     {passKind !== "punch" && (
@@ -2849,10 +2858,6 @@ export function CheckIn({
 
                                     {passKind === "punch" ? (
                                         <div className="space-y-3">
-                                            <p className="text-sm text-gray-600">
-                                                👨‍👩‍👧‍👦 Any child on the account can use
-                                                these punches.
-                                            </p>
                                             {punchCardOptions(availablePasses).map((card) => (
                                                 <button
                                                     key={card.id}
