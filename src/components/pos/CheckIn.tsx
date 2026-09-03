@@ -23,7 +23,10 @@ import {
     PASS_KIND_LABEL,
     groupQuoteByProduct,
     quotePasses,
+    punchCardOptions,
     type PassKind,
+    type PassQuote,
+    type SelectablePass,
 } from "@/lib/pos/passSelection";
 
 interface SiblingDiscount {
@@ -238,6 +241,8 @@ export function CheckIn({
     // Child-first pass buying: pick who's playing, then the kind of pass.
     const [passChildIds, setPassChildIds] = useState<string[]>([]);
     const [passKind, setPassKind] = useState<PassKind>("day");
+    // Punch card buying is account-scoped: one card is picked, not a child.
+    const [selectedPunchCard, setSelectedPunchCard] = useState<SelectablePass | null>(null);
     const [buyingPasses, setBuyingPasses] = useState(false);
     const [passError, setPassError] = useState<string | null>(null);
     const [showAddChild, setShowAddChild] = useState(false);
@@ -855,16 +860,21 @@ export function CheckIn({
         passChildIds.includes(c.id)
     );
 
-    const passQuote = quotePasses(
-        passChildren,
-        passKind,
-        availablePasses,
-        siblingDiscounts,
-        qualifiesForMemberPricing(
-            passKind === "monthly" ? "monthly_pass" : "day_pass",
-            true
-        )
-    );
+    // Punch cards are account-scoped from 1 October 2026 — there is no child to
+    // price them against, so the per-child quote does not apply to them.
+    const passQuote: PassQuote =
+        passKind === "punch"
+            ? { lines: [], unresolved: [], total: 0, savings: 0, productCount: 0 }
+            : quotePasses(
+                  passChildren,
+                  passKind,
+                  availablePasses,
+                  siblingDiscounts,
+                  qualifiesForMemberPricing(
+                      passKind === "monthly" ? "monthly_pass" : "day_pass",
+                      true
+                  )
+              );
 
     const togglePassChild = (childId: string) => {
         setPassError(null);
@@ -879,11 +889,80 @@ export function CheckIn({
      * Buy the quoted passes.
      *
      * Day passes for siblings share one payment and record a row per child, so
-     * each child's pass is tracked at its own rate. Punch cards and monthly
-     * passes are bought per child at full price, so each is its own purchase.
+     * each child's pass is tracked at its own rate. Monthly passes are bought
+     * per child at full price, so each is its own purchase. Punch cards have no
+     * child to price against at all — they belong to the account — and are
+     * handled by their own early branch below.
      */
     const handleBuyPasses = async () => {
         const customer = displayCustomer;
+
+        // A punch card belongs to the account, so there is no child to pick and
+        // no per-child quote to build — one card, one row.
+        if (passKind === "punch") {
+            if (!customer) return;
+            if (!selectedPunchCard) {
+                setPassError("Choose a punch card.");
+                return;
+            }
+
+            setBuyingPasses(true);
+            setPassError(null);
+
+            try {
+                const response = await fetch("/api/purchases/pos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_id: customer.id,
+                        product_id: selectedPunchCard.id,
+                        product_name: selectedPunchCard.name,
+                        product_price: selectedPunchCard.price,
+                        product_description: "",
+                        purchase_type: "weekly_pass",
+                        child_id: null,
+                        pass_scope: "account",
+                        quantity: 1,
+                        metadata: {},
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Purchase failed");
+                }
+
+                setSuccessDetails({
+                    title: "Punch Card Purchased ✅",
+                    message: `${selectedPunchCard.name} — any child on the account can use it.`,
+                    details: `💰 ${formatCurrency(selectedPunchCard.price)}`,
+                });
+                setShowSuccessModal(true);
+                setSelectedPunchCard(null);
+
+                // Refresh the customer so the new card shows immediately
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                    });
+                }
+            } catch (error) {
+                setPassError(
+                    error instanceof Error ? error.message : "Purchase failed. Please try again."
+                );
+            } finally {
+                setBuyingPasses(false);
+            }
+            return;
+        }
+
         if (!customer || passQuote.lines.length === 0) return;
 
         const missingWaiver = passQuote.lines.find((l) => !l.child.waiverSigned);
@@ -926,12 +1005,10 @@ export function CheckIn({
                         product_name: group.pass.name,
                         product_price: group.total,
                         product_description: "",
+                        // Punch cards return above before this point — only
+                        // day and monthly passes are ever bought per child here.
                         purchase_type:
-                            passKind === "monthly"
-                                ? "monthly_pass"
-                                : passKind === "punch"
-                                  ? "weekly_pass"
-                                  : "day_pass",
+                            passKind === "monthly" ? "monthly_pass" : "day_pass",
                         child_id: childIds[0],
                         children_ids: childIds,
                         split_per_child: useSplit,
@@ -2718,33 +2795,35 @@ export function CheckIn({
                                         rate is worked out from each child&apos;s age.
                                     </p>
 
-                                    <div className="flex flex-wrap gap-2 mb-5">
-                                        {displayCustomer.children.map((child) => {
-                                            const selected = passChildIds.includes(child.id);
-                                            return (
-                                                <button
-                                                    key={child.id}
-                                                    type="button"
-                                                    onClick={() => togglePassChild(child.id)}
-                                                    aria-pressed={selected}
-                                                    className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                                        selected
-                                                            ? "bg-amber-100 border-amber-500"
-                                                            : "bg-white border-gray-300 hover:border-amber-400"
-                                                    }`}
-                                                >
-                                                    <span className="block font-semibold text-gray-900">
-                                                        {selected ? "✓ " : ""}
-                                                        {child.name}
-                                                    </span>
-                                                    <span className="block text-xs text-gray-600">
-                                                        Age {child.age}
-                                                        {!child.waiverSigned && " · waiver needed"}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    {passKind !== "punch" && (
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {displayCustomer.children.map((child) => {
+                                                const selected = passChildIds.includes(child.id);
+                                                return (
+                                                    <button
+                                                        key={child.id}
+                                                        type="button"
+                                                        onClick={() => togglePassChild(child.id)}
+                                                        aria-pressed={selected}
+                                                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                            selected
+                                                                ? "bg-amber-100 border-amber-500"
+                                                                : "bg-white border-gray-300 hover:border-amber-400"
+                                                        }`}
+                                                    >
+                                                        <span className="block font-semibold text-gray-900">
+                                                            {selected ? "✓ " : ""}
+                                                            {child.name}
+                                                        </span>
+                                                        <span className="block text-xs text-gray-600">
+                                                            Age {child.age}
+                                                            {!child.waiverSigned && " · waiver needed"}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
 
                                     <div className="flex flex-wrap gap-2 mb-5">
                                         {PASS_KINDS.map((kind) => (
@@ -2754,6 +2833,7 @@ export function CheckIn({
                                                 onClick={() => {
                                                     setPassKind(kind);
                                                     setPassError(null);
+                                                    setSelectedPunchCard(null);
                                                 }}
                                                 aria-pressed={passKind === kind}
                                                 className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
@@ -2767,7 +2847,33 @@ export function CheckIn({
                                         ))}
                                     </div>
 
-                                    {passChildIds.length === 0 ? (
+                                    {passKind === "punch" ? (
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-gray-600">
+                                                👨‍👩‍👧‍👦 Any child on the account can use
+                                                these punches.
+                                            </p>
+                                            {punchCardOptions(availablePasses).map((card) => (
+                                                <button
+                                                    key={card.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPunchCard(card)}
+                                                    className={`w-full p-4 rounded-xl border-4 text-left transition-colors ${
+                                                        selectedPunchCard?.id === card.id
+                                                            ? "border-yellow-400 bg-yellow-50"
+                                                            : "border-gray-200 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <span className="text-xl font-bold">
+                                                        {card.name}
+                                                    </span>
+                                                    <span className="ml-3 text-xl">
+                                                        {formatCurrency(card.price)}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : passChildIds.length === 0 ? (
                                         <p className="text-sm text-gray-500">
                                             Select at least one child to see pricing.
                                         </p>
@@ -2848,15 +2954,22 @@ export function CheckIn({
                                     <Button
                                         onClick={handleBuyPasses}
                                         disabled={
-                                            buyingPasses || passQuote.lines.length === 0
+                                            buyingPasses ||
+                                            (passKind === "punch"
+                                                ? !selectedPunchCard
+                                                : passQuote.lines.length === 0)
                                         }
                                         className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
                                     >
                                         {buyingPasses
                                             ? "Processing…"
-                                            : passQuote.lines.length === 0
-                                              ? `Buy ${PASS_KIND_LABEL[passKind]}`
-                                              : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
+                                            : passKind === "punch"
+                                              ? selectedPunchCard
+                                                    ? `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(selectedPunchCard.price)}`
+                                                    : `Buy ${PASS_KIND_LABEL[passKind]}`
+                                              : passQuote.lines.length === 0
+                                                ? `Buy ${PASS_KIND_LABEL[passKind]}`
+                                                : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
                                     </Button>
                                 </Card>
                             )}
