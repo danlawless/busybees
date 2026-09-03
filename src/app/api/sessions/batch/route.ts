@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSessions } from '@/lib/services/sessions';
 import { getPurchase, updatePurchase } from '@/lib/services/purchases';
+import { getCustomerChildren } from '@/lib/services/children';
+import { checkBatchOwnership, checkBatchCapacity } from './validation';
 
 const batchSchema = z.object({
   customer_id: z.string().uuid(),
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
     // Every pass is checked before anything is inserted, so an expired card
     // cannot let part of a family through.
     const purchaseIds = [...new Set(entries.map((e) => e.purchase_id))];
+    const purchases: NonNullable<Awaited<ReturnType<typeof getPurchase>>>[] = [];
     for (const purchaseId of purchaseIds) {
       const purchase = await getPurchase(purchaseId);
       if (!purchase) {
@@ -55,6 +58,31 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      purchases.push(purchase);
+    }
+
+    // Every purchase_id and child_id must actually belong to customer_id --
+    // the admin client bypasses RLS and this route has no session auth, so
+    // nothing else stands between an arbitrary request body and someone
+    // else's punch card.
+    const customerChildren = await getCustomerChildren(customer_id);
+    const ownershipError = checkBatchOwnership(
+      customer_id,
+      entries,
+      purchases,
+      customerChildren.map((child) => child.id)
+    );
+    if (ownershipError) {
+      return NextResponse.json({ error: ownershipError }, { status: 403 });
+    }
+
+    // A safety net: the POS picker is the intended gatekeeper against
+    // over-drawing a card, but the server must not take a correct client on
+    // trust when a single call can check in several children against it at
+    // once.
+    const capacityError = checkBatchCapacity(entries, purchases);
+    if (capacityError) {
+      return NextResponse.json({ error: capacityError }, { status: 400 });
     }
 
     const sessions = await createSessions(
