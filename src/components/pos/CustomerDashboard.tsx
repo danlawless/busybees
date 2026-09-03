@@ -59,6 +59,7 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+  passScope?: string; // 'account' means the pass belongs to the whole account, not one child
   // Party scheduling fields
   partyDate?: string; // Scheduled party date
   partyStartTime?: string; // Scheduled party start time
@@ -911,6 +912,7 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
           firstUseDate: p.first_use_date,
           actualExpiryDate: p.actual_expiry_date,
           childId: p.child_id,
+          passScope: p.pass_scope,
           autoRenew: p.auto_renew,
           nextRenewalDate: p.next_renewal_date,
           stripePaymentIntentId: p.stripe_payment_intent_id,
@@ -1821,11 +1823,15 @@ export function CustomerDashboard({ customer, onUpdateCustomer }: CustomerDashbo
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <h4 className="font-semibold text-lg">{purchase.name}</h4>
-                    {purchase.childId && (
+                    {purchase.passScope === 'account' ? (
+                      <p className="text-gray-600 font-medium text-sm">
+                        👨‍👩‍👧‍👦 Any child on the account
+                      </p>
+                    ) : purchase.childId ? (
                       <p className="text-blue-600 font-medium text-sm">
                         👶 {getChildName(purchase.childId)}
                       </p>
-                    )}
+                    ) : null}
                     <p className="text-gray-600">
                       {purchase.totalSessions === 999 ? 'Unlimited' :
                        `${purchase.totalSessions - purchase.usedSessions} visits remaining`}

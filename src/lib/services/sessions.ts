@@ -67,7 +67,8 @@ export async function getAllActiveSessions(): Promise<Session[]> {
       .select(`
         *,
         customer:users!sessions_customer_id_fkey (id, name, phone),
-        purchase:purchases (id, name, type)
+        purchase:purchases (id, name, type),
+        child:children (id, name)
       `)
       .is('end_time', null)
       .order('start_time', { ascending: false })

@@ -176,6 +176,7 @@ function WebMyAccountContent() {
           autoRenew: p.auto_renew,
           nextRenewalDate: p.next_renewal_date,
           childId: p.child_id,
+          passScope: p.pass_scope,
           partyDate: p.party_date,
           partyStartTime: p.party_start_time,
           partyEndTime: p.party_end_time,
@@ -1402,11 +1403,15 @@ function WebMyAccountContent() {
                               </span>
                             )}
                           </div>
-                          {purchase.childId && (
+                          {purchase.passScope === 'account' ? (
+                            <p className="text-gray-600 font-medium text-sm">
+                              👨‍👩‍👧‍👦 Any child on the account
+                            </p>
+                          ) : purchase.childId ? (
                             <p className="text-blue-600 font-medium text-sm">
                               👶 {getChildName(purchase.childId)}
                             </p>
-                          )}
+                          ) : null}
                           <p className="text-gray-600 text-sm">
                             {getRemainingSessionsDisplay(purchase)}
                           </p>
