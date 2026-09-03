@@ -9,6 +9,8 @@ import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { WaiverModal } from "@/components/ui/WaiverModal";
 import { AfterDarkWaiver, type WaiverFormData as AfterDarkWaiverFormData } from "@/components/customer/AfterDarkWaiver";
 import { GroupChildrenManager } from "./GroupChildrenManager";
+import { PunchCardCheckIn } from "@/components/pos/PunchCardCheckIn";
+import type { AllocationLine, PunchAllocation } from "@/lib/pos/punchAllocation";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
@@ -83,6 +85,7 @@ interface Purchase {
     nextRenewalDate?: string;
     childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
     childIds?: string[]; // For family passes: all children covered by this purchase
+    passScope?: 'child' | 'account';
     // Party scheduling fields
     partyDate?: string;
     partyStartTime?: string;
@@ -95,6 +98,10 @@ interface Session {
     id: string;
     customerId: string;
     purchaseId: string;
+    // Who actually played on this session. Set for account-scoped punch card
+    // check-ins (one session per child); absent for the older single-child
+    // pass path, where the purchase's own childId already says who it is.
+    childId?: string;
     startTime: string;
     endTime?: string;
     duration?: number;
@@ -125,6 +132,7 @@ interface PurchaseRow {
     total_sessions: number;
     status: Purchase["status"];
     child_id?: string;
+    pass_scope?: 'child' | 'account';
 }
 
 function toPurchase(row: PurchaseRow): Purchase {
@@ -141,6 +149,7 @@ function toPurchase(row: PurchaseRow): Purchase {
         totalSessions: row.total_sessions,
         status: row.status,
         childId: row.child_id,
+        passScope: row.pass_scope,
     };
 }
 
@@ -184,6 +193,9 @@ export function CheckIn({
     }>>({});
     const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
     const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
+    // The account punch card currently open in the "who's playing" picker,
+    // by purchase id.
+    const [punchCardCheckIn, setPunchCardCheckIn] = useState<string | null>(null);
     const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
     const [showPartyModal, setShowPartyModal] = useState(false);
     const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
@@ -1260,6 +1272,142 @@ export function CheckIn({
                 return firstUseDate;
             default:
                 return new Date(firstUse.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        }
+    };
+
+    /**
+     * Confirm a punch card check-in.
+     *
+     * Day passes are bought first: a declined card must never leave children
+     * checked in. Then every child goes in on one batch insert, so a family
+     * either all gets in or none does.
+     */
+    const handlePunchCardConfirm = async (
+        customer: Customer,
+        purchaseId: string,
+        allocation: PunchAllocation
+    ) => {
+        const autoCheckoutTime = getNextClosingTime(
+            autoCheckoutSettings.timezone,
+            autoCheckoutSettings.closingTime
+        );
+        const dayPassLines = allocation.lines.filter((l) => l.method === "day_pass");
+        const entries: { purchase_id: string; child_id: string }[] = allocation.lines
+            .filter((l) => l.method === "punch")
+            .map((l) => ({ purchase_id: purchaseId, child_id: l.child.id }));
+
+        try {
+            if (dayPassLines.length > 0) {
+                // Different ages can resolve to different day-pass products in
+                // the same shortfall -- the under-1 rate is its own product --
+                // so this groups by product first, exactly like the
+                // child-first day-pass flow's groupQuoteByProduct. One
+                // purchase call per product; a mixed-age group must never be
+                // charged and labeled under just the first child's product.
+                const groups = new Map<string, { pass: SelectablePass; lines: AllocationLine[] }>();
+                for (const line of dayPassLines) {
+                    if (!line.pass) throw new Error(`No day pass resolved for ${line.child.name}`);
+                    const existing = groups.get(line.pass.id);
+                    if (existing) existing.lines.push(line);
+                    else groups.set(line.pass.id, { pass: line.pass, lines: [line] });
+                }
+
+                for (const { pass, lines } of groups.values()) {
+                    const groupTotal = Math.round(
+                        lines.reduce((sum, l) => sum + l.price, 0) * 100
+                    ) / 100;
+                    const response = await fetch("/api/purchases/pos", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            customer_id: customer.id,
+                            product_id: pass.id,
+                            product_name: pass.name,
+                            product_price: groupTotal,
+                            product_description: "",
+                            purchase_type: "day_pass",
+                            child_id: lines[0].child.id,
+                            children_ids: lines.map((l) => l.child.id),
+                            split_per_child: true,
+                            child_prices: lines.map((l) => l.price),
+                            quantity: 1,
+                            metadata: {},
+                        }),
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || "Purchase failed");
+                    }
+                    const { purchases: created } = (await response.json()) as {
+                        purchases: { id: string; child_id: string | null }[];
+                    };
+                    for (const line of lines) {
+                        const match = created.find((p) => p.child_id === line.child.id);
+                        if (!match) throw new Error(`No purchase returned for ${line.child.name}`);
+                        entries.push({ purchase_id: match.id, child_id: line.child.id });
+                    }
+                }
+            }
+
+            const sessionsResponse = await fetch("/api/sessions/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    auto_checkout_time: autoCheckoutTime,
+                    entries,
+                }),
+            });
+            if (!sessionsResponse.ok) {
+                const errorData = await sessionsResponse.json();
+                throw new Error(errorData.error || "Check-in failed");
+            }
+            const { sessions: createdSessions } = (await sessionsResponse.json()) as {
+                sessions: {
+                    id: string;
+                    customer_id: string;
+                    purchase_id: string;
+                    child_id: string | null;
+                    start_time: string;
+                    auto_checkout_time: string;
+                }[];
+            };
+            const newSessions: Session[] = createdSessions.map((s) => ({
+                id: s.id,
+                customerId: s.customer_id,
+                purchaseId: s.purchase_id,
+                childId: s.child_id ?? undefined,
+                startTime: s.start_time,
+                autoCheckoutTime: s.auto_checkout_time,
+            }));
+
+            setPunchCardCheckIn(null);
+
+            // Refresh the customer's purchases so the card's reduced balance
+            // and any new day passes show immediately; fold in the new
+            // sessions either way so the children read as checked in even if
+            // the refresh itself hiccups.
+            const purchasesResponse = await fetch(
+                `/api/purchases?customer_id=${customer.id}`
+            );
+            if (purchasesResponse.ok) {
+                const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                    purchases: PurchaseRow[] | null;
+                };
+                onUpdateCustomer({
+                    ...customer,
+                    purchases: (purchasesData || []).map(toPurchase),
+                    activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                });
+            } else {
+                onUpdateCustomer({
+                    ...customer,
+                    activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                });
+            }
+        } catch (error) {
+            console.error("Punch card check-in failed:", error);
+            alert(error instanceof Error ? error.message : "Check-in failed");
         }
     };
 
@@ -3520,11 +3668,14 @@ export function CheckIn({
                                             p.status === "active" &&
                                             p.type !== "party_package" &&
                                             !(p.actualExpiryDate && new Date(p.actualExpiryDate) < now) &&
-                                            !(
-                                                displayCustomer.activeSessions || []
-                                            ).some(
-                                                (session) => session.purchaseId === p.id
-                                            )
+                                            // A pass for one child is hidden while that child is
+                                            // inside. An account punch card stays available — the
+                                            // second and third child still have to get in — and
+                                            // double check-ins are stopped per child in the picker.
+                                            (p.passScope === 'account' ||
+                                                !(displayCustomer.activeSessions || []).some(
+                                                    (session) => session.purchaseId === p.id
+                                                ))
                                     );
 
                                 // Group passes by type + childId
@@ -3557,7 +3708,23 @@ export function CheckIn({
                                     const normalizedType = inferPassType(purchase.name, purchase.type);
                                     const isFamilyPurchase = (purchase.childIds?.length || 0) > 0;
 
-                                    if (isFamilyPurchase) {
+                                    if (purchase.passScope === 'account') {
+                                        // One tile for the card, not one per child — who is playing
+                                        // is asked after it is tapped.
+                                        const key = `${normalizedType}-account-${purchase.id}`;
+                                        acc[key] = {
+                                            type: normalizedType,
+                                            typeName: getPassTypeName(normalizedType, purchase.name),
+                                            childId: null,
+                                            childName: null,
+                                            totalVisits:
+                                                (purchase.totalSessions || 0) - (purchase.usedSessions || 0),
+                                            isUnlimited: purchase.totalSessions === 999,
+                                            purchases: [purchase],
+                                            firstPurchase: purchase,
+                                        };
+                                        return acc;
+                                    } else if (isFamilyPurchase) {
                                         // Family pass: create a group entry for each child on the pass
                                         for (const cId of purchase.childIds!) {
                                             const key = `${normalizedType}-${cId}-family-${purchase.id}`;
@@ -3632,11 +3799,15 @@ export function CheckIn({
                                                                     )}
                                                                     {group.typeName}
                                                                 </h4>
-                                                                {group.childName && (
+                                                                {group.childName ? (
                                                                     <p className="text-green-600 font-medium text-lg mb-3">
                                                                         👶 {group.childName}
                                                                     </p>
-                                                                )}
+                                                                ) : group.firstPurchase.passScope === 'account' ? (
+                                                                    <p className="text-green-600 font-medium text-lg mb-3">
+                                                                        👨‍👩‍👧‍👦 Any child on the account
+                                                                    </p>
+                                                                ) : null}
                                                                 {purchase.type ===
                                                                     "party_package" &&
                                                                 purchase.partyDate ? (
@@ -3903,6 +4074,15 @@ export function CheckIn({
                                                                         <Button
                                                                             onClick={() => {
                                                                                 if (
+                                                                                    purchase.passScope ===
+                                                                                    'account'
+                                                                                ) {
+                                                                                    // Account cards ask who's playing
+                                                                                    // instead of checking in directly.
+                                                                                    setPunchCardCheckIn(
+                                                                                        purchase.id
+                                                                                    );
+                                                                                } else if (
                                                                                     confirmingCheckIn ===
                                                                                     purchase.id
                                                                                 ) {
@@ -5371,6 +5551,59 @@ export function CheckIn({
                     </Card>
                 </div>
             )}
+
+            {/* Punch Card Check-In Picker ("who's playing?") */}
+            {punchCardCheckIn && displayCustomer && (() => {
+                const punchCardPurchase = displayCustomer.purchases.find(
+                    (p) => p.id === punchCardCheckIn
+                );
+                if (!punchCardPurchase) return null;
+
+                // A child reads as "inside" either because an account punch
+                // card session names them directly, or because an active
+                // session's purchase belongs to them alone (the older
+                // single-child pass path never sets session.childId).
+                const childrenInsideIds = (displayCustomer.activeSessions || []).flatMap(
+                    (session) => {
+                        const ids: string[] = [];
+                        if (session.childId) ids.push(session.childId);
+                        const sessionPurchase = displayCustomer.purchases.find(
+                            (p) => p.id === session.purchaseId
+                        );
+                        if (sessionPurchase?.childId) ids.push(sessionPurchase.childId);
+                        return ids;
+                    }
+                );
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="w-full max-w-xl">
+                            <Card className="max-h-[90vh] overflow-y-auto">
+                                <PunchCardCheckIn
+                                    purchase={punchCardPurchase}
+                                    // eslint-disable-next-line react/no-children-prop -- `children` here is the account's list of kids, not JSX content.
+                                    children={displayCustomer.children}
+                                    childrenInsideIds={childrenInsideIds}
+                                    passes={availablePasses}
+                                    siblingRules={siblingDiscounts}
+                                    qualifiesForMemberPricing={qualifiesForMemberPricing(
+                                        "day_pass",
+                                        true
+                                    )}
+                                    onConfirm={(allocation) =>
+                                        handlePunchCardConfirm(
+                                            displayCustomer,
+                                            punchCardPurchase.id,
+                                            allocation
+                                        )
+                                    }
+                                    onCancel={() => setPunchCardCheckIn(null)}
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Party Details Modal */}
             {showPartyModal && selectedParty && (
