@@ -88,6 +88,56 @@ export async function getAllActiveSessions(): Promise<Session[]> {
 }
 
 /**
+ * Open several sessions at once.
+ *
+ * One array insert is a single statement, so a family checking in on one punch
+ * card either all get in or none do. Separate inserts could half-succeed and
+ * leave punches spent with children still outside.
+ */
+export async function createSessions(entries: SessionInsert[]): Promise<Session[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.from('sessions').insert(entries).select();
+
+  if (error) {
+    console.error('Error creating sessions:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Undo a check-in that has not ended yet. The AFTER DELETE trigger gives the
+ * punch back and, on a card returned to zero, clears the expiry clock its first
+ * use started.
+ */
+export async function voidSession(id: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data: session, error: readError } = await supabase
+    .from('sessions')
+    .select('id, end_time')
+    .eq('id', id)
+    .single();
+
+  if (readError) {
+    console.error('Error reading session to void:', readError);
+    throw readError;
+  }
+  if (session.end_time !== null) {
+    throw new Error('SESSION_ALREADY_ENDED');
+  }
+
+  const { error } = await supabase.from('sessions').delete().eq('id', id);
+
+  if (error) {
+    console.error('Error voiding session:', error);
+    throw error;
+  }
+}
+
+/**
  * Create a new session (check-in)
  */
 export async function createSession(session: SessionInsert): Promise<Session> {
