@@ -290,6 +290,7 @@ export interface Database {
           party_guests: number | null;
           party_notes: string | null;
           gift_card_amount_used: number;
+          pass_scope: string;
           created_at: string;
           updated_at: string;
         };
@@ -318,6 +319,7 @@ export interface Database {
           party_guests?: number | null;
           party_notes?: string | null;
           gift_card_amount_used?: number;
+          pass_scope?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -346,6 +348,7 @@ export interface Database {
           party_guests?: number | null;
           party_notes?: string | null;
           gift_card_amount_used?: number;
+          pass_scope?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -360,6 +363,7 @@ export interface Database {
           end_time: string | null;
           duration: number | null;
           auto_checkout_time: string;
+          child_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -370,6 +374,7 @@ export interface Database {
           end_time?: string | null;
           duration?: number | null;
           auto_checkout_time: string;
+          child_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -380,6 +385,7 @@ export interface Database {
           end_time?: string | null;
           duration?: number | null;
           auto_checkout_time?: string;
+          child_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
