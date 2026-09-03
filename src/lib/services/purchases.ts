@@ -32,6 +32,42 @@ export async function getPurchase(id: string): Promise<Purchase | null> {
 }
 
 /**
+ * Get purchase by ID, bypassing RLS.
+ *
+ * Feeds server-side validation gates (batch check-in ownership and capacity)
+ * that deny on an absent row. POS routes are PIN-gated at the application
+ * level and `/api` is excluded from auth middleware, so a request here may
+ * carry no Supabase auth session for RLS to evaluate `auth.uid() =
+ * customer_id` against -- `getPurchase` above would then silently see
+ * nothing for reasons that have nothing to do with who owns the purchase. A
+ * gate that treats absence as "deny" must not be fed by a read that can
+ * return absence for an unrelated reason, so this reads with the same admin
+ * client the insert already uses. Do not swap this back to `createClient()`.
+ */
+export async function getPurchaseAsAdmin(id: string): Promise<Purchase | null> {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+        .from("purchases")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        // A genuinely missing row surfaces as PGRST116 ("no rows returned")
+        // -- that is a real "not found", not an RLS artifact, so return null
+        // rather than throwing.
+        if (error.code === "PGRST116") {
+            return null;
+        }
+        console.error("Error fetching purchase (admin):", error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
  * Get all purchases for a customer
  */
 export async function getCustomerPurchases(customerId: string): Promise<Purchase[]> {

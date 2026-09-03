@@ -12,8 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSessions } from '@/lib/services/sessions';
-import { getPurchase, updatePurchase } from '@/lib/services/purchases';
-import { getCustomerChildren } from '@/lib/services/children';
+import { getPurchaseAsAdmin, updatePurchase } from '@/lib/services/purchases';
+import { getCustomerChildIdsAsAdmin } from '@/lib/services/children';
 import { checkBatchOwnership, checkBatchCapacity } from './validation';
 
 const batchSchema = z.object({
@@ -38,11 +38,15 @@ export async function POST(request: NextRequest) {
     const { customer_id, auto_checkout_time, start_time, entries } = parsed.data;
 
     // Every pass is checked before anything is inserted, so an expired card
-    // cannot let part of a family through.
+    // cannot let part of a family through. Reads here use the admin client:
+    // POS requests carry no Supabase auth session (PIN-gated, and `/api` is
+    // excluded from auth middleware), so an RLS-scoped read could return
+    // nothing for reasons unrelated to whether the purchase exists or who
+    // owns it -- see the comment on `getPurchaseAsAdmin`.
     const purchaseIds = [...new Set(entries.map((e) => e.purchase_id))];
-    const purchases: NonNullable<Awaited<ReturnType<typeof getPurchase>>>[] = [];
+    const purchases: NonNullable<Awaited<ReturnType<typeof getPurchaseAsAdmin>>>[] = [];
     for (const purchaseId of purchaseIds) {
-      const purchase = await getPurchase(purchaseId);
+      const purchase = await getPurchaseAsAdmin(purchaseId);
       if (!purchase) {
         return NextResponse.json({ error: 'Pass not found' }, { status: 404 });
       }
@@ -62,16 +66,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Every purchase_id and child_id must actually belong to customer_id --
-    // the admin client bypasses RLS and this route has no session auth, so
-    // nothing else stands between an arbitrary request body and someone
-    // else's punch card.
-    const customerChildren = await getCustomerChildren(customer_id);
-    const ownershipError = checkBatchOwnership(
-      customer_id,
-      entries,
-      purchases,
-      customerChildren.map((child) => child.id)
-    );
+    // this route has no session auth, so nothing else stands between an
+    // arbitrary request body and someone else's punch card. Also read with
+    // the admin client, and for the same reason as above: see
+    // `getCustomerChildIdsAsAdmin`.
+    const customerChildIds = await getCustomerChildIdsAsAdmin(customer_id);
+    const ownershipError = checkBatchOwnership(customer_id, entries, purchases, customerChildIds);
     if (ownershipError) {
       return NextResponse.json({ error: ownershipError }, { status: 403 });
     }
