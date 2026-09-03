@@ -1444,26 +1444,47 @@ export function CheckIn({
                 autoCheckoutTime: s.auto_checkout_time,
             }));
 
+            // The check-in itself has succeeded from here down: the sessions
+            // exist in the database and every day pass this attempt bought is
+            // spent. Nothing past this point may re-arm the retry lock or
+            // tell staff to press Confirm again -- a replay would only be
+            // rejected by checkBatchCapacity (these purchases are now used
+            // up), leaving this card stuck locked forever for no reason.
             setPunchCardCheckIn(null);
             setPendingPunchCardRetry(null);
 
             // Refresh the customer's purchases so the card's reduced balance
-            // and any new day passes show immediately; fold in the new
-            // sessions either way so the children read as checked in even if
-            // the refresh itself hiccups.
-            const purchasesResponse = await fetch(
-                `/api/purchases?customer_id=${customer.id}`
-            );
-            if (purchasesResponse.ok) {
-                const { purchases: purchasesData } = (await purchasesResponse.json()) as {
-                    purchases: PurchaseRow[] | null;
-                };
-                onUpdateCustomer({
-                    ...customer,
-                    purchases: (purchasesData || []).map(toPurchase),
-                    activeSessions: [...(customer.activeSessions || []), ...newSessions],
-                });
-            } else {
+            // and any new day passes show immediately. Best-effort, and
+            // deliberately its own try/catch: a failure here is a stale
+            // screen, not a failed check-in, and must not be read as one by
+            // the outer catch below (which exists to handle check-in itself
+            // failing, not a follow-up refresh).
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                } else {
+                    onUpdateCustomer({
+                        ...customer,
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Punch card check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+                // The children are checked in either way -- fold in the new
+                // sessions so the screen doesn't read as if nobody is.
                 onUpdateCustomer({
                     ...customer,
                     activeSessions: [...(customer.activeSessions || []), ...newSessions],
@@ -3622,10 +3643,19 @@ export function CheckIn({
                         <div className="space-y-10">
                             {/* Currently Checked In Passes */}
                             {(() => {
+                                // Driven by open sessions, not purchase status. Migration
+                                // 052 moved the punch deduction from check-out to
+                                // check-in, so a single-visit pass (a day pass, or a
+                                // punch card on its last punch) now flips to "used" the
+                                // instant the child walks in -- before this section ever
+                                // filtered on status, that flip would hide the tile and
+                                // leave staff with no way to check the child back out. A
+                                // purchase with an open session is, by definition,
+                                // someone in the building, regardless of what its
+                                // remaining-balance status says.
                                 const checkedInPasses =
                                     displayCustomer.purchases.filter(
                                         (p) =>
-                                            p.status === "active" &&
                                             p.type !== "party_package" &&
                                             (displayCustomer.activeSessions || []).some(
                                                 (session) => session.purchaseId === p.id

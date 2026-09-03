@@ -126,7 +126,11 @@ export function PunchCardCheckIn({
                   disabled={locked}
                 />
                 {child.name}
-                {line && (
+                {/* While locked, the parent is replaying a fixed set of
+                    already-bought entries -- this line's live price can
+                    have gone stale (a re-search, another till) and must not
+                    be shown next to the banner's authoritative figure. */}
+                {line && !locked && (
                   <span className="ml-auto text-lg text-gray-600">
                     {line.method === 'punch' ? '1 punch' : formatCurrency(line.price)}
                   </span>
@@ -154,15 +158,21 @@ export function PunchCardCheckIn({
         </p>
       )}
 
-      <div className="rounded-xl bg-gray-50 p-4 text-lg">
-        <p>
-          {allocation.punchesSpent} {allocation.punchesSpent === 1 ? 'punch' : 'punches'} ·{' '}
-          {remaining} left, {allocation.punchesRemainingAfter} after
-        </p>
-        {allocation.total > 0 && (
-          <p className="font-bold">Day passes {formatCurrency(allocation.total)}</p>
-        )}
-      </div>
+      {/* While locked, this box's numbers come from a live recompute the
+          parent is ignoring -- the notice banner above is the only figure
+          that's actually authoritative, so this is suppressed rather than
+          risk a staff member reading a stale total to a parent. */}
+      {!locked && (
+        <div className="rounded-xl bg-gray-50 p-4 text-lg">
+          <p>
+            {allocation.punchesSpent} {allocation.punchesSpent === 1 ? 'punch' : 'punches'} ·{' '}
+            {remaining} left, {allocation.punchesRemainingAfter} after
+          </p>
+          {allocation.total > 0 && (
+            <p className="font-bold">Day passes {formatCurrency(allocation.total)}</p>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-4">
         <button
