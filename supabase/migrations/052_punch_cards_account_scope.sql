@@ -20,6 +20,16 @@ BEGIN;
 -- Abort instead of hanging the front desk.
 SET LOCAL lock_timeout = '5s';
 
+-- lock_timeout bounds how long a statement waits to *acquire* a lock. It says
+-- nothing about how long a statement runs once it has one, and the sessions
+-- backfill below rewrites every historical row while holding the table. On a
+-- long history that could run for minutes with check-in blocked behind it and
+-- no ceiling at all. Bound the run too: exceeding this aborts the whole
+-- transaction, so nothing is half-applied and the night can retry off-hours.
+-- Generous on purpose -- see the runbook for how to size it against the row
+-- count before the night.
+SET LOCAL statement_timeout = '5min';
+
 -- ==================== Scope ====================
 -- Everything already sold takes 'child', so tiered cards sold before
 -- 1 October keep working exactly as they do now until they age out.

@@ -24,8 +24,17 @@ four-year-old could spend an infant-tier $5 punch). **It no longer is only
 that.** The application code on this branch writes `pass_scope` from two
 payment-handling routes, not just the POS:
 
+- `POST /api/purchases/pos`
 - `POST /api/stripe/direct-payment`
+- `POST /api/stripe/kiosk-payment`
+- `POST /api/stripe/checkout` (the branch where gift card credit covers the
+  whole price and the row is written without a Stripe round trip)
 - `POST /api/stripe/webhook`
+
+That is **every** route that records a pass. There is no remaining path that
+sells a punch card without writing `pass_scope`, which is the point — but it
+also means there is no path left that degrades gracefully if the column is
+missing.
 
 If the code is deployed while the `pass_scope` column does not yet exist:
 
@@ -91,6 +100,42 @@ fix the migration first.
 -- If non-zero, the COALESCE guards baked into 052 are load-bearing, not defensive.
 SELECT count(*) FROM public.purchases WHERE used_sessions IS NULL;
 ```
+
+```sql
+-- How much work the sessions backfill actually has to do. See the timeout note
+-- below before running the migration against a large history.
+SELECT count(*) FROM public.sessions;
+```
+
+### The two timeouts, and why one is not enough
+
+052 sets both:
+
+```sql
+SET LOCAL lock_timeout     = '5s';
+SET LOCAL statement_timeout = '5min';
+```
+
+They guard different things and **the first does not imply the second**:
+
+- `lock_timeout` bounds how long a statement waits to *acquire* a lock. It is
+  what stops the `ALTER TABLE` queueing behind an open transaction and freezing
+  the front desk indefinitely.
+- `statement_timeout` bounds how long a statement *runs* once it holds that
+  lock. Without it the `UPDATE public.sessions SET child_id = ...` backfill is
+  unbounded: it rewrites every historical session row while holding the table,
+  and check-in blocks behind it for as long as that takes.
+
+Both abort the whole transaction rather than leaving half a migration behind,
+so the failure mode is "nothing applied, run it again" — which is why the
+values can afford to be strict.
+
+`5min` is generous for the row count this business has. If the `count(*)` above
+is large enough that you doubt it, time the backfill on the restored snapshot
+first (Step 0 exists for exactly this) and raise the value in the migration to
+comfortably exceed what you measured. Run the migration in a quiet window
+either way: an aborted attempt costs nothing, an attempt that runs long with
+customers at the door costs the queue.
 
 ### a. Re-paste test — the only real proof the idempotency guard works
 
@@ -159,6 +204,12 @@ WHERE name ILIKE '%punch%' AND pass_scope = 'account' AND child_id IS NOT NULL;
 -- expect zero rows: an account-wide card must not also name a child
 ```
 
+Zero is now a real assertion rather than a hope: every route that writes a
+purchase nulls `child_id` when the derived scope is `'account'`, so a row that
+is both account-scoped and child-tagged can only come from something writing
+outside the application. If this query returns anything after launch, do not
+dismiss it as cosmetic — find out what wrote it.
+
 ### Riskiest part of the migration, for the night's on-call
 
 The trigger swap affects **day passes and memberships too, not just punch
@@ -191,6 +242,61 @@ place — but it is invisible unless someone is looking for it.
 
 ---
 
+## Two things about the POS that change on this deploy
+
+### Check-in now requires a staff login on the POS device
+
+`POST /api/sessions`, `POST /api/sessions/batch` and
+`DELETE /api/sessions/{id}` now require a **staff or admin Supabase session**,
+the same check `/api/purchases/pos` has always had.
+
+They had none before, and `middleware.ts` excludes every `/api` path from auth.
+That was survivable while a session insert cost nothing; since 052 the insert
+itself spends a punch and the delete refunds one, which made three endpoints
+that move money reachable by anyone on the internet who knows a session id —
+and `GET /api/pos/customers` hands those out unauthenticated.
+
+**Operational consequence, and it is not small:** the POS PIN is a client-side
+screen lock and proves nothing to the server. A POS device running in kiosk
+mode with nobody logged in as staff will now get **401 on check-in**. Log in as
+staff on every POS device before opening, and check that check-in works before
+the first family arrives.
+
+It fails closed — a 401 with no punch spent — so the worst case is a queue at
+the front desk, not a card silently drained. Two other things follow from the
+same reasoning and were deliberately **not** changed, because they are not on
+the money path: check-*out* (`PUT /api/sessions/{id}`) is still open, so nobody
+gets trapped inside by a login problem, and `GET /api/pos/customers` is still
+unauthenticated. That endpoint returns every customer id, child id, purchase id
+and open session id in the business, and it should be closed too — but doing it
+on launch night, when it is what the POS reads to draw its own screen, is the
+wrong night for it. Track it separately.
+
+### Staff-mode pass purchases still send no `payment_method`
+
+Pre-existing and **not introduced by this branch**, but it lands on the punch
+card's first day, so the night should know: nothing in the POS UI sends
+`payment_method` to `/api/purchases/pos`. The route defaults it to `'test'`,
+and in live Stripe mode a `'test'` payment is refused outright:
+
+> `Test payment method not allowed in live mode. Use terminal, saved_card, or cash.`
+
+That is a 400 before anything is written — no charge, no row. It applies
+equally to day passes, monthly passes and punch cards bought through the
+child-first pass screen, and to the day passes the punch-card shortfall flow
+buys. Only the complimentary-pass path sends a method today.
+
+So: **if the POS is running against live Stripe keys, the pass-buying screen
+does not sell anything.** Kiosk mode is unaffected (it goes through
+`/api/stripe/kiosk-payment` with a saved card). Confirm which mode each POS
+device is in before the night, and if staff mode is in use with live keys,
+this needs fixing before punch cards can be sold at the counter — it is a
+POS-wide gap, not a punch-card one, and fixing it means deciding what a staff
+sale should actually charge (terminal, saved card, or cash) rather than a
+one-line patch.
+
+---
+
 ## Step 1: Database (existing pricing changes, unchanged by this branch)
 
 1. `passes` table rows (+ Stripe product sync):
@@ -218,7 +324,8 @@ place — but it is invisible unless someone is looking for it.
 Carries `PACKAGE_PRICING` in `src/lib/validations/party-booking.ts`,
 `TODDLER_AGE_THRESHOLD` in `src/lib/utils/ageUtils.ts` (**2 → 1**), and — new
 on this branch — the account-wide punch card code that writes `pass_scope`
-from the POS route, `/api/stripe/direct-payment`, and `/api/stripe/webhook`.
+from every route that records a pass (listed in the order-of-operations
+section above).
 
 Order matters slightly within this step too: between changing pass prices and
 deploying, day passes would price at $20 while a one-year-old still counts as
