@@ -328,6 +328,7 @@ export function AdminPanel({
     customerName: string;
     customerPhone: string;
     customerEmail: string | null;
+    passScope: string; // 'account' means any child on the account can use it — no one child to name
     childName: string | null;
     passName: string;
     price: number;
@@ -5073,7 +5074,11 @@ export function AdminPanel({
                         <div className="text-xs text-gray-500">{card.customerPhone}</div>
                       </td>
                       <td className="py-3 px-2 text-gray-600">
-                        {card.childName || '—'}
+                        {card.passScope === 'account' ? (
+                          <span className="text-gray-600">Any child on the account</span>
+                        ) : (
+                          card.childName || '—'
+                        )}
                       </td>
                       <td className="py-3 px-2 text-gray-900">{card.passName}</td>
                       <td className="py-3 px-2 text-center">

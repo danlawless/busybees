@@ -70,6 +70,10 @@ export async function getAllActiveSessions(): Promise<Session[]> {
         purchase:purchases (id, name, type),
         child:children (id, name)
       `)
+      // child join above mirrors migration 052's get_active_sessions fix (child
+      // comes from the session, not the purchase). Unused today: the sole
+      // caller of this function returns rows straight through and nothing
+      // reads .child from the result yet.
       .is('end_time', null)
       .order('start_time', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
