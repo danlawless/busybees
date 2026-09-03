@@ -44,6 +44,7 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+  passScope?: string; // 'account' means any child on the account can use it — no one child to name
 }
 
 interface Session {
@@ -206,6 +207,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               firstUseDate: purchase.first_use_date,
               actualExpiryDate: purchase.actual_expiry_date,
               childId: purchase.child_id,
+              passScope: purchase.pass_scope,
               autoRenew: purchase.auto_renew,
               nextRenewalDate: purchase.next_renewal_date,
               stripePaymentIntentId: purchase.stripe_payment_intent_id,
