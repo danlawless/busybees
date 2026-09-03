@@ -241,7 +241,10 @@ export async function POST(request: NextRequest) {
         .from('purchases')
         .insert({
           customer_id: user.id,
-          child_id: childId || null,
+          // An account-wide card names no child — see the note in
+          // /api/purchases/pos. A row that is account-scoped and child-tagged
+          // is the contradiction the launch runbook asserts must not exist.
+          child_id: passScope === 'account' ? null : (childId || null),
           type: purchaseType,
           product_id: productId,
           name: productName,
@@ -377,6 +380,10 @@ export async function POST(request: NextRequest) {
             total_sessions: 1,
             status: 'active',
             stripe_payment_intent_id: paymentIntent.id,
+            // One row per named child in a combo is a per-child pass by
+            // construction. Explicit rather than relying on the column
+            // default, so every insert in this route states its scope.
+            pass_scope: 'child',
           })
           .select()
           .single();
@@ -402,7 +409,10 @@ export async function POST(request: NextRequest) {
         .from('purchases')
         .insert({
           customer_id: user.id,
-          child_id: childId || null,
+          // An account-wide card names no child — see the note in
+          // /api/purchases/pos. A row that is account-scoped and child-tagged
+          // is the contradiction the launch runbook asserts must not exist.
+          child_id: passScope === 'account' ? null : (childId || null),
           type: purchaseType,
           product_id: productId,
           name: productName,

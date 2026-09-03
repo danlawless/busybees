@@ -11,7 +11,7 @@ import { createCheckoutSession } from '@/lib/stripe/checkout';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
 import { getStripeCustomerIdColumn } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 
 export async function POST(request: NextRequest) {
   try {
@@ -176,11 +176,24 @@ export async function POST(request: NextRequest) {
         adminSupabase,
       );
 
+      // A punch card is always account-scoped — derived from the product
+      // itself (shared with /api/purchases/pos, /api/stripe/direct-payment,
+      // /api/stripe/kiosk-payment and both webhook handlers), never from the
+      // request. This branch writes the purchase row directly when gift card
+      // credit covers the whole price, so it never reaches the webhook that
+      // would otherwise have set the scope. Day and monthly passes resolve to
+      // 'child', same as the column default; a failed lookup does too, so a
+      // hiccup in the passes table cannot block the sale.
+      const passScope = await resolvePassScope(productId, adminSupabase);
+
       const { data: purchase, error: purchaseError } = await adminSupabase
         .from('purchases')
         .insert({
           customer_id: user.id,
-          child_id: childId || null,
+          // An account-wide card names no child — see the note in
+          // /api/purchases/pos. A row that is account-scoped and child-tagged
+          // is the contradiction the launch runbook asserts must not exist.
+          child_id: passScope === 'account' ? null : (childId || null),
           type: purchaseType,
           product_id: productId,
           name: productName,
@@ -192,6 +205,7 @@ export async function POST(request: NextRequest) {
           status: 'active',
           stripe_payment_intent_id: `giftcard_${Date.now()}`, // Mark as gift card purchase
           gift_card_amount_used: giftCardAmountUsed,
+          pass_scope: passScope,
         })
         .select()
         .single();

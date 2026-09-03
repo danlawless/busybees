@@ -314,7 +314,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note in
+    // /api/purchases/pos. Stripe metadata carries whatever child was selected
+    // when checkout started; on a punch card that child is meaningless and a
+    // row that is account-scoped *and* child-tagged is the contradiction the
+    // launch runbook asserts must not exist.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: purchase_type,
     product_id,
     name: session.line_items?.data[0]?.description || 'Purchase',
@@ -495,7 +500,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note above.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: product_type as any,
     product_id,
     name: product_name,

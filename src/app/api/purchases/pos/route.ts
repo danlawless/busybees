@@ -483,6 +483,12 @@ export async function POST(request: NextRequest) {
             status: 'active',
             stripe_payment_intent_id: paymentIntentId,
             gift_card_amount_used: giftCardPerChild,
+            // One row per named child is a per-child pass by construction --
+            // the split exists precisely because each child gets their own.
+            // Written out rather than left to the column default so the
+            // "forgetting is impossible" claim above holds on every insert in
+            // this route, not just the single-purchase one.
+            pass_scope: 'child',
           })
           .select()
           .single();
@@ -507,7 +513,13 @@ export async function POST(request: NextRequest) {
         .from('purchases')
         .insert({
           customer_id,
-          child_id: child_id || null,
+          // An account-wide card names no child. A screen that still sends one
+          // (the product grid does, from whoever happens to be selected) would
+          // otherwise leave a row that is account-scoped *and* child-tagged --
+          // a contradiction the launch runbook asserts must not exist, and one
+          // that would make the card look child-locked wherever child_id is
+          // read instead of pass_scope.
+          child_id: passScope === 'account' ? null : (child_id || null),
           type: purchase_type,
           product_id,
           name: product_name,
