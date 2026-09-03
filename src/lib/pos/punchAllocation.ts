@@ -15,6 +15,7 @@
 
 import { getAgeGroupFromBirthdate } from '@/lib/utils/ageUtils';
 import {
+  isMultiChildPass,
   quotePasses,
   type ChildLike,
   type SelectablePass,
@@ -70,10 +71,15 @@ export function allocatePunches(
   }
 
   // Every child in the visit holds a sibling position, punch payers included.
+  // Filter out multi-child products (combos, family packs) to prevent punch-covered
+  // children from being folded into a joint product on behalf of a sibling who may
+  // not be paying their half. This preserves the correct price for the day-pass
+  // children even when the punch payer would have qualified for combo pricing.
+  const singleChildPasses = passes.filter((p) => !isMultiChildPass(p.name));
   const quote = quotePasses(
     candidates.map((c) => c.child),
     'day',
-    passes,
+    singleChildPasses,
     siblingRules,
     qualifiesForMemberPricing
   );
@@ -89,6 +95,8 @@ export function allocatePunches(
       continue;
     }
     const line = quoted.get(child.id);
+    // Defensive: quotePasses guarantees every child is in either lines or unresolved,
+    // never both, so !line alone would suffice. This double-check makes the intent explicit.
     if (!line || unresolvedIds.has(child.id)) {
       unresolved.push(child);
       continue;

@@ -8,6 +8,13 @@ const PASSES: SelectablePass[] = [
   { id: 'baby', name: 'Day Pass - Infant', price: 10, category: 'day', sessions_included: 1 },
 ];
 
+// Legacy catalogue with combo product (may still exist at launch).
+const PASSES_WITH_COMBO: SelectablePass[] = [
+  { id: 'day', name: 'Day Pass', price: 20, category: 'day', sessions_included: 1 },
+  { id: 'baby', name: 'Day Pass - Infant', price: 10, category: 'day', sessions_included: 1 },
+  { id: 'combo', name: 'Day Pass - Child + Infant', price: 20, category: 'day', sessions_included: 1 },
+];
+
 // 50% for everyone from the second child, per the October restructure.
 const SIBLING_RULES: SiblingRule[] = [
   { child_position: 2, discount_percent: 50, is_active: true, applies_to_monthly_only: false },
@@ -97,5 +104,22 @@ describe('allocatePunches', () => {
     expect(result.lines).toEqual([]);
     expect(result.punchesSpent).toBe(0);
     expect(result.total).toBe(0);
+  });
+
+  it('does not apply multi-child combo pricing to punch-covered children', () => {
+    // Noah (toddler, 40mo) takes a punch. Mia (infant, 8mo) takes a day pass.
+    // The combo product "Child + Infant" would normally pair them, giving Mia
+    // a free slot (includedFree: true, price 0). But Noah is not buying his half,
+    // so Mia gets the real under-1 rate at her sibling position: $10 at position 2
+    // becomes $5 (50% off).
+    const result = allocatePunches(
+      [{ child: noah }, { child: mia }],
+      1, // One punch available, goes to Noah
+      PASSES_WITH_COMBO,
+      SIBLING_RULES,
+      false
+    );
+    const miaLine = result.lines.find((l) => l.child.id === 'm');
+    expect(miaLine?.price).toBe(5);
   });
 });
