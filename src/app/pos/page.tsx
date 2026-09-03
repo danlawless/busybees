@@ -75,12 +75,24 @@ interface Purchase {
     usedSessions: number;
     totalSessions: number;
     status: "active" | "expired" | "used";
+    // 'account' means any child on the account can use it — no one child to
+    // name. Typed to match CheckIn.tsx's own Purchase (this object is passed
+    // straight through as that component's `customers` prop).
+    passScope?: "child" | "account";
 }
 
 interface Session {
     id: string;
     customerId: string;
     purchaseId: string;
+    // Who actually played on this session. Set for account-scoped punch card
+    // check-ins (one session per child); absent for the older single-child
+    // pass path, where the purchase's own childId already says who it is.
+    // The database and /api/pos/customers actually produce `string | null`
+    // here (never omitted) — kept `?: string` to match CheckIn.tsx's own
+    // Session, which this object is passed straight through as a prop and
+    // must stay structurally assignable to.
+    childId?: string;
     startTime: string;
     endTime?: string;
     duration?: number;

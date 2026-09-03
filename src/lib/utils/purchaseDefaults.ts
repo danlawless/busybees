@@ -56,7 +56,13 @@ export async function resolvePassScope(
     .eq('id', productId)
     .single();
 
-  if (error || !data) return 'child';
+  if (error || !data) {
+    logger.warn(
+      { productId, error },
+      'Pass scope lookup failed — defaulting to child-scoped rather than blocking the sale',
+    );
+    return 'child';
+  }
 
   return classifyPassScope(data);
 }

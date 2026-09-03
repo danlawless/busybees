@@ -44,7 +44,10 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
-  passScope?: string; // 'account' means any child on the account can use it — no one child to name
+  // 'account' means any child on the account can use it — no one child to
+  // name. Typed to match CheckIn.tsx's own Purchase, since this object flows
+  // through page.tsx's Customer to CheckIn.tsx's `customers` prop.
+  passScope?: "child" | "account";
 }
 
 interface Session {
@@ -54,6 +57,12 @@ interface Session {
   // Who actually played on this session. Set for account-scoped punch card
   // check-ins (one session per child); absent for the older single-child
   // pass path, where the purchase's own childId already says who it is.
+  // The database and /api/pos/customers actually produce `string | null`
+  // here (never omitted) — kept `?: string` because this object is passed
+  // to page.tsx's onLogin/onNewCustomer as page.tsx's own Customer type,
+  // which in turn must stay assignable to CheckIn.tsx's Session (also
+  // `childId?: string`, un-aligned — see task report). Realigning this file
+  // alone breaks that chain; all three need to move together.
   childId?: string;
   startTime: string;
   endTime?: string;

@@ -59,7 +59,7 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
-  passScope?: string; // 'account' means the pass belongs to the whole account, not one child
+  passScope?: 'child' | 'account'; // 'account' means the pass belongs to the whole account, not one child
   // Party scheduling fields
   partyDate?: string; // Scheduled party date
   partyStartTime?: string; // Scheduled party start time
