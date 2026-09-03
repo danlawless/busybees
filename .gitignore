@@ -53,3 +53,4 @@ ai-coding-config/
 
 # QIE Intelligence Framework (symlink — not part of this project)
 _bmad
+.worktrees/
