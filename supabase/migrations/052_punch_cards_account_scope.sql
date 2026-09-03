@@ -15,6 +15,11 @@
 
 BEGIN;
 
+-- The sessions/purchases ALTER below takes ACCESS EXCLUSIVE and would otherwise
+-- queue behind any open transaction, freezing POS check-in while it waits.
+-- Abort instead of hanging the front desk.
+SET LOCAL lock_timeout = '5s';
+
 -- ==================== Scope ====================
 -- Everything already sold takes 'child', so tiered cards sold before
 -- 1 October keep working exactly as they do now until they age out.
@@ -47,26 +52,43 @@ CREATE INDEX IF NOT EXISTS idx_sessions_child ON public.sessions(child_id);
 -- These have not been counted yet: today a punch is spent on check-out. Once
 -- the trigger moves to check-in they never would be. Count them once, here,
 -- before the old trigger goes.
+--
+-- Guarded on the new trigger's existence, which this same transaction creates
+-- below: if this file is re-pasted after a dropped connection or an ambiguous
+-- result, the trigger already exists, so this block is skipped and no card is
+-- charged a second punch for a session the new trigger already counted.
 
-WITH open_counts AS (
-  SELECT purchase_id, COUNT(*) AS n
-  FROM public.sessions
-  WHERE end_time IS NULL
-  GROUP BY purchase_id
-)
-UPDATE public.purchases p
-SET
-  used_sessions = p.used_sessions + oc.n,
-  status = CASE
-    WHEN p.status = 'active' AND p.used_sessions + oc.n >= p.total_sessions
-      THEN 'used'::purchase_status
-    ELSE p.status
-  END,
-  updated_at = NOW()
-FROM open_counts oc
-WHERE p.id = oc.purchase_id;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'consume_session_on_checkin'
+      AND tgrelid = 'public.sessions'::regclass
+  ) THEN
+    WITH open_counts AS (
+      SELECT purchase_id, COUNT(*) AS n
+      FROM public.sessions
+      WHERE end_time IS NULL
+      GROUP BY purchase_id
+    )
+    UPDATE public.purchases p
+    SET
+      used_sessions = COALESCE(p.used_sessions, 0) + oc.n,
+      status = CASE
+        WHEN p.status = 'active' AND COALESCE(p.used_sessions, 0) + oc.n >= p.total_sessions
+          THEN 'used'::purchase_status
+        ELSE p.status
+      END,
+      updated_at = NOW()
+    FROM open_counts oc
+    WHERE p.id = oc.purchase_id;
+  END IF;
+END $$;
 
 -- ==================== The punch moves to check-in ====================
+-- update_purchase_session_count() (the function behind the trigger dropped
+-- below) is deliberately left in place but unused from here on — nothing
+-- calls it anymore, so don't go hunting for where it fires.
 
 DROP TRIGGER IF EXISTS update_purchase_sessions ON public.sessions;
 
@@ -75,9 +97,9 @@ RETURNS TRIGGER AS $$
 BEGIN
   UPDATE public.purchases
   SET
-    used_sessions = used_sessions + 1,
+    used_sessions = COALESCE(used_sessions, 0) + 1,
     status = CASE
-      WHEN status = 'active' AND used_sessions + 1 >= total_sessions
+      WHEN status = 'active' AND COALESCE(used_sessions, 0) + 1 >= total_sessions
         THEN 'used'::purchase_status
       ELSE status
     END,
@@ -103,11 +125,27 @@ RETURNS TRIGGER AS $$
 DECLARE
   remaining_used INTEGER;
 BEGIN
+  -- A completed visit is not a mis-tap. Only an open session can be voided,
+  -- which is exactly what DELETE /api/sessions/[id] permits — deleting a
+  -- closed (historical) session must not refund a punch that was genuinely
+  -- spent weeks ago.
+  IF OLD.end_time IS NOT NULL THEN
+    RETURN OLD;
+  END IF;
+
+  -- The purchase may already be gone: deleting a purchase cascades to its
+  -- sessions (sessions.purchase_id is ON DELETE CASCADE) and fires this
+  -- trigger. Nothing to give back in that case.
+  IF NOT EXISTS (SELECT 1 FROM public.purchases WHERE id = OLD.purchase_id) THEN
+    RETURN OLD;
+  END IF;
+
   UPDATE public.purchases
   SET
-    used_sessions = GREATEST(used_sessions - 1, 0),
+    used_sessions = GREATEST(COALESCE(used_sessions, 0) - 1, 0),
     status = CASE
-      WHEN status = 'used' THEN 'active'::purchase_status
+      WHEN status = 'used' AND COALESCE(used_sessions, 0) - 1 < total_sessions
+        THEN 'active'::purchase_status
       ELSE status
     END,
     updated_at = NOW()
