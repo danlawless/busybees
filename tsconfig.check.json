@@ -1,0 +1,5 @@
+{
+  "// why": "tsconfig.json sweeps in mobile/, whose useTerminal.ts has a fatal parse error that aborts the whole program before src/ is ever checked. This config is the typecheck gate for src/: same compiler options, mobile/ excluded.",
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "mobile", ".worktrees"]
+}
