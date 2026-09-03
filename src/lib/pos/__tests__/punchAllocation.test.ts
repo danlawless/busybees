@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocatePunches } from '@/lib/pos/punchAllocation';
+import { allocatePunches, groupDayPassLines } from '@/lib/pos/punchAllocation';
 import type { ChildLike, SelectablePass, SiblingRule } from '@/lib/pos/passSelection';
 
 // October 2026 catalogue: one flat day pass, one under-1 rate, no combo.
@@ -121,5 +121,58 @@ describe('allocatePunches', () => {
     );
     const miaLine = result.lines.find((l) => l.child.id === 'm');
     expect(miaLine?.price).toBe(5);
+  });
+});
+
+describe('groupDayPassLines', () => {
+  it('gives each product resolved for a mixed-age shortfall its own group, with aligned prices', () => {
+    // No punches: Ava (toddler) resolves to the flat day pass, Mia (infant)
+    // resolves to the under-1 day pass -- two different products in one
+    // shortfall, exactly the case a single grouped purchase would mislabel.
+    const result = alloc([{ child: ava }, { child: mia }], 0);
+    const groups = groupDayPassLines(result.lines);
+
+    expect(groups).toHaveLength(2);
+
+    const dayGroup = groups.find((g) => g.pass.id === 'day');
+    expect(dayGroup?.lines.map((l) => l.child.id)).toEqual(['a']);
+    expect(dayGroup?.lines.map((l) => l.price)).toEqual([20]);
+    expect(dayGroup?.total).toBe(20);
+
+    const babyGroup = groups.find((g) => g.pass.id === 'baby');
+    // Mia holds sibling position 2 behind Ava, so the 50% rule applies to
+    // her $10 under-1 rate.
+    expect(babyGroup?.lines.map((l) => l.child.id)).toEqual(['m']);
+    expect(babyGroup?.lines.map((l) => l.price)).toEqual([5]);
+    expect(babyGroup?.total).toBe(5);
+  });
+
+  it('keeps a single-product shortfall as one group covering every child', () => {
+    // No punches, both full-rate: Ava and Noah both resolve to the same flat
+    // day pass.
+    const result = alloc([{ child: ava }, { child: noah }], 0);
+    const groups = groupDayPassLines(result.lines);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].pass.id).toBe('day');
+    expect(groups[0].lines.map((l) => l.child.id)).toEqual(['a', 'n']);
+    // Ava full price at position 1, Noah 50% off at position 2.
+    expect(groups[0].lines.map((l) => l.price)).toEqual([20, 10]);
+    expect(groups[0].total).toBe(30);
+  });
+
+  it('ignores punch-covered lines and returns nothing when the whole visit is on punches', () => {
+    const result = alloc([{ child: ava }, { child: noah }], 7);
+    expect(groupDayPassLines(result.lines)).toEqual([]);
+  });
+
+  it('refuses to group a day-pass line with no resolved product', () => {
+    const brokenLine = {
+      child: ava,
+      method: 'day_pass' as const,
+      price: 20,
+      pass: null,
+    };
+    expect(() => groupDayPassLines([brokenLine])).toThrow(/no day pass resolved/i);
   });
 });

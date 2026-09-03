@@ -113,6 +113,47 @@ export function allocatePunches(
   };
 }
 
+export interface DayPassGroup {
+  pass: SelectablePass;
+  lines: AllocationLine[];
+  /** Sum of this group's line prices, rounded once. */
+  total: number;
+}
+
+/**
+ * Group an allocation's day-pass lines by the product they resolved to.
+ *
+ * allocatePunches resolves a day-pass product per child by age (quotePasses ->
+ * resolvePassForChild), so an infant defaulting to the under-1 rate and an
+ * older sibling shortfall in the same visit can land on two different
+ * products. Charging and labeling that mixed group under just one child's
+ * product would be wrong, so check-in must buy one purchase per product, not
+ * one purchase for the whole shortfall.
+ *
+ * This keys by `pass.id`, not by quotePasses' own `groupId` (the way
+ * groupQuoteByProduct does for a direct pass purchase) -- that is only safe
+ * here because allocatePunches strips multi-child products (combos, family
+ * packs) out of the passes it quotes before this ever sees a line. If that
+ * filter is ever relaxed, two combo pairs sharing a groupId but resolving to
+ * the same product id would silently collapse into one request the purchase
+ * route rejects.
+ */
+export function groupDayPassLines(lines: readonly AllocationLine[]): DayPassGroup[] {
+  const groups = new Map<string, { pass: SelectablePass; lines: AllocationLine[] }>();
+  for (const line of lines) {
+    if (line.method !== 'day_pass') continue;
+    if (!line.pass) throw new Error(`No day pass resolved for ${line.child.name}`);
+    const existing = groups.get(line.pass.id);
+    if (existing) existing.lines.push(line);
+    else groups.set(line.pass.id, { pass: line.pass, lines: [line] });
+  }
+  return [...groups.values()].map((g) => ({
+    pass: g.pass,
+    lines: g.lines,
+    total: round2(g.lines.reduce((sum, l) => sum + l.price, 0)),
+  }));
+}
+
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }

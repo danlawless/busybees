@@ -18,6 +18,7 @@ import {
 } from '@/lib/pos/punchAllocation';
 import type { ChildLike, SelectablePass, SiblingRule } from '@/lib/pos/passSelection';
 import { getAgeGroupFromBirthdate } from '@/lib/utils/ageUtils';
+import { formatCurrency } from '@/lib/utils/productHelpers';
 
 interface PunchCardCheckInProps {
   purchase: { id: string; name: string; totalSessions: number; usedSessions: number };
@@ -28,9 +29,20 @@ interface PunchCardCheckInProps {
   qualifiesForMemberPricing: boolean;
   onConfirm: (allocation: PunchAllocation) => Promise<void>;
   onCancel: () => void;
+  /**
+   * Set when a previous attempt already bought day passes for this card but
+   * failed to open sessions. Shown as a persistent banner so staff don't
+   * lose that context once the one-time alert is dismissed.
+   */
+  notice?: string | null;
+  /**
+   * True together with `notice`: day passes are already bought and this
+   * screen must not let staff change who's selected and buy them again.
+   * Confirm still fires, but the parent ignores the recomputed allocation
+   * and retries opening sessions against what was already purchased.
+   */
+  locked?: boolean;
 }
-
-const formatCurrency = (value: number): string => `$${value.toFixed(2)}`;
 
 export function PunchCardCheckIn({
   purchase,
@@ -41,12 +53,15 @@ export function PunchCardCheckIn({
   qualifiesForMemberPricing,
   onConfirm,
   onCancel,
+  notice = null,
+  locked = false,
 }: PunchCardCheckInProps) {
   const inside = new Set(childrenInsideIds);
 
-  // A child already inside cannot be checked in again, and one without a signed
-  // waiver cannot play at all — the same rule the purchase flow enforces.
-  const eligible = children.filter((c) => !inside.has(c.id) && c.waiverSigned !== false);
+  // A child already inside cannot be checked in again, and only a waiver
+  // signed (BOOLEAN DEFAULT FALSE, nullable) explicitly true clears them to
+  // play — null and false both mean "not signed."
+  const eligible = children.filter((c) => !inside.has(c.id) && c.waiverSigned === true);
 
   const [selectedIds, setSelectedIds] = useState<string[]>(() => eligible.map((c) => c.id));
   const [preferPunchIds, setPreferPunchIds] = useState<string[]>([]);
@@ -84,6 +99,12 @@ export function PunchCardCheckIn({
         {purchase.name} · {remaining} {remaining === 1 ? 'punch' : 'punches'} left
       </p>
 
+      {notice && (
+        <p className="rounded-xl border-2 border-yellow-400 bg-yellow-50 p-4 text-lg font-medium text-yellow-900">
+          {notice}
+        </p>
+      )}
+
       {eligible.length === 0 && (
         <p className="text-lg text-gray-600">
           Everyone on this account is already checked in.
@@ -102,6 +123,7 @@ export function PunchCardCheckIn({
                   className="h-6 w-6"
                   checked={selectedIds.includes(child.id)}
                   onChange={() => toggleChild(child.id)}
+                  disabled={locked}
                 />
                 {child.name}
                 {line && (
@@ -116,6 +138,7 @@ export function PunchCardCheckIn({
                     type="checkbox"
                     checked={preferPunchIds.includes(child.id)}
                     onChange={() => togglePreferPunch(child.id)}
+                    disabled={locked}
                   />
                   Use a punch instead — the under-1 day rate is cheaper
                 </label>
@@ -153,11 +176,12 @@ export function PunchCardCheckIn({
           type="button"
           onClick={handleConfirm}
           disabled={
-            submitting || allocation.lines.length === 0 || allocation.unresolved.length > 0
+            submitting ||
+            (!locked && (allocation.lines.length === 0 || allocation.unresolved.length > 0))
           }
           className="flex-1 rounded-xl bg-yellow-400 p-4 text-xl font-bold disabled:opacity-50"
         >
-          {submitting ? 'Checking in…' : 'Confirm Check-In'}
+          {submitting ? 'Checking in…' : locked ? 'Finish Check-In' : 'Confirm Check-In'}
         </button>
       </div>
     </div>

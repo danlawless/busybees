@@ -10,6 +10,7 @@ import { WaiverModal } from "@/components/ui/WaiverModal";
 import { AfterDarkWaiver, type WaiverFormData as AfterDarkWaiverFormData } from "@/components/customer/AfterDarkWaiver";
 import { GroupChildrenManager } from "./GroupChildrenManager";
 import { PunchCardCheckIn } from "@/components/pos/PunchCardCheckIn";
+import { groupDayPassLines } from "@/lib/pos/punchAllocation";
 import type { AllocationLine, PunchAllocation } from "@/lib/pos/punchAllocation";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
@@ -196,6 +197,18 @@ export function CheckIn({
     // The account punch card currently open in the "who's playing" picker,
     // by purchase id.
     const [punchCardCheckIn, setPunchCardCheckIn] = useState<string | null>(null);
+    // Set once any day-pass purchase has actually succeeded for a punch-card
+    // check-in but the check-in itself did not finish (the batch session
+    // call failed, or a later day-pass group failed after an earlier one
+    // went through). From this point on, that purchase id must never run the
+    // purchase loop again -- only retry opening sessions against what was
+    // already bought -- or the same passes get bought twice. Cleared only on
+    // a successful check-in; a Cancel intentionally leaves it in place.
+    const [pendingPunchCardRetry, setPendingPunchCardRetry] = useState<{
+        purchaseId: string;
+        entries: { purchase_id: string; child_id: string }[];
+        boughtSummary: string;
+    } | null>(null);
     const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
     const [showPartyModal, setShowPartyModal] = useState(false);
     const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
@@ -1281,6 +1294,16 @@ export function CheckIn({
      * Day passes are bought first: a declined card must never leave children
      * checked in. Then every child goes in on one batch insert, so a family
      * either all gets in or none does.
+     *
+     * The picker's `remaining` comes from the client's stale `usedSessions`,
+     * so the batch call below can fail on capacity *after* the day passes
+     * above have already been paid for -- another till may have drawn the
+     * card down in between. Once any day-pass purchase has actually
+     * succeeded for this purchase id, this must never run the purchase loop
+     * again: a retry only reopens sessions against what was already bought.
+     * That lockout (`pendingPunchCardRetry`) is cleared solely by a
+     * successful check-in -- Cancel deliberately leaves it in place, since
+     * forgetting it would let the next Confirm buy the same passes twice.
      */
     const handlePunchCardConfirm = async (
         customer: Customer,
@@ -1291,31 +1314,44 @@ export function CheckIn({
             autoCheckoutSettings.timezone,
             autoCheckoutSettings.closingTime
         );
-        const dayPassLines = allocation.lines.filter((l) => l.method === "day_pass");
-        const entries: { purchase_id: string; child_id: string }[] = allocation.lines
-            .filter((l) => l.method === "punch")
-            .map((l) => ({ purchase_id: purchaseId, child_id: l.child.id }));
 
-        try {
-            if (dayPassLines.length > 0) {
+        const retrying = pendingPunchCardRetry?.purchaseId === purchaseId;
+        let entries: { purchase_id: string; child_id: string }[];
+        // Set once day passes are known to have been bought -- either just
+        // now, or by an earlier attempt this retry is resuming.
+        let boughtSummary: string | null = retrying ? pendingPunchCardRetry!.boughtSummary : null;
+
+        // Money has moved for these lines: build the message that both locks
+        // out re-buying and tells staff plainly what already happened.
+        const describePurchased = (lines: readonly AllocationLine[]): string => {
+            const names = lines.map((l) => l.child.name).join(", ");
+            const total = formatCurrency(lines.reduce((sum, l) => sum + l.price, 0));
+            return `Day passes were already purchased for ${names} (${total}). Press Confirm again to finish checking them in — do not buy passes again. If it keeps failing, check them in individually from Available Passes below.`;
+        };
+
+        if (retrying) {
+            entries = pendingPunchCardRetry!.entries;
+        } else {
+            entries = allocation.lines
+                .filter((l) => l.method === "punch")
+                .map((l) => ({ purchase_id: purchaseId, child_id: l.child.id }));
+
+            // Lines whose day pass actually got bought this call, so a
+            // failure -- here or later, opening sessions -- can say exactly
+            // what already happened and this purchase id can be locked out
+            // of ever running the purchase loop again.
+            const purchasedLines: AllocationLine[] = [];
+
+            try {
                 // Different ages can resolve to different day-pass products in
                 // the same shortfall -- the under-1 rate is its own product --
-                // so this groups by product first, exactly like the
-                // child-first day-pass flow's groupQuoteByProduct. One
-                // purchase call per product; a mixed-age group must never be
-                // charged and labeled under just the first child's product.
-                const groups = new Map<string, { pass: SelectablePass; lines: AllocationLine[] }>();
-                for (const line of dayPassLines) {
-                    if (!line.pass) throw new Error(`No day pass resolved for ${line.child.name}`);
-                    const existing = groups.get(line.pass.id);
-                    if (existing) existing.lines.push(line);
-                    else groups.set(line.pass.id, { pass: line.pass, lines: [line] });
-                }
-
-                for (const { pass, lines } of groups.values()) {
-                    const groupTotal = Math.round(
-                        lines.reduce((sum, l) => sum + l.price, 0) * 100
-                    ) / 100;
+                // so this buys one purchase per product, never one purchase
+                // for the whole shortfall labeled under the first child's
+                // product. See groupDayPassLines for why keying by pass.id
+                // (rather than quotePasses' own groupId, the way
+                // groupQuoteByProduct does for a direct purchase) is safe here.
+                const groups = groupDayPassLines(allocation.lines);
+                for (const { pass, lines, total } of groups) {
                     const response = await fetch("/api/purchases/pos", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -1323,7 +1359,7 @@ export function CheckIn({
                             customer_id: customer.id,
                             product_id: pass.id,
                             product_name: pass.name,
-                            product_price: groupTotal,
+                            product_price: total,
                             product_description: "",
                             purchase_type: "day_pass",
                             child_id: lines[0].child.id,
@@ -1346,9 +1382,36 @@ export function CheckIn({
                         if (!match) throw new Error(`No purchase returned for ${line.child.name}`);
                         entries.push({ purchase_id: match.id, child_id: line.child.id });
                     }
+                    purchasedLines.push(...lines);
                 }
+            } catch (error) {
+                console.error("Punch card day-pass purchase failed:", error);
+                if (purchasedLines.length > 0) {
+                    // Some money already moved. This purchase id is locked out
+                    // of the purchase loop from here on -- a second press may
+                    // only retry opening sessions against what was bought.
+                    boughtSummary = describePurchased(purchasedLines);
+                    setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                    alert(`${boughtSummary}\n\n(Buying the rest failed: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`);
+                } else {
+                    // Nothing was charged yet, so a plain retry is safe.
+                    alert(error instanceof Error ? error.message : "Purchase failed");
+                }
+                return;
             }
 
+            if (purchasedLines.length > 0) {
+                // Every group that needed buying succeeded. This purchase id
+                // is locked out of the purchase loop from here on even
+                // though nothing has failed yet -- if opening sessions fails
+                // next, it must not be allowed to buy these again.
+                boughtSummary = describePurchased(purchasedLines);
+            }
+        }
+
+        try {
             const sessionsResponse = await fetch("/api/sessions/batch", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1382,6 +1445,7 @@ export function CheckIn({
             }));
 
             setPunchCardCheckIn(null);
+            setPendingPunchCardRetry(null);
 
             // Refresh the customer's purchases so the card's reduced balance
             // and any new day passes show immediately; fold in the new
@@ -1407,7 +1471,19 @@ export function CheckIn({
             }
         } catch (error) {
             console.error("Punch card check-in failed:", error);
-            alert(error instanceof Error ? error.message : "Check-in failed");
+            if (boughtSummary) {
+                // Day passes for this card are already bought -- this attempt
+                // or an earlier one -- so stay locked into retry-only-sessions
+                // rather than letting the next press buy them again.
+                setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                alert(
+                    `${boughtSummary}\n\n(Check-in failed again: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`
+                );
+            } else {
+                alert(error instanceof Error ? error.message : "Check-in failed");
+            }
         }
     };
 
@@ -3556,43 +3632,70 @@ export function CheckIn({
                                             )
                                     );
 
-                                if (checkedInPasses.length > 0) {
+                                // An account punch card can carry several open
+                                // sessions at once -- one per child playing on
+                                // it -- so it gets one tile per session, named,
+                                // each with its own Check Out. A child-scoped
+                                // pass still carries at most one open session
+                                // (the available-passes filter hides it the
+                                // moment a session opens), so it keeps its
+                                // original one-tile-per-purchase behaviour.
+                                const checkedInTiles = checkedInPasses.flatMap((purchase) => {
+                                    const purchaseSessions = (
+                                        displayCustomer.activeSessions || []
+                                    ).filter((session) => session.purchaseId === purchase.id);
+
+                                    if (purchase.passScope === "account") {
+                                        return purchaseSessions.map((session) => ({
+                                            key: session.id,
+                                            purchase,
+                                            session,
+                                            childName: session.childId
+                                                ? getChildName(session.childId, displayCustomer)
+                                                : null,
+                                        }));
+                                    }
+
+                                    const session =
+                                        purchaseSessions[purchaseSessions.length - 1];
+                                    if (!session) return [];
+                                    return [
+                                        {
+                                            key: purchase.id,
+                                            purchase,
+                                            session,
+                                            childName: purchase.childId
+                                                ? getChildName(purchase.childId, displayCustomer)
+                                                : null,
+                                        },
+                                    ];
+                                });
+
+                                if (checkedInTiles.length > 0) {
                                     return (
                                         <div>
                                             <h3 className="text-2xl font-bold mb-6 text-green-700">
                                                 ✅ Currently Checked In
                                             </h3>
                                             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-                                                {checkedInPasses.map((purchase) => {
-                                                    const activeSessions = (
-                                                        displayCustomer.activeSessions ||
-                                                        []
-                                                    ).filter(
-                                                        (session) =>
-                                                            session.purchaseId ===
-                                                            purchase.id
-                                                    );
-                                                    return (
-                                                        <Card
-                                                            key={purchase.id}
-                                                            className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
-                                                        >
-                                                            <div className="flex flex-col items-center text-center space-y-4">
-                                                                <div className="flex-1">
-                                                                    <h4 className="text-2xl font-bold text-gray-900 mb-3">
-                                                                        {purchase.name}
-                                                                    </h4>
-                                                                    {purchase.childId && (
-                                                                        <p className="text-blue-600 font-medium text-lg mb-2">
-                                                                            👶{" "}
-                                                                            {getChildName(
-                                                                                purchase.childId,
-                                                                                displayCustomer
-                                                                            )}
-                                                                        </p>
-                                                                    )}
-                                                                    {activeSessions.length >
-                                                                        0 && (
+                                                {checkedInTiles.map(
+                                                    ({ key, purchase, session, childName }) => {
+                                                        return (
+                                                            <Card
+                                                                key={key}
+                                                                className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
+                                                            >
+                                                                <div className="flex flex-col items-center text-center space-y-4">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                                                                            {purchase.name}
+                                                                        </h4>
+                                                                        {childName && (
+                                                                            <p className="text-blue-600 font-medium text-lg mb-2">
+                                                                                👶{" "}
+                                                                                {childName}
+                                                                            </p>
+                                                                        )}
                                                                         <div className="p-3 bg-green-100 border border-green-300 rounded-lg mb-4">
                                                                             <p className="text-lg text-green-800 font-bold">
                                                                                 ✅
@@ -3602,56 +3705,52 @@ export function CheckIn({
                                                                             <p className="text-sm text-green-700 mt-1">
                                                                                 Since{" "}
                                                                                 {new Date(
-                                                                                    activeSessions[0].startTime
+                                                                                    session.startTime
                                                                                 ).toLocaleTimeString()}
                                                                             </p>
                                                                             <p className="text-sm text-green-700">
                                                                                 Duration:{" "}
                                                                                 {getSessionDuration(
-                                                                                    activeSessions[0]
-                                                                                        .startTime
+                                                                                    session.startTime
                                                                                 )}
                                                                             </p>
                                                                         </div>
-                                                                    )}
-                                                                    {/* Expiration & Auto-Renew Info */}
-                                                                    {purchase.actualExpiryDate && (
-                                                                        <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                                                                            <p className="text-sm text-gray-600">
-                                                                                Expires:{" "}
-                                                                                {formatDate(
-                                                                                    purchase.actualExpiryDate
-                                                                                )}
-                                                                                {purchase.autoRenew && (
-                                                                                    <span className="ml-2 text-blue-600 font-bold">
-                                                                                        🔄
-                                                                                        Auto-Renew
-                                                                                    </span>
-                                                                                )}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
+                                                                        {/* Expiration & Auto-Renew Info */}
+                                                                        {purchase.actualExpiryDate && (
+                                                                            <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                                                                <p className="text-sm text-gray-600">
+                                                                                    Expires:{" "}
+                                                                                    {formatDate(
+                                                                                        purchase.actualExpiryDate
+                                                                                    )}
+                                                                                    {purchase.autoRenew && (
+                                                                                        <span className="ml-2 text-blue-600 font-bold">
+                                                                                            🔄
+                                                                                            Auto-Renew
+                                                                                        </span>
+                                                                                    )}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <Button
+                                                                        onClick={() =>
+                                                                            void handleCheckOut(
+                                                                                displayCustomer,
+                                                                                session.id
+                                                                            )
+                                                                        }
+                                                                        size="lg"
+                                                                        variant="outline"
+                                                                        className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
+                                                                    >
+                                                                        Check Out
+                                                                    </Button>
                                                                 </div>
-                                                                <Button
-                                                                    onClick={() =>
-                                                                        void handleCheckOut(
-                                                                            displayCustomer,
-                                                                            activeSessions[
-                                                                                activeSessions.length -
-                                                                                    1
-                                                                            ].id
-                                                                        )
-                                                                    }
-                                                                    size="lg"
-                                                                    variant="outline"
-                                                                    className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
-                                                                >
-                                                                    Check Out
-                                                                </Button>
-                                                            </div>
-                                                        </Card>
-                                                    );
-                                                })}
+                                                            </Card>
+                                                        );
+                                                    }
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -3786,7 +3885,12 @@ export function CheckIn({
                                                     const purchase = group.firstPurchase;
                                                     return (
                                                     <Card
-                                                        key={`${group.type}-${group.childId}`}
+                                                        // Two account cards of the same inferred
+                                                        // type (e.g. a 5-punch and a 10-punch both
+                                                        // read as "weekly_pass") both set childId
+                                                        // to null, so the key needs the purchase
+                                                        // id too or they'd collide.
+                                                        key={`${group.type}-${group.childId ?? "none"}-${group.firstPurchase.id}`}
                                                         className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer min-w-[300px]"
                                                     >
                                                         <div className="flex flex-col items-center text-center space-y-4">
@@ -5559,6 +5663,11 @@ export function CheckIn({
                 );
                 if (!punchCardPurchase) return null;
 
+                const retry =
+                    pendingPunchCardRetry?.purchaseId === punchCardPurchase.id
+                        ? pendingPunchCardRetry
+                        : null;
+
                 // A child reads as "inside" either because an account punch
                 // card session names them directly, or because an active
                 // session's purchase belongs to them alone (the older
@@ -5598,6 +5707,8 @@ export function CheckIn({
                                         )
                                     }
                                     onCancel={() => setPunchCardCheckIn(null)}
+                                    notice={retry?.boughtSummary ?? null}
+                                    locked={retry !== null}
                                 />
                             </Card>
                         </div>
