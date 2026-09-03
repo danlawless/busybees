@@ -50,6 +50,10 @@ interface Session {
   id: string;
   customerId: string;
   purchaseId: string;
+  // Who actually played on this session. Set for account-scoped punch card
+  // check-ins (one session per child); absent for the older single-child
+  // pass path, where the purchase's own childId already says who it is.
+  childId?: string;
   startTime: string;
   endTime?: string;
   duration?: number;
@@ -228,6 +232,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               id: session.id,
               customerId: session.customer_id,
               purchaseId: session.purchase_id,
+              // Who actually played on this session — needed so the check-in
+              // picker can tell which children on an account punch card are
+              // already inside (the purchase itself names no single child).
+              childId: session.child_id,
               startTime: session.start_time,
               endTime: session.end_time,
               autoCheckoutTime: session.auto_checkout_time,

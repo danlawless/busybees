@@ -6,10 +6,59 @@
 
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { getPassKind } from '@/lib/pos/passSelection';
 
 interface PurchaseDefaults {
   totalSessions: number;
   expiryDate: Date | null;
+}
+
+/** The two columns `classifyPassScope` needs to tell a punch card from every
+ *  other pass — a subset of the `passes` row, not the whole thing. */
+export interface PassScopeRow {
+  name: string;
+  category: string | null;
+}
+
+/**
+ * Classifies a pass row's scope from the product alone: a punch card belongs
+ * to the whole account, everything else (day passes, monthly passes, and
+ * anything that isn't a pass at all) belongs to one child.
+ *
+ * Pure — no database, no request body. Takes only the two columns
+ * `getPassKind` reads, so it's testable without standing up a client, and
+ * safe to call with `null`/`undefined` for a product that failed to load.
+ */
+export function classifyPassScope(pass: PassScopeRow | null | undefined): 'child' | 'account' {
+  if (!pass) return 'child';
+  return getPassKind({ id: '', name: pass.name, price: 0, category: pass.category }) === 'punch'
+    ? 'account'
+    : 'child';
+}
+
+/**
+ * Looks up the `passes` row for `productId` and derives its scope.
+ *
+ * Fail-safe by design: a missing product or a failed lookup resolves to
+ * `'child'` rather than throwing. A punch card that ends up wrongly
+ * child-scoped is a support ticket; a payment route that throws mid-purchase
+ * is a lost sale — so this never blocks a sale on a scope lookup.
+ */
+export async function resolvePassScope(
+  productId: string,
+  supabase?: ReturnType<typeof createAdminClient>,
+): Promise<'child' | 'account'> {
+  const db = supabase ?? createAdminClient();
+
+  const { data, error } = await db
+    .from('passes')
+    .select('name, category')
+    .eq('id', productId)
+    .single();
+
+  if (error || !data) return 'child';
+
+  return classifyPassScope(data);
 }
 
 /**

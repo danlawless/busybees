@@ -19,8 +19,7 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
-import { getPassKind } from '@/lib/pos/passSelection';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
@@ -404,21 +403,11 @@ export async function POST(request: NextRequest) {
     // flow — and a client-supplied scope on a money-bearing column is the
     // wrong shape: any future caller that forgets to send pass_scope: 'account'
     // would silently create a card that only works for one child. Deriving it
-    // from the product itself, by the same classification the card-first POS
-    // flow uses (getPassKind, keyed off the pass's *stored* name/category —
-    // not whatever product_name the request happens to carry), makes
-    // forgetting impossible. Day and monthly passes are untouched: they stay
-    // whatever passScope already resolved to above.
-    const { data: productForScope } = await adminSupabase
-      .from('passes')
-      .select('name, category')
-      .eq('id', product_id)
-      .single();
-
-    if (
-      productForScope &&
-      getPassKind({ id: product_id, name: productForScope.name, price: 0, category: productForScope.category }) === 'punch'
-    ) {
+    // from the product itself (shared with /api/stripe/direct-payment and the
+    // Stripe webhook, so all three callers agree) makes forgetting impossible.
+    // Day and monthly passes are untouched: they stay whatever passScope
+    // already resolved to above.
+    if ((await resolvePassScope(product_id, adminSupabase)) === 'account') {
       passScope = 'account';
     }
 

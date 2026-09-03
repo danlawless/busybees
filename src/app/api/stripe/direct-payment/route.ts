@@ -23,7 +23,7 @@ import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gif
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { getActivePartyPromoByCode } from '@/lib/services/promos';
 import { sendPurchaseConfirmationEmail, sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
@@ -224,6 +224,12 @@ export async function POST(request: NextRequest) {
 
     logger.info({ ...logContext, totalSessions: purchaseDefaults.totalSessions, expiryDate: purchaseDefaults.expiryDate }, '✅ Pass defaults resolved');
 
+    // A punch card is always account-scoped — derived from the product itself
+    // (shared with /api/purchases/pos and the Stripe webhook), never from the
+    // request, since this route accepts no pass_scope from the client at all.
+    // Day and monthly passes resolve to 'child', same as the column default.
+    const passScope = await resolvePassScope(productId, adminSupabase);
+
     const now = new Date();
 
     // If gift card covers entire purchase, skip Stripe payment
@@ -246,6 +252,7 @@ export async function POST(request: NextRequest) {
           total_sessions: purchaseDefaults.totalSessions,
           status: 'active',
           stripe_payment_intent_id: `giftcard_${Date.now()}`,
+          pass_scope: passScope,
         })
         .select()
         .single();
@@ -406,6 +413,7 @@ export async function POST(request: NextRequest) {
           total_sessions: purchaseDefaults.totalSessions,
           status: 'active',
           stripe_payment_intent_id: paymentIntent.id,
+          pass_scope: passScope,
         })
         .select()
         .single();
