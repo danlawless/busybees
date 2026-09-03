@@ -18,6 +18,13 @@ import {
 
 export type PassKind = 'day' | 'punch' | 'monthly';
 
+/**
+ * The kinds still bought per child. Punch cards became account-scoped on
+ * 1 October 2026 — they have no child, so resolving one against a child's age
+ * is meaningless and used to sell a family of three, three cards.
+ */
+export type PerChildPassKind = Exclude<PassKind, 'punch'>;
+
 export const PASS_KINDS: readonly PassKind[] = ['day', 'punch', 'monthly'] as const;
 
 export const PASS_KIND_LABEL: Record<PassKind, string> = {
@@ -89,7 +96,7 @@ export function getPassKind(pass: SelectablePass): PassKind | null {
  */
 export function resolvePassOptions(
   child: ChildLike,
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[]
 ): SelectablePass[] {
   const band: AgeGroup = getAgeGroupFromBirthdate(child.birthdate);
@@ -108,10 +115,27 @@ export function resolvePassOptions(
   );
 }
 
+/**
+ * The punch cards on offer, most sessions first.
+ *
+ * Account-scoped, so no child and no age band comes into it — after
+ * 1 October there is one flat card and any child on the account may spend it.
+ */
+export function punchCardOptions(
+  passes: readonly SelectablePass[]
+): SelectablePass[] {
+  return passes
+    .filter((p) => getPassKind(p) === 'punch' && !isMultiChildPass(p.name))
+    .sort(
+      (a, b) =>
+        (b.sessions_included ?? 0) - (a.sessions_included ?? 0) || a.price - b.price
+    );
+}
+
 /** The single best product of this kind for this child, or null if none fits. */
 export function resolvePassForChild(
   child: ChildLike,
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[]
 ): SelectablePass | null {
   return resolvePassOptions(child, kind, passes)[0] ?? null;
@@ -149,7 +173,7 @@ export interface PassQuote {
  */
 export function quotePasses(
   children: readonly ChildLike[],
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[],
   siblingRules: readonly SiblingRule[],
   qualifiesForMemberPricing: boolean
