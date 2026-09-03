@@ -449,6 +449,16 @@ export function CheckIn({
                         price: pass.price,
                         description: pass.description,
                         sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+                        // Kept under its own name as well: punchCardOptions and
+                        // resolvePassOptions sort on `sessions_included` first,
+                        // so renaming it to `sessions` on the way in left that
+                        // primary sort key undefined for every product and the
+                        // lists fell back to price-ascending — putting the $90
+                        // 5-punch card above the $170 10-punch card, and
+                        // handing resolvePassForChild ([0]) the wrong product
+                        // to price a shortfall against.
+                        sessions_included:
+                            pass.sessions_included || pass.sessionsIncluded || 1,
                         category: pass.category, // day, weekly, monthly
                         validity:
                             pass.category === "day"
@@ -1640,6 +1650,81 @@ export function CheckIn({
             onUpdateCustomer(updatedCustomer);
         } catch (error) {
             console.error('Error ending session:', error);
+        }
+    };
+
+    /**
+     * Undo a check-in.
+     *
+     * The remedy for a mis-tap, and deliberately not the same button as Check
+     * Out: checking out ends the visit and leaves the punch spent, while this
+     * deletes the session so the AFTER DELETE trigger hands the punch back (and
+     * clears the expiry clock a first use started, on a card returned to zero).
+     * It matters more now than it used to — a family confirmed on one account
+     * card spends a punch per child in a single tap, so the wrong card or the
+     * wrong family costs three punches at once.
+     *
+     * Destructive and irreversible in the other direction, so it confirms
+     * first. Only a session that has not ended can be voided; the server says
+     * so plainly if staff reach for it after checking someone out.
+     */
+    const handleUndoCheckIn = async (
+        customer: Customer,
+        sessionId: string,
+        childName: string | null
+    ) => {
+        const who = childName ? `${childName}'s` : "this";
+        if (
+            !confirm(
+                `Undo ${who} check-in? The punch goes back on the card and they will no longer be checked in.`
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/sessions/${sessionId}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(
+                    errorData.error ||
+                        "Could not undo this check-in. Please try again."
+                );
+                return;
+            }
+
+            const activeSessions = (customer.activeSessions || []).filter(
+                (session) => session.id !== sessionId
+            );
+
+            // The punch is restored by a database trigger, so re-read the
+            // purchases rather than guessing the new balance. Best-effort: a
+            // failure here is a stale balance on screen, not a failed undo.
+            let purchases = customer.purchases;
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    purchases = (purchasesData || []).map(toPurchase);
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Undo check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+            }
+
+            onUpdateCustomer({ ...customer, purchases, activeSessions });
+        } catch (error) {
+            console.error("Error undoing check-in:", error);
+            alert("Could not undo this check-in. Please try again.");
         }
     };
 
@@ -3763,19 +3848,35 @@ export function CheckIn({
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    <Button
-                                                                        onClick={() =>
-                                                                            void handleCheckOut(
-                                                                                displayCustomer,
-                                                                                session.id
-                                                                            )
-                                                                        }
-                                                                        size="lg"
-                                                                        variant="outline"
-                                                                        className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
-                                                                    >
-                                                                        Check Out
-                                                                    </Button>
+                                                                    <div className="flex flex-col items-center gap-3">
+                                                                        <Button
+                                                                            onClick={() =>
+                                                                                void handleCheckOut(
+                                                                                    displayCustomer,
+                                                                                    session.id
+                                                                                )
+                                                                            }
+                                                                            size="lg"
+                                                                            variant="outline"
+                                                                            className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
+                                                                        >
+                                                                            Check Out
+                                                                        </Button>
+                                                                        {/* Mis-tap remedy: gives the punch back, unlike Check Out. */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                void handleUndoCheckIn(
+                                                                                    displayCustomer,
+                                                                                    session.id,
+                                                                                    childName
+                                                                                )
+                                                                            }
+                                                                            className="text-base text-gray-600 underline underline-offset-4 hover:text-red-600 font-medium px-3 py-2"
+                                                                        >
+                                                                            Undo check-in
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </Card>
                                                         );

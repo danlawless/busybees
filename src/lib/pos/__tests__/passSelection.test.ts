@@ -20,4 +20,18 @@ describe('punchCardOptions', () => {
   it('returns an empty list when the catalogue carries no punch card', () => {
     expect(punchCardOptions(CARDS.filter((p) => !p.name.includes('Punch')))).toEqual([]);
   });
+
+  it('falls back to cheapest-first when sessions_included is missing', () => {
+    // Documents why the POS must carry `sessions_included` through its own
+    // API mapping and not rename it: with the primary sort key undefined the
+    // list quietly reverses, putting the $90 5-punch card above the $170
+    // 10-punch card and handing resolvePassForChild the wrong product.
+    const unmapped: SelectablePass[] = CARDS.map((card) => ({
+      id: card.id,
+      name: card.name,
+      price: card.price,
+      category: card.category,
+    }));
+    expect(punchCardOptions(unmapped).map((p) => p.id)).toEqual(['p5', 'p10']);
+  });
 });
