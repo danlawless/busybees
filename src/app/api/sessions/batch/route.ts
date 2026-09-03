@@ -6,9 +6,12 @@
  * or none does, so a partial failure never spends punches for children left
  * outside.
  *
- * Requires a staff/admin session: since migration 052 the insert below spends
- * a punch, which puts this route in the same class as `/api/purchases/pos`.
- * The POS PIN is a client-side screen lock and proves nothing to the server.
+ * Requires a caller entitled to the account being checked in: staff or admin
+ * on any account, or the signed-in customer on their own. Since migration 052
+ * the insert below spends a punch, so this cannot be left open -- but it is not
+ * staff-only either, because a self-service device runs this screen signed in
+ * as the customer. The POS PIN is a client-side screen lock and proves nothing
+ * to the server. See `requireAccountAccess`.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +19,7 @@ import { z } from 'zod';
 import { createSessions, getOpenSessionChildIdsAsAdmin } from '@/lib/services/sessions';
 import { getPurchaseAsAdmin, updatePurchase } from '@/lib/services/purchases';
 import { getCustomerChildIdsAsAdmin } from '@/lib/services/children';
-import { requireStaff } from '../requireStaff';
+import { requireAccountAccess } from '../requireAccountAccess';
 import {
   checkBatchOwnership,
   checkBatchCapacity,
@@ -36,9 +39,6 @@ const batchSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const denied = await requireStaff();
-    if (denied) return denied;
-
     const parsed = batchSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
@@ -47,6 +47,12 @@ export async function POST(request: NextRequest) {
       );
     }
     const { customer_id, auto_checkout_time, start_time, entries } = parsed.data;
+
+    // Who may call, before anything is read or written. The account has to be
+    // parsed out of the body first, so this sits below the schema check and
+    // above every query.
+    const denied = await requireAccountAccess(customer_id);
+    if (denied) return denied;
 
     // A child named twice in one call would be checked in twice and charged
     // twice. Pure, so it runs before any database work.
@@ -84,8 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Every purchase_id and child_id must actually belong to customer_id.
-    // Staff auth above says the caller works here; it says nothing about
-    // whether the ids in this body hang together, and a mistyped or stale
+    // The gate above says the caller may act on this account; it says nothing
+    // about whether the ids in this body hang together, and a mistyped or stale
     // customer_id would otherwise draw down another family's card. Also read
     // with the admin client, and for the same reason as above: see
     // `getCustomerChildIdsAsAdmin`.

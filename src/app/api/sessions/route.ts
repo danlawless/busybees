@@ -3,11 +3,13 @@
  * GET - List active sessions (all or for specific customer)
  * POST - Create a new session (check-in)
  *
- * POST requires a staff/admin session. Before migration 052 an insert here
- * spent nothing -- the punch came off at check-out. It now deducts a punch the
- * instant the row lands, which puts this route in the same class as its batch
- * sibling and as `/api/purchases/pos`. The POS PIN is a client-side screen
- * lock and proves nothing to the server.
+ * POST requires a caller entitled to the account named in the body: staff or
+ * admin on any account, or the signed-in customer on their own. Before
+ * migration 052 an insert here spent nothing -- the punch came off at
+ * check-out. It now deducts a punch the instant the row lands, so this cannot
+ * be left open; it is not staff-only either, because a self-service device
+ * runs check-in signed in as the customer. The POS PIN is a client-side screen
+ * lock and proves nothing to the server. See `requireAccountAccess`.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,7 +17,7 @@ import { z } from 'zod';
 import { getAllActiveSessions, getActiveSessions, createSession } from '@/lib/services/sessions';
 import { getPurchaseAsAdmin, updatePurchase } from '@/lib/services/purchases';
 import { getCustomerChildIdsAsAdmin } from '@/lib/services/children';
-import { requireStaff } from './requireStaff';
+import { requireAccountAccess } from './requireAccountAccess';
 import { OWNERSHIP_MISMATCH_MESSAGE } from './batch/validation';
 
 export async function GET(request: NextRequest) {
@@ -53,9 +55,6 @@ const sessionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const denied = await requireStaff();
-    if (denied) return denied;
-
     const parsed = sessionSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
@@ -64,6 +63,12 @@ export async function POST(request: NextRequest) {
       );
     }
     const { customer_id, purchase_id, child_id, start_time, auto_checkout_time } = parsed.data;
+
+    // Who may call, before anything is read or written. The account has to be
+    // parsed out of the body first, so this sits below the schema check and
+    // above every query.
+    const denied = await requireAccountAccess(customer_id);
+    if (denied) return denied;
 
     // Read as admin for the same reason the batch route does: under RLS an
     // invisible row and a missing row are indistinguishable, and everything

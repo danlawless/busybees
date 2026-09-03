@@ -244,33 +244,47 @@ place — but it is invisible unless someone is looking for it.
 
 ## Two things about the POS that change on this deploy
 
-### Check-in now requires a staff login on the POS device
+### Check-in now requires a signed-in caller — staff *or* the family themselves
 
-`POST /api/sessions`, `POST /api/sessions/batch` and
-`DELETE /api/sessions/{id}` now require a **staff or admin Supabase session**,
-the same check `/api/purchases/pos` has always had.
+`POST /api/sessions` and `POST /api/sessions/batch` now require a Supabase
+session belonging to someone entitled to the account being checked in:
 
-They had none before, and `middleware.ts` excludes every `/api` path from auth.
-That was survivable while a session insert cost nothing; since 052 the insert
-itself spends a punch and the delete refunds one, which made three endpoints
-that move money reachable by anyone on the internet who knows a session id —
-and `GET /api/pos/customers` hands those out unauthenticated.
+- **staff or admin** — any account, exactly as the POS works today; or
+- **the customer themselves** — their own `customer_id` and nobody else's.
 
-**Operational consequence, and it is not small:** the POS PIN is a client-side
-screen lock and proves nothing to the server. A POS device running in kiosk
-mode with nobody logged in as staff will now get **401 on check-in**. Log in as
-staff on every POS device before opening, and check that check-in works before
-the first family arrives.
+`DELETE /api/sessions/{id}` is **staff/admin only**. Undoing a check-in refunds
+a punch and is a front-desk correction, not something a family does for itself.
 
-It fails closed — a 401 with no punch spent — so the worst case is a queue at
-the front desk, not a card silently drained. Two other things follow from the
-same reasoning and were deliberately **not** changed, because they are not on
-the money path: check-*out* (`PUT /api/sessions/{id}`) is still open, so nobody
-gets trapped inside by a login problem, and `GET /api/pos/customers` is still
-unauthenticated. That endpoint returns every customer id, child id, purchase id
-and open session id in the business, and it should be closed too — but doing it
-on launch night, when it is what the POS reads to draw its own screen, is the
-wrong night for it. Track it separately.
+These three had no auth at all before, and `middleware.ts` excludes every
+`/api` path. That was survivable while a session insert cost nothing; since 052
+the insert itself spends a punch and the delete refunds one, which made three
+endpoints that move money reachable by anyone on the internet who knows a
+session id — and `GET /api/pos/customers` hands those out unauthenticated.
+
+**Operational consequence: both POS modes keep working, and neither needs a new
+step at open.** Staff-mode check-in is unchanged. Self-service check-in also
+still works: `/api/auth/pos-login` signs the *customer* in when they enter their
+phone number, so the browser is already holding their session by the time the
+check-in screen appears, and the id it posts is their own. What is now refused
+is a caller with no Supabase session at all (**401**) and a signed-in customer
+naming somebody else's account (**403**). The POS PIN is a client-side screen
+lock and still proves nothing to the server — it is not what makes either mode
+work.
+
+Worth knowing anyway: a device left sitting on the check-in screen long enough
+for the customer's session to expire gets a 401 on the next tap. The cure is to
+go back to the phone screen and enter the number again, which mints a fresh
+session.
+
+It fails closed — a 401 or 403 with no punch spent — so the worst case is a
+queue at the front desk, not a card silently drained. Two other things follow
+from the same reasoning and were deliberately **not** changed, because they are
+not on the money path: check-*out* (`PUT /api/sessions/{id}`) is still open, so
+nobody gets trapped inside by a login problem, and `GET /api/pos/customers` is
+still unauthenticated. That endpoint returns every customer id, child id,
+purchase id and open session id in the business, and it should be closed too —
+but doing it on launch night, when it is what the POS reads to draw its own
+screen, is the wrong night for it. Track it separately.
 
 ### Staff-mode pass purchases still send no `payment_method`
 
