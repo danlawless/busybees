@@ -10,14 +10,16 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
 
-const PACKAGE_INCLUDED_KIDS: Record<string, number> = {
-  queen_bee: 20,
-  worker_bee: 15,
-  basic_bee: 15,
-  group_rate: 0,
+// Read the included counts from the package config rather than restating them.
+// This route decides what a customer is charged for extra children, so a stale
+// copy here undercharges every party on a tier whose included count moved.
+const includedKidsFor = (packageName: string): number => {
+  const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
+  return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
 };
-const EXTRA_KID_PRICE = 15;
+const EXTRA_KID_PRICE = ADDITIONAL_KIDS_PRICE;
 
 const OveragePaymentSchema = z.object({
   payment_method: z.enum(['saved_card', 'cash']),
@@ -109,7 +111,7 @@ export async function POST(
     }
 
     const guestCount = count || 0;
-    const includedKids = PACKAGE_INCLUDED_KIDS[booking.package_name] ?? 15;
+    const includedKids = includedKidsFor(booking.package_name);
     const extraKids = Math.max(0, guestCount - includedKids);
 
     if (extraKids === 0) {

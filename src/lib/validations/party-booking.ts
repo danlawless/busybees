@@ -204,7 +204,7 @@ export const PACKAGE_PRICING = {
     maxGuests: 20,
     includedKids: 10,
     duration: 2,
-    description: 'Standard package \u2014 10 kids included',
+    description: 'Standard package — 10 kids included',
     features: [
       '10 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
@@ -239,7 +239,12 @@ export const PACKAGE_PRICING = {
 
 // Additional kids pricing - per issue #101
 export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
-export const INCLUDED_KIDS = 15; // 15 kids included with each package
+/**
+ * Fallback for screens that need a number before a package has been chosen.
+ * The authoritative count is PACKAGE_PRICING[pkg].includedKids, which differs
+ * per tier -- do not treat this as "what a package includes".
+ */
+export const INCLUDED_KIDS = 15;
 export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
 // Group rate pricing (age-based)

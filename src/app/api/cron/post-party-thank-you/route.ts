@@ -10,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { sendPostPartyThankYouEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { formatDateET } from '@/lib/services/report-aggregations';
+import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
 
 function getYesterdayDate(): string {
   const yesterday = new Date();
@@ -107,8 +108,8 @@ export async function GET(request: NextRequest) {
         .eq('booking_id', booking.id)
         .order('created_at', { ascending: true });
 
-      const PACKAGE_INCLUDED_KIDS: Record<string, number> = { queen_bee: 20, worker_bee: 15, basic_bee: 15 };
-      const includedKids = PACKAGE_INCLUDED_KIDS[booking.package_name] ?? 15;
+      const pkg = PACKAGE_PRICING[booking.package_name as keyof typeof PACKAGE_PRICING];
+      const includedKids = pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
 
       const result = await sendPostPartyThankYouEmail({
         to: booking.customer_email,
