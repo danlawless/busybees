@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, HelpCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
+import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking'
 
 const faqs = [
   {
@@ -50,7 +51,7 @@ const faqs = [
     questions: [
       {
         question: 'How do I book a birthday party?',
-        answer: 'Once you log in to your account, parties can be purchased under the Parties section. We recommend booking at least a week in advance, especially for weekend slots. We offer three party packages: Basic Bee ($475), Worker Bee ($525), and Queen Bee ($575) — all include exclusive use of the entire facility.'
+        answer: `Once you log in to your account, parties can be purchased under the Parties section. We recommend booking at least a week in advance, especially for weekend slots. We offer three party packages: ${PACKAGE_PRICING.basic_bee.name} ($${PACKAGE_PRICING.basic_bee.privatePrice}), ${PACKAGE_PRICING.worker_bee.name} ($${PACKAGE_PRICING.worker_bee.privatePrice}), and ${PACKAGE_PRICING.queen_bee.name} ($${PACKAGE_PRICING.queen_bee.privatePrice}) — all include exclusive use of the entire facility.`
       },
       {
         question: 'What\'s included in party packages?',
@@ -62,7 +63,7 @@ const faqs = [
       },
       {
         question: 'How many kids are included in a party package?',
-        answer: 'Our Queen Bee package includes 20 kids, and our Worker Bee and Basic Bee packages include 15 kids. Each additional child beyond the included amount is $15/child. Queen Bee can accommodate up to 25 kids, and Worker Bee/Basic Bee can accommodate up to 20.'
+        answer: `Our ${PACKAGE_PRICING.queen_bee.name} package includes ${PACKAGE_PRICING.queen_bee.includedKids} kids, ${PACKAGE_PRICING.worker_bee.name} includes ${PACKAGE_PRICING.worker_bee.includedKids}, and ${PACKAGE_PRICING.basic_bee.name} includes ${PACKAGE_PRICING.basic_bee.includedKids}. Each additional child beyond the included amount is $${ADDITIONAL_KIDS_PRICE}/child. ${PACKAGE_PRICING.queen_bee.name} can accommodate up to ${PACKAGE_PRICING.queen_bee.maxGuests} kids, and the other two up to ${PACKAGE_PRICING.worker_bee.maxGuests}.`
       }
     ]
   },

@@ -1,4 +1,5 @@
 import { Layout } from '@/components/layout/Layout'
+import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking'
 import { InfoHero } from '@/components/info/InfoHero'
 import { ImportantInfo } from '@/components/info/ImportantInfo'
 import { DetailedHours } from '@/components/info/DetailedHours'
@@ -43,12 +44,12 @@ const faqJsonLd = {
     {
       '@type': 'Question',
       name: 'How do I book a birthday party?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Log in to your account and purchase under the Parties section. We recommend booking at least a week in advance. We offer three packages: Basic Bee ($475), Worker Bee ($525), and Queen Bee ($575) — all include exclusive use of the facility.' },
+      acceptedAnswer: { '@type': 'Answer', text: `Log in to your account and purchase under the Parties section. We recommend booking at least a week in advance. We offer three packages: ${PACKAGE_PRICING.basic_bee.name} ($${PACKAGE_PRICING.basic_bee.privatePrice}), ${PACKAGE_PRICING.worker_bee.name} ($${PACKAGE_PRICING.worker_bee.privatePrice}), and ${PACKAGE_PRICING.queen_bee.name} ($${PACKAGE_PRICING.queen_bee.privatePrice}) — all include exclusive use of the facility.` },
     },
     {
       '@type': 'Question',
       name: 'How many kids are included in a party package?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Our Queen Bee package includes 20 kids, and Worker Bee and Basic Bee include 15 kids. Each additional child is $15. Queen Bee can accommodate up to 25 kids, and Worker Bee/Basic Bee up to 20.' },
+      acceptedAnswer: { '@type': 'Answer', text: `${PACKAGE_PRICING.queen_bee.name} includes ${PACKAGE_PRICING.queen_bee.includedKids} kids, ${PACKAGE_PRICING.worker_bee.name} includes ${PACKAGE_PRICING.worker_bee.includedKids}, and ${PACKAGE_PRICING.basic_bee.name} includes ${PACKAGE_PRICING.basic_bee.includedKids}. Each additional child is $${ADDITIONAL_KIDS_PRICE}. ${PACKAGE_PRICING.queen_bee.name} can accommodate up to ${PACKAGE_PRICING.queen_bee.maxGuests} kids, and the other two up to ${PACKAGE_PRICING.worker_bee.maxGuests}.` },
     },
     {
       '@type': 'Question',
