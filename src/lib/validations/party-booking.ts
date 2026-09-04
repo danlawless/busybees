@@ -160,7 +160,7 @@ export const PACKAGE_PRICING = {
   queen_bee: {
     name: 'Queen Bee+',
     semiPrivatePrice: 500,
-    privatePrice: 575,
+    privatePrice: 600,
     maxGuests: 25,
     includedKids: 20,
     duration: 2,
@@ -180,7 +180,7 @@ export const PACKAGE_PRICING = {
   worker_bee: {
     name: 'Worker Bee+',
     semiPrivatePrice: 450,
-    privatePrice: 525,
+    privatePrice: 550,
     maxGuests: 20,
     includedKids: 15,
     duration: 2,
@@ -200,13 +200,13 @@ export const PACKAGE_PRICING = {
   basic_bee: {
     name: 'Basic Bee',
     semiPrivatePrice: 400,
-    privatePrice: 475,
+    privatePrice: 500,
     maxGuests: 20,
-    includedKids: 15,
+    includedKids: 10,
     duration: 2,
-    description: 'Standard package with paper goods',
+    description: 'Standard package \u2014 10 kids included',
     features: [
-      '15 kids included',
+      '10 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
       'Customized digital invitations for your guests',
@@ -223,10 +223,9 @@ export const PACKAGE_PRICING = {
     privatePrice: 0, // Not applicable - uses per-child pricing
     maxGuests: 30,
     duration: 2,
-    description: 'Group rate: $12 per child (2+), $5 per child (under 2), min 10, max 30',
+    description: 'Group rate: $15 per child, any age, min 10, max 30',
     features: [
-      '$12 per child (ages 2 and up)',
-      '$5 per child (under 2)',
+      '$15 per child, any age',
       'Minimum 10 children',
       'Maximum 30 children',
       'Access to play area',
@@ -244,8 +243,12 @@ export const INCLUDED_KIDS = 15; // 15 kids included with each package
 export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
 // Group rate pricing (age-based)
-export const GROUP_RATE_PRICE_AGE_2_PLUS = 12; // $12 for children 2 years and older
-export const GROUP_RATE_PRICE_UNDER_2 = 5;     // $5 for children under 2 years old
+/**
+ * One rate per child, whatever their age. The group rate used to split at age
+ * two ($12 / $5); from 1 October 2026 it is flat, so there is a single number
+ * here rather than two that have to be kept in step.
+ */
+export const GROUP_RATE_PRICE_PER_CHILD = 15;
 export const GROUP_RATE_MIN_CHILDREN = 10;
 export const GROUP_RATE_MAX_CHILDREN = 30;
 
@@ -257,10 +260,10 @@ export function calculateBookingPrice(
   partyType: PartyType,
   guestCount: number
 ): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
-  // Group rate uses age-based per-child pricing
-  // Without individual ages, estimate using the 2+ rate ($12) as the default
+  // Group rate is charged per child at one flat rate, so the guest count is
+  // the whole calculation -- no base price and no additional-child tier.
   if (packageName === 'group_rate') {
-    const totalPrice = guestCount * GROUP_RATE_PRICE_AGE_2_PLUS;
+    const totalPrice = guestCount * GROUP_RATE_PRICE_PER_CHILD;
     return {
       basePrice: 0,
       additionalKidsPrice: 0,
