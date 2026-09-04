@@ -5,36 +5,15 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
 
-const allImages = [
-  'MH_12587.jpg', 'MH_12592-HDR.jpg', 'MH_12594.jpg', 'MH_12597.jpg',
-  'MH_12603.jpg', 'MH_12605-HDR.jpg', 'MH_12608.jpg', 'MH_12612.jpg',
-  'MH_12618.jpg', 'MH_12621.jpg', 'MH_12624.jpg', 'MH_12628.jpg',
-  'MH_12629.jpg', 'MH_12631.jpg', 'MH_12632.jpg', 'MH_12634.jpg',
-  'MH_12636.jpg', 'MH_12639.jpg', 'MH_12644.jpg', 'MH_12648.jpg',
-  'MH_12650.jpg', 'MH_12652.jpg', 'MH_12655.jpg', 'MH_12657.jpg',
-  'MH_12660.jpg', 'MH_12663.jpg', 'MH_12666.jpg', 'MH_12667.jpg',
-  'MH_12668.jpg', 'MH_12669.jpg', 'MH_12671.jpg', 'MH_12673.jpg',
-  'MH_12675.jpg', 'MH_12676.jpg', 'MH_12677.jpg', 'MH_12678.jpg',
-  'MH_12679.jpg', 'MH_12680.jpg', 'MH_12681.jpg', 'MH_12683.jpg',
-  'MH_12686.jpg', 'MH_12690.jpg', 'MH_12693.jpg', 'MH_12694.jpg',
-  'MH_12695.jpg', 'MH_12697.jpg', 'MH_12700.jpg', 'MH_12702.jpg',
-  'MH_12704.jpg', 'MH_12706.jpg', 'MH_12709.jpg', 'MH_12710.jpg',
-  'MH_12713.jpg', 'MH_12716.jpg', 'MH_12719.jpg', 'MH_12724.jpg',
-  'MH_12726.jpg', 'MH_12728.jpg', 'MH_12731.jpg', 'MH_12736.jpg',
-  'MH_12738.jpg', 'MH_12743.jpg', 'MH_12745.jpg', 'MH_12750.jpg',
-  'MH_12754.jpg', 'MH_12756.jpg', 'MH_12758.jpg', 'MH_12765.jpg',
-  'MH_12766.jpg', 'MH_12767.jpg', 'MH_12768.jpg', 'MH_12771.jpg',
-  'MH_12774.jpg', 'MH_12777.jpg', 'MH_12779.jpg', 'MH_12781.jpg',
-  'MH_12785.jpg', 'MH_12787.jpg', 'MH_12789.jpg', 'MH_12792.jpg',
-  'MH_12794.jpg', 'MH_12798.jpg', 'MH_12801.jpg', 'MH_12802.jpg',
-  'MH_12804.jpg', 'MH_12807.jpg', 'MH_12808.jpg', 'MH_12812.jpg',
-  'MH_12814.jpg', 'MH_12816.jpg', 'MH_12819.jpg', 'MH_12820.jpg',
-  'MH_12824.jpg', 'MH_12825.jpg',
-]
 
 const INITIAL_COUNT = 12
 
-export function Gallery() {
+interface GalleryProps {
+  /** Filenames in public/album, supplied by the page at build time. */
+  images: string[]
+}
+
+export function Gallery({ images: allImages }: GalleryProps) {
   const [showAll, setShowAll] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
