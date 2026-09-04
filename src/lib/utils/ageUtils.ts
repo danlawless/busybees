@@ -9,7 +9,7 @@ import { parseDateString } from '@/lib/utils';
 export type AgeGroup = 'infant' | 'toddler';
 
 // Age threshold: children under 2 are infants, 2 and over are toddlers
-const TODDLER_AGE_THRESHOLD = 2;
+const TODDLER_AGE_THRESHOLD = 1;
 
 /**
  * Calculate age from birthdate
