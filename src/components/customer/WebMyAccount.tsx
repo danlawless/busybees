@@ -21,6 +21,7 @@ import { WaiverModal } from '@/components/ui/WaiverModal';
 import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
+import { getPassKind } from '@/lib/pos/passSelection';
 import { parseDateString } from '@/lib/utils';
 import {
   isComplimentaryPurchase,
@@ -532,6 +533,14 @@ function WebMyAccountContent() {
     return productName.toLowerCase().includes('family');
   };
 
+  /**
+   * A punch card belongs to the account, not to one child, so buying one asks
+   * no "which child is this for?" question. Uses the same classifier the server
+   * derives pass_scope from, so the site and the database cannot disagree.
+   */
+  const isPunchCardProduct = (product: { id: string; name: string; price: number; category?: string | null }): boolean =>
+    getPassKind({ id: product.id, name: product.name, price: product.price, category: product.category }) === 'punch';
+
   const isChildInfantComboPass = (productName: string): boolean => {
     const lowerName = productName.toLowerCase();
     return (lowerName.includes('child') || lowerName.includes('toddler')) && lowerName.includes('infant');
@@ -612,7 +621,22 @@ function WebMyAccountContent() {
     const isPassPurchase = availablePasses.some(p => p.id === productId);
     const effectiveChildId = childId || selectedChildForPurchase;
 
-    if (isPassPurchase) {
+    const isPunchCard = isPassPurchase && isPunchCardProduct(product);
+
+    if (isPunchCard) {
+      // The card covers whoever plays, so there is no child to name here. It
+      // still needs somebody able to use it, and check-in enforces the waiver
+      // per child at the door.
+      if (!children.some(c => c.waiverSigned)) {
+        setSuccessDetails({
+          title: 'Waiver Required',
+          message: 'At least one child on your account needs a signed waiver before you can buy a punch card.',
+          variant: 'warning'
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+    } else if (isPassPurchase) {
       if (!effectiveChildId) {
         setSuccessDetails({
           title: 'Child Selection Required',
@@ -688,9 +712,19 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
-          childrenIds: purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined,
-          childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
+          childId: isPunchCard
+            ? undefined
+            : isPassPurchase
+              ? effectiveChildId
+              : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
+          // One key, not two. This object previously declared childrenIds twice,
+          // so the second silently overwrote the first and a party package lost
+          // its birthday-child selection.
+          childrenIds: isPunchCard
+            ? undefined
+            : purchaseType === 'party_package'
+              ? (selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined)
+              : (isPassPurchase && familyChildIds && familyChildIds.length > 0 ? familyChildIds : undefined),
           paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
@@ -1612,7 +1646,10 @@ function WebMyAccountContent() {
                               setShowSuccessModal(true);
                               return;
                             }
-                            if (isComboProduct) {
+                            if (isPunchCardProduct(product)) {
+                              // Covers every child on the account, so nothing to assign.
+                              handleConfirmPurchase(product.id);
+                            } else if (isComboProduct) {
                               // Combo pass: always show dual child/infant selector
                               setComboChildId(null);
                               setComboInfantId(null);
