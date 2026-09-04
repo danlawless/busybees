@@ -25,8 +25,7 @@ import {
 } from 'lucide-react';
 import { parseDateString } from '@/lib/utils';
 import {
-  GROUP_RATE_PRICE_AGE_2_PLUS,
-  GROUP_RATE_PRICE_UNDER_2,
+  GROUP_RATE_PRICE_PER_CHILD,
 } from '@/lib/validations/party-booking';
 
 interface SearchResultChild {
@@ -321,15 +320,9 @@ export function GroupChildrenManager({
     }
   };
 
-  const getChildPrice = (birthdate: string): number => {
-    const age = calculateAge(birthdate);
-    return age >= 2 ? GROUP_RATE_PRICE_AGE_2_PLUS : GROUP_RATE_PRICE_UNDER_2;
-  };
-
-  const groupTotal = assignedChildren.reduce(
-    (sum, child) => sum + getChildPrice(child.birthdate),
-    0
-  );
+  // Every child costs the same from 1 October 2026, so the total is just a
+  // head count -- no per-child lookup and no age to inspect.
+  const groupTotal = assignedChildren.length * GROUP_RATE_PRICE_PER_CHILD;
 
   const allWaiversSigned = assignedChildren.every((c) => c.waiver_signed);
   const canProceed =
@@ -601,7 +594,7 @@ export function GroupChildrenManager({
                 <div className="space-y-2">
                   {assignedChildren.map((child, index) => {
                     const age = calculateAge(child.birthdate);
-                    const childPrice = getChildPrice(child.birthdate);
+                    const childPrice = GROUP_RATE_PRICE_PER_CHILD;
 
                     return (
                       <motion.div
@@ -673,10 +666,9 @@ export function GroupChildrenManager({
             <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                  <span>{assignedChildren.filter(c => calculateAge(c.birthdate) >= 2).length} x ${GROUP_RATE_PRICE_AGE_2_PLUS} (ages 2+)</span>
-                  {assignedChildren.some(c => calculateAge(c.birthdate) < 2) && (
-                    <span className="ml-3">{assignedChildren.filter(c => calculateAge(c.birthdate) < 2).length} x ${GROUP_RATE_PRICE_UNDER_2} (under 2)</span>
-                  )}
+                  {/* One rate for every age since 1 October 2026, so there is a
+                      single line here rather than a 2+ / under-2 split. */}
+                  <span>{assignedChildren.length} x ${GROUP_RATE_PRICE_PER_CHILD}</span>
                 </div>
                 <span className="text-lg font-bold text-gray-900">${groupTotal.toFixed(2)}</span>
               </div>
