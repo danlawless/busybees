@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { Layout } from '@/components/layout/Layout'
 import { Hero } from '@/components/home/Hero'
 import { Gallery } from '@/components/home/Gallery'
+import { getAlbumImages } from '@/lib/album'
 import { ReviewCTA } from '@/components/home/ReviewCTA'
 import {
   PlayAreas,
@@ -17,6 +18,9 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
+  // Read at build time — see the note in lib/album.ts about keeping this page static.
+  const albumImages = getAlbumImages()
+
   return (
     <Layout>
       <Hero />
@@ -25,7 +29,7 @@ export default function Home() {
       <HomeParties />
       <Membership />
       <MoreWays />
-      <Gallery />
+      <Gallery images={albumImages} />
       <ReviewCTA />
       <LocationHours />
     </Layout>
