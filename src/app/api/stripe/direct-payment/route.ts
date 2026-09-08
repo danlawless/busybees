@@ -22,7 +22,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { applyGiftCardBalance, getUserGiftCardBalance } from '@/lib/services/gift-cards';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
-import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
+import { validateBirthdateForProduct, hasAgeRestriction, requiresChildSelection, CHILD_REQUIRED_ERROR } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { getActivePartyPromoByCode } from '@/lib/services/promos';
@@ -131,6 +131,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Age gate validation for passes with age restrictions
+    // An age-restricted pass with no child named skips the check below entirely,
+    // so refuse it rather than sell a pass nobody has been checked against.
+    if (!childId && requiresChildSelection(productName)) {
+      logger.warn(
+        { productName },
+        'Age-restricted pass rejected: no child selected'
+      );
+      return NextResponse.json({ error: CHILD_REQUIRED_ERROR }, { status: 400 });
+    }
+
     if (childId && hasAgeRestriction(productName)) {
       const { data: child } = await adminSupabase
         .from('children')

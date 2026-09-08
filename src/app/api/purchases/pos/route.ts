@@ -18,7 +18,7 @@ import type { Database } from '@/lib/supabase/database.types';
 import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
-import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
+import { validateBirthdateForProduct, hasAgeRestriction, requiresChildSelection, CHILD_REQUIRED_ERROR } from '@/lib/utils/ageUtils';
 import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
@@ -111,6 +111,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Age gate validation for passes with age restrictions
+    // An age-restricted pass with no child named skips the check below entirely,
+    // so refuse it rather than sell a pass nobody has been checked against.
+    if (!child_id && requiresChildSelection(product_name)) {
+      logger.warn(
+        { product_name },
+        'Age-restricted pass rejected: no child selected'
+      );
+      return NextResponse.json({ error: CHILD_REQUIRED_ERROR }, { status: 400 });
+    }
+
     if (child_id && hasAgeRestriction(product_name)) {
       const { data: child } = await adminSupabase
         .from('children')
