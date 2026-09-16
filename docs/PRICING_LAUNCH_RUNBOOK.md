@@ -346,6 +346,32 @@ deploying, day passes would price at $20 while a one-year-old still counts as
 an infant under the old threshold. Deploy the code and land the price change
 together, or deploy first.
 
+### Parties already on the books keep their included count
+
+The announcement promises booked parties are locked in at the quoted price.
+Basic Bee drops from 15 included children to 10 on the ladder, and as of
+15 September there are **six confirmed Basic Bee parties booked pre-October
+with 15 guests each**. Every reader of an existing booking — the admin overage
+charge, the post-party thank-you recap, the admin guest list — now goes through
+`includedKidsForBooking(packageName, created_at)`, which returns the old count
+for anything booked before **midnight Eastern on 1 October**
+(`PARTY_LADDER_CUTOVER` in `src/lib/validations/party-booking.ts`).
+
+The cutover is keyed on when the party was *booked*, not when it is held. That
+leaves one window to watch: if this deploys on the evening of 30 September, a
+party booked between the deploy and midnight is quoted on the *new* ladder but
+dated before the cutover, so it would be treated as legacy — Basic Bee with 15
+included instead of 10, undercharging by up to $75. After the deploy, check:
+
+```sql
+SELECT id, package_name, guest_count, created_at
+FROM public.party_bookings
+WHERE created_at >= '<deploy time>' AND created_at < '2026-10-01 00:00-04';
+```
+
+Anything listed was quoted with the new counts; note the booking so overage
+is charged by hand if it comes to it. An empty result means nothing to do.
+
 ## Step 3: Verify
 
 ```bash
