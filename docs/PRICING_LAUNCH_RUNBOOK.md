@@ -385,6 +385,19 @@ surfaces read from one source (`src/lib/pricing/catalog.ts`), so no marketing
 copy needs touching separately — but this script is still the only thing that
 proves it.
 
+## After launch: retire the announcement page
+
+`/pricing-changes` (branch `pricing-changes-page`, shipped 17 September) holds
+its own copy of the October rates because the catalog could not show them
+before the night. Once the change is live the catalog is the truth again, so:
+
+1. End the "See what's changing" announcement in the admin announcements screen
+   (or let its scheduled end date do it).
+2. Delete `src/app/pricing-changes/` and redirect the path to `/info` in
+   `next.config` so links in the sent email keep working.
+
+Leave it a couple of weeks — the email is still in inboxes.
+
 ---
 
 ## Reference
