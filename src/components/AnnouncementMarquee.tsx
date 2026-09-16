@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { parseAnnouncementLinks } from '@/lib/announcements/links';
 
 interface Announcement {
   id: string;
@@ -43,6 +45,15 @@ export function AnnouncementMarquee() {
 
   // Combine all messages with a separator
   const combinedMessage = announcements.map(a => a.message).join('     ★     ');
+  const rendered = parseAnnouncementLinks(combinedMessage).map((segment, i) =>
+    segment.kind === 'link' ? (
+      <Link key={i} href={segment.href} className="underline underline-offset-2 hover:opacity-80">
+        {segment.text}
+      </Link>
+    ) : (
+      <span key={i}>{segment.text}</span>
+    )
+  );
   // Use the first announcement's colors
   const bgColor = announcements[0].bg_color || '#f59e0b';
   const textColor = announcements[0].text_color || '#78350f';
@@ -58,13 +69,13 @@ export function AnnouncementMarquee() {
             className="inline-block text-sm font-semibold whitespace-nowrap px-8"
             style={{ color: textColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}
           >
-            📢 {combinedMessage}
+            📢 {rendered}
           </span>
           <span
             className="inline-block text-sm font-semibold whitespace-nowrap px-8"
             style={{ color: textColor, fontFamily: 'system-ui, -apple-system, sans-serif' }}
           >
-            📢 {combinedMessage}
+            📢 {rendered}
           </span>
         </div>
       </div>
