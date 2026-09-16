@@ -4,6 +4,7 @@ import {
   ADDITIONAL_KIDS_PRICE,
   GROUP_RATE_PRICE_PER_CHILD,
   PACKAGE_PRICING,
+  includedKidsForBooking,
 } from '@/lib/validations/party-booking';
 
 /**
@@ -74,5 +75,42 @@ describe('group rate', () => {
     expect(quote.basePrice).toBe(0);
     expect(quote.additionalKidsPrice).toBe(0);
     expect(quote.additionalKids).toBe(0);
+  });
+});
+
+describe('included children for an existing booking', () => {
+  const beforeCutover = new Date('2026-09-15T14:00:00-04:00');
+  const afterCutover = new Date('2026-10-03T10:00:00-04:00');
+
+  it('keeps the count a pre-October booking was quoted', () => {
+    // Every Basic Bee party on the books was sold with 15 included. The ladder
+    // drops that to 10, and charging those families $75 for "five extra" would
+    // break the promise in the announcement that booked prices are locked in.
+    expect(includedKidsForBooking('basic_bee', beforeCutover)).toBe(15);
+    expect(includedKidsForBooking('worker_bee', beforeCutover)).toBe(15);
+    expect(includedKidsForBooking('queen_bee', beforeCutover)).toBe(20);
+  });
+
+  it('uses the ladder for bookings made from 1 October', () => {
+    expect(includedKidsForBooking('basic_bee', afterCutover)).toBe(
+      PACKAGE_PRICING.basic_bee.includedKids
+    );
+    expect(includedKidsForBooking('worker_bee', afterCutover)).toBe(15);
+    expect(includedKidsForBooking('queen_bee', afterCutover)).toBe(20);
+  });
+
+  it('cuts over at midnight Eastern, not UTC', () => {
+    // 23:30 on 30 September in New York is already 1 October in UTC.
+    expect(includedKidsForBooking('basic_bee', new Date('2026-09-30T23:30:00-04:00'))).toBe(15);
+    expect(includedKidsForBooking('basic_bee', new Date('2026-10-01T00:00:00-04:00'))).toBe(10);
+  });
+
+  it('accepts the ISO string a database row carries', () => {
+    expect(includedKidsForBooking('basic_bee', '2026-08-02T15:22:10.123+00:00')).toBe(15);
+  });
+
+  it('includes nobody for the group rate', () => {
+    expect(includedKidsForBooking('group_rate', beforeCutover)).toBe(0);
+    expect(includedKidsForBooking('group_rate', afterCutover)).toBe(0);
   });
 });

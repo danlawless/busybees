@@ -10,15 +10,11 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
+import { includedKidsForBooking, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
 
-// Read the included counts from the package config rather than restating them.
-// This route decides what a customer is charged for extra children, so a stale
-// copy here undercharges every party on a tier whose included count moved.
-const includedKidsFor = (packageName: string): number => {
-  const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
-  return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
-};
+// This route decides what a customer is charged for extra children, so the
+// included count must be the one the booking was sold with -- see
+// includedKidsForBooking for why that depends on when it was booked.
 const EXTRA_KID_PRICE = ADDITIONAL_KIDS_PRICE;
 
 const OveragePaymentSchema = z.object({
@@ -92,7 +88,7 @@ export async function POST(
     // Get booking details
     const { data: booking, error: bookingError } = await supabase
       .from('party_bookings')
-      .select('id, customer_id, customer_name, customer_email, customer_phone, package_name')
+      .select('id, customer_id, customer_name, customer_email, customer_phone, package_name, created_at')
       .eq('id', bookingId)
       .single();
 
@@ -111,7 +107,7 @@ export async function POST(
     }
 
     const guestCount = count || 0;
-    const includedKids = includedKidsFor(booking.package_name);
+    const includedKids = includedKidsForBooking(booking.package_name, booking.created_at);
     const extraKids = Math.max(0, guestCount - includedKids);
 
     if (extraKids === 0) {

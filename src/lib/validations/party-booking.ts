@@ -234,6 +234,37 @@ export const PACKAGE_PRICING = {
   },
 } as const;
 
+/**
+ * The October 2026 ladder took effect at midnight Eastern on 1 October, and it
+ * changed what Basic Bee includes: 15 children before, 10 after. Anyone who
+ * booked before that was quoted the old count, and the announcement promised
+ * booked parties keep the price they were quoted -- so anything that judges an
+ * existing booking (overage charges, the thank-you recap, the admin guest list)
+ * must ask what that booking was sold with, not what the package says today.
+ *
+ * Bookings are dated by when they were made, not when the party is; a party in
+ * November booked in August was quoted in August.
+ */
+export const PARTY_LADDER_CUTOVER = new Date('2026-10-01T00:00:00-04:00');
+
+const INCLUDED_KIDS_BEFORE_CUTOVER: Record<string, number> = {
+  queen_bee: 20,
+  worker_bee: 15,
+  basic_bee: 15,
+};
+
+export function includedKidsForBooking(
+  packageName: string,
+  bookedAt: Date | string
+): number {
+  const booked = bookedAt instanceof Date ? bookedAt : new Date(bookedAt);
+  if (booked < PARTY_LADDER_CUTOVER) {
+    return INCLUDED_KIDS_BEFORE_CUTOVER[packageName] ?? 0;
+  }
+  const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
+  return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
+}
+
 // Time slots are now stored in the database (party_time_slots table)
 // No hardcoded fallbacks - fetch from /api/party-booking/time-slots
 
