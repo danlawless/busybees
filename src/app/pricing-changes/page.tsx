@@ -14,9 +14,9 @@ import Link from 'next/link';
 import { Layout } from '@/components/layout/Layout';
 
 export const metadata = {
-  title: 'Our prices are changing on 1 October',
+  title: 'Our prices are changing on October 1st',
   description:
-    'What changes at Busy Bees on 1 October 2026: day passes, memberships, punch cards and birthday parties — and what stays the same if you already have a card or a booked party.',
+    'What changes at Busy Bees on October 1st, 2026: day passes, memberships, punch cards and birthday parties — and what stays the same if you already have a card or a booked party.',
   alternates: { canonical: '/pricing-changes' },
   // A dated announcement: keep it out of search results so it does not
   // outlive the change it describes.
@@ -25,7 +25,7 @@ export const metadata = {
 
 // The 1 October 2026 rates. Announced to customers 17 September.
 const OCTOBER_2026 = {
-  effective: '1 October',
+  effective: 'October 1st',
   dayPass: { child: 20, sibling: 10, infant: 10 },
   membership: { one: 65, two: 105, family: 135, previousOne: 100 },
   punchCard: { ten: 170, five: 90 },
