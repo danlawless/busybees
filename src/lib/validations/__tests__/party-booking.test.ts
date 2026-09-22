@@ -3,6 +3,10 @@ import {
   calculateBookingPrice,
   ADDITIONAL_KIDS_PRICE,
   GROUP_RATE_PRICE_PER_CHILD,
+  GROUP_RATE_PRIVATE_MINIMUM,
+  GROUP_RATE_MIN_CHILDREN,
+  GROUP_RATE_MAX_CHILDREN,
+  calculateGroupRatePrice,
   PACKAGE_PRICING,
   includedKidsForBooking,
 } from '@/lib/validations/party-booking';
@@ -112,5 +116,44 @@ describe('included children for an existing booking', () => {
   it('includes nobody for the group rate', () => {
     expect(includedKidsForBooking('group_rate', beforeCutover)).toBe(0);
     expect(includedKidsForBooking('group_rate', afterCutover)).toBe(0);
+  });
+});
+
+describe('group rate with exclusive use', () => {
+  it('charges per child when the group shares the floor', () => {
+    expect(calculateGroupRatePrice(10, { exclusiveUse: false }).total).toBe(150);
+    expect(calculateGroupRatePrice(30, { exclusiveUse: false }).total).toBe(450);
+  });
+
+  it('puts a floor under an exclusive booking', () => {
+    // A private two-hour slot for ten children at $150 undercuts the identical
+    // Basic Bee party at $500, and the $450 we have actually charged for a
+    // private playgroup. The floor is that proven price.
+    const small = calculateGroupRatePrice(10, { exclusiveUse: true });
+    expect(small.total).toBe(GROUP_RATE_PRIVATE_MINIMUM);
+    expect(small.minimumApplied).toBe(true);
+  });
+
+  it('charges per child once the group is big enough to clear the floor', () => {
+    const full = calculateGroupRatePrice(30, { exclusiveUse: true });
+    expect(full.total).toBe(450);
+    expect(full.minimumApplied).toBe(false);
+
+    const over = calculateGroupRatePrice(30, { exclusiveUse: true });
+    expect(over.perChildTotal).toBe(30 * GROUP_RATE_PRICE_PER_CHILD);
+  });
+
+  it('never prices an exclusive booking below a shared one', () => {
+    for (let n = GROUP_RATE_MIN_CHILDREN; n <= GROUP_RATE_MAX_CHILDREN; n++) {
+      expect(calculateGroupRatePrice(n, { exclusiveUse: true }).total).toBeGreaterThanOrEqual(
+        calculateGroupRatePrice(n, { exclusiveUse: false }).total
+      );
+    }
+  });
+
+  it('leaves the booking-flow quote per-child, since a booking is not exclusive use', () => {
+    // party_type 'private' means a private party room, not the run of the
+    // place -- a group booking is not automatically an exclusive hire.
+    expect(calculateBookingPrice('group_rate', 'private', 12).totalPrice).toBe(180);
   });
 });

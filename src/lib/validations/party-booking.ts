@@ -289,6 +289,45 @@ export const GROUP_RATE_MIN_CHILDREN = 10;
 export const GROUP_RATE_MAX_CHILDREN = 30;
 
 /**
+ * What an exclusive-use group visit costs at minimum.
+ *
+ * Per-child pricing alone breaks down when the group has the place to itself:
+ * ten children at $15 is $150 for the same two hours and the same room a Basic
+ * Bee party pays $500 for, and a third of the $450 we have actually charged
+ * for a private playgroup. The floor is that proven price, so a small group
+ * cannot buy exclusivity for less than the room is worth. It binds up to 30
+ * children, at which point per-child pricing reaches $450 on its own.
+ */
+export const GROUP_RATE_PRIVATE_MINIMUM = 450;
+
+export interface GroupRateQuote {
+  /** Head count x the per-child rate, before any minimum. */
+  perChildTotal: number;
+  /** What to charge. */
+  total: number;
+  /** True when the minimum, not the head count, set the price. */
+  minimumApplied: boolean;
+}
+
+/**
+ * Price a group visit. `exclusiveUse` means the group has the play area to
+ * itself; a group sharing the floor during open hours pays per child.
+ */
+export function calculateGroupRatePrice(
+  childCount: number,
+  { exclusiveUse }: { exclusiveUse: boolean }
+): GroupRateQuote {
+  const perChildTotal = childCount * GROUP_RATE_PRICE_PER_CHILD;
+  const total = exclusiveUse ? Math.max(perChildTotal, GROUP_RATE_PRIVATE_MINIMUM) : perChildTotal;
+
+  return {
+    perChildTotal,
+    total,
+    minimumApplied: total !== perChildTotal,
+  };
+}
+
+/**
  * Calculate total price for a party booking
  */
 export function calculateBookingPrice(
@@ -298,8 +337,10 @@ export function calculateBookingPrice(
 ): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
   // Group rate is charged per child at one flat rate, so the guest count is
   // the whole calculation -- no base price and no additional-child tier.
+  // partyType is about the party room, not the run of the place, so a booking
+  // is not exclusive use; that is priced through calculateGroupRatePrice.
   if (packageName === 'group_rate') {
-    const totalPrice = guestCount * GROUP_RATE_PRICE_PER_CHILD;
+    const { total: totalPrice } = calculateGroupRatePrice(guestCount, { exclusiveUse: false });
     return {
       basePrice: 0,
       additionalKidsPrice: 0,

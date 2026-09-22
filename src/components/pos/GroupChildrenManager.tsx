@@ -26,6 +26,8 @@ import {
 import { parseDateString } from '@/lib/utils';
 import {
   GROUP_RATE_PRICE_PER_CHILD,
+  GROUP_RATE_PRIVATE_MINIMUM,
+  calculateGroupRatePrice,
 } from '@/lib/validations/party-booking';
 
 interface SearchResultChild {
@@ -73,6 +75,9 @@ export function GroupChildrenManager({
   guestCount,
   onComplete,
 }: GroupChildrenManagerProps) {
+  // Whether the group has the play area to itself, which sets a price floor.
+  const [exclusiveUse, setExclusiveUse] = useState(false);
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResultChild[]>([]);
@@ -320,9 +325,11 @@ export function GroupChildrenManager({
     }
   };
 
-  // Every child costs the same from 1 October 2026, so the total is just a
-  // head count -- no per-child lookup and no age to inspect.
-  const groupTotal = assignedChildren.length * GROUP_RATE_PRICE_PER_CHILD;
+  // Every child costs the same from October 1st 2026, so the head count is the
+  // whole calculation -- no per-child lookup and no age to inspect. A group
+  // with the play area to itself pays at least the exclusive-use minimum.
+  const quote = calculateGroupRatePrice(assignedChildren.length, { exclusiveUse });
+  const groupTotal = quote.total;
 
   const allWaiversSigned = assignedChildren.every((c) => c.waiver_signed);
   const canProceed =
@@ -661,14 +668,37 @@ export function GroupChildrenManager({
             )}
           </div>
 
+          {/* Exclusive use */}
+          <div className="px-6 py-3 border-t border-gray-200">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={exclusiveUse}
+                onChange={(e) => setExclusiveUse(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-gray-900">Exclusive use of the play area</span>
+                <span className="block text-gray-600">
+                  The group has the place to itself. Minimum ${GROUP_RATE_PRIVATE_MINIMUM}.
+                </span>
+              </span>
+            </label>
+          </div>
+
           {/* Pricing Summary */}
           {assignedChildren.length > 0 && (
             <div className="px-6 py-3 bg-amber-50 border-t border-amber-200">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                  {/* One rate for every age since 1 October 2026, so there is a
-                      single line here rather than a 2+ / under-2 split. */}
+                  {/* One rate for every age since October 1st 2026, so there is
+                      a single line here rather than a 2+ / under-2 split. */}
                   <span>{assignedChildren.length} x ${GROUP_RATE_PRICE_PER_CHILD}</span>
+                  {quote.minimumApplied && (
+                    <span className="block text-amber-800">
+                      ${quote.perChildTotal.toFixed(2)} — exclusive-use minimum applied
+                    </span>
+                  )}
                 </div>
                 <span className="text-lg font-bold text-gray-900">${groupTotal.toFixed(2)}</span>
               </div>
