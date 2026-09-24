@@ -37,15 +37,13 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
         <motion.div className="text-center" variants={staggerContainer} initial="initial" animate="animate">
-          {/* The header already carries the logo, so the hero says one thing:
-              the headline over the photograph. */}
-          <motion.h1
-            variants={fadeInUp}
-            className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl"
-          >
-            Where little ones{' '}
-            <span className="text-primary-600">buzz, play &amp; grow</span>
-          </motion.h1>
+          {/* The hero is the photograph now. The heading stays in the markup
+              but out of sight: a page still needs one h1 for screen readers
+              and for search, and this is the only thing on the page that
+              names what Busy Bees is. */}
+          <h1 className="sr-only">
+            Busy Bees Indoor Play Center — where little ones buzz, play and grow
+          </h1>
 
           {/* Subhead */}
           <motion.p
