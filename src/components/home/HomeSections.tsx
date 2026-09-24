@@ -56,14 +56,17 @@ const playAreas = [
 export function PlayAreas() {
   return (
     <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="play">
-      <PhotoBackdrop src="/images/backgrounds/play-room.jpg" />
+      <PhotoBackdrop src="/images/backgrounds/play-open-floor.jpg" />
       <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="The hive is buzzing"
           title="Room to explore, made for little ones"
           sub="Every corner is designed for small hands and big imaginations — soft, safe, and endlessly fun for the 0–6 crowd."
         />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Held narrower than the section and tightened all round: at full width
+            these cards covered the photograph almost edge to edge, and the
+            point of the band is that the room shows through. */}
+        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {playAreas.map((a, i) => (
             <motion.div
               key={a.title}
@@ -71,18 +74,18 @@ export function PlayAreas() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.05 }}
-              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-6 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
+              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-4 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
             >
               {a.tag && (
-                <span className="absolute right-5 top-5 rounded-full bg-honey-400 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-charcoal-800">
+                <span className="absolute right-3 top-3 rounded-full bg-honey-400 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-charcoal-800">
                   {a.tag}
                 </span>
               )}
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary-200/40 bg-honey-100 text-3xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-200/40 bg-honey-100 text-xl">
                 {a.icon}
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-charcoal-800">{a.title}</h3>
-              <p className="mt-2 text-charcoal-600">{a.desc}</p>
+              <h3 className="mt-3 text-base font-semibold text-charcoal-800">{a.title}</h3>
+              <p className="mt-1 text-sm leading-snug text-charcoal-600">{a.desc}</p>
             </motion.div>
           ))}
         </div>
