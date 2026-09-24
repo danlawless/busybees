@@ -56,7 +56,7 @@ const playAreas = [
 export function PlayAreas() {
   return (
     <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="play">
-      <PhotoBackdrop src="/images/backgrounds/play-open-floor.jpg" />
+      <PhotoBackdrop src="/images/backgrounds/play-ride-on.jpg" />
       <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="The hive is buzzing"
@@ -66,7 +66,7 @@ export function PlayAreas() {
         {/* Held narrower than the section and tightened all round: at full width
             these cards covered the photograph almost edge to edge, and the
             point of the band is that the room shows through. */}
-        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {playAreas.map((a, i) => (
             <motion.div
               key={a.title}
@@ -74,18 +74,18 @@ export function PlayAreas() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.05 }}
-              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-4 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
+              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-3.5 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
             >
               {a.tag && (
                 <span className="absolute right-3 top-3 rounded-full bg-honey-400 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-charcoal-800">
                   {a.tag}
                 </span>
               )}
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-200/40 bg-honey-100 text-xl">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200/40 bg-honey-100 text-base">
                 {a.icon}
               </div>
-              <h3 className="mt-3 text-base font-semibold text-charcoal-800">{a.title}</h3>
-              <p className="mt-1 text-sm leading-snug text-charcoal-600">{a.desc}</p>
+              <h3 className="mt-2.5 text-sm font-semibold text-charcoal-800">{a.title}</h3>
+              <p className="mt-1 text-xs leading-snug text-charcoal-600">{a.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -104,8 +104,9 @@ const passes = [
 
 export function DayPasses() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="pricing">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="pricing">
+      <PhotoBackdrop src="/images/backgrounds/day-passes-swing.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="Day passes"
           title="Play all day, one sweet price"
@@ -244,8 +245,9 @@ const perks = [
 
 export function Membership() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="membership">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="membership">
+      <PhotoBackdrop src="/images/backgrounds/membership-play.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div {...fadeUp}>
             <Eyebrow>Busy Bee membership</Eyebrow>

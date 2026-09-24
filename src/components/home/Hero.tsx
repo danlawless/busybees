@@ -2,21 +2,9 @@
 
 import React from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/Button'
 import { PhotoBackdrop } from '@/components/home/PhotoBackdrop'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
-
-const MAPS_URL =
-  'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+301+Massachusetts+Avenue+Lunenburg+MA'
-
-const stats = [
-  { n: '0–6', l: 'Ages welcome' },
-  { n: 'All day', l: 'Play, no time limits' },
-  { n: 'Sparkling', l: 'Cleaned & sanitized' },
-  { n: 'Comfy', l: 'Café & parent seating' },
-]
 
 export function Hero() {
   return (
@@ -49,20 +37,11 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
         <motion.div className="text-center" variants={staggerContainer} initial="initial" animate="animate">
-          {/* Brand wordmark */}
-          <motion.div variants={fadeInUp}>
-            <div className="text-4xl sm:text-5xl font-bold leading-none text-honey-600">
-              Busy Bees
-            </div>
-            <div className="mt-1 text-xl sm:text-2xl text-charcoal-700">
-              Indoor Play Center
-            </div>
-          </motion.div>
-
-          {/* Title */}
+          {/* The header already carries the logo, so the hero says one thing:
+              the headline over the photograph. */}
           <motion.h1
             variants={fadeInUp}
-            className="mt-6 text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl"
+            className="text-4xl font-bold tracking-tight text-charcoal-800 sm:text-5xl lg:text-6xl"
           >
             Where little ones{' '}
             <span className="text-primary-600">buzz, play &amp; grow</span>
@@ -77,38 +56,6 @@ export function Hero() {
             preschoolers. Open 7 days a week — no time limits on play!
           </motion.p>
 
-          {/* CTA Buttons */}
-          <motion.div variants={fadeInUp} className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/customer/login">
-              <Button
-                size="lg"
-                className="px-8 py-4 text-lg font-semibold bg-honey-500 hover:bg-honey-600 text-charcoal-900 border-0 shadow-xl hover:shadow-2xl transition-all"
-              >
-                🍯 Join the Hive
-              </Button>
-            </Link>
-            <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
-              <button className="px-8 py-4 text-lg font-semibold rounded-full bg-white/90 text-charcoal-800 border-2 border-primary-300 shadow-lg hover:bg-white transition-all">
-                📍 Get Directions
-              </button>
-            </a>
-          </motion.div>
-
-          {/* Stats row */}
-          <motion.div
-            variants={fadeInUp}
-            className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto"
-          >
-            {stats.map((s) => (
-              <div
-                key={s.l}
-                className="rounded-2xl border border-primary-200/40 bg-white/90 backdrop-blur-sm px-4 py-4 shadow-soft"
-              >
-                <div className="text-xl sm:text-2xl font-bold text-charcoal-800">{s.n}</div>
-                <div className="mt-1 text-xs sm:text-sm text-charcoal-600">{s.l}</div>
-              </div>
-            ))}
-          </motion.div>
         </motion.div>
       </div>
     </section>
