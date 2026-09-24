@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Gift, Users, CalendarDays, MapPin, Phone, Mail, Clock, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PhotoBackdrop } from '@/components/home/PhotoBackdrop'
 
 const MAPS_URL =
   'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+301+Massachusetts+Avenue+Lunenburg+MA'
@@ -26,16 +27,20 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function SectionHead({
   eyebrow,
   title,
+  lead,
   sub,
 }: {
   eyebrow: string
   title: string
+  /** Sits above `sub`, for a section that wants to set the scene first. */
+  lead?: string
   sub?: string
 }) {
   return (
     <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center mb-12">
       <Eyebrow>{eyebrow}</Eyebrow>
       <h2 className="mt-4 text-3xl sm:text-4xl font-bold text-charcoal-800">{title}</h2>
+      {lead && <p className="mt-4 text-lg text-charcoal-600">{lead}</p>}
       {sub && <p className="mt-4 text-lg text-charcoal-600">{sub}</p>}
     </motion.div>
   )
@@ -54,14 +59,19 @@ const playAreas = [
 
 export function PlayAreas() {
   return (
-    <section className="py-16 sm:py-20 bg-white" id="play">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="play">
+      <PhotoBackdrop src="/images/backgrounds/play-ride-on.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="The hive is buzzing"
           title="Room to explore, made for little ones"
+          lead="6,000 square feet of indoor playground built just for babies, toddlers, and preschoolers. Open 7 days a week — no time limits on play!"
           sub="Every corner is designed for small hands and big imaginations — soft, safe, and endlessly fun for the 0–6 crowd."
         />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Held narrower than the section and tightened all round: at full width
+            these cards covered the photograph almost edge to edge, and the
+            point of the band is that the room shows through. */}
+        <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {playAreas.map((a, i) => (
             <motion.div
               key={a.title}
@@ -69,18 +79,18 @@ export function PlayAreas() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.05 }}
-              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-6 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
+              className="relative rounded-2xl border border-primary-200/30 bg-[#FFFDF7] p-3.5 shadow-soft hover:shadow-medium hover:-translate-y-1 transition-all duration-200"
             >
               {a.tag && (
-                <span className="absolute right-5 top-5 rounded-full bg-honey-400 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-charcoal-800">
+                <span className="absolute right-3 top-3 rounded-full bg-honey-400 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-charcoal-800">
                   {a.tag}
                 </span>
               )}
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary-200/40 bg-honey-100 text-3xl">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200/40 bg-honey-100 text-base">
                 {a.icon}
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-charcoal-800">{a.title}</h3>
-              <p className="mt-2 text-charcoal-600">{a.desc}</p>
+              <h3 className="mt-2.5 text-sm font-semibold text-charcoal-800">{a.title}</h3>
+              <p className="mt-1 text-xs leading-snug text-charcoal-600">{a.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -99,8 +109,9 @@ const passes = [
 
 export function DayPasses() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="pricing">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="pricing">
+      <PhotoBackdrop src="/images/backgrounds/day-passes-swing.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="Day passes"
           title="Play all day, one sweet price"
@@ -161,8 +172,9 @@ const partyTiers = [
 
 export function HomeParties() {
   return (
-    <section className="py-16 sm:py-20 bg-white" id="parties">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="parties">
+      <PhotoBackdrop src="/images/backgrounds/party-playhouses.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="Birthday parties"
           title="Un-bee-lievable birthdays, zero stress"
@@ -238,8 +250,9 @@ const perks = [
 
 export function Membership() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="membership">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="membership">
+      <PhotoBackdrop src="/images/backgrounds/membership-play.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div {...fadeUp}>
             <Eyebrow>Busy Bee membership</Eyebrow>
@@ -340,8 +353,9 @@ export function MoreWays() {
 
 export function LocationHours() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="visit">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="visit">
+      <PhotoBackdrop src="/images/backgrounds/visit-welcome.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div {...fadeUp}>
             <Eyebrow>Come visit</Eyebrow>
