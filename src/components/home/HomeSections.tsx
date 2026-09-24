@@ -12,6 +12,7 @@ import {
   includedKidsLabel,
   type CatalogPass,
 } from '@/lib/pricing/catalog'
+import { PhotoBackdrop } from '@/components/home/PhotoBackdrop'
 
 const MAPS_URL =
   'https://maps.google.com/?q=Busy+Bees+Indoor+Play+Center+301+Massachusetts+Avenue+Lunenburg+MA'
@@ -62,8 +63,9 @@ const playAreas = [
 
 export function PlayAreas() {
   return (
-    <section className="py-16 sm:py-20 bg-white" id="play">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="play">
+      <PhotoBackdrop src="/images/backgrounds/play-areas.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="The hive is buzzing"
           title="Room to explore, made for little ones"
@@ -173,8 +175,9 @@ export function HomeParties() {
   }))
 
   return (
-    <section className="py-16 sm:py-20 bg-white" id="parties">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-white" id="parties">
+      <PhotoBackdrop src="/images/backgrounds/party-room.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <SectionHead
           eyebrow="Birthday parties"
           title="Un-bee-lievable birthdays, zero stress"
@@ -363,8 +366,9 @@ export function MoreWays() {
 
 export function LocationHours() {
   return (
-    <section className="py-16 sm:py-20 bg-[#FFF8E7]" id="visit">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-[#FFF8E7]" id="visit">
+      <PhotoBackdrop src="/images/backgrounds/visit-us.jpg" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <motion.div {...fadeUp}>
             <Eyebrow>Come visit</Eyebrow>
