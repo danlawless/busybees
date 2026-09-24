@@ -8,7 +8,15 @@ import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden py-20 sm:py-28 lg:py-32 min-h-[34rem]">
+    // The hero is shaped to the photograph rather than the other way round.
+    // object-cover fills the box and crops whatever overflows, so a 3:2 photo
+    // in a short, wide hero loses its top and bottom -- which took the faces
+    // off the two boys on a full-screen monitor, while a narrower window
+    // looked fine. Matching the file's own ratio means nothing is ever cut.
+    <section
+      className="relative flex w-full items-center overflow-hidden min-h-[20rem]"
+      style={{ aspectRatio: '1024 / 683' }}
+    >
       {/* A photograph of the play floor, in place of the honeycomb illustration
           that used to sit here. Same treatment as the bands further down the
           page, on the lighter of the two scrims -- the headline is big enough
@@ -35,7 +43,7 @@ export function Hero() {
         </motion.div>
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 z-20">
+      <div className="relative z-20 mx-auto w-full min-w-0 max-w-7xl px-6 sm:px-8 lg:px-12">
         <motion.div className="text-center" variants={staggerContainer} initial="initial" animate="animate">
           {/* The hero is the photograph now. The heading stays in the markup
               but out of sight: a page still needs one h1 for screen readers
