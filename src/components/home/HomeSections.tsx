@@ -27,16 +27,20 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function SectionHead({
   eyebrow,
   title,
+  lead,
   sub,
 }: {
   eyebrow: string
   title: string
+  /** Sits above `sub`, for a section that wants to set the scene first. */
+  lead?: string
   sub?: string
 }) {
   return (
     <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center mb-12">
       <Eyebrow>{eyebrow}</Eyebrow>
       <h2 className="mt-4 text-3xl sm:text-4xl font-bold text-charcoal-800">{title}</h2>
+      {lead && <p className="mt-4 text-lg text-charcoal-600">{lead}</p>}
       {sub && <p className="mt-4 text-lg text-charcoal-600">{sub}</p>}
     </motion.div>
   )
@@ -61,6 +65,7 @@ export function PlayAreas() {
         <SectionHead
           eyebrow="The hive is buzzing"
           title="Room to explore, made for little ones"
+          lead="6,000 square feet of indoor playground built just for babies, toddlers, and preschoolers. Open 7 days a week — no time limits on play!"
           sub="Every corner is designed for small hands and big imaginations — soft, safe, and endlessly fun for the 0–6 crowd."
         />
         {/* Held narrower than the section and tightened all round: at full width
