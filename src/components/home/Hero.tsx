@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
+import { PhotoBackdrop } from '@/components/home/PhotoBackdrop'
 import { fadeInUp, staggerContainer } from '@/lib/utils'
 
 const MAPS_URL =
@@ -20,21 +21,11 @@ const stats = [
 export function Hero() {
   return (
     <section className="relative overflow-hidden py-20 sm:py-28 lg:py-32 min-h-[34rem]">
-      {/* Hero background image */}
-      <div className="absolute inset-0 z-0" aria-hidden>
-        <Image
-          src="/hero-background.png"
-          alt=""
-          fill
-          className="object-cover object-center"
-          priority
-          sizes="100vw"
-        />
-        <div
-          className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/30 via-transparent to-[#FFF8E7]/25"
-          aria-hidden
-        />
-      </div>
+      {/* A photograph of the play floor, in place of the honeycomb illustration
+          that used to sit here. Same treatment as the bands further down the
+          page, on the lighter of the two scrims -- the headline is big enough
+          to hold its own against more of the picture. */}
+      <PhotoBackdrop src="/images/backgrounds/hero-kids-climbing.jpg" tone="hero" priority />
 
       {/* Flying Bees beside title (large screens only) */}
       <div className="absolute left-1/2 top-28 z-10 hidden -translate-x-[26rem] -translate-y-1/2 xl:block">
