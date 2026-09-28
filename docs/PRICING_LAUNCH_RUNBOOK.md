@@ -346,6 +346,32 @@ deploying, day passes would price at $20 while a one-year-old still counts as
 an infant under the old threshold. Deploy the code and land the price change
 together, or deploy first.
 
+### Parties already on the books keep their included count
+
+The announcement promises booked parties are locked in at the quoted price.
+Basic Bee drops from 15 included children to 10 on the ladder, and as of
+15 September there are **six confirmed Basic Bee parties booked pre-October
+with 15 guests each**. Every reader of an existing booking — the admin overage
+charge, the post-party thank-you recap, the admin guest list — now goes through
+`includedKidsForBooking(packageName, created_at)`, which returns the old count
+for anything booked before **midnight Eastern on 1 October**
+(`PARTY_LADDER_CUTOVER` in `src/lib/validations/party-booking.ts`).
+
+The cutover is keyed on when the party was *booked*, not when it is held. That
+leaves one window to watch: if this deploys on the evening of 30 September, a
+party booked between the deploy and midnight is quoted on the *new* ladder but
+dated before the cutover, so it would be treated as legacy — Basic Bee with 15
+included instead of 10, undercharging by up to $75. After the deploy, check:
+
+```sql
+SELECT id, package_name, guest_count, created_at
+FROM public.party_bookings
+WHERE created_at >= '<deploy time>' AND created_at < '2026-10-01 00:00-04';
+```
+
+Anything listed was quoted with the new counts; note the booking so overage
+is charged by hand if it comes to it. An empty result means nothing to do.
+
 ## Step 3: Verify
 
 ```bash
@@ -358,6 +384,19 @@ checks the party ladder still holds, compares `party_packages` against
 surfaces read from one source (`src/lib/pricing/catalog.ts`), so no marketing
 copy needs touching separately — but this script is still the only thing that
 proves it.
+
+## After launch: retire the announcement page
+
+`/pricing-changes` (branch `pricing-changes-page`, shipped 17 September) holds
+its own copy of the October rates because the catalog could not show them
+before the night. Once the change is live the catalog is the truth again, so:
+
+1. End the "See what's changing" announcement in the admin announcements screen
+   (or let its scheduled end date do it).
+2. Delete `src/app/pricing-changes/` and redirect the path to `/info` in
+   `next.config` so links in the sent email keep working.
+
+Leave it a couple of weeks — the email is still in inboxes.
 
 ---
 
