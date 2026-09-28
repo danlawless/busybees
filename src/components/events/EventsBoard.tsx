@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { EventCard } from './EventCard';
-import { formatDateToYYYYMMDD } from '@/lib/utils';
+import { categorizeEvents, type EventCategory } from '@/lib/events/schedule';
 
 interface PublicEvent {
   id: string;
@@ -16,8 +16,6 @@ interface PublicEvent {
   event_time_end: string | null;
   is_free: boolean;
 }
-
-type EventCategory = 'happening-now' | 'upcoming' | 'past';
 
 interface CategorizedEvent extends PublicEvent {
   category: EventCategory;
@@ -46,82 +44,6 @@ export function EventsBoard() {
     }
   };
 
-  const categorizeEvents = (): {
-    happeningNow: CategorizedEvent[];
-    upcoming: CategorizedEvent[];
-    past: CategorizedEvent[];
-  } => {
-    const now = new Date();
-    const todayStr = formatDateToYYYYMMDD(now);
-    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const happeningNow: CategorizedEvent[] = [];
-    const upcoming: CategorizedEvent[] = [];
-    const past: CategorizedEvent[] = [];
-
-    for (const event of events) {
-      const eventStart = event.event_date;
-      const eventEnd = event.event_date_end || event.event_date;
-
-      if (eventEnd < todayStr) {
-        // Event (or last day of multi-day event) is in the past
-        past.push({ ...event, category: 'past' });
-      } else if (eventStart <= todayStr && eventEnd >= todayStr) {
-        // Today falls within the event date range
-        const isFirstDay = eventStart === todayStr;
-        const isLastDay = eventEnd === todayStr;
-
-        const [startH, startM] = event.event_time_start.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-
-        let endMinutes = startMinutes + 120; // Default 2hr if no end time
-        if (event.event_time_end) {
-          const [endH, endM] = event.event_time_end.split(':').map(Number);
-          endMinutes = endH * 60 + endM;
-        }
-
-        // Multi-day event: middle days are always "happening now" during business hours
-        const isMiddleDay = !isFirstDay && !isLastDay;
-
-        if (isMiddleDay) {
-          happeningNow.push({ ...event, category: 'happening-now' });
-        } else if (isFirstDay && isLastDay) {
-          // Single-day event or first==last day
-          if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
-            happeningNow.push({ ...event, category: 'happening-now' });
-          } else if (currentTimeMinutes < startMinutes) {
-            upcoming.push({ ...event, category: 'upcoming' });
-          } else {
-            past.push({ ...event, category: 'past' });
-          }
-        } else if (isFirstDay) {
-          // First day of multi-day: happening now once start time passes
-          if (currentTimeMinutes >= startMinutes) {
-            happeningNow.push({ ...event, category: 'happening-now' });
-          } else {
-            upcoming.push({ ...event, category: 'upcoming' });
-          }
-        } else {
-          // Last day of multi-day: happening now until end time
-          if (currentTimeMinutes <= endMinutes) {
-            happeningNow.push({ ...event, category: 'happening-now' });
-          } else {
-            past.push({ ...event, category: 'past' });
-          }
-        }
-      } else {
-        // Event starts in the future
-        upcoming.push({ ...event, category: 'upcoming' });
-      }
-    }
-
-    // Sort upcoming by date ascending, past by date descending
-    upcoming.sort((a, b) => a.event_date.localeCompare(b.event_date));
-    past.sort((a, b) => b.event_date.localeCompare(a.event_date));
-
-    return { happeningNow, upcoming, past };
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -138,7 +60,9 @@ export function EventsBoard() {
     );
   }
 
-  const { happeningNow, upcoming } = categorizeEvents();
+  // Scheduling rules live in lib/events/schedule, so this page and the
+  // homepage's featured slot always agree on what "upcoming" means.
+  const { happeningNow, upcoming } = categorizeEvents(events);
   const hasNoEvents = happeningNow.length === 0 && upcoming.length === 0;
 
   if (hasNoEvents) {
