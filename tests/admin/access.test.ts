@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decidePageAccess, decideApiAccess } from '@/lib/admin/access';
+import { decidePageAccess, decideApiAccess, liveAdminLevel } from '@/lib/admin/access';
 
 const now = 1_000_000_000_000;
 const fresh = now - 60_000;
@@ -76,5 +76,24 @@ describe('decideApiAccess', () => {
   });
   it('self exemption is always passed to the route', () => {
     expect(decideApiAccess({ pathname: '/api/admin/gift-cards/send-reminders', role: null, signedIn: false, startedAt: null, now })).toEqual({ kind: 'allow' });
+  });
+});
+
+describe('liveAdminLevel', () => {
+  it('returns the level for staff/admin with a live stamp', () => {
+    expect(liveAdminLevel({ role: 'staff', startedAt: fresh, now })).toBe('staff');
+    expect(liveAdminLevel({ role: 'admin', startedAt: fresh, now })).toBe('admin');
+  });
+  it('null without a staff/admin role', () => {
+    expect(liveAdminLevel({ role: null, startedAt: fresh, now })).toBeNull();
+    expect(liveAdminLevel({ role: 'customer', startedAt: fresh, now })).toBeNull();
+  });
+  it('null when the stamp is missing, stale or in the future', () => {
+    expect(liveAdminLevel({ role: 'admin', startedAt: null, now })).toBeNull();
+    expect(liveAdminLevel({ role: 'admin', startedAt: stale, now })).toBeNull();
+    expect(liveAdminLevel({ role: 'staff', startedAt: now + 60_000, now })).toBeNull();
+  });
+  it('null at exactly the 12-hour edge', () => {
+    expect(liveAdminLevel({ role: 'staff', startedAt: now - 12 * 60 * 60 * 1000, now })).toBeNull();
   });
 });

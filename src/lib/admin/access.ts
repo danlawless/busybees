@@ -1,4 +1,4 @@
-import { levelForPath, roleToLevel } from './nav';
+import { levelForPath, roleToLevel, type Level } from './nav';
 import { apiLevelForPath } from './api-access';
 import { MAX_SESSION_MS } from './session-stamp';
 
@@ -29,4 +29,10 @@ export function decideApiAccess(i: { pathname: string; method?: string; role: st
   if (!live(i.startedAt, i.now)) return { kind: 'deny', status: 401 };
   if (need === 'admin' && level !== 'admin') return { kind: 'deny', status: 403 };
   return { kind: 'allow' };
+}
+
+/** GET /api/admin/session: the level when the role is staff/admin and the stamp is live, else null. */
+export function liveAdminLevel(i: { role: string | null; startedAt: number | null; now: number }): Level | null {
+  const level = roleToLevel(i.role);
+  return level && live(i.startedAt, i.now) ? level : null;
 }

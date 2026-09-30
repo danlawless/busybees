@@ -3,7 +3,9 @@ import { createServerClient } from '@supabase/ssr';
 import { resolvePinLevel } from '@/lib/admin/pin-login';
 import { clientKeyFrom, createRateLimiter, gateAttempt } from '@/lib/admin/rate-limit';
 import { SHARED_ACCOUNTS, loadPinHashes } from '@/lib/admin/shared-accounts';
-import { STAMP_COOKIE, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
+import { STAMP_COOKIE, readStamp, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
+import { liveAdminLevel } from '@/lib/admin/access';
+import { getAdminLevel } from '@/lib/admin/guard';
 import { logger } from '@/lib/logger';
 
 // Per-instance limiter. A cold start resets it; acceptable for v1 (spec 5.2).
@@ -22,6 +24,19 @@ function sessionClient(req: NextRequest, res: NextResponse) {
       setAll: list => list.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
     },
   });
+}
+
+/**
+ * Is there a live admin session? 200 { level } only when users.role is staff/admin
+ * AND the signed bb_admin_started stamp is valid and within MAX_SESSION_MS.
+ * The POS calls this before restoring staff mode from a remembered login.
+ */
+export async function GET(req: NextRequest) {
+  const role = await getAdminLevel();
+  const startedAt = await readStamp(req.cookies.get(STAMP_COOKIE)?.value, process.env.ADMIN_SESSION_SECRET ?? '');
+  const level = liveAdminLevel({ role, startedAt, now: Date.now() });
+  if (!level) return NextResponse.json({ error: 'session-ended' }, { status: 401 });
+  return NextResponse.json({ level });
 }
 
 export async function POST(req: NextRequest) {

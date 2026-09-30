@@ -155,6 +155,10 @@ export default function POSPage() {
                 if (response.ok) {
                     const { user } = await response.json();
                     if (user && (user.role === 'staff' || user.role === 'admin')) {
+                        // Admin APIs also need a live signed session stamp; without
+                        // one, stay in customer mode so staff log in again.
+                        const adminSession = await fetch('/api/admin/session');
+                        if (!adminSession.ok) return;
                         setStaffUser({ id: user.id, name: user.name, role: user.role });
                         setIsStaffMode(true);
                         setCurrentView("admin");
