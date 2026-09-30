@@ -103,3 +103,16 @@ describe('liveAdminLevel', () => {
     expect(liveAdminLevel({ role: 'staff', startedAt: now - 12 * 60 * 60 * 1000, now })).toBeNull();
   });
 });
+
+describe('kiosk group-rate exemptions', () => {
+  const base = { startedAt: null, now };
+  it('a signed-in customer may sign a waiver', () => {
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers/abc/children/def/waiver', method: 'POST', role: 'customer', signedIn: true })).toEqual({ kind: 'allow' });
+  });
+  it('a signed-in customer may not delete a customer', () => {
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers/x', method: 'DELETE', role: 'customer', signedIn: true })).toEqual({ kind: 'deny', status: 403 });
+  });
+  it('anonymous callers are refused', () => {
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers/abc/children/def/waiver', method: 'POST', role: null, signedIn: false })).toEqual({ kind: 'deny', status: 401 });
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { apiLevelForPath, API_EXEMPTIONS, isExplicitlyClassified } from '@/lib/admin/api-access';
+import { apiLevelForPath, API_EXEMPTIONS, KIOSK_EXEMPTIONS, isExplicitlyClassified } from '@/lib/admin/api-access';
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -82,5 +82,31 @@ describe('apiLevelForPath', () => {
   it('every exemption points at a real route', () => {
     const urls = new Set(routeFiles('src/app/api/admin').map(toUrl));
     for (const path of Object.keys(API_EXEMPTIONS)) expect(urls.has(path), path).toBe(true);
+  });
+
+  it('lets a signed-in kiosk reach exactly the group-rate child calls, method by method', () => {
+    expect(apiLevelForPath('/api/admin/children/search', 'GET')).toBe('signed-in');
+    expect(apiLevelForPath('/api/admin/customers', 'POST')).toBe('signed-in');
+    expect(apiLevelForPath('/api/admin/customers/abc/children', 'POST')).toBe('signed-in');
+    expect(apiLevelForPath('/api/admin/customers/abc/children/def/waiver', 'POST')).toBe('signed-in');
+  });
+
+  it('keeps every other method and shape on those routes at staff', () => {
+    expect(apiLevelForPath('/api/admin/customers', 'GET')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc', 'DELETE')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc', 'PATCH')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc/children', 'GET')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc/children/def', 'DELETE')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc/children/def/waiver', 'DELETE')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/children/search', 'POST')).toBe('staff');
+    // a dynamic segment is one segment, never a prefix
+    expect(apiLevelForPath('/api/admin/customers/abc/extra/children', 'POST')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc/children/def/waiver/extra', 'POST')).toBe('staff');
+    expect(apiLevelForPath('/api/admin/customers/abc/payment-methods/def/default', 'POST')).toBe('staff');
+  });
+
+  it('every kiosk exemption points at a real route', () => {
+    const urls = new Set(routeFiles('src/app/api/admin').map(toUrl));
+    for (const { pattern } of KIOSK_EXEMPTIONS) expect(urls.has(pattern.replace(/:[^/]+/g, 'x')), pattern).toBe(true);
   });
 });
