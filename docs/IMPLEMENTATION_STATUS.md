@@ -6,7 +6,7 @@
 - ✅ Supabase browser client (`src/lib/supabase/client.ts`)
 - ✅ Supabase server client (`src/lib/supabase/server.ts`)
 - ✅ TypeScript database types (`src/lib/supabase/database.types.ts`)
-- ✅ Middleware with auth session refresh (`middleware.ts`)
+- ✅ Middleware with auth session refresh (`src/middleware.ts`)
 - ✅ Environment variable configuration (`env.example`)
 
 ### 2. Database Schema
