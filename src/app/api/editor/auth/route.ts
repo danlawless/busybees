@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'universal-editor-secret'
-
 export async function POST(request: NextRequest) {
+  const adminPassword = process.env.EDITOR_PASSWORD
+  const JWT_SECRET = process.env.JWT_SECRET
+  if (!adminPassword || !JWT_SECRET) {
+    return NextResponse.json({ success: false, error: 'Editor not configured' }, { status: 503 })
+  }
+
   try {
     const body = await request.json()
     const { action, password, token } = body
-    
-    console.log('Auth API called:', { action, passwordLength: password?.length })
 
     if (action === 'login') {
-      const adminPassword = process.env.EDITOR_PASSWORD || 'universal2025!'
-      console.log('Comparing passwords:', { 
-        received: password, 
-        expected: adminPassword,
-        match: password === adminPassword 
-      })
-      
       if (password === adminPassword) {
         const authToken = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '24h' })
         return NextResponse.json({ 
@@ -26,7 +21,6 @@ export async function POST(request: NextRequest) {
           message: 'Authentication successful' 
         })
       } else {
-        console.log('Password mismatch!')
         return NextResponse.json({ 
           success: false, 
           message: 'Invalid password' 

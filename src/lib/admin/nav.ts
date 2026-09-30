@@ -66,7 +66,6 @@ export const BRIDGED_VIEWS: Record<string, AdminView> = {
   announcements: 'announcements',
   sales: 'sales',
   products: 'products',
-  settings: 'settings',
 };
 
 const ALL_ITEMS = NAV.flatMap(g => g.items);
