@@ -26,3 +26,14 @@ export function createRateLimiter(opts: { max: number; windowMs: number; lockMs:
     reset(key: string) { map.delete(key); },
   };
 }
+
+// Real client identity for rate limiting. x-real-ip is set by the platform
+// (Vercel) to the connecting client. Otherwise the LAST x-forwarded-for entry,
+// the hop appended by the nearest proxy; earlier entries are client-supplied
+// and spoofable, so they are never trusted.
+export function clientKeyFrom(headers: Headers): string {
+  const real = headers.get('x-real-ip')?.trim();
+  if (real) return real;
+  const parts = (headers.get('x-forwarded-for') ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  return parts[parts.length - 1] || 'unknown';
+}

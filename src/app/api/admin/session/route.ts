@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { resolvePinLevel } from '@/lib/admin/pin-login';
-import { createRateLimiter } from '@/lib/admin/rate-limit';
+import { clientKeyFrom, createRateLimiter } from '@/lib/admin/rate-limit';
 import { SHARED_ACCOUNTS, loadPinHashes } from '@/lib/admin/shared-accounts';
 import { STAMP_COOKIE, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
 import { logger } from '@/lib/logger';
@@ -9,9 +9,10 @@ import { logger } from '@/lib/logger';
 // Per-instance limiter. A cold start resets it; acceptable for v1 (spec 5.2).
 const limiter = createRateLimiter({ max: 5, windowMs: 10 * 60_000, lockMs: 10 * 60_000 });
 
-function clientKey(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-}
+// Shop-wide cap so rotating client identities cannot escape the per-client limit.
+// Trade-off: a flood of wrong codes from anywhere can lock PIN login for everyone
+// for 10 minutes. Accepted: 10,000 codes make an uncapped guesser the worse risk.
+const globalLimiter = createRateLimiter({ max: 50, windowMs: 10 * 60_000, lockMs: 10 * 60_000 });
 
 function sessionClient(req: NextRequest, res: NextResponse) {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -23,11 +24,13 @@ function sessionClient(req: NextRequest, res: NextResponse) {
 }
 
 export async function POST(req: NextRequest) {
-  const key = clientKey(req);
-  // Record the attempt before any await so parallel bursts cannot outrun the limit.
+  const key = clientKeyFrom(req.headers);
+  // Record both attempts before any await so parallel bursts cannot outrun the limits.
   const gate = limiter.attempt(key);
-  if (!gate.allowed) {
-    return NextResponse.json({ error: 'locked', retryAfterSeconds: Math.ceil(gate.retryAfterMs / 1000) }, { status: 429 });
+  const all = globalLimiter.attempt('all');
+  if (!gate.allowed || !all.allowed) {
+    const retryAfterMs = Math.max(gate.allowed ? 0 : gate.retryAfterMs, all.allowed ? 0 : all.retryAfterMs);
+    return NextResponse.json({ error: 'locked', retryAfterSeconds: Math.ceil(retryAfterMs / 1000) }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
     logger.warn({ remaining: gate.remaining }, 'Admin PIN mismatch');
     return NextResponse.json({ error: 'mismatch', remaining: gate.remaining }, { status: 401 });
   }
-  limiter.reset(key);
+  limiter.reset(key); // per-client only: a correct login must not wipe the shop-wide budget
 
   const account = SHARED_ACCOUNTS[level];
   const password = process.env[account.passwordEnv];

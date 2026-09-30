@@ -48,4 +48,14 @@ describe('rate limiter', () => {
     expect(results.filter(r => r.allowed)).toHaveLength(5);
     expect(results.filter(r => !r.allowed)).toHaveLength(5);
   });
+
+  it('a shared global limiter locks on the 50th attempt even when keys rotate', () => {
+    const global = createRateLimiter({ max: 50, windowMs: 600_000, lockMs: 600_000, now: () => 0 });
+    for (let i = 0; i < 49; i++) expect(global.attempt('all').allowed).toBe(true);
+    // each attempt would come from a fresh per-client key; the global key is constant
+    const perClient = createRateLimiter({ max: 5, windowMs: 600_000, lockMs: 600_000, now: () => 0 });
+    for (let i = 0; i < 49; i++) expect(perClient.attempt(`spoof-${i}`).remaining).toBe(4);
+    expect(global.attempt('all').remaining).toBe(0);
+    expect(global.check('all').allowed).toBe(false);
+  });
 });
