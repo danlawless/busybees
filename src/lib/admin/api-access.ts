@@ -23,7 +23,17 @@ const ADMIN_PREFIXES = [
   '/api/admin/top-customers',
   '/api/admin/staff',
   '/api/admin/pins',
+  '/api/admin/check-admin-pin',
   '/api/settings',
+];
+
+/** Day-to-day routes staff may call. Anything under /api/admin not listed here or in ADMIN_PREFIXES is admin. */
+const STAFF_PREFIXES = [
+  '/api/admin/after-dark-bookings', '/api/admin/after-dark-movies', '/api/admin/announcements',
+  '/api/admin/children', '/api/admin/coupons', '/api/admin/customers', '/api/admin/event-bookings',
+  '/api/admin/events', '/api/admin/gift-cards', '/api/admin/groups', '/api/admin/monthly-members',
+  '/api/admin/party-bookings', '/api/admin/party-packages', '/api/admin/party-time-slots',
+  '/api/admin/punch-cards', '/api/admin/sibling-discounts', '/api/admin/staff-discounts',
 ];
 
 function under(pathname: string, prefix: string): boolean {
@@ -36,6 +46,17 @@ export function apiLevelForPath(pathname: string, method = 'GET'): ApiLevel | nu
   if (method.toUpperCase() === 'GET' && KIOSK_READS.has(path)) return null;
   if (API_EXEMPTIONS[path]) return API_EXEMPTIONS[path];
   if (ADMIN_PREFIXES.some(p => under(path, p))) return 'admin';
-  if (under(path, '/api/admin')) return 'staff';
+  if (STAFF_PREFIXES.some(p => under(path, p))) return 'staff';
+  if (under(path, '/api/admin')) return 'admin';
   return null;
+}
+
+export function isExplicitlyClassified(pathname: string): boolean {
+  const path = pathname.replace(/\/$/, '');
+  if (OPEN.has(path)) return true;
+  if (KIOSK_READS.has(path)) return true;
+  if (API_EXEMPTIONS[path]) return true;
+  if (ADMIN_PREFIXES.some(p => under(path, p))) return true;
+  if (STAFF_PREFIXES.some(p => under(path, p))) return true;
+  return false;
 }

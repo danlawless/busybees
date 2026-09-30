@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { apiLevelForPath, API_EXEMPTIONS } from '@/lib/admin/api-access';
+import { apiLevelForPath, API_EXEMPTIONS, isExplicitlyClassified } from '@/lib/admin/api-access';
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
@@ -35,6 +35,7 @@ describe('apiLevelForPath', () => {
     expect(apiLevelForPath('/api/admin/staff/x')).toBe('admin');
     expect(apiLevelForPath('/api/admin/pins')).toBe('admin');
     expect(apiLevelForPath('/api/settings')).toBe('admin');
+    expect(apiLevelForPath('/api/settings/pos-pin', 'POST')).toBe('admin');
   });
 
   it('classifies day-to-day data as staff', () => {
@@ -46,6 +47,11 @@ describe('apiLevelForPath', () => {
   it('keeps the kiosk group-rate assignment and the reminder cron reachable', () => {
     expect(apiLevelForPath('/api/admin/group-booking/assign-children')).toBe('signed-in');
     expect(apiLevelForPath('/api/admin/gift-cards/send-reminders')).toBe('self');
+  });
+
+  it('defaults unknown admin routes to admin (fail closed)', () => {
+    expect(apiLevelForPath('/api/admin/some-new-route')).toBe('admin');
+    expect(apiLevelForPath('/api/admin/some-new-route', 'POST')).toBe('admin');
   });
 
   it('lets the kiosk read its three settings with no session, but not write them', () => {
@@ -62,7 +68,7 @@ describe('apiLevelForPath', () => {
     for (const f of files) {
       const url = toUrl(f);
       if (url === '/api/admin/session') continue;
-      expect(apiLevelForPath(url, 'POST'), url).not.toBeNull();
+      expect(isExplicitlyClassified(url), url).toBe(true);
     }
   });
 
