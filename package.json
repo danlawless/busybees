@@ -13,6 +13,8 @@
     "build": "node scripts/inject-sw-version.js && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "seed:promos": "tsx scripts/seed-promos.ts",
     "stripe:migrate": "tsx scripts/migrate-stripe-to-live.ts",
     "stripe:migrate:dry": "tsx scripts/migrate-stripe-to-live.ts --dry-run"
@@ -64,6 +66,8 @@
     "require-in-the-middle": "^8.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.7"
   }
 }
