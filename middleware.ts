@@ -1,7 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { decidePageAccess, decideApiAccess } from '@/lib/admin/access';
+import { apiLevelForPath } from '@/lib/admin/api-access';
 import { readStamp, STAMP_COOKIE } from '@/lib/admin/session-stamp';
+
+// Carry cookies refreshed by getUser() (rotated refresh token) onto a replacement response
+function withCookies<T extends NextResponse>(from: NextResponse, to: T): T {
+  from.cookies.getAll().forEach(c => to.cookies.set(c));
+  return to;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -44,6 +51,12 @@ export async function middleware(request: NextRequest) {
   const isGuardedApi = pathname.startsWith('/api/admin') || pathname.startsWith('/api/settings');
 
   if (isAdminPage || isEditor || isGuardedApi) {
+    // Ungated API paths (kiosk polls, self-authenticated routes) skip the role query and stamp check
+    if (isGuardedApi) {
+      const need = apiLevelForPath(pathname, request.method);
+      if (need === null || need === 'self') return response;
+    }
+
     let role: string | null = null;
     if (user) {
       const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
@@ -56,7 +69,7 @@ export async function middleware(request: NextRequest) {
     if (isGuardedApi) {
       const d = decideApiAccess({ pathname, method: request.method, role, signedIn: !!user, startedAt, now });
       if (d.kind === 'deny') {
-        return NextResponse.json({ error: d.status === 401 ? 'session-ended' : 'forbidden' }, { status: d.status });
+        return withCookies(response, NextResponse.json({ error: d.status === 401 ? 'session-ended' : 'forbidden' }, { status: d.status }));
       }
       return response;
     }
@@ -66,20 +79,10 @@ export async function middleware(request: NextRequest) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/admin/login';
       loginUrl.search = `?to=${encodeURIComponent(d.to)}`;
-      const redirect = NextResponse.redirect(loginUrl);
-      response.cookies.getAll().forEach(c => redirect.cookies.set(c));
-      return redirect;
+      return withCookies(response, NextResponse.redirect(loginUrl));
     }
 
-    if (isEditor) {
-      // Serve static files from public/editor; /editor itself serves index.html
-      if (pathname === '/editor' || pathname === '/editor/') {
-        const editorUrl = request.nextUrl.clone();
-        editorUrl.pathname = '/editor/index.html';
-        return NextResponse.rewrite(editorUrl);
-      }
-      return response;
-    }
+    // Allowed editor requests fall through; next.config.ts rewrites /editor and /editor/ to index.html
     return response;
   }
 

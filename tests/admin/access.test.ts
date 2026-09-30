@@ -26,6 +26,13 @@ describe('decidePageAccess', () => {
   it('staff on the editor goes to login (static page cannot render a prompt)', () => {
     expect(decidePageAccess({ pathname: '/editor', role: 'staff', startedAt: fresh, now })).toEqual({ kind: 'login', to: '/admin/settings' });
   });
+  it('editor assets follow the same rule as the editor page', () => {
+    expect(decidePageAccess({ pathname: '/editor/app.js', role: 'staff', startedAt: fresh, now })).toEqual({ kind: 'login', to: '/admin/settings' });
+    expect(decidePageAccess({ pathname: '/editor/app.js', role: 'admin', startedAt: fresh, now })).toEqual({ kind: 'allow' });
+  });
+  it('a stamp dated in the future is not live', () => {
+    expect(decidePageAccess({ pathname: '/admin', role: 'admin', startedAt: now + 60_000, now }).kind).toBe('login');
+  });
   it('admin is allowed everywhere', () => {
     expect(decidePageAccess({ pathname: '/admin/reports', role: 'admin', startedAt: fresh, now })).toEqual({ kind: 'allow' });
     expect(decidePageAccess({ pathname: '/editor', role: 'admin', startedAt: fresh, now })).toEqual({ kind: 'allow' });
@@ -58,6 +65,14 @@ describe('decideApiAccess', () => {
   it('kiosk settings reads pass with no session; writes do not', () => {
     expect(decideApiAccess({ pathname: '/api/settings/pos-mode', method: 'GET', role: null, signedIn: false, startedAt: null, now })).toEqual({ kind: 'allow' });
     expect(decideApiAccess({ pathname: '/api/settings/pos-mode', method: 'POST', role: null, signedIn: false, startedAt: null, now })).toEqual({ kind: 'deny', status: 401 });
+  });
+  it('a future-dated stamp is a 401', () => {
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'admin', startedAt: now + 60_000 })).toEqual({ kind: 'deny', status: 401 });
+  });
+  it('kiosk settings writes need admin with a fresh stamp', () => {
+    const p = '/api/settings/pos-mode';
+    expect(decideApiAccess({ ...base, pathname: p, method: 'POST', role: 'admin' })).toEqual({ kind: 'allow' });
+    expect(decideApiAccess({ ...base, pathname: p, method: 'POST', role: 'staff' })).toEqual({ kind: 'deny', status: 403 });
   });
   it('self exemption is always passed to the route', () => {
     expect(decideApiAccess({ pathname: '/api/admin/gift-cards/send-reminders', role: null, signedIn: false, startedAt: null, now })).toEqual({ kind: 'allow' });
