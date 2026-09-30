@@ -68,6 +68,7 @@ export function AdminSidebar({ level }: { level: Level }) {
                       <li key={i.id}>
                         <Link
                           href={i.href}
+                          onClick={() => setDrawer(false)}
                           target={i.external ? '_blank' : undefined}
                           aria-current={isActive ? 'page' : undefined}
                           className={cn(
