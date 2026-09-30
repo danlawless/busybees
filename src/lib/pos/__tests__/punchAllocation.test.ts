@@ -72,11 +72,11 @@ describe('allocatePunches', () => {
     expect(miaLine?.method).toBe('day_pass');
   });
 
-  it('gives the shortfall child a sibling position behind the punch payers', () => {
-    // Ava and Noah hold positions 1 and 2 on punches, so Mia is position 3 and
-    // takes the 50% sibling rate off the $10 under-1 pass.
+  it('charges an infant shortfall the full infant rate, behind the punch payers', () => {
+    // Ava and Noah spend the two punches. Mia pays the $10 under-1 rate: from
+    // 1 October an infant is never sibling-discounted (Busy Bees, 30 Sep 2026).
     const result = alloc([{ child: ava }, { child: noah }, { child: mia }], 2);
-    expect(result.total).toBe(5);
+    expect(result.total).toBe(10);
   });
 
   it('spends nothing and charges everyone when the card is empty', () => {
@@ -110,8 +110,7 @@ describe('allocatePunches', () => {
     // Noah (toddler, 40mo) takes a punch. Mia (infant, 8mo) takes a day pass.
     // The combo product "Child + Infant" would normally pair them, giving Mia
     // a free slot (includedFree: true, price 0). But Noah is not buying his half,
-    // so Mia gets the real under-1 rate at her sibling position: $10 at position 2
-    // becomes $5 (50% off).
+    // so Mia pays the real under-1 rate: $10, never sibling-discounted.
     const result = allocatePunches(
       [{ child: noah }, { child: mia }],
       1, // One punch available, goes to Noah
@@ -120,7 +119,7 @@ describe('allocatePunches', () => {
       false
     );
     const miaLine = result.lines.find((l) => l.child.id === 'm');
-    expect(miaLine?.price).toBe(5);
+    expect(miaLine?.price).toBe(10);
   });
 });
 
@@ -140,11 +139,11 @@ describe('groupDayPassLines', () => {
     expect(dayGroup?.total).toBe(20);
 
     const babyGroup = groups.find((g) => g.pass.id === 'baby');
-    // Mia holds sibling position 2 behind Ava, so the 50% rule applies to
-    // her $10 under-1 rate.
+    // Mia pays the $10 under-1 rate in full: infants sit outside the sibling
+    // ladder.
     expect(babyGroup?.lines.map((l) => l.child.id)).toEqual(['m']);
-    expect(babyGroup?.lines.map((l) => l.price)).toEqual([5]);
-    expect(babyGroup?.total).toBe(5);
+    expect(babyGroup?.lines.map((l) => l.price)).toEqual([10]);
+    expect(babyGroup?.total).toBe(10);
   });
 
   it('keeps a single-product shortfall as one group covering every child', () => {
