@@ -6,6 +6,7 @@ import { SHARED_ACCOUNTS, loadPinHashes } from '@/lib/admin/shared-accounts';
 import { STAMP_COOKIE, readStamp, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
 import { liveAdminLevel } from '@/lib/admin/access';
 import { getAdminLevel } from '@/lib/admin/guard';
+import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
 // Per-instance limiter. A cold start resets it; acceptable for v1 (spec 5.2).
@@ -33,8 +34,9 @@ function sessionClient(req: NextRequest, res: NextResponse) {
  */
 export async function GET(req: NextRequest) {
   const role = await getAdminLevel();
+  const { data: { user } } = await (await createClient()).auth.getUser();
   const stampSecret = process.env.ADMIN_SESSION_SECRET;
-  const startedAt = stampSecret ? await readStamp(req.cookies.get(STAMP_COOKIE)?.value, stampSecret) : null;
+  const startedAt = stampSecret && user ? await readStamp(req.cookies.get(STAMP_COOKIE)?.value, user.id, stampSecret) : null;
   const level = liveAdminLevel({ role, startedAt, now: Date.now() });
   if (!level) return NextResponse.json({ error: 'session-ended' }, { status: 401 });
   return NextResponse.json({ level });
@@ -79,12 +81,12 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ level });
   const supabase = sessionClient(req, res);
   await supabase.auth.signOut({ scope: 'local' }); // upgrade path: drop the staff session first
-  const { error } = await supabase.auth.signInWithPassword({ email: account.email, password });
-  if (error) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: account.email, password });
+  if (error || !data.user) {
     logger.error({ error, level }, 'Shared account sign-in failed');
     return NextResponse.json({ error: 'config' }, { status: 500 });
   }
-  res.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), secret), stampCookieOptions());
+  res.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), data.user.id, secret), stampCookieOptions());
   logger.info({ level }, 'Admin session started');
   return res;
 }

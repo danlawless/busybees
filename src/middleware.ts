@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
       role = data?.role ?? null;
     }
     const secret = process.env.ADMIN_SESSION_SECRET;
-    const startedAt = secret ? await readStamp(request.cookies.get(STAMP_COOKIE)?.value, secret) : null;
+    const startedAt = secret && user ? await readStamp(request.cookies.get(STAMP_COOKIE)?.value, user.id, secret) : null;
     const now = Date.now();
 
     if (isGuardedApi) {

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const { error: signInError } = await supabaseSession.auth.signInWithPassword({
+    const { data: signIn, error: signInError } = await supabaseSession.auth.signInWithPassword({
       email: user.email!,
       password: staffPassword,
     });
@@ -118,7 +118,9 @@ export async function POST(request: NextRequest) {
 
     const ok = NextResponse.json({ user: safeUser, message: 'Login successful' }, { status: 200, headers: response.headers });
     if (process.env.ADMIN_SESSION_SECRET) {
-      ok.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), process.env.ADMIN_SESSION_SECRET), stampCookieOptions());
+      // Bind the stamp to the session that was just created (same id as users.id)
+      const sessionUserId = signIn.user?.id ?? user.id;
+      ok.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), sessionUserId, process.env.ADMIN_SESSION_SECRET), stampCookieOptions());
     }
     return ok;
   } catch (error) {

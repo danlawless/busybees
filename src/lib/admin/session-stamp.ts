@@ -20,19 +20,24 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export async function signStamp(startedAt: number, secret: string): Promise<string> {
+/**
+ * The cookie holds `<epochMs>.<sig>`; the signature covers `<epochMs>.<userId>`, so a stamp only
+ * reads back for the user it was issued to. The user id is supplied by the verifier, never stored.
+ */
+export async function signStamp(startedAt: number, userId: string, secret: string): Promise<string> {
   if (!secret) throw new Error('ADMIN_SESSION_SECRET is not set');
-  return `${startedAt}.${await hmac(String(startedAt), secret)}`;
+  if (!userId) throw new Error('signStamp needs the signed-in user id');
+  return `${startedAt}.${await hmac(`${startedAt}.${userId}`, secret)}`;
 }
 
-export async function readStamp(value: string | undefined, secret: string): Promise<number | null> {
+export async function readStamp(value: string | undefined, userId: string | null | undefined, secret: string): Promise<number | null> {
   if (!secret) return null;
-  if (!value) return null;
+  if (!value || !userId) return null;
   const dot = value.indexOf('.');
   if (dot <= 0) return null;
   const ts = value.slice(0, dot);
   if (!/^\d+$/.test(ts)) return null;
-  const expected = await hmac(ts, secret);
+  const expected = await hmac(`${ts}.${userId}`, secret);
   return safeEqual(expected, value.slice(dot + 1)) ? Number(ts) : null;
 }
 
