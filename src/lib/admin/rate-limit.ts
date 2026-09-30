@@ -37,3 +37,15 @@ export function clientKeyFrom(headers: Headers): string {
   const parts = (headers.get('x-forwarded-for') ?? '').split(',').map(s => s.trim()).filter(Boolean);
   return parts[parts.length - 1] || 'unknown';
 }
+
+type Limiter = ReturnType<typeof createRateLimiter>;
+
+// Two-limiter gate. Per-client first: a client already locked is refused without
+// touching the shop-wide budget, so one host cannot burn it alone.
+export function gateAttempt(perClient: Limiter, global: Limiter, key: string): { allowed: boolean; retryAfterMs: number; remaining: number } {
+  const gate = perClient.attempt(key);
+  if (!gate.allowed) return gate;
+  const all = global.attempt('all');
+  if (!all.allowed) return { allowed: false, retryAfterMs: all.retryAfterMs, remaining: 0 };
+  return gate;
+}

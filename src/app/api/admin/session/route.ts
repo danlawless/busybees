@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { resolvePinLevel } from '@/lib/admin/pin-login';
-import { clientKeyFrom, createRateLimiter } from '@/lib/admin/rate-limit';
+import { clientKeyFrom, createRateLimiter, gateAttempt } from '@/lib/admin/rate-limit';
 import { SHARED_ACCOUNTS, loadPinHashes } from '@/lib/admin/shared-accounts';
 import { STAMP_COOKIE, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
 import { logger } from '@/lib/logger';
@@ -10,8 +10,9 @@ import { logger } from '@/lib/logger';
 const limiter = createRateLimiter({ max: 5, windowMs: 10 * 60_000, lockMs: 10 * 60_000 });
 
 // Shop-wide cap so rotating client identities cannot escape the per-client limit.
-// Trade-off: a flood of wrong codes from anywhere can lock PIN login for everyone
-// for 10 minutes. Accepted: 10,000 codes make an uncapped guesser the worse risk.
+// Trade-off: a shop-wide lock (PIN login refused for everyone for 10 minutes) now
+// needs at least 10 distinct clients, since a locked client no longer spends this
+// budget. Accepted: 10,000 codes make an uncapped guesser the worse risk.
 const globalLimiter = createRateLimiter({ max: 50, windowMs: 10 * 60_000, lockMs: 10 * 60_000 });
 
 function sessionClient(req: NextRequest, res: NextResponse) {
@@ -25,12 +26,10 @@ function sessionClient(req: NextRequest, res: NextResponse) {
 
 export async function POST(req: NextRequest) {
   const key = clientKeyFrom(req.headers);
-  // Record both attempts before any await so parallel bursts cannot outrun the limits.
-  const gate = limiter.attempt(key);
-  const all = globalLimiter.attempt('all');
-  if (!gate.allowed || !all.allowed) {
-    const retryAfterMs = Math.max(gate.allowed ? 0 : gate.retryAfterMs, all.allowed ? 0 : all.retryAfterMs);
-    return NextResponse.json({ error: 'locked', retryAfterSeconds: Math.ceil(retryAfterMs / 1000) }, { status: 429 });
+  // Record the attempt before any await so parallel bursts cannot outrun the limits.
+  const gate = gateAttempt(limiter, globalLimiter, key);
+  if (!gate.allowed) {
+    return NextResponse.json({ error: 'locked', retryAfterSeconds: Math.ceil(gate.retryAfterMs / 1000) }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
