@@ -1012,17 +1012,22 @@ export function CheckIn({
         setPassError(null);
 
         try {
-            // Day passes group onto one payment per product; punch cards and
-            // monthly passes stay one purchase per child.
+            // Day passes group onto one payment per product. A family monthly
+            // membership is one purchase covering every child on it; any other
+            // monthly pass stays one purchase per child.
             const groups =
                 passKind === "day"
                     ? groupQuoteByProduct(passQuote)
-                    : passQuote.lines.map((line) => ({
-                          pass: line.pass,
-                          lines: [line],
-                          total: line.price,
-                          isCombo: false,
-                      }));
+                    : groupQuoteByProduct(passQuote).flatMap((group) =>
+                          group.isCombo
+                              ? [group]
+                              : group.lines.map((line) => ({
+                                    pass: line.pass,
+                                    lines: [line],
+                                    total: line.price,
+                                    isCombo: false,
+                                }))
+                      );
 
             for (const group of groups) {
                 const childIds = group.lines.map((l) => l.child.id);
@@ -1067,7 +1072,7 @@ export function CheckIn({
                 message: `${PASS_KIND_LABEL[passKind]} for ${names}.`,
                 details: `💰 ${formatCurrency(passQuote.total)}${
                     passQuote.savings > 0
-                        ? `\n🎉 Sibling discount saved ${formatCurrency(passQuote.savings)}`
+                        ? `\n🎉 ${passKind === "monthly" ? "Family membership" : "Sibling discount"} saved ${formatCurrency(passQuote.savings)}`
                         : ""
                 }`,
             });
@@ -3227,7 +3232,7 @@ export function CheckIn({
                                                         </span>
                                                         {line.includedFree ? (
                                                             <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                plays free
+                                                                {passKind === "monthly" ? "on the family membership" : "plays free"}
                                                             </span>
                                                         ) : (
                                                             line.discountPercent > 0 && (
@@ -3239,7 +3244,9 @@ export function CheckIn({
                                                     </span>
                                                     <span className="font-semibold tabular-nums">
                                                         {line.includedFree ? (
-                                                            <span className="text-green-700">Free</span>
+                                                            <span className="text-green-700">
+                                                                {passKind === "monthly" ? "Included" : "Free"}
+                                                            </span>
                                                         ) : (
                                                             <>
                                                                 {line.discountPercent > 0 && (
