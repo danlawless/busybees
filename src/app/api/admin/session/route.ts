@@ -24,7 +24,8 @@ function sessionClient(req: NextRequest, res: NextResponse) {
 
 export async function POST(req: NextRequest) {
   const key = clientKey(req);
-  const gate = limiter.check(key);
+  // Record the attempt before any await so parallel bursts cannot outrun the limit.
+  const gate = limiter.attempt(key);
   if (!gate.allowed) {
     return NextResponse.json({ error: 'locked', retryAfterSeconds: Math.ceil(gate.retryAfterMs / 1000) }, { status: 429 });
   }
@@ -38,9 +39,8 @@ export async function POST(req: NextRequest) {
 
   const level = await resolvePinLevel(pin, hashes);
   if (!level) {
-    const remaining = limiter.fail(key);
-    logger.warn({ remaining }, 'Admin PIN mismatch');
-    return NextResponse.json({ error: 'mismatch', remaining }, { status: 401 });
+    logger.warn({ remaining: gate.remaining }, 'Admin PIN mismatch');
+    return NextResponse.json({ error: 'mismatch', remaining: gate.remaining }, { status: 401 });
   }
   limiter.reset(key);
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({ level });
   const supabase = sessionClient(req, res);
-  await supabase.auth.signOut(); // upgrade path: drop the staff session first
+  await supabase.auth.signOut({ scope: 'local' }); // upgrade path: drop the staff session first
   const { error } = await supabase.auth.signInWithPassword({ email: account.email, password });
   if (error) {
     logger.error({ error, level }, 'Shared account sign-in failed');
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
-  await sessionClient(req, res).auth.signOut();
+  await sessionClient(req, res).auth.signOut({ scope: 'local' });
   res.cookies.set(STAMP_COOKIE, '', { ...stampCookieOptions(), maxAge: 0 });
   return res;
 }
