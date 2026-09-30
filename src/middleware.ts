@@ -94,20 +94,17 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Only the gated surfaces. Every other route runs without middleware, which is how production
+  // has always behaved (the file sat outside src/ until this branch). /editor/:path* keeps the
+  // editor's static assets (.js, .css, images) behind the same admin gate as the editor page.
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public image files (.js stays matched so /editor/*.js remains gated)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/admin',
+    '/admin/:path*',
+    '/editor',
+    '/editor/:path*',
     '/api/admin/:path*',
+    '/api/settings',
     '/api/settings/:path*',
     '/api/editor/:path*',
-    '/api/settings',
   ],
 }
-
