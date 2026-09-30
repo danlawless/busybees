@@ -4,6 +4,10 @@ import { decidePageAccess, decideApiAccess } from '@/lib/admin/access';
 import { apiLevelForPath } from '@/lib/admin/api-access';
 import { readStamp, STAMP_COOKIE } from '@/lib/admin/session-stamp';
 
+// The /customer and /staff route checks that previously lived here never ran (the file sat
+// outside src/), so they are intentionally not enabled here; enabling them is a separate
+// product decision.
+
 // Carry cookies refreshed by getUser() (rotated refresh token) onto a replacement response
 function withCookies<T extends NextResponse>(from: NextResponse, to: T): T {
   from.cookies.getAll().forEach(c => to.cookies.set(c));
@@ -84,76 +88,6 @@ export async function middleware(request: NextRequest) {
 
     // Allowed editor requests fall through; next.config.ts rewrites /editor and /editor/ to index.html
     return response;
-  }
-
-  const url = request.nextUrl.clone();
-
-  // Protect staff routes - require staff or admin role
-  if (url.pathname.startsWith('/staff')) {
-    try {
-      if (!user) {
-        url.pathname = '/auth/staff';
-        return NextResponse.redirect(url);
-      }
-
-      // Verify staff or admin role
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData || !['staff', 'admin'].includes(userData.role)) {
-        url.pathname = '/pos';
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      url.pathname = '/auth/staff';
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Protect customer portal routes (except login/signup/verify pages)
-  if (url.pathname.startsWith('/customer') &&
-      !url.pathname.startsWith('/customer/login') &&
-      !url.pathname.startsWith('/customer/signup') &&
-      !url.pathname.startsWith('/customer/verify-email')) {
-    try {
-
-      if (!user) {
-        url.pathname = '/customer/login';
-        return NextResponse.redirect(url);
-      }
-
-      // Check if email is verified (required for online portal access)
-      // POS users might not have verified emails, so redirect them to verify
-      if (!user.email_confirmed_at && user.email) {
-        url.pathname = '/customer/verify-email';
-        return NextResponse.redirect(url);
-      }
-
-      // If no email at all, redirect to verify page to add one
-      if (!user.email) {
-        url.pathname = '/customer/verify-email';
-        return NextResponse.redirect(url);
-      }
-
-      // Verify user has customer or admin role
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (userData && !['customer', 'admin'].includes(userData.role)) {
-        url.pathname = '/customer/login';
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      // Auth error - redirect to login
-      url.pathname = '/customer/login';
-      return NextResponse.redirect(url);
-    }
   }
 
   return response;
