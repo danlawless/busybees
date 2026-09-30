@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { decidePageAccess, decideApiAccess } from '@/lib/admin/access';
+import { readStamp, STAMP_COOKIE } from '@/lib/admin/session-stamp';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -7,22 +9,6 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request,
   });
-
-  // Handle editor routes - serve static files from public/editor
-  if (pathname.startsWith('/editor')) {
-    // Rewrite to serve static files from public directory
-    const url = request.nextUrl.clone();
-
-    // If accessing /editor or /editor/, serve index.html
-    if (pathname === '/editor' || pathname === '/editor/') {
-      url.pathname = '/editor/index.html';
-      return NextResponse.rewrite(url);
-    }
-
-    // For all other /editor/* paths, serve the file directly from public
-    // The files are already copied there by the build process
-    return NextResponse.next();
-  }
 
   // Supabase auth session refresh
   // Uses getAll/setAll to correctly handle chunked JWT cookies
@@ -50,39 +36,58 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   // This also updates chunked auth cookies via the setAll callback above
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Protect admin routes - require admin role
-  const url = request.nextUrl.clone();
-  if (url.pathname.startsWith('/admin')) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        url.pathname = '/auth/staff';
-        return NextResponse.redirect(url);
-      }
+  // One gate for admin pages, the editor, and the admin + settings APIs
+  const isAdminPage = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isEditor = pathname === '/editor' || pathname.startsWith('/editor/');
+  const isGuardedApi = pathname.startsWith('/api/admin') || pathname.startsWith('/api/settings');
 
-      // Verify admin role
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData || userData.role !== 'admin') {
-        url.pathname = '/pos';
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      url.pathname = '/auth/staff';
-      return NextResponse.redirect(url);
+  if (isAdminPage || isEditor || isGuardedApi) {
+    let role: string | null = null;
+    if (user) {
+      const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+      role = data?.role ?? null;
     }
+    const secret = process.env.ADMIN_SESSION_SECRET;
+    const startedAt = secret ? await readStamp(request.cookies.get(STAMP_COOKIE)?.value, secret) : null;
+    const now = Date.now();
+
+    if (isGuardedApi) {
+      const d = decideApiAccess({ pathname, method: request.method, role, signedIn: !!user, startedAt, now });
+      if (d.kind === 'deny') {
+        return NextResponse.json({ error: d.status === 401 ? 'session-ended' : 'forbidden' }, { status: d.status });
+      }
+      return response;
+    }
+
+    const d = decidePageAccess({ pathname, role, startedAt, now });
+    if (d.kind === 'login') {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/admin/login';
+      loginUrl.search = `?to=${encodeURIComponent(d.to)}`;
+      const redirect = NextResponse.redirect(loginUrl);
+      response.cookies.getAll().forEach(c => redirect.cookies.set(c));
+      return redirect;
+    }
+
+    if (isEditor) {
+      // Serve static files from public/editor; /editor itself serves index.html
+      if (pathname === '/editor' || pathname === '/editor/') {
+        const editorUrl = request.nextUrl.clone();
+        editorUrl.pathname = '/editor/index.html';
+        return NextResponse.rewrite(editorUrl);
+      }
+      return response;
+    }
+    return response;
   }
+
+  const url = request.nextUrl.clone();
 
   // Protect staff routes - require staff or admin role
   if (url.pathname.startsWith('/staff')) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         url.pathname = '/auth/staff';
         return NextResponse.redirect(url);
@@ -111,7 +116,6 @@ export async function middleware(request: NextRequest) {
       !url.pathname.startsWith('/customer/signup') &&
       !url.pathname.startsWith('/customer/verify-email')) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
         url.pathname = '/customer/login';
@@ -162,6 +166,9 @@ export const config = {
      * - favicon.ico (favicon file)
      */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/api/admin/:path*',
+    '/api/settings/:path*',
+    '/api/settings',
   ],
 }
 
