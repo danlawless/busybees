@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   // One gate for admin pages, the editor, and the admin + settings APIs
   const isAdminPage = pathname === '/admin' || pathname.startsWith('/admin/');
   const isEditor = pathname === '/editor' || pathname.startsWith('/editor/');
-  const isGuardedApi = pathname.startsWith('/api/admin') || pathname.startsWith('/api/settings');
+  const isGuardedApi = pathname.startsWith('/api/admin') || pathname.startsWith('/api/settings') || pathname.startsWith('/api/editor');
 
   if (isAdminPage || isEditor || isGuardedApi) {
     // Ungated API paths (kiosk polls, self-authenticated routes) skip the role query and stamp check
@@ -171,6 +171,7 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
     '/api/admin/:path*',
     '/api/settings/:path*',
+    '/api/editor/:path*',
     '/api/settings',
   ],
 }

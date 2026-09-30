@@ -3,12 +3,11 @@ import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import path from 'path'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'universal-editor-secret'
 const CONTENT_FILE = path.join(process.cwd(), 'editor', 'shared', 'content.json')
 
-function verifyAuth(token: string) {
+function verifyAuth(token: string, secret: string) {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    return jwt.verify(token, secret)
   } catch (error) {
     return null
   }
@@ -32,13 +31,17 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const JWT_SECRET = process.env.JWT_SECRET
+  if (!JWT_SECRET) {
+    return NextResponse.json({ success: false, error: 'Editor not configured' }, { status: 503 })
+  }
   try {
     const { action, token, content, fieldId } = await request.json()
     
     const authHeader = request.headers.get('Authorization')
     const authToken = authHeader?.replace('Bearer ', '') || token
 
-    if (!verifyAuth(authToken)) {
+    if (!verifyAuth(authToken, JWT_SECRET)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 

@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { createHash, timingSafeEqual } from 'node:crypto'
+
+function sameSecret(a: unknown, b: string): boolean {
+  if (typeof a !== 'string') return false
+  const ha = createHash('sha256').update(a).digest()
+  const hb = createHash('sha256').update(b).digest()
+  return timingSafeEqual(ha, hb)
+}
 
 export async function POST(request: NextRequest) {
   const adminPassword = process.env.EDITOR_PASSWORD
@@ -13,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { action, password, token } = body
 
     if (action === 'login') {
-      if (password === adminPassword) {
+      if (sameSecret(password, adminPassword)) {
         const authToken = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '24h' })
         return NextResponse.json({ 
           success: true, 
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
     console.error('Auth API error:', error)
     return NextResponse.json({ 
       success: false, 
-      message: 'Server error: ' + error.message 
+      message: 'Server error' 
     }, { status: 500 })
   }
 }

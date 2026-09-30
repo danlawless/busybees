@@ -38,6 +38,13 @@ describe('apiLevelForPath', () => {
     expect(apiLevelForPath('/api/settings/pos-pin', 'POST')).toBe('admin');
   });
 
+  it('classifies every editor API as admin', () => {
+    for (const p of ['/api/editor/auth', '/api/editor/content', '/api/editor/github']) {
+      expect(apiLevelForPath(p, 'GET'), p).toBe('admin');
+      expect(apiLevelForPath(p, 'POST'), p).toBe('admin');
+    }
+  });
+
   it('classifies day-to-day data as staff', () => {
     expect(apiLevelForPath('/api/admin/customers/x/children')).toBe('staff');
     expect(apiLevelForPath('/api/admin/party-bookings/x/guests')).toBe('staff');
@@ -63,7 +70,7 @@ describe('apiLevelForPath', () => {
   });
 
   it('classifies every existing admin and settings route file', () => {
-    const files = [...routeFiles('src/app/api/admin'), ...routeFiles('src/app/api/settings')];
+    const files = [...routeFiles('src/app/api/admin'), ...routeFiles('src/app/api/settings'), ...routeFiles('src/app/api/editor')];
     expect(files.length).toBeGreaterThan(50);
     for (const f of files) {
       const url = toUrl(f);

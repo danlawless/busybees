@@ -33,7 +33,8 @@ function sessionClient(req: NextRequest, res: NextResponse) {
  */
 export async function GET(req: NextRequest) {
   const role = await getAdminLevel();
-  const startedAt = await readStamp(req.cookies.get(STAMP_COOKIE)?.value, process.env.ADMIN_SESSION_SECRET ?? '');
+  const stampSecret = process.env.ADMIN_SESSION_SECRET;
+  const startedAt = stampSecret ? await readStamp(req.cookies.get(STAMP_COOKIE)?.value, stampSecret) : null;
   const level = liveAdminLevel({ role, startedAt, now: Date.now() });
   if (!level) return NextResponse.json({ error: 'session-ended' }, { status: 401 });
   return NextResponse.json({ level });
@@ -51,7 +52,13 @@ export async function POST(req: NextRequest) {
   const pin = typeof body?.pin === 'string' ? body.pin : '';
   if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: 'invalid' }, { status: 400 });
 
-  const hashes = await loadPinHashes();
+  let hashes: Awaited<ReturnType<typeof loadPinHashes>>;
+  try {
+    hashes = await loadPinHashes();
+  } catch (error) {
+    logger.error({ error }, 'Could not read PIN hashes');
+    return NextResponse.json({ error: 'config' }, { status: 500 });
+  }
   if (!hashes.admin && !hashes.staff) return NextResponse.json({ error: 'no-pin' }, { status: 503 });
 
   const level = await resolvePinLevel(pin, hashes);

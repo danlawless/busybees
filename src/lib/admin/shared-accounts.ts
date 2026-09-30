@@ -8,7 +8,8 @@ export const SHARED_ACCOUNTS: Record<Level, { email: string; passwordEnv: 'STAFF
 
 export async function loadPinHashes(): Promise<{ admin: string | null; staff: string | null }> {
   const db = createAdminClient();
-  const { data } = await db.from('settings').select('key, value').in('key', ['admin_pin_hash', 'staff_pin_hash']);
+  const { data, error } = await db.from('settings').select('key, value').in('key', ['admin_pin_hash', 'staff_pin_hash']);
+  if (error) throw error;
   const byKey = new Map((data ?? []).map(r => [r.key, r.value || null]));
   return { admin: byKey.get('admin_pin_hash') ?? null, staff: byKey.get('staff_pin_hash') ?? null };
 }

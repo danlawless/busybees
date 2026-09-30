@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'universal-editor-secret'
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const GITHUB_REPO = process.env.GITHUB_REPO || 'danlawless/busybees'
 
-function verifyAuth(token: string) {
+function verifyAuth(token: string, secret: string) {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    return jwt.verify(token, secret)
   } catch (error) {
     return null
   }
 }
 
 export async function POST(request: NextRequest) {
+  const JWT_SECRET = process.env.JWT_SECRET
+  if (!JWT_SECRET) {
+    return NextResponse.json({ success: false, error: 'Editor not configured' }, { status: 503 })
+  }
   try {
     const { action, token, message, content } = await request.json()
     
     const authHeader = request.headers.get('Authorization')
     const authToken = authHeader?.replace('Bearer ', '') || token
 
-    if (!verifyAuth(authToken)) {
+    if (!verifyAuth(authToken, JWT_SECRET)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 

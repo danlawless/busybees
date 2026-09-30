@@ -16,17 +16,19 @@ export async function POST(req: NextRequest) {
   if (validatePinChange(kind, pin, false) === 'invalid') {
     return NextResponse.json({ error: 'invalid' }, { status: 400 });
   }
-  const hashes = await loadPinHashes();
-  const otherHash = kind === 'admin' ? hashes.staff : hashes.admin;
-  const otherMatches = otherHash ? await verifyPin(pin, otherHash) : false;
-  if (validatePinChange(kind, pin, otherMatches) === 'same-as-other') {
-    return NextResponse.json({ error: 'same-as-other' }, { status: 400 });
-  }
+  try {
+    const hashes = await loadPinHashes();
+    const otherHash = kind === 'admin' ? hashes.staff : hashes.admin;
+    const otherMatches = otherHash ? await verifyPin(pin, otherHash) : false;
+    if (validatePinChange(kind, pin, otherMatches) === 'same-as-other') {
+      return NextResponse.json({ error: 'same-as-other' }, { status: 400 });
+    }
 
-  const { error } = await createAdminClient()
-    .from('settings')
-    .upsert({ key: `${kind}_pin_hash`, value: await hashPin(pin), description: `bcrypt hash of the ${kind} PIN` }, { onConflict: 'key' });
-  if (error) {
+    const { error } = await createAdminClient()
+      .from('settings')
+      .upsert({ key: `${kind}_pin_hash`, value: await hashPin(pin), description: `bcrypt hash of the ${kind} PIN` }, { onConflict: 'key' });
+    if (error) throw error;
+  } catch (error) {
     logger.error({ error, kind }, 'PIN update failed');
     return NextResponse.json({ error: 'save-failed' }, { status: 500 });
   }

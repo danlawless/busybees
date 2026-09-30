@@ -23,6 +23,7 @@ const ADMIN_PREFIXES = [
   '/api/admin/top-customers',
   '/api/admin/staff',
   '/api/admin/pins',
+  '/api/editor',
   '/api/settings',
 ];
 

@@ -53,6 +53,12 @@ describe('decideApiAccess', () => {
     expect(decideApiAccess({ ...base, pathname: '/api/admin/reports/revenue', role: 'staff' })).toEqual({ kind: 'deny', status: 403 });
     expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'customer' })).toEqual({ kind: 'deny', status: 403 });
   });
+  it('editor APIs: 401 anonymous, 403 staff, allowed for admin', () => {
+    const path = '/api/editor/content';
+    expect(decideApiAccess({ ...base, pathname: path, role: null, signedIn: false })).toEqual({ kind: 'deny', status: 401 });
+    expect(decideApiAccess({ ...base, pathname: path, role: 'staff' })).toEqual({ kind: 'deny', status: 403 });
+    expect(decideApiAccess({ ...base, pathname: path, role: 'admin' })).toEqual({ kind: 'allow' });
+  });
   it('allows the right levels', () => {
     expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'staff' })).toEqual({ kind: 'allow' });
     expect(decideApiAccess({ ...base, pathname: '/api/admin/reports/revenue', role: 'admin' })).toEqual({ kind: 'allow' });
