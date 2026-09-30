@@ -1,17 +1,21 @@
 /**
  * One-time admin access setup. Run locally against the target Supabase project:
  *   pnpm admin:setup
- * Reads NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STAFF_ACCOUNT_PASSWORD,
- * ADMIN_ACCOUNT_PASSWORD from .env.local. Prompts for the two PINs; they are never
- * written to disk or logged.
+ * Loads ONLY .env.local (override: true, so a stray .env can never win) and reads
+ * NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STAFF_ACCOUNT_PASSWORD,
+ * ADMIN_ACCOUNT_PASSWORD from it. Prints the target Supabase host and requires it
+ * typed back exactly before anything changes. Prompts for the two PINs first; they
+ * are never written to disk or logged.
+ *
+ * The two emails duplicate SHARED_ACCOUNTS in src/lib/admin/shared-accounts.ts and the
+ * bcrypt cost (10) matches src/lib/auth/pin.ts; scripts cannot import Next server modules.
  */
-import 'dotenv/config';
 import { config } from 'dotenv';
-import { createInterface } from 'node:readline/promises';
+import { createInterface } from 'node:readline';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
-config({ path: '.env.local' });
+config({ path: '.env.local', override: true });
 
 const env = (k: string) => {
   const v = process.env[k];
@@ -47,20 +51,37 @@ async function ensureAccount(email: string, password: string, role: 'staff' | 'a
   console.log(`✓ ${email} is ${role}`);
 }
 
+function promptAll(questions: string[], validate: (answers: string[]) => void): Promise<string[]> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise<string[]>((resolve, reject) => {
+    const answers: string[] = [];
+    let settled = false;
+    const done = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+    rl.on('close', () => done(() => reject(new Error('Input closed before all answers were given'))));
+    const next = () => {
+      if (answers.length === questions.length) {
+        try { validate(answers); done(() => resolve(answers)); } catch (e) { done(() => reject(e)); }
+        return;
+      }
+      rl.question(questions[answers.length], a => { answers.push(a.trim()); next(); });
+    };
+    next();
+  }).finally(() => rl.close());
+}
+
 async function main() {
+  const host = new URL(env('NEXT_PUBLIC_SUPABASE_URL')).host;
+  console.log(`Target Supabase project: ${host}`);
+  const [typedHost] = await promptAll(['Type the host above exactly to continue: '], () => {});
+  if (typedHost !== host) throw new Error('Host did not match; nothing was changed');
+
+  const [staff, admin] = await promptAll(['Staff code (4 digits): ', 'Admin code (4 digits): '], ([s, a]) => {
+    if (!/^\d{4}$/.test(s) || !/^\d{4}$/.test(a)) throw new Error('Codes are exactly 4 digits');
+    if (s === a) throw new Error('Staff and admin codes must differ');
+  });
+
   await ensureAccount('staff@busybees.internal', env('STAFF_ACCOUNT_PASSWORD'), 'staff', 'Staff (shared)');
   await ensureAccount('admin@busybees.internal', env('ADMIN_ACCOUNT_PASSWORD'), 'admin', 'Admin (shared)');
-
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const ask = async (q: string) => {
-    const a = (await rl.question(q)).trim();
-    if (!/^\d{4}$/.test(a)) throw new Error('Codes are exactly 4 digits');
-    return a;
-  };
-  const staff = await ask('Staff code (4 digits): ');
-  const admin = await ask('Admin code (4 digits): ');
-  rl.close();
-  if (staff === admin) throw new Error('Staff and admin codes must differ');
 
   const rows = [
     { key: 'staff_pin_hash', value: bcrypt.hashSync(staff, 10), description: 'bcrypt hash of the staff PIN' },
