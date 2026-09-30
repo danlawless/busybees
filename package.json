@@ -15,6 +15,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "admin:setup": "tsx scripts/admin-access-setup.ts",
     "seed:promos": "tsx scripts/seed-promos.ts",
     "stripe:migrate": "tsx scripts/migrate-stripe-to-live.ts",
     "stripe:migrate:dry": "tsx scripts/migrate-stripe-to-live.ts --dry-run"
