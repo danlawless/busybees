@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { WaiverModal } from '@/components/ui/WaiverModal';
 import { StaffDiscountApplicator } from '@/components/admin/StaffDiscountApplicator';
 import { logger } from '@/lib/client-logger';
+import { AdminPageHeader } from '@/components/admin/shell/AdminPageHeader';
+import { redirectIfSessionEnded } from '@/lib/admin/session-redirect';
 import { Database } from '@/lib/supabase/database.types';
 import { PACKAGE_PRICING } from '@/lib/validations/party-booking';
 import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
@@ -52,12 +54,6 @@ const PACKAGE_BADGE_COLORS: Record<string, string> = {
 };
 
 export default function AdminPartiesPage() {
-  // PIN lock state
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-
   const [bookings, setBookings] = useState<PartyBooking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<PartyBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,15 +162,12 @@ export default function AdminPartiesPage() {
   const INCLUDED_KIDS = selectedBooking ? getIncludedKids(selectedBooking.package_name) : 15;
   const EXTRA_KID_PRICE = 15;
 
-  // Only fetch data after PIN is entered
   useEffect(() => {
-    if (isUnlocked) {
-      fetchBookings();
-      fetchEvents();
-      fetchPartyPackages();
-      fetchTimeSlots();
-    }
-  }, [isUnlocked]);
+    fetchBookings();
+    fetchEvents();
+    fetchPartyPackages();
+    fetchTimeSlots();
+  }, []);
 
   const fetchPartyPackages = async () => {
     try {
@@ -284,6 +277,7 @@ export default function AdminPartiesPage() {
     try {
       setIsLoadingSlots(true);
       const response = await fetch('/api/admin/party-time-slots');
+      if (redirectIfSessionEnded(response)) return;
       if (!response.ok) {
         throw new Error('Failed to fetch time slots');
       }
@@ -317,6 +311,7 @@ export default function AdminPartiesPage() {
           dayOfWeek: dayOfWeek === '' ? null : Number(dayOfWeek),
         }),
       });
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -357,6 +352,7 @@ export default function AdminPartiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !slot.is_active }),
       });
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         throw new Error('Failed to update time slot');
@@ -382,6 +378,7 @@ export default function AdminPartiesPage() {
       const response = await fetch(`/api/admin/party-time-slots/${slot.id}`, {
         method: 'DELETE',
       });
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         throw new Error('Failed to delete time slot');
@@ -418,6 +415,7 @@ export default function AdminPartiesPage() {
           partyDate: selectedCalendarDate,
         }),
       });
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -454,6 +452,7 @@ export default function AdminPartiesPage() {
   const fetchEvents = async () => {
     try {
       const response = await fetch('/api/admin/events');
+      if (redirectIfSessionEnded(response)) return;
       if (!response.ok) {
         throw new Error('Failed to fetch events');
       }
@@ -576,6 +575,7 @@ export default function AdminPartiesPage() {
       setError('');
 
       const response = await fetch('/api/admin/party-bookings');
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
@@ -650,6 +650,7 @@ export default function AdminPartiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (redirectIfSessionEnded(response)) return;
 
       if (!response.ok) {
         throw new Error('Failed to update booking');
@@ -678,6 +679,7 @@ export default function AdminPartiesPage() {
       const response = await fetch(`/api/admin/party-bookings/${bookingId}`, {
         method: 'DELETE',
       });
+      if (redirectIfSessionEnded(response)) return;
       if (!response.ok) {
         throw new Error('Failed to delete booking');
       }
@@ -695,6 +697,7 @@ export default function AdminPartiesPage() {
     setGuestsLoading(true);
     try {
       const response = await fetch(`/api/admin/party-bookings/${bookingId}/guests`);
+      if (redirectIfSessionEnded(response)) return;
       if (response.ok) {
         const data = await response.json();
         setGuests(data.guests || []);
@@ -718,6 +721,7 @@ export default function AdminPartiesPage() {
           age: addGuestForm.age ? parseInt(addGuestForm.age) : null,
         }),
       });
+      if (redirectIfSessionEnded(response)) return;
       if (response.ok) {
         const data = await response.json();
         setGuests(prev => [...prev, data.guest]);
@@ -739,6 +743,7 @@ export default function AdminPartiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ waiver_signed: true }),
       });
+      if (redirectIfSessionEnded(response)) return;
       if (response.ok) {
         setGuests(prev => prev.map(g =>
           g.id === guestId ? { ...g, waiver_signed: true, waiver_signed_date: new Date().toISOString() } : g
@@ -758,6 +763,7 @@ export default function AdminPartiesPage() {
       const response = await fetch(`/api/admin/party-bookings/${selectedBooking.id}/guests/${guestId}`, {
         method: 'DELETE',
       });
+      if (redirectIfSessionEnded(response)) return;
       if (response.ok) {
         setGuests(prev => prev.filter(g => g.id !== guestId));
       }
@@ -772,6 +778,7 @@ export default function AdminPartiesPage() {
     setLoadingCards(true);
     try {
       const response = await fetch(`/api/admin/party-bookings/${bookingId}/overage-payment`);
+      if (redirectIfSessionEnded(response)) return;
       if (response.ok) {
         const data = await response.json();
         setSavedCards(data.savedCards || []);
@@ -805,6 +812,7 @@ export default function AdminPartiesPage() {
           payment_method_id: selectedPaymentMethod === 'saved_card' ? selectedCardId : undefined,
         }),
       });
+      if (redirectIfSessionEnded(response)) return;
 
       const data = await response.json();
       if (response.ok) {
@@ -847,43 +855,6 @@ export default function AdminPartiesPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  // PIN verification - authenticates via staff login API
-  const handlePinSubmit = async () => {
-    if (pinInput.length !== 4) return;
-
-    setIsAuthenticating(true);
-    setPinError('');
-
-    try {
-      const response = await fetch('/api/auth/staff-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinInput }),
-      });
-
-      if (response.ok) {
-        setIsUnlocked(true);
-        setPinError('');
-      } else {
-        const data = await response.json();
-        setPinError(data.error || 'Invalid PIN. Please try again.');
-        setPinInput('');
-      }
-    } catch (err) {
-      logger.error({ error: err }, 'Staff login failed');
-      setPinError('Authentication failed. Please try again.');
-      setPinInput('');
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  const handlePinKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handlePinSubmit();
-    }
-  };
-
   // Stats
   const stats = {
     total: bookings.length,
@@ -895,52 +866,9 @@ export default function AdminPartiesPage() {
       .reduce((sum, b) => sum + Number(b.total_price), 0),
   };
 
-  // PIN Lock Screen
-  if (!isUnlocked) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white flex items-center justify-center p-8 pos-page-static">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">🔒 Admin Access Required</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-center text-neutral-600">
-                Enter the admin PIN to access Party Management
-              </p>
-              <div>
-                <input
-                  type="password"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  onKeyDown={handlePinKeyDown}
-                  placeholder="Enter PIN"
-                  maxLength={4}
-                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 disabled:opacity-50"
-                  autoFocus
-                  disabled={isAuthenticating}
-                />
-              </div>
-              {pinError && (
-                <p className="text-red-600 text-sm text-center">{pinError}</p>
-              )}
-              <Button
-                onClick={handlePinSubmit}
-                className="w-full"
-                disabled={pinInput.length < 4 || isAuthenticating}
-              >
-                {isAuthenticating ? 'Authenticating...' : 'Unlock'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8 pos-page-static">
+      <div>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-honey-500"></div>
@@ -951,15 +879,10 @@ export default function AdminPartiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pastel-yellow to-white p-8 pos-page-static">
+    <div>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-charcoal-800 mb-2">Party Management</h1>
-            <p className="text-neutral-600">Manage party bookings, packages, and calendar</p>
-          </div>
-        </div>
+        <AdminPageHeader title="Parties" description="Bookings, guests and discounts" />
 
         {/* Messages */}
         {error && (
@@ -1204,6 +1127,7 @@ export default function AdminPartiesPage() {
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ child_name: newName }),
                                   });
+                                  if (redirectIfSessionEnded(res)) return;
                                   if (res.ok) {
                                     const updated = await res.json();
                                     setBookings(prev => prev.map(b => b.id === selectedBooking.id ? updated : b));
