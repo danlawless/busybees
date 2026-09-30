@@ -51,6 +51,34 @@ export async function getCustomerChildren(customerId: string): Promise<Child[]> 
 }
 
 /**
+ * Get the ids of a customer's children, bypassing RLS.
+ *
+ * Feeds the batch check-in ownership gate, which denies a child_id that
+ * isn't in this list. That route does require a staff session -- it is not
+ * anonymous -- but that is not why this reads as admin. An RLS-scoped read
+ * returns an empty list both for "this customer has no children" and for
+ * "these children are not visible to this caller", and the gate cannot tell
+ * the two apart: the second would deny a whole family at the front desk.
+ * Read with the same admin client the insert already uses, so visibility
+ * never masquerades as ownership. Do not swap this back to `createClient()`.
+ */
+export async function getCustomerChildIdsAsAdmin(customerId: string): Promise<string[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('children')
+    .select('id')
+    .eq('customer_id', customerId);
+
+  if (error) {
+    console.error('Error fetching customer child ids (admin):', error);
+    throw error;
+  }
+
+  return data.map((child) => child.id);
+}
+
+/**
  * Create a new child
  */
 export async function createChild(child: ChildInsert): Promise<Child> {

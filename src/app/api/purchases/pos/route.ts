@@ -14,16 +14,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
-import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { validateBirthdateForProduct, hasAgeRestriction, requiresChildSelection, CHILD_REQUIRED_ERROR } from '@/lib/utils/ageUtils';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
+import {
+  MEMBERSHIP_DISCOUNT_PERCENT,
+  applyMemberDiscount,
+  fromPurchaseRow,
+  hasActiveMembership,
+  isMemberDiscountable,
+} from '@/lib/membership';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
+
+// The exact row shape `.insert(...).select().single()` resolves to for this
+// table — used to type the per-child purchases returned to the caller so
+// Task 8 can open each child's session against their own new pass.
+type PurchaseRow = Database['public']['Tables']['purchases']['Row'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +68,9 @@ export async function POST(request: NextRequest) {
       purchase_type,
       child_id,
       children_ids, // For family passes: array of child IDs
+      split_per_child, // Record one purchase row per child in children_ids (day passes bought for siblings)
+      child_prices, // Optional exact price per child, aligned with children_ids; must sum to product_price
+      pass_scope,
       quantity = 1,
       metadata = {},
       // Payment method options
@@ -64,6 +80,13 @@ export async function POST(request: NextRequest) {
       coupon_code, // Optional: single-use coupon code (day-pass purchases only)
       use_gift_card_balance = true, // Apply the customer's account gift card credit (default on)
     } = body;
+
+    // Punch cards are bought for the account from 1 October 2026. Anything that
+    // does not say so is a pass for one named child, which is what every row
+    // sold before then is. This is provisional -- overridden below once the
+    // product itself is resolved, because a punch card must always be
+    // account-scoped no matter what (or whether) the caller sent pass_scope.
+    let passScope: 'child' | 'account' = pass_scope === 'account' ? 'account' : 'child';
 
     // Validate required fields
     if (!customer_id || !product_id || !product_name || product_price === undefined || !purchase_type) {
@@ -88,6 +111,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Age gate validation for passes with age restrictions
+    // An age-restricted pass with no child named skips the check below entirely,
+    // so refuse it rather than sell a pass nobody has been checked against.
+    if (!child_id && requiresChildSelection(product_name)) {
+      logger.warn(
+        { product_name },
+        'Age-restricted pass rejected: no child selected'
+      );
+      return NextResponse.json({ error: CHILD_REQUIRED_ERROR }, { status: 400 });
+    }
+
     if (child_id && hasAgeRestriction(product_name)) {
       const { data: child } = await adminSupabase
         .from('children')
@@ -120,6 +153,35 @@ export async function POST(request: NextRequest) {
 
     logger.info({ customer_id, product_name, purchase_type, payment_method }, 'Processing POS purchase');
 
+    // Active members get an automatic discount on food & retail. Resolved here,
+    // server-side, from the customer's own purchase history — the client sends
+    // the list price and never decides whether the discount applies.
+    let memberDiscount = 0;
+    let unitPrice = Number(product_price);
+    if (isMemberDiscountable(purchase_type)) {
+      const { data: memberPasses, error: memberError } = await adminSupabase
+        .from('purchases')
+        .select('type, status, expiry_date, actual_expiry_date')
+        .eq('customer_id', customer_id)
+        .eq('type', 'monthly_pass')
+        .eq('status', 'active');
+
+      if (memberError) {
+        // Never block a sale on this — the customer just pays list price.
+        logger.warn(
+          { customer_id, error: memberError },
+          'Failed to check membership for counter discount, charging list price'
+        );
+      } else if (hasActiveMembership((memberPasses ?? []).map(fromPurchaseRow))) {
+        unitPrice = applyMemberDiscount(unitPrice, true);
+        memberDiscount = Number(product_price) - unitPrice;
+        logger.info(
+          { customer_id, product_name, memberDiscount, percent: MEMBERSHIP_DISCOUNT_PERCENT },
+          '🏷️ Active member — applied automatic counter discount'
+        );
+      }
+    }
+
     // Coupon validation (day-pass only; single-use; cap at one unit's price; remainder forfeited)
     let couponDiscount = 0;
     let validatedCouponId: string | null = null;
@@ -146,7 +208,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      const { applied } = computeCouponDiscount(couponResult.coupon, Number(product_price));
+      const { applied } = computeCouponDiscount(couponResult.coupon, unitPrice);
       couponDiscount = applied;
       validatedCouponId = couponResult.coupon.id;
     }
@@ -162,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     const stripe = await getStripeClient();
     const stripeMode = await getStripeMode();
-    const finalUnitPrice = Math.max(0, Number(product_price) - couponDiscount);
+    const finalUnitPrice = Math.max(0, unitPrice - couponDiscount);
     const finalTotal = finalUnitPrice * quantity;
 
     // Apply the customer's gift card balance (account credit) to the remaining total,
@@ -344,6 +406,21 @@ export async function POST(request: NextRequest) {
       adminSupabase,
     );
 
+    // A punch card is always account-scoped, regardless of what pass_scope the
+    // caller sent (or, from a screen that predates this, never sends at all).
+    // Several screens post here — the POS product grid, the customer
+    // dashboard's own purchase flow, and this route's own card-first punch
+    // flow — and a client-supplied scope on a money-bearing column is the
+    // wrong shape: any future caller that forgets to send pass_scope: 'account'
+    // would silently create a card that only works for one child. Deriving it
+    // from the product itself (shared with /api/stripe/direct-payment and the
+    // Stripe webhook, so all three callers agree) makes forgetting impossible.
+    // Day and monthly passes are untouched: they stay whatever passScope
+    // already resolved to above.
+    if ((await resolvePassScope(product_id, adminSupabase)) === 'account') {
+      passScope = 'account';
+    }
+
     // Monthly passes default to auto-renew on (renew 7 days before expiry)
     const isMonthlyPass = purchase_type === 'monthly_pass';
     const nextRenewalDate = isMonthlyPass && expiryDate
@@ -356,15 +433,50 @@ export async function POST(request: NextRequest) {
       ? children_ids
       : null;
 
+    // One payment covering several children records a purchase row per child, so
+    // every child's pass is tracked and priced on its own. The combo pass has
+    // always worked this way; the child-first flow asks for it explicitly via
+    // split_per_child so that family passes — which are one pass covering many
+    // children — keep recording as a single row.
+    const requestedSplitIds = split_per_child === true && Array.isArray(children_ids) && children_ids.length > 0
+      ? (children_ids as string[])
+      : null;
+    const splitChildrenIds = requestedSplitIds ?? comboChildrenIds;
+
+    // Exact per-child prices, when the caller sends them. They must add up to
+    // the amount actually charged, otherwise the recorded revenue would drift
+    // from the payment — fall back to an even split rather than trust them.
+    let perChildPrices: number[] | null = null;
+    if (splitChildrenIds && Array.isArray(child_prices) && child_prices.length === splitChildrenIds.length) {
+      const sum = child_prices.reduce((t: number, p: number) => t + Number(p), 0);
+      if (Math.abs(sum - Number(product_price)) < 0.01) {
+        perChildPrices = child_prices.map((p: number) => Number(p));
+      } else {
+        logger.warn(
+          { customer_id, sum, product_price },
+          'child_prices do not sum to product_price — falling back to an even split'
+        );
+      }
+    }
+
     let purchase;
+    // Every row created by this request, in addition to `purchase` above.
+    // Task 8 needs each child's own new pass id to open that child's session,
+    // which `purchase` alone (the split branch's "use first for the response")
+    // cannot provide.
+    let createdPurchases: PurchaseRow[] = [];
 
-    if (comboChildrenIds) {
-      // Create a separate purchase for each child in the combo
-      const pricePerChild = (payment_method === 'complimentary' ? 0 : product_price) / comboChildrenIds.length;
-      const giftCardPerChild = giftCardAmountUsed / comboChildrenIds.length;
-      const purchases = [];
+    if (splitChildrenIds) {
+      // Create a separate purchase for each child sharing this payment
+      const evenPrice = (payment_method === 'complimentary' ? 0 : Number(product_price)) / splitChildrenIds.length;
+      const giftCardPerChild = giftCardAmountUsed / splitChildrenIds.length;
+      const purchases: PurchaseRow[] = [];
 
-      for (const comboChildId of comboChildrenIds) {
+      for (const [index, comboChildId] of splitChildrenIds.entries()) {
+        const pricePerChild = payment_method === 'complimentary'
+          ? 0
+          : (perChildPrices ? perChildPrices[index] : evenPrice);
+
         const { data: childPurchase, error: childDbError } = await adminSupabase
           .from('purchases')
           .insert({
@@ -381,6 +493,12 @@ export async function POST(request: NextRequest) {
             status: 'active',
             stripe_payment_intent_id: paymentIntentId,
             gift_card_amount_used: giftCardPerChild,
+            // One row per named child is a per-child pass by construction --
+            // the split exists precisely because each child gets their own.
+            // Written out rather than left to the column default so the
+            // "forgetting is impossible" claim above holds on every insert in
+            // this route, not just the single-purchase one.
+            pass_scope: 'child',
           })
           .select()
           .single();
@@ -390,13 +508,14 @@ export async function POST(request: NextRequest) {
           throw childDbError;
         }
 
-        purchases.push(childPurchase);
+        purchases.push(childPurchase!);
       }
 
       purchase = purchases[0]; // Use first for the response
+      createdPurchases = purchases;
       logger.info(
-        { purchaseIds: purchases.map(p => p.id), customer_id },
-        'Combo pass: created individual purchases for each child'
+        { purchaseIds: purchases.map(p => p.id), customer_id, exactPrices: perChildPrices !== null },
+        'Multi-child pass: created individual purchases for each child'
       );
     } else {
       // Standard single purchase
@@ -404,7 +523,13 @@ export async function POST(request: NextRequest) {
         .from('purchases')
         .insert({
           customer_id,
-          child_id: child_id || null,
+          // An account-wide card names no child. A screen that still sends one
+          // (the product grid does, from whoever happens to be selected) would
+          // otherwise leave a row that is account-scoped *and* child-tagged --
+          // a contradiction the launch runbook asserts must not exist, and one
+          // that would make the card look child-locked wherever child_id is
+          // read instead of pass_scope.
+          child_id: passScope === 'account' ? null : (child_id || null),
           type: purchase_type,
           product_id,
           name: product_name,
@@ -422,6 +547,7 @@ export async function POST(request: NextRequest) {
           party_start_time: metadata.party_time || null,
           party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
           party_notes: metadata.party_notes || null,
+          pass_scope: passScope,
         })
         .select()
         .single();
@@ -432,6 +558,7 @@ export async function POST(request: NextRequest) {
       }
 
       purchase = singlePurchase;
+      createdPurchases = [singlePurchase!];
 
       // Atomically redeem the coupon against this purchase
       if (validatedCouponId && coupon_code) {
@@ -493,6 +620,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       purchase,
+      purchases: createdPurchases,
       payment_intent_id: paymentIntentId,
       payment_status: paymentStatus,
       payment_method,

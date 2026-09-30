@@ -22,8 +22,10 @@ export function usePasses(includeAll: boolean = false) {
     }
   );
 
+  // The API responds with { passes: [...] } — unwrap it so callers get the
+  // array they asked for rather than the envelope.
   return {
-    passes: data || [],
+    passes: data?.passes ?? [],
     isLoading,
     isError: error,
     mutate,

@@ -20,6 +20,7 @@ export interface Purchase {
   id: string;
   customerId?: string;
   childId?: string;
+  passScope?: string; // 'account' means the pass belongs to the whole account, not one child
   type: PurchaseType;
   productId?: string;
   name: string;

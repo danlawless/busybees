@@ -44,12 +44,26 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+  // 'account' means any child on the account can use it — no one child to
+  // name. Typed to match CheckIn.tsx's own Purchase, since this object flows
+  // through page.tsx's Customer to CheckIn.tsx's `customers` prop.
+  passScope?: "child" | "account";
 }
 
 interface Session {
   id: string;
   customerId: string;
   purchaseId: string;
+  // Who actually played on this session. Set for account-scoped punch card
+  // check-ins (one session per child); absent for the older single-child
+  // pass path, where the purchase's own childId already says who it is.
+  // The database and /api/pos/customers actually produce `string | null`
+  // here (never omitted) — kept `?: string` because this object is passed
+  // to page.tsx's onLogin/onNewCustomer as page.tsx's own Customer type,
+  // which in turn must stay assignable to CheckIn.tsx's Session (also
+  // `childId?: string`, un-aligned — see task report). Realigning this file
+  // alone breaks that chain; all three need to move together.
+  childId?: string;
   startTime: string;
   endTime?: string;
   duration?: number;
@@ -202,6 +216,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               firstUseDate: purchase.first_use_date,
               actualExpiryDate: purchase.actual_expiry_date,
               childId: purchase.child_id,
+              passScope: purchase.pass_scope,
               autoRenew: purchase.auto_renew,
               nextRenewalDate: purchase.next_renewal_date,
               stripePaymentIntentId: purchase.stripe_payment_intent_id,
@@ -228,6 +243,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               id: session.id,
               customerId: session.customer_id,
               purchaseId: session.purchase_id,
+              // Who actually played on this session — needed so the check-in
+              // picker can tell which children on an account punch card are
+              // already inside (the purchase itself names no single child).
+              childId: session.child_id,
               startTime: session.start_time,
               endTime: session.end_time,
               autoCheckoutTime: session.auto_checkout_time,

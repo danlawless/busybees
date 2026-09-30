@@ -1180,12 +1180,12 @@ function getPackageEmailContent(packageName: string, isSemiPrivate = false): { h
                     <p style="${subheadingStyle}">🎪 Play Time &ndash; 1 Hour, 30 Minutes</p>
                     <p style="${textStyle}">Children will enjoy full access to the play area, including the bounce house and music.</p>
 
-                    <p style="${subheadingStyle}">🍕 Pizza and Cake &ndash; Final 30 Minutes</p>
-                    <p style="${textStyle}">The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
-                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room. This helps shift everyone toward the pizza and cake portion of the party and ensures we can prepare the play area for the next group.</p>
+                    <p style="${subheadingStyle}">🎂 Food and Cake &ndash; Final 30 Minutes</p>
+                    <p style="${textStyle}">The last 30 minutes of your reservation will take place in the private party room. Please bring your own food, cake, snacks, and drinks. All food and drinks must be consumed in the party room.</p>
+                    <p style="${textStyle}">To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room. This helps shift everyone toward the food and cake portion of the party and ensures we can prepare the play area for the next group.</p>
 
                     <p style="${subheadingStyle}">👋 Departure</p>
-                    <p style="${textStyle}">At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
+                    <p style="${textStyle}">At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure so our staff can begin cleaning and preparing the space for the next party.</p>
 
                     <p style="${subheadingStyle}">🐝 Busy Bee Sticker Stop</p>
                     <p style="${textStyle}">Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker. This has become a fun tradition for many of our guests and helps make the transition out of the play area smooth and exciting for the kids.</p>
@@ -1215,12 +1215,12 @@ Your party will follow this timeline:
 Play Time - 1 Hour, 30 Minutes
 Children will enjoy full access to the play area, including the bounce house and music.
 
-Pizza and Cake - Final 30 Minutes
-The last 30 minutes of your reservation will take place in the private party room for pizza and cake. You are welcome to bring in your own food, snacks, and drinks. All food and drinks must be consumed in the party room.
+Food and Cake - Final 30 Minutes
+The last 30 minutes of your reservation will take place in the private party room. Please bring your own food, cake, snacks, and drinks. All food and drinks must be consumed in the party room.
 To help make the transition smooth for everyone, the bounce house and music will be turned off during these final 30 minutes while the kids are in the party room.
 
 Departure
-At the conclusion of pizza and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
+At the conclusion of food and cake, we kindly ask that children do not re-enter the play area. Please begin gathering belongings and escort guests toward the main lobby for departure.
 
 Busy Bee Sticker Stop
 Before heading out, kids are welcome to stop by the front desk near the shoe area to receive a custom Busy Bee sticker.

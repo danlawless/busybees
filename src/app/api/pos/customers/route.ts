@@ -66,6 +66,13 @@ interface FormattedSession {
   id: string;
   customerId: string;
   purchaseId: string;
+  // Who actually played on this session. Set for account-scoped punch card
+  // check-ins (one session per child); null for the older single-child pass
+  // path, where the purchase's own childId already says who it is. The
+  // check-in picker needs this to tell which of an account's several
+  // children are already inside — a purchase-level id can't, once one card
+  // covers more than one child.
+  childId: string | null;
   startTime: string;
   endTime: string | null;
   duration: number | null;
@@ -88,6 +95,7 @@ interface FormattedPurchase {
   childId: string | null; // Direct single-child link (needed to resolve check-in child names)
   childIds: string[]; // For family passes: all children covered by this purchase
   giftCardAmountUsed: number; // Portion of price paid from gift-card/account credit (not new revenue)
+  passScope: string; // 'account' means any child on the account can use it — no one child to name
 }
 
 /**
@@ -214,6 +222,7 @@ export async function GET() {
         childId: purchase.child_id,
         childIds: childIdsByPurchase.get(purchase.id) || [],
         giftCardAmountUsed: Number(purchase.gift_card_amount_used || 0),
+        passScope: purchase.pass_scope,
       });
     }
 
@@ -228,6 +237,7 @@ export async function GET() {
         id: session.id,
         customerId: session.customer_id,
         purchaseId: session.purchase_id,
+        childId: session.child_id,
         startTime: session.start_time,
         endTime: session.end_time,
         duration: session.duration,

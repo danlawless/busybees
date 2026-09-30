@@ -21,11 +21,18 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from "@/lib
 import { getOrCreateStripeCustomer } from "@/lib/stripe/payment-methods";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
-import { validateBirthdateForProduct, hasAgeRestriction } from "@/lib/utils/ageUtils";
-import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from "@/lib/utils/purchaseDefaults";
+import { validateBirthdateForProduct, hasAgeRestriction, requiresChildSelection, CHILD_REQUIRED_ERROR } from "@/lib/utils/ageUtils";
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from "@/lib/utils/purchaseDefaults";
 import { decrementInventoryAfterPurchase } from "@/lib/services/products";
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from "@/lib/services/coupons";
 import { getUserGiftCardBalance, applyGiftCardBalance } from "@/lib/services/gift-cards";
+import {
+    MEMBERSHIP_DISCOUNT_PERCENT,
+    applyMemberDiscount,
+    fromPurchaseRow,
+    hasActiveMembership,
+    isMemberDiscountable,
+} from "@/lib/membership";
 
 export async function POST(request: NextRequest) {
     const adminSupabase = createAdminClient();
@@ -120,6 +127,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Age gate validation for passes with age restrictions
+        // An age-restricted pass with no child named skips the check below entirely,
+        // so refuse it rather than sell a pass nobody has been checked against.
+        if (!childId && requiresChildSelection(productName)) {
+          logger.warn(
+            { productName },
+            'Age-restricted pass rejected: no child selected'
+          );
+          return NextResponse.json({ error: CHILD_REQUIRED_ERROR }, { status: 400 });
+        }
+
         if (childId && hasAgeRestriction(productName)) {
             const { data: child } = await adminSupabase
                 .from("children")
@@ -166,6 +183,36 @@ export async function POST(request: NextRequest) {
 
         const stripe = await getStripeClient();
 
+        // Active members get an automatic discount on food & retail. Resolved
+        // server-side from the customer's own purchase history so the client
+        // never decides whether the discount applies. Note productPrice here is
+        // already the line total (quantity × any sibling discount).
+        let memberDiscount = 0;
+        let discountedTotal = Number(productPrice);
+        if (isMemberDiscountable(purchaseType)) {
+            const { data: memberPasses, error: memberError } = await adminSupabase
+                .from("purchases")
+                .select("type, status, expiry_date, actual_expiry_date")
+                .eq("customer_id", customerId)
+                .eq("type", "monthly_pass")
+                .eq("status", "active");
+
+            if (memberError) {
+                // Never block a sale on this — the customer just pays list price.
+                logger.warn(
+                    { customerId, error: memberError },
+                    "Failed to check membership for counter discount, charging list price"
+                );
+            } else if (hasActiveMembership((memberPasses ?? []).map(fromPurchaseRow))) {
+                discountedTotal = applyMemberDiscount(discountedTotal, true);
+                memberDiscount = Number(productPrice) - discountedTotal;
+                logger.info(
+                    { customerId, productName, memberDiscount, percent: MEMBERSHIP_DISCOUNT_PERCENT },
+                    "🏷️ Active member — applied automatic counter discount"
+                );
+            }
+        }
+
         // Coupon validation (day-pass only; single-use; cap at productPrice; remainder forfeited)
         let couponDiscount = 0;
         let validatedCouponId: string | null = null;
@@ -183,13 +230,13 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 );
             }
-            const { applied } = computeCouponDiscount(couponResult.coupon, Number(productPrice));
+            const { applied } = computeCouponDiscount(couponResult.coupon, discountedTotal);
             couponDiscount = applied;
             validatedCouponId = couponResult.coupon.id;
         }
 
         // productPrice already includes quantity × discount from frontend
-        const finalTotal = Math.max(0, Number(productPrice) - couponDiscount);
+        const finalTotal = Math.max(0, discountedTotal - couponDiscount);
 
         // Apply the customer's gift card balance (account credit) to the remaining
         // total, after any coupon. Mirrors the web and After Dark checkout flows so a
@@ -307,6 +354,16 @@ export async function POST(request: NextRequest) {
         );
         const expiryDate = defaults.expiryDate;
 
+        // A punch card is always account-scoped — derived from the product
+        // itself (shared with /api/purchases/pos, /api/stripe/direct-payment
+        // and both webhook handlers), never from the request. This route is
+        // the one the POS product grid uses in kiosk mode, so without this a
+        // punch card bought from the grid looks normal and is silently locked
+        // to one child. Day and monthly passes resolve to 'child', same as the
+        // column default; a failed lookup does too, so a hiccup in the passes
+        // table cannot block the sale.
+        const passScope = await resolvePassScope(productId, adminSupabase);
+
         // Child + Infant combo pass: create individual purchases per child
         const isComboPass = (productName.toLowerCase().includes('child') || productName.toLowerCase().includes('toddler')) && productName.toLowerCase().includes('infant');
         const comboChildrenIds = isComboPass && Array.isArray(childrenIds) && childrenIds.length === 2
@@ -336,6 +393,10 @@ export async function POST(request: NextRequest) {
                         used_sessions: 0,
                         total_sessions: 1,
                         status: "active",
+                        // One row per named child in a combo is a per-child
+                        // pass by construction. Explicit, so every insert in
+                        // this route states its scope.
+                        pass_scope: "child" as const,
                         stripe_payment_intent_id: paymentIntent?.id || null,
                         gift_card_amount_used: giftCardPerChild,
                     })
@@ -372,7 +433,11 @@ export async function POST(request: NextRequest) {
                 .from("purchases")
                 .insert({
                     customer_id: customerId,
-                    child_id: childId || null,
+                    // An account-wide card names no child — see the note in
+                    // /api/purchases/pos. A row that is account-scoped and
+                    // child-tagged is the contradiction the launch runbook
+                    // asserts must not exist.
+                    child_id: passScope === "account" ? null : (childId || null),
                     type: purchaseType,
                     product_id: productId,
                     name: purchaseName,
@@ -384,6 +449,7 @@ export async function POST(request: NextRequest) {
                     status: purchaseType === "food_beverage" ? "used" : "active",
                     stripe_payment_intent_id: paymentIntent?.id || null,
                     gift_card_amount_used: giftCardAmountUsed,
+                    pass_scope: passScope,
                 })
                 .select()
                 .single();

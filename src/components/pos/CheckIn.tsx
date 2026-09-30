@@ -9,10 +9,28 @@ import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { WaiverModal } from "@/components/ui/WaiverModal";
 import { AfterDarkWaiver, type WaiverFormData as AfterDarkWaiverFormData } from "@/components/customer/AfterDarkWaiver";
 import { GroupChildrenManager } from "./GroupChildrenManager";
+import { PunchCardCheckIn } from "@/components/pos/PunchCardCheckIn";
+import { groupDayPassLines } from "@/lib/pos/punchAllocation";
+import type { AllocationLine, PunchAllocation } from "@/lib/pos/punchAllocation";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
 import { parseDateString } from "@/lib/utils";
+import {
+    MEMBERSHIP_DISCOUNT_PERCENT,
+    applyMemberDiscount,
+    hasActiveMembership,
+} from "@/lib/membership";
+import {
+    PASS_KINDS,
+    PASS_KIND_LABEL,
+    groupQuoteByProduct,
+    quotePasses,
+    punchCardOptions,
+    type PassKind,
+    type PassQuote,
+    type SelectablePass,
+} from "@/lib/pos/passSelection";
 
 interface SiblingDiscount {
     id: string;
@@ -68,6 +86,7 @@ interface Purchase {
     nextRenewalDate?: string;
     childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
     childIds?: string[]; // For family passes: all children covered by this purchase
+    passScope?: 'child' | 'account';
     // Party scheduling fields
     partyDate?: string;
     partyStartTime?: string;
@@ -80,6 +99,10 @@ interface Session {
     id: string;
     customerId: string;
     purchaseId: string;
+    // Who actually played on this session. Set for account-scoped punch card
+    // check-ins (one session per child); absent for the older single-child
+    // pass path, where the purchase's own childId already says who it is.
+    childId?: string;
     startTime: string;
     endTime?: string;
     duration?: number;
@@ -93,6 +116,42 @@ interface SavedCard {
     expiryMonth: number;
     expiryYear: number;
     isDefault: boolean;
+}
+
+/** A purchase as the API returns it, in the database's snake_case. */
+interface PurchaseRow {
+    id: string;
+    type: Purchase["type"];
+    name: string;
+    price: number;
+    purchase_date?: string;
+    created_at?: string;
+    expiry_date?: string;
+    first_use_date?: string;
+    actual_expiry_date?: string;
+    used_sessions: number;
+    total_sessions: number;
+    status: Purchase["status"];
+    child_id?: string;
+    pass_scope?: 'child' | 'account';
+}
+
+function toPurchase(row: PurchaseRow): Purchase {
+    return {
+        id: row.id,
+        type: row.type,
+        name: row.name,
+        price: row.price,
+        purchaseDate: row.purchase_date || row.created_at || "",
+        expiryDate: row.expiry_date,
+        firstUseDate: row.first_use_date,
+        actualExpiryDate: row.actual_expiry_date,
+        usedSessions: row.used_sessions,
+        totalSessions: row.total_sessions,
+        status: row.status,
+        childId: row.child_id,
+        passScope: row.pass_scope,
+    };
 }
 
 interface CheckInProps {
@@ -135,6 +194,21 @@ export function CheckIn({
     }>>({});
     const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
     const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
+    // The account punch card currently open in the "who's playing" picker,
+    // by purchase id.
+    const [punchCardCheckIn, setPunchCardCheckIn] = useState<string | null>(null);
+    // Set once any day-pass purchase has actually succeeded for a punch-card
+    // check-in but the check-in itself did not finish (the batch session
+    // call failed, or a later day-pass group failed after an earlier one
+    // went through). From this point on, that purchase id must never run the
+    // purchase loop again -- only retry opening sessions against what was
+    // already bought -- or the same passes get bought twice. Cleared only on
+    // a successful check-in; a Cancel intentionally leaves it in place.
+    const [pendingPunchCardRetry, setPendingPunchCardRetry] = useState<{
+        purchaseId: string;
+        entries: { purchase_id: string; child_id: string }[];
+        boughtSummary: string;
+    } | null>(null);
     const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
     const [showPartyModal, setShowPartyModal] = useState(false);
     const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
@@ -189,6 +263,13 @@ export function CheckIn({
     const [comboInfantId, setComboInfantId] = useState<string | null>(null); // infant under 2 for combo pass
     const [selectedChildrenForFamilyPass, setSelectedChildrenForFamilyPass] =
         useState<string[]>([]);
+    // Child-first pass buying: pick who's playing, then the kind of pass.
+    const [passChildIds, setPassChildIds] = useState<string[]>([]);
+    const [passKind, setPassKind] = useState<PassKind>("day");
+    // Punch card buying is account-scoped: one card is picked, not a child.
+    const [selectedPunchCard, setSelectedPunchCard] = useState<SelectablePass | null>(null);
+    const [buyingPasses, setBuyingPasses] = useState(false);
+    const [passError, setPassError] = useState<string | null>(null);
     const [showAddChild, setShowAddChild] = useState(false);
     const [showWaiverModal, setShowWaiverModal] = useState(false);
     const [waiverChild, setWaiverChild] = useState<Child | null>(null);
@@ -214,9 +295,6 @@ export function CheckIn({
 
     // Filter states
     const [passFilter, setPassFilter] = useState<"all" | "infant" | "toddler">("all");
-    const [partyFilter, setPartyFilter] = useState<"all" | "semi-private" | "private">(
-        "all"
-    );
 
     // Complimentary pass state (staff only)
     const [showComplimentaryModal, setShowComplimentaryModal] = useState(false);
@@ -371,6 +449,16 @@ export function CheckIn({
                         price: pass.price,
                         description: pass.description,
                         sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+                        // Kept under its own name as well: punchCardOptions and
+                        // resolvePassOptions sort on `sessions_included` first,
+                        // so renaming it to `sessions` on the way in left that
+                        // primary sort key undefined for every product and the
+                        // lists fell back to price-ascending — putting the $90
+                        // 5-punch card above the $170 10-punch card, and
+                        // handing resolvePassForChild ([0]) the wrong product
+                        // to price a shortfall against.
+                        sessions_included:
+                            pass.sessions_included || pass.sessionsIncluded || 1,
                         category: pass.category, // day, weekly, monthly
                         validity:
                             pass.category === "day"
@@ -770,33 +858,242 @@ export function CheckIn({
         }));
     };
 
-    // Calculate discounted total price using sibling discounts
-    // Only applies to monthly memberships when configured
-    const calculateDiscountedTotal = (
-        basePrice: number,
-        quantity: number,
-        isMonthlyMembership: boolean = false
-    ) => {
-        if (quantity <= 0) return 0;
-        if (quantity === 1) return basePrice;
+    // Customer on screen (selected via staff search, or the logged-in customer).
+    // Resolved here rather than at render time because the pricing helpers below
+    // need to know whether this customer holds a membership.
+    const displayCustomer = isStaffMode
+        ? selectedCustomer
+        : currentCustomer || selectedCustomer;
 
-        // Build discount map for quick lookup
-        const discountMap = new Map<number, number>();
-        for (const d of siblingDiscounts) {
-            // Only apply if active and either it's a monthly membership or it's not restricted to monthly only
-            if (d.is_active && (isMonthlyMembership || !d.applies_to_monthly_only)) {
-                discountMap.set(d.child_position, d.discount_percent);
+    // Active monthly pass holders get member pricing automatically. Derived from
+    // the purchases already loaded for this customer, so it costs no extra
+    // request and can't fall out of step with what's on screen.
+    const isActiveMember = hasActiveMembership(displayCustomer?.purchases);
+
+    /**
+     * Whether member-only sibling pricing applies to this transaction.
+     *
+     * Sibling discounts are priced per child, so they only ever apply to pass
+     * purchases — never to snacks or retail, which get the flat member discount
+     * server-side instead.
+     *
+     * Two ways to qualify: the customer already holds an active membership, or
+     * they're buying monthly passes right now (so a parent signing up two
+     * children still gets the sibling rate on the spot).
+     */
+    const qualifiesForMemberPricing = (
+        purchaseType: string | undefined,
+        isPassPurchase: boolean
+    ) => isPassPurchase && (isActiveMember || purchaseType === "monthly_pass");
+
+    // --- Child-first pass buying -------------------------------------------
+    // Staff (or the customer) picks which children are playing; the product and
+    // rate for each one are derived from their age, and siblings are priced by
+    // the configured discount ladder.
+
+    const passChildren = (displayCustomer?.children ?? []).filter((c) =>
+        passChildIds.includes(c.id)
+    );
+
+    // Punch cards are account-scoped from 1 October 2026 — there is no child to
+    // price them against, so the per-child quote does not apply to them.
+    const passQuote: PassQuote =
+        passKind === "punch"
+            ? { lines: [], unresolved: [], total: 0, savings: 0, productCount: 0 }
+            : quotePasses(
+                  passChildren,
+                  passKind,
+                  availablePasses,
+                  siblingDiscounts,
+                  qualifiesForMemberPricing(
+                      passKind === "monthly" ? "monthly_pass" : "day_pass",
+                      true
+                  )
+              );
+
+    const togglePassChild = (childId: string) => {
+        setPassError(null);
+        setPassChildIds((prev) =>
+            prev.includes(childId)
+                ? prev.filter((id) => id !== childId)
+                : [...prev, childId]
+        );
+    };
+
+    /**
+     * Buy the quoted passes.
+     *
+     * Day passes for siblings share one payment and record a row per child, so
+     * each child's pass is tracked at its own rate. Monthly passes are bought
+     * per child at full price, so each is its own purchase. Punch cards have no
+     * child to price against at all — they belong to the account — and are
+     * handled by their own early branch below.
+     */
+    const handleBuyPasses = async () => {
+        const customer = displayCustomer;
+
+        // A punch card belongs to the account, so there is no child to pick and
+        // no per-child quote to build — one card, one row.
+        if (passKind === "punch") {
+            if (!customer) return;
+            if (!selectedPunchCard) {
+                setPassError("Choose a punch card.");
+                return;
             }
+
+            setBuyingPasses(true);
+            setPassError(null);
+
+            try {
+                const response = await fetch("/api/purchases/pos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_id: customer.id,
+                        product_id: selectedPunchCard.id,
+                        product_name: selectedPunchCard.name,
+                        product_price: selectedPunchCard.price,
+                        product_description: "",
+                        purchase_type: "weekly_pass",
+                        child_id: null,
+                        pass_scope: "account",
+                        quantity: 1,
+                        metadata: {},
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Purchase failed");
+                }
+
+                setSuccessDetails({
+                    title: "Punch Card Purchased ✅",
+                    message: `${selectedPunchCard.name} — any child on the account can use it.`,
+                    details: `💰 ${formatCurrency(selectedPunchCard.price)}`,
+                });
+                setShowSuccessModal(true);
+                setSelectedPunchCard(null);
+
+                // Refresh the customer so the new card shows immediately
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                    });
+                }
+            } catch (error) {
+                setPassError(
+                    error instanceof Error ? error.message : "Purchase failed. Please try again."
+                );
+            } finally {
+                setBuyingPasses(false);
+            }
+            return;
         }
 
-        let total = 0;
-        for (let position = 1; position <= quantity; position++) {
-            const discountPercent = discountMap.get(position) || 0;
-            const price = basePrice * (1 - discountPercent / 100);
-            total += price;
+        if (!customer || passQuote.lines.length === 0) return;
+
+        const missingWaiver = passQuote.lines.find((l) => !l.child.waiverSigned);
+        if (missingWaiver) {
+            setPassError(
+                `${missingWaiver.child.name} needs a signed waiver before buying a pass.`
+            );
+            return;
         }
 
-        return total;
+        setBuyingPasses(true);
+        setPassError(null);
+
+        try {
+            // Day passes group onto one payment per product; punch cards and
+            // monthly passes stay one purchase per child.
+            const groups =
+                passKind === "day"
+                    ? groupQuoteByProduct(passQuote)
+                    : passQuote.lines.map((line) => ({
+                          pass: line.pass,
+                          lines: [line],
+                          total: line.price,
+                          isCombo: false,
+                      }));
+
+            for (const group of groups) {
+                const childIds = group.lines.map((l) => l.child.id);
+                // The combo product already has its own handling server-side —
+                // one payment, a row per child. Everything else uses the
+                // per-child split with the exact prices we quoted.
+                const useSplit = passKind === "day" && !group.isCombo;
+
+                const response = await fetch("/api/purchases/pos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_id: customer.id,
+                        product_id: group.pass.id,
+                        product_name: group.pass.name,
+                        product_price: group.total,
+                        product_description: "",
+                        // Punch cards return above before this point — only
+                        // day and monthly passes are ever bought per child here.
+                        purchase_type:
+                            passKind === "monthly" ? "monthly_pass" : "day_pass",
+                        child_id: childIds[0],
+                        children_ids: childIds,
+                        split_per_child: useSplit,
+                        child_prices: useSplit
+                            ? group.lines.map((l) => l.price)
+                            : undefined,
+                        quantity: 1,
+                        metadata: {},
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Purchase failed");
+                }
+            }
+
+            const names = passQuote.lines.map((l) => l.child.name).join(", ");
+            setSuccessDetails({
+                title: "Passes Purchased ✅",
+                message: `${PASS_KIND_LABEL[passKind]} for ${names}.`,
+                details: `💰 ${formatCurrency(passQuote.total)}${
+                    passQuote.savings > 0
+                        ? `\n🎉 Sibling discount saved ${formatCurrency(passQuote.savings)}`
+                        : ""
+                }`,
+            });
+            setShowSuccessModal(true);
+            setPassChildIds([]);
+
+            // Refresh the customer so the new passes show immediately
+            const purchasesResponse = await fetch(
+                `/api/purchases?customer_id=${customer.id}`
+            );
+            if (purchasesResponse.ok) {
+                const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                    purchases: PurchaseRow[] | null;
+                };
+                onUpdateCustomer({
+                    ...customer,
+                    purchases: (purchasesData || []).map(toPurchase),
+                });
+            }
+        } catch (error) {
+            setPassError(
+                error instanceof Error ? error.message : "Purchase failed. Please try again."
+            );
+        } finally {
+            setBuyingPasses(false);
+        }
     };
 
     // Get pricing breakdown for display
@@ -914,30 +1211,13 @@ export function CheckIn({
         return filtered.sort((a, b) => a.price - b.price);
     };
 
-    // Filter and sort parties based on selected filter
-    const getFilteredParties = () => {
-        let filtered = [...availableParties];
-
-        // Apply filter
-        if (partyFilter === "semi-private") {
-            filtered = filtered.filter((party) =>
-                party.name.toLowerCase().includes("semi-private")
-            );
-        } else if (partyFilter === "private") {
-            filtered = filtered.filter(
-                (party) =>
-                    party.name.toLowerCase().includes("private") &&
-                    !party.name.toLowerCase().includes("semi")
-            );
-        }
-
-        // Sort by price (lowest to highest)
-        return filtered.sort((a, b) => a.price - b.price);
-    };
-
-    // Use filtered and sorted data
+    // Party packages are no longer sold from the POS — parties are booked
+    // through the website. The catalogue is still needed so the POS can
+    // recognise a package a customer already owns and schedule it.
     const AVAILABLE_PASS_PRODUCTS = getFilteredPasses();
-    const AVAILABLE_PARTY_PRODUCTS = getFilteredParties();
+    const AVAILABLE_PARTY_PRODUCTS = [...availableParties].sort(
+        (a, b) => a.price - b.price
+    );
     const AVAILABLE_SNACKS = [...availableSnacks].sort((a, b) => a.price - b.price); // Sort snacks by price too
 
     const formatPhoneNumber = (value: string) => {
@@ -1015,6 +1295,226 @@ export function CheckIn({
                 return firstUseDate;
             default:
                 return new Date(firstUse.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        }
+    };
+
+    /**
+     * Confirm a punch card check-in.
+     *
+     * Day passes are bought first: a declined card must never leave children
+     * checked in. Then every child goes in on one batch insert, so a family
+     * either all gets in or none does.
+     *
+     * The picker's `remaining` comes from the client's stale `usedSessions`,
+     * so the batch call below can fail on capacity *after* the day passes
+     * above have already been paid for -- another till may have drawn the
+     * card down in between. Once any day-pass purchase has actually
+     * succeeded for this purchase id, this must never run the purchase loop
+     * again: a retry only reopens sessions against what was already bought.
+     * That lockout (`pendingPunchCardRetry`) is cleared solely by a
+     * successful check-in -- Cancel deliberately leaves it in place, since
+     * forgetting it would let the next Confirm buy the same passes twice.
+     */
+    const handlePunchCardConfirm = async (
+        customer: Customer,
+        purchaseId: string,
+        allocation: PunchAllocation
+    ) => {
+        const autoCheckoutTime = getNextClosingTime(
+            autoCheckoutSettings.timezone,
+            autoCheckoutSettings.closingTime
+        );
+
+        const retrying = pendingPunchCardRetry?.purchaseId === purchaseId;
+        let entries: { purchase_id: string; child_id: string }[];
+        // Set once day passes are known to have been bought -- either just
+        // now, or by an earlier attempt this retry is resuming.
+        let boughtSummary: string | null = retrying ? pendingPunchCardRetry!.boughtSummary : null;
+
+        // Money has moved for these lines: build the message that both locks
+        // out re-buying and tells staff plainly what already happened.
+        const describePurchased = (lines: readonly AllocationLine[]): string => {
+            const names = lines.map((l) => l.child.name).join(", ");
+            const total = formatCurrency(lines.reduce((sum, l) => sum + l.price, 0));
+            return `Day passes were already purchased for ${names} (${total}). Press Confirm again to finish checking them in — do not buy passes again. If it keeps failing, check them in individually from Available Passes below.`;
+        };
+
+        if (retrying) {
+            entries = pendingPunchCardRetry!.entries;
+        } else {
+            entries = allocation.lines
+                .filter((l) => l.method === "punch")
+                .map((l) => ({ purchase_id: purchaseId, child_id: l.child.id }));
+
+            // Lines whose day pass actually got bought this call, so a
+            // failure -- here or later, opening sessions -- can say exactly
+            // what already happened and this purchase id can be locked out
+            // of ever running the purchase loop again.
+            const purchasedLines: AllocationLine[] = [];
+
+            try {
+                // Different ages can resolve to different day-pass products in
+                // the same shortfall -- the under-1 rate is its own product --
+                // so this buys one purchase per product, never one purchase
+                // for the whole shortfall labeled under the first child's
+                // product. See groupDayPassLines for why keying by pass.id
+                // (rather than quotePasses' own groupId, the way
+                // groupQuoteByProduct does for a direct purchase) is safe here.
+                const groups = groupDayPassLines(allocation.lines);
+                for (const { pass, lines, total } of groups) {
+                    const response = await fetch("/api/purchases/pos", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            customer_id: customer.id,
+                            product_id: pass.id,
+                            product_name: pass.name,
+                            product_price: total,
+                            product_description: "",
+                            purchase_type: "day_pass",
+                            child_id: lines[0].child.id,
+                            children_ids: lines.map((l) => l.child.id),
+                            split_per_child: true,
+                            child_prices: lines.map((l) => l.price),
+                            quantity: 1,
+                            metadata: {},
+                        }),
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || "Purchase failed");
+                    }
+                    const { purchases: created } = (await response.json()) as {
+                        purchases: { id: string; child_id: string | null }[];
+                    };
+                    for (const line of lines) {
+                        const match = created.find((p) => p.child_id === line.child.id);
+                        if (!match) throw new Error(`No purchase returned for ${line.child.name}`);
+                        entries.push({ purchase_id: match.id, child_id: line.child.id });
+                    }
+                    purchasedLines.push(...lines);
+                }
+            } catch (error) {
+                console.error("Punch card day-pass purchase failed:", error);
+                if (purchasedLines.length > 0) {
+                    // Some money already moved. This purchase id is locked out
+                    // of the purchase loop from here on -- a second press may
+                    // only retry opening sessions against what was bought.
+                    boughtSummary = describePurchased(purchasedLines);
+                    setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                    alert(`${boughtSummary}\n\n(Buying the rest failed: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`);
+                } else {
+                    // Nothing was charged yet, so a plain retry is safe.
+                    alert(error instanceof Error ? error.message : "Purchase failed");
+                }
+                return;
+            }
+
+            if (purchasedLines.length > 0) {
+                // Every group that needed buying succeeded. This purchase id
+                // is locked out of the purchase loop from here on even
+                // though nothing has failed yet -- if opening sessions fails
+                // next, it must not be allowed to buy these again.
+                boughtSummary = describePurchased(purchasedLines);
+            }
+        }
+
+        try {
+            const sessionsResponse = await fetch("/api/sessions/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    auto_checkout_time: autoCheckoutTime,
+                    entries,
+                }),
+            });
+            if (!sessionsResponse.ok) {
+                const errorData = await sessionsResponse.json();
+                throw new Error(errorData.error || "Check-in failed");
+            }
+            const { sessions: createdSessions } = (await sessionsResponse.json()) as {
+                sessions: {
+                    id: string;
+                    customer_id: string;
+                    purchase_id: string;
+                    child_id: string | null;
+                    start_time: string;
+                    auto_checkout_time: string;
+                }[];
+            };
+            const newSessions: Session[] = createdSessions.map((s) => ({
+                id: s.id,
+                customerId: s.customer_id,
+                purchaseId: s.purchase_id,
+                childId: s.child_id ?? undefined,
+                startTime: s.start_time,
+                autoCheckoutTime: s.auto_checkout_time,
+            }));
+
+            // The check-in itself has succeeded from here down: the sessions
+            // exist in the database and every day pass this attempt bought is
+            // spent. Nothing past this point may re-arm the retry lock or
+            // tell staff to press Confirm again -- a replay would only be
+            // rejected by checkBatchCapacity (these purchases are now used
+            // up), leaving this card stuck locked forever for no reason.
+            setPunchCardCheckIn(null);
+            setPendingPunchCardRetry(null);
+
+            // Refresh the customer's purchases so the card's reduced balance
+            // and any new day passes show immediately. Best-effort, and
+            // deliberately its own try/catch: a failure here is a stale
+            // screen, not a failed check-in, and must not be read as one by
+            // the outer catch below (which exists to handle check-in itself
+            // failing, not a follow-up refresh).
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                } else {
+                    onUpdateCustomer({
+                        ...customer,
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Punch card check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+                // The children are checked in either way -- fold in the new
+                // sessions so the screen doesn't read as if nobody is.
+                onUpdateCustomer({
+                    ...customer,
+                    activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                });
+            }
+        } catch (error) {
+            console.error("Punch card check-in failed:", error);
+            if (boughtSummary) {
+                // Day passes for this card are already bought -- this attempt
+                // or an earlier one -- so stay locked into retry-only-sessions
+                // rather than letting the next press buy them again.
+                setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                alert(
+                    `${boughtSummary}\n\n(Check-in failed again: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`
+                );
+            } else {
+                alert(error instanceof Error ? error.message : "Check-in failed");
+            }
         }
     };
 
@@ -1150,6 +1650,81 @@ export function CheckIn({
             onUpdateCustomer(updatedCustomer);
         } catch (error) {
             console.error('Error ending session:', error);
+        }
+    };
+
+    /**
+     * Undo a check-in.
+     *
+     * The remedy for a mis-tap, and deliberately not the same button as Check
+     * Out: checking out ends the visit and leaves the punch spent, while this
+     * deletes the session so the AFTER DELETE trigger hands the punch back (and
+     * clears the expiry clock a first use started, on a card returned to zero).
+     * It matters more now than it used to — a family confirmed on one account
+     * card spends a punch per child in a single tap, so the wrong card or the
+     * wrong family costs three punches at once.
+     *
+     * Destructive and irreversible in the other direction, so it confirms
+     * first. Only a session that has not ended can be voided; the server says
+     * so plainly if staff reach for it after checking someone out.
+     */
+    const handleUndoCheckIn = async (
+        customer: Customer,
+        sessionId: string,
+        childName: string | null
+    ) => {
+        const who = childName ? `${childName}'s` : "this";
+        if (
+            !confirm(
+                `Undo ${who} check-in? The punch goes back on the card and they will no longer be checked in.`
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/sessions/${sessionId}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(
+                    errorData.error ||
+                        "Could not undo this check-in. Please try again."
+                );
+                return;
+            }
+
+            const activeSessions = (customer.activeSessions || []).filter(
+                (session) => session.id !== sessionId
+            );
+
+            // The punch is restored by a database trigger, so re-read the
+            // purchases rather than guessing the new balance. Best-effort: a
+            // failure here is a stale balance on screen, not a failed undo.
+            let purchases = customer.purchases;
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    purchases = (purchasesData || []).map(toPurchase);
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Undo check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+            }
+
+            onUpdateCustomer({ ...customer, purchases, activeSessions });
+        } catch (error) {
+            console.error("Error undoing check-in:", error);
+            alert("Could not undo this check-in. Please try again.");
         }
     };
 
@@ -1617,13 +2192,6 @@ export function CheckIn({
             product.name.toLowerCase().includes('group_rate');
     };
 
-    // Handle group rate product - opens children manager instead of direct purchase
-    const handleGroupRatePurchase = (productId: string, product: { name: string; price: number }) => {
-        setGroupRateProductId(productId);
-        setGroupRateGuestCount(quantities[productId] || 10);
-        setShowGroupChildrenManager(true);
-    };
-
     // Callback when group children assignment is complete
     const handleGroupChildrenComplete = (children: typeof pendingGroupChildren, totalPrice: number) => {
         setPendingGroupChildren(children);
@@ -1793,11 +2361,15 @@ export function CheckIn({
                 // Get the default card or first card
                 const defaultCard = customer.savedCards.find(c => c.isDefault) || customer.savedCards[0];
 
-                // Get quantity and calculate discounted total
-                // Sibling discounts only apply to monthly memberships
+                // Get quantity and calculate discounted total. Sibling discounts
+                // apply to passes for members (or when buying memberships); the
+                // member discount on food & retail is applied server-side.
                 const quantity = quantities[productId] || 1;
-                const isMonthlyMembership = purchaseType === 'monthly_pass';
-                const pricing = getPricingBreakdown(product.price, quantity, isMonthlyMembership);
+                const pricing = getPricingBreakdown(
+                    product.price,
+                    quantity,
+                    qualifiesForMemberPricing(purchaseType, isPassPurchase)
+                );
                 const totalPrice = pricing.total;
 
                 // Use kiosk payment API with saved card (self-serve endpoint)
@@ -2261,11 +2833,6 @@ export function CheckIn({
         (c) => c.activeSessions && c.activeSessions.length > 0
     );
 
-    // Customer to display (selected via search or current logged-in customer)
-    const displayCustomer = isStaffMode
-        ? selectedCustomer
-        : currentCustomer || selectedCustomer;
-
     return (
         <div className="space-y-8">
             {/* Staff Search */}
@@ -2402,12 +2969,23 @@ export function CheckIn({
                                         ` • ${displayCustomer.email}`}
                                 </p>
                                 <p className="text-base text-gray-600">
-                                    Member since {formatDate(displayCustomer.createdAt)}
+                                    Customer since {formatDate(displayCustomer.createdAt)}
                                     {displayCustomer.lastVisit &&
                                         ` • Last visit: ${formatDate(
                                             displayCustomer.lastVisit
                                         )}`}
                                 </p>
+                                {isActiveMember && (
+                                    <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-100 border border-amber-400 px-4 py-2">
+                                        <span className="text-xl">🐝</span>
+                                        <span className="text-sm font-bold text-amber-900">
+                                            Active Member
+                                        </span>
+                                        <span className="text-xs text-amber-800">
+                                            {MEMBERSHIP_DISCOUNT_PERCENT}% off food &amp; retail, applied automatically
+                                        </span>
+                                    </div>
+                                )}
                                 {(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0) > 0 && (
                                     <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">
                                         <span className="text-xl">🎁</span>
@@ -2534,6 +3112,202 @@ export function CheckIn({
                                     Add Child
                                 </Button>
                             </div>
+
+                            {/* Buy passes: pick who's playing, then the pass.
+                                The rate for each child comes from their age. */}
+                            {displayCustomer.children.length > 0 && (
+                                <Card className="p-6 border-l-4 border-l-amber-400">
+                                    <h4 className="text-xl font-bold mb-1">
+                                        {passKind === "punch"
+                                            ? "Buy a punch card"
+                                            : "Who's playing?"}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        {passKind === "punch" ? (
+                                            "Choose a card below — any child on the account can use it."
+                                        ) : (
+                                            <>
+                                                Select the children, then choose a pass. The
+                                                right rate is worked out from each
+                                                child&apos;s age.
+                                            </>
+                                        )}
+                                    </p>
+
+                                    {passKind !== "punch" && (
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {displayCustomer.children.map((child) => {
+                                                const selected = passChildIds.includes(child.id);
+                                                return (
+                                                    <button
+                                                        key={child.id}
+                                                        type="button"
+                                                        onClick={() => togglePassChild(child.id)}
+                                                        aria-pressed={selected}
+                                                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                            selected
+                                                                ? "bg-amber-100 border-amber-500"
+                                                                : "bg-white border-gray-300 hover:border-amber-400"
+                                                        }`}
+                                                    >
+                                                        <span className="block font-semibold text-gray-900">
+                                                            {selected ? "✓ " : ""}
+                                                            {child.name}
+                                                        </span>
+                                                        <span className="block text-xs text-gray-600">
+                                                            Age {child.age}
+                                                            {!child.waiverSigned && " · waiver needed"}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2 mb-5">
+                                        {PASS_KINDS.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPassKind(kind);
+                                                    setPassError(null);
+                                                    setSelectedPunchCard(null);
+                                                }}
+                                                aria-pressed={passKind === kind}
+                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                    passKind === kind
+                                                        ? "bg-gray-900 text-white border-gray-900"
+                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                                                }`}
+                                            >
+                                                {PASS_KIND_LABEL[kind]}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {passKind === "punch" ? (
+                                        <div className="space-y-3">
+                                            {punchCardOptions(availablePasses).map((card) => (
+                                                <button
+                                                    key={card.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPunchCard(card)}
+                                                    className={`w-full p-4 rounded-xl border-4 text-left transition-colors ${
+                                                        selectedPunchCard?.id === card.id
+                                                            ? "border-yellow-400 bg-yellow-50"
+                                                            : "border-gray-200 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <span className="text-xl font-bold">
+                                                        {card.name}
+                                                    </span>
+                                                    <span className="ml-3 text-xl">
+                                                        {formatCurrency(card.price)}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : passChildIds.length === 0 ? (
+                                        <p className="text-sm text-gray-500">
+                                            Select at least one child to see pricing.
+                                        </p>
+                                    ) : (
+                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                                            {passQuote.lines.map((line) => (
+                                                <div
+                                                    key={line.child.id}
+                                                    className="flex justify-between items-baseline py-1"
+                                                >
+                                                    <span className="text-gray-800">
+                                                        {line.child.name}
+                                                        <span className="text-gray-500 text-sm">
+                                                            {" "}
+                                                            · {line.pass.name}
+                                                        </span>
+                                                        {line.includedFree ? (
+                                                            <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                plays free
+                                                            </span>
+                                                        ) : (
+                                                            line.discountPercent > 0 && (
+                                                                <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                    sibling −{line.discountPercent}%
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </span>
+                                                    <span className="font-semibold tabular-nums">
+                                                        {line.includedFree ? (
+                                                            <span className="text-green-700">Free</span>
+                                                        ) : (
+                                                            <>
+                                                                {line.discountPercent > 0 && (
+                                                                    <span className="line-through text-gray-400 font-normal mr-2">
+                                                                        {formatCurrency(line.basePrice)}
+                                                                    </span>
+                                                                )}
+                                                                {formatCurrency(line.price)}
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            ))}
+
+                                            {passQuote.unresolved.length > 0 && (
+                                                <p className="mt-2 text-sm text-red-700">
+                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
+                                                    available for{" "}
+                                                    {passQuote.unresolved
+                                                        .map((c) => c.name)
+                                                        .join(", ")}
+                                                    .
+                                                </p>
+                                            )}
+
+                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
+                                                <span className="font-bold text-lg">Total</span>
+                                                <span className="font-bold text-lg tabular-nums">
+                                                    {formatCurrency(passQuote.total)}
+                                                </span>
+                                            </div>
+                                            {passQuote.savings > 0 && (
+                                                <p className="text-sm text-green-700 text-right">
+                                                    Sibling discount saves{" "}
+                                                    {formatCurrency(passQuote.savings)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {passError && (
+                                        <p className="mt-3 text-sm font-medium text-red-700">
+                                            {passError}
+                                        </p>
+                                    )}
+
+                                    <Button
+                                        onClick={handleBuyPasses}
+                                        disabled={
+                                            buyingPasses ||
+                                            (passKind === "punch"
+                                                ? !selectedPunchCard
+                                                : passQuote.lines.length === 0)
+                                        }
+                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
+                                    >
+                                        {buyingPasses
+                                            ? "Processing…"
+                                            : passKind === "punch"
+                                              ? selectedPunchCard
+                                                    ? `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(selectedPunchCard.price)}`
+                                                    : `Buy ${PASS_KIND_LABEL[passKind]}`
+                                              : passQuote.lines.length === 0
+                                                ? `Buy ${PASS_KIND_LABEL[passKind]}`
+                                                : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
+                                    </Button>
+                                </Card>
+                            )}
 
                             {/* Children List */}
                             {displayCustomer.children.length === 0 ? (
@@ -2954,53 +3728,89 @@ export function CheckIn({
                         <div className="space-y-10">
                             {/* Currently Checked In Passes */}
                             {(() => {
+                                // Driven by open sessions, not purchase status. Migration
+                                // 052 moved the punch deduction from check-out to
+                                // check-in, so a single-visit pass (a day pass, or a
+                                // punch card on its last punch) now flips to "used" the
+                                // instant the child walks in -- before this section ever
+                                // filtered on status, that flip would hide the tile and
+                                // leave staff with no way to check the child back out. A
+                                // purchase with an open session is, by definition,
+                                // someone in the building, regardless of what its
+                                // remaining-balance status says.
                                 const checkedInPasses =
                                     displayCustomer.purchases.filter(
                                         (p) =>
-                                            p.status === "active" &&
                                             p.type !== "party_package" &&
                                             (displayCustomer.activeSessions || []).some(
                                                 (session) => session.purchaseId === p.id
                                             )
                                     );
 
-                                if (checkedInPasses.length > 0) {
+                                // An account punch card can carry several open
+                                // sessions at once -- one per child playing on
+                                // it -- so it gets one tile per session, named,
+                                // each with its own Check Out. A child-scoped
+                                // pass still carries at most one open session
+                                // (the available-passes filter hides it the
+                                // moment a session opens), so it keeps its
+                                // original one-tile-per-purchase behaviour.
+                                const checkedInTiles = checkedInPasses.flatMap((purchase) => {
+                                    const purchaseSessions = (
+                                        displayCustomer.activeSessions || []
+                                    ).filter((session) => session.purchaseId === purchase.id);
+
+                                    if (purchase.passScope === "account") {
+                                        return purchaseSessions.map((session) => ({
+                                            key: session.id,
+                                            purchase,
+                                            session,
+                                            childName: session.childId
+                                                ? getChildName(session.childId, displayCustomer)
+                                                : null,
+                                        }));
+                                    }
+
+                                    const session =
+                                        purchaseSessions[purchaseSessions.length - 1];
+                                    if (!session) return [];
+                                    return [
+                                        {
+                                            key: purchase.id,
+                                            purchase,
+                                            session,
+                                            childName: purchase.childId
+                                                ? getChildName(purchase.childId, displayCustomer)
+                                                : null,
+                                        },
+                                    ];
+                                });
+
+                                if (checkedInTiles.length > 0) {
                                     return (
                                         <div>
                                             <h3 className="text-2xl font-bold mb-6 text-green-700">
                                                 ✅ Currently Checked In
                                             </h3>
                                             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-                                                {checkedInPasses.map((purchase) => {
-                                                    const activeSessions = (
-                                                        displayCustomer.activeSessions ||
-                                                        []
-                                                    ).filter(
-                                                        (session) =>
-                                                            session.purchaseId ===
-                                                            purchase.id
-                                                    );
-                                                    return (
-                                                        <Card
-                                                            key={purchase.id}
-                                                            className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
-                                                        >
-                                                            <div className="flex flex-col items-center text-center space-y-4">
-                                                                <div className="flex-1">
-                                                                    <h4 className="text-2xl font-bold text-gray-900 mb-3">
-                                                                        {purchase.name}
-                                                                    </h4>
-                                                                    {purchase.childId && (
-                                                                        <p className="text-blue-600 font-medium text-lg mb-2">
-                                                                            👶{" "}
-                                                                            {getChildName(
-                                                                                purchase.childId,
-                                                                                displayCustomer
-                                                                            )}
-                                                                        </p>
-                                                                    )}
-                                                                    {activeSessions.length >
-                                                                        0 && (
+                                                {checkedInTiles.map(
+                                                    ({ key, purchase, session, childName }) => {
+                                                        return (
+                                                            <Card
+                                                                key={key}
+                                                                className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
+                                                            >
+                                                                <div className="flex flex-col items-center text-center space-y-4">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                                                                            {purchase.name}
+                                                                        </h4>
+                                                                        {childName && (
+                                                                            <p className="text-blue-600 font-medium text-lg mb-2">
+                                                                                👶{" "}
+                                                                                {childName}
+                                                                            </p>
+                                                                        )}
                                                                         <div className="p-3 bg-green-100 border border-green-300 rounded-lg mb-4">
                                                                             <p className="text-lg text-green-800 font-bold">
                                                                                 ✅
@@ -3010,56 +3820,68 @@ export function CheckIn({
                                                                             <p className="text-sm text-green-700 mt-1">
                                                                                 Since{" "}
                                                                                 {new Date(
-                                                                                    activeSessions[0].startTime
+                                                                                    session.startTime
                                                                                 ).toLocaleTimeString()}
                                                                             </p>
                                                                             <p className="text-sm text-green-700">
                                                                                 Duration:{" "}
                                                                                 {getSessionDuration(
-                                                                                    activeSessions[0]
-                                                                                        .startTime
+                                                                                    session.startTime
                                                                                 )}
                                                                             </p>
                                                                         </div>
-                                                                    )}
-                                                                    {/* Expiration & Auto-Renew Info */}
-                                                                    {purchase.actualExpiryDate && (
-                                                                        <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                                                                            <p className="text-sm text-gray-600">
-                                                                                Expires:{" "}
-                                                                                {formatDate(
-                                                                                    purchase.actualExpiryDate
-                                                                                )}
-                                                                                {purchase.autoRenew && (
-                                                                                    <span className="ml-2 text-blue-600 font-bold">
-                                                                                        🔄
-                                                                                        Auto-Renew
-                                                                                    </span>
-                                                                                )}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
+                                                                        {/* Expiration & Auto-Renew Info */}
+                                                                        {purchase.actualExpiryDate && (
+                                                                            <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                                                                <p className="text-sm text-gray-600">
+                                                                                    Expires:{" "}
+                                                                                    {formatDate(
+                                                                                        purchase.actualExpiryDate
+                                                                                    )}
+                                                                                    {purchase.autoRenew && (
+                                                                                        <span className="ml-2 text-blue-600 font-bold">
+                                                                                            🔄
+                                                                                            Auto-Renew
+                                                                                        </span>
+                                                                                    )}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-col items-center gap-3">
+                                                                        <Button
+                                                                            onClick={() =>
+                                                                                void handleCheckOut(
+                                                                                    displayCustomer,
+                                                                                    session.id
+                                                                                )
+                                                                            }
+                                                                            size="lg"
+                                                                            variant="outline"
+                                                                            className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
+                                                                        >
+                                                                            Check Out
+                                                                        </Button>
+                                                                        {/* Mis-tap remedy: gives the punch back, unlike Check Out. */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                void handleUndoCheckIn(
+                                                                                    displayCustomer,
+                                                                                    session.id,
+                                                                                    childName
+                                                                                )
+                                                                            }
+                                                                            className="text-base text-gray-600 underline underline-offset-4 hover:text-red-600 font-medium px-3 py-2"
+                                                                        >
+                                                                            Undo check-in
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <Button
-                                                                    onClick={() =>
-                                                                        void handleCheckOut(
-                                                                            displayCustomer,
-                                                                            activeSessions[
-                                                                                activeSessions.length -
-                                                                                    1
-                                                                            ].id
-                                                                        )
-                                                                    }
-                                                                    size="lg"
-                                                                    variant="outline"
-                                                                    className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
-                                                                >
-                                                                    Check Out
-                                                                </Button>
-                                                            </div>
-                                                        </Card>
-                                                    );
-                                                })}
+                                                            </Card>
+                                                        );
+                                                    }
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -3076,11 +3898,14 @@ export function CheckIn({
                                             p.status === "active" &&
                                             p.type !== "party_package" &&
                                             !(p.actualExpiryDate && new Date(p.actualExpiryDate) < now) &&
-                                            !(
-                                                displayCustomer.activeSessions || []
-                                            ).some(
-                                                (session) => session.purchaseId === p.id
-                                            )
+                                            // A pass for one child is hidden while that child is
+                                            // inside. An account punch card stays available — the
+                                            // second and third child still have to get in — and
+                                            // double check-ins are stopped per child in the picker.
+                                            (p.passScope === 'account' ||
+                                                !(displayCustomer.activeSessions || []).some(
+                                                    (session) => session.purchaseId === p.id
+                                                ))
                                     );
 
                                 // Group passes by type + childId
@@ -3113,7 +3938,23 @@ export function CheckIn({
                                     const normalizedType = inferPassType(purchase.name, purchase.type);
                                     const isFamilyPurchase = (purchase.childIds?.length || 0) > 0;
 
-                                    if (isFamilyPurchase) {
+                                    if (purchase.passScope === 'account') {
+                                        // One tile for the card, not one per child — who is playing
+                                        // is asked after it is tapped.
+                                        const key = `${normalizedType}-account-${purchase.id}`;
+                                        acc[key] = {
+                                            type: normalizedType,
+                                            typeName: getPassTypeName(normalizedType, purchase.name),
+                                            childId: null,
+                                            childName: null,
+                                            totalVisits:
+                                                (purchase.totalSessions || 0) - (purchase.usedSessions || 0),
+                                            isUnlimited: purchase.totalSessions === 999,
+                                            purchases: [purchase],
+                                            firstPurchase: purchase,
+                                        };
+                                        return acc;
+                                    } else if (isFamilyPurchase) {
                                         // Family pass: create a group entry for each child on the pass
                                         for (const cId of purchase.childIds!) {
                                             const key = `${normalizedType}-${cId}-family-${purchase.id}`;
@@ -3175,7 +4016,12 @@ export function CheckIn({
                                                     const purchase = group.firstPurchase;
                                                     return (
                                                     <Card
-                                                        key={`${group.type}-${group.childId}`}
+                                                        // Two account cards of the same inferred
+                                                        // type (e.g. a 5-punch and a 10-punch both
+                                                        // read as "weekly_pass") both set childId
+                                                        // to null, so the key needs the purchase
+                                                        // id too or they'd collide.
+                                                        key={`${group.type}-${group.childId ?? "none"}-${group.firstPurchase.id}`}
                                                         className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer min-w-[300px]"
                                                     >
                                                         <div className="flex flex-col items-center text-center space-y-4">
@@ -3188,11 +4034,15 @@ export function CheckIn({
                                                                     )}
                                                                     {group.typeName}
                                                                 </h4>
-                                                                {group.childName && (
+                                                                {group.childName ? (
                                                                     <p className="text-green-600 font-medium text-lg mb-3">
                                                                         👶 {group.childName}
                                                                     </p>
-                                                                )}
+                                                                ) : group.firstPurchase.passScope === 'account' ? (
+                                                                    <p className="text-green-600 font-medium text-lg mb-3">
+                                                                        👨‍👩‍👧‍👦 Any child on the account
+                                                                    </p>
+                                                                ) : null}
                                                                 {purchase.type ===
                                                                     "party_package" &&
                                                                 purchase.partyDate ? (
@@ -3459,6 +4309,15 @@ export function CheckIn({
                                                                         <Button
                                                                             onClick={() => {
                                                                                 if (
+                                                                                    purchase.passScope ===
+                                                                                    'account'
+                                                                                ) {
+                                                                                    // Account cards ask who's playing
+                                                                                    // instead of checking in directly.
+                                                                                    setPunchCardCheckIn(
+                                                                                        purchase.id
+                                                                                    );
+                                                                                } else if (
                                                                                     confirmingCheckIn ===
                                                                                     purchase.id
                                                                                 ) {
@@ -4110,8 +4969,9 @@ export function CheckIn({
                                                     No Party Packages
                                                 </h4>
                                                 <p className="text-gray-600 mb-4">
-                                                    Purchase party packages below to
-                                                    celebrate!
+                                                    Parties are booked on the website. Once
+                                                    a package is purchased it appears here
+                                                    to schedule.
                                                 </p>
                                             </div>
                                         )}
@@ -4119,194 +4979,6 @@ export function CheckIn({
                                 );
                             })()}
 
-                            {/* Quick Purchase Party Packages - Always Visible */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase Party Packages
-                                </h3>
-
-                                {/* Party Filter Tabs */}
-                                <div className="flex space-x-2 mb-4">
-                                    <button
-                                        onClick={() => setPartyFilter("all")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "all"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        All ({availableParties.length})
-                                    </button>
-                                    <button
-                                        onClick={() => setPartyFilter("semi-private")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "semi-private"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Semi-Private (
-                                        {
-                                            availableParties.filter((p) =>
-                                                p.name
-                                                    .toLowerCase()
-                                                    .includes("semi-private")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                    <button
-                                        onClick={() => setPartyFilter("private")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            partyFilter === "private"
-                                                ? "bg-purple-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Private (
-                                        {
-                                            availableParties.filter(
-                                                (p) =>
-                                                    p.name
-                                                        .toLowerCase()
-                                                        .includes("private") &&
-                                                    !p.name
-                                                        .toLowerCase()
-                                                        .includes("semi")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                </div>
-
-                                <Card className="p-6 border-l-8 border-l-purple-300 bg-purple-50">
-                                    <div className="grid gap-4 text-left">
-                                        {AVAILABLE_PARTY_PRODUCTS.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                                            >
-                                                <div className="flex-1">
-                                                    <span className="font-medium text-gray-900 text-lg">
-                                                        🎉 {product.name}
-                                                    </span>
-                                                    <p className="text-sm text-gray-600">
-                                                        {product.description}
-                                                    </p>
-                                                    <p className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${product.price.toFixed(2)}
-                                                    </p>
-                                                </div>
-
-                                                {/* Group Rate: guest count selector */}
-                                                {isGroupRateProduct(product) && (
-                                                    <div className="flex items-center space-x-3 mr-4">
-                                                        <label className="text-sm font-medium text-gray-700">Kids:</label>
-                                                        <select
-                                                            value={quantities[product.id] || 10}
-                                                            onChange={(e) =>
-                                                                setQuantities((prev) => ({
-                                                                    ...prev,
-                                                                    [product.id]: parseInt(e.target.value, 10),
-                                                                }))
-                                                            }
-                                                            className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
-                                                        >
-                                                            {Array.from({ length: 21 }, (_, i) => i + 10).map((n) => (
-                                                                <option key={n} value={n}>
-                                                                    {n} kids
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-
-                                                <Button
-                                                    onClick={() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            // Show payment modal instead of alert
-                                                            setShowPaymentModal(true);
-                                                            return;
-                                                        }
-
-                                                        // Group rate: open children manager
-                                                        if (isGroupRateProduct(product)) {
-                                                            handleGroupRatePurchase(product.id, product);
-                                                            return;
-                                                        }
-
-                                                        if (
-                                                            confirmingProduct ===
-                                                            product.id
-                                                        ) {
-                                                            handleConfirmPurchase(
-                                                                product.id
-                                                            );
-                                                        } else {
-                                                            handleQuickPurchase(
-                                                                product.id
-                                                            );
-                                                        }
-                                                    }}
-                                                    size="lg"
-                                                    disabled={
-                                                        purchasingProduct === product.id
-                                                    }
-                                                    className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "bg-yellow-500 hover:bg-yellow-600";
-                                                        }
-                                                        return confirmingProduct ===
-                                                            product.id
-                                                            ? "bg-purple-600 hover:bg-purple-700 animate-pulse"
-                                                            : purchasingProduct ===
-                                                              product.id
-                                                            ? "bg-purple-500"
-                                                            : "bg-purple-600 hover:bg-purple-700";
-                                                    })()}`}
-                                                >
-                                                    {(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (
-                                                            customer &&
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "💳 Add Payment First";
-                                                        }
-                                                        if (isGroupRateProduct(product)) {
-                                                            return "Assign Children";
-                                                        }
-                                                        return purchasingProduct ===
-                                                            product.id
-                                                            ? "Processing..."
-                                                            : confirmingProduct ===
-                                                              product.id
-                                                            ? "✓ Confirm Purchase"
-                                                            : "Book Party";
-                                                    })()}
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </div>
                         </div>
                     )}
 
@@ -4385,9 +5057,21 @@ export function CheckIn({
                                                     <p className="text-sm text-gray-600">
                                                         {snack.description}
                                                     </p>
-                                                    <p className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${snack.price.toFixed(2)}
-                                                    </p>
+                                                    {isActiveMember ? (
+                                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                                            <span className="line-through text-gray-400 font-normal text-base mr-2">
+                                                                ${snack.price.toFixed(2)}
+                                                            </span>
+                                                            ${applyMemberDiscount(snack.price, true).toFixed(2)}
+                                                            <span className="ml-2 text-xs font-semibold text-amber-700">
+                                                                member
+                                                            </span>
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-lg font-bold text-gray-900 mt-1">
+                                                            ${snack.price.toFixed(2)}
+                                                        </p>
+                                                    )}
                                                 </div>
 
                                                 {/* Quantity Controls */}
@@ -5102,6 +5786,66 @@ export function CheckIn({
                     </Card>
                 </div>
             )}
+
+            {/* Punch Card Check-In Picker ("who's playing?") */}
+            {punchCardCheckIn && displayCustomer && (() => {
+                const punchCardPurchase = displayCustomer.purchases.find(
+                    (p) => p.id === punchCardCheckIn
+                );
+                if (!punchCardPurchase) return null;
+
+                const retry =
+                    pendingPunchCardRetry?.purchaseId === punchCardPurchase.id
+                        ? pendingPunchCardRetry
+                        : null;
+
+                // A child reads as "inside" either because an account punch
+                // card session names them directly, or because an active
+                // session's purchase belongs to them alone (the older
+                // single-child pass path never sets session.childId).
+                const childrenInsideIds = (displayCustomer.activeSessions || []).flatMap(
+                    (session) => {
+                        const ids: string[] = [];
+                        if (session.childId) ids.push(session.childId);
+                        const sessionPurchase = displayCustomer.purchases.find(
+                            (p) => p.id === session.purchaseId
+                        );
+                        if (sessionPurchase?.childId) ids.push(sessionPurchase.childId);
+                        return ids;
+                    }
+                );
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="w-full max-w-xl">
+                            <Card className="max-h-[90vh] overflow-y-auto">
+                                <PunchCardCheckIn
+                                    purchase={punchCardPurchase}
+                                    // eslint-disable-next-line react/no-children-prop -- `children` here is the account's list of kids, not JSX content.
+                                    children={displayCustomer.children}
+                                    childrenInsideIds={childrenInsideIds}
+                                    passes={availablePasses}
+                                    siblingRules={siblingDiscounts}
+                                    qualifiesForMemberPricing={qualifiesForMemberPricing(
+                                        "day_pass",
+                                        true
+                                    )}
+                                    onConfirm={(allocation) =>
+                                        handlePunchCardConfirm(
+                                            displayCustomer,
+                                            punchCardPurchase.id,
+                                            allocation
+                                        )
+                                    }
+                                    onCancel={() => setPunchCardCheckIn(null)}
+                                    notice={retry?.boughtSummary ?? null}
+                                    locked={retry !== null}
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Party Details Modal */}
             {showPartyModal && selectedParty && (

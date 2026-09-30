@@ -16,7 +16,7 @@ import {
   sendRefundConfirmationEmail,
 } from '@/lib/email/resend';
 import Stripe from 'stripe';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import { resolvePurchaseDefaults, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 // This is important for Next.js to treat this as raw body
@@ -305,10 +305,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     supabase,
   );
 
+  // A punch card is always account-scoped — derived from the product itself
+  // (shared with /api/purchases/pos and /api/stripe/direct-payment), never
+  // from Stripe metadata. Day and monthly passes resolve to 'child', same as
+  // the column default.
+  const passScope = await resolvePassScope(product_id, supabase);
+
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note in
+    // /api/purchases/pos. Stripe metadata carries whatever child was selected
+    // when checkout started; on a punch card that child is meaningless and a
+    // row that is account-scoped *and* child-tagged is the contradiction the
+    // launch runbook asserts must not exist.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: purchase_type,
     product_id,
     name: session.line_items?.data[0]?.description || 'Purchase',
@@ -324,6 +335,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     party_start_time: party_time || null,
     party_guests: party_guests ? parseInt(party_guests) : null,
     party_notes: party_notes || null,
+    pass_scope: passScope,
   });
 
   if (error) {
@@ -479,10 +491,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     resolvedTotalSessions = 1;
   }
 
+  // A punch card is always account-scoped — derived from the product itself
+  // (shared with /api/purchases/pos and /api/stripe/direct-payment), never
+  // from Stripe metadata. Day and monthly passes resolve to 'child', same as
+  // the column default.
+  const passScope = await resolvePassScope(product_id, supabase);
+
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note above.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: product_type as any,
     product_id,
     name: product_name,
@@ -494,6 +513,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     status: 'active',
     stripe_payment_intent_id: paymentIntent.id,
     gift_card_amount_used: parseFloat(metadata.gift_card_amount || '0'),
+    pass_scope: passScope,
   });
 
   if (error) {

@@ -7,8 +7,11 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-
-const MEMBERSHIP_DISCOUNT_PERCENT = 10;
+import {
+  MEMBERSHIP_DISCOUNT_PERCENT,
+  fromPurchaseRow,
+  hasActiveMembership,
+} from '@/lib/membership';
 
 export async function GET() {
   try {
@@ -23,18 +26,20 @@ export async function GET() {
     const adminSupabase = createAdminClient();
     const { data: activePurchases, error } = await adminSupabase
       .from('purchases')
-      .select('id, type, status')
+      .select('id, type, status, expiry_date, actual_expiry_date')
       .eq('customer_id', user.id)
       .eq('type', 'monthly_pass')
-      .eq('status', 'active')
-      .limit(1);
+      .eq('status', 'active');
 
     if (error) {
       logger.error({ error, userId: user.id }, 'Failed to query active monthly passes');
       return NextResponse.json({ isMember: false, discountPercent: 0 });
     }
 
-    const isMember = (activePurchases?.length ?? 0) > 0;
+    // Status alone isn't sufficient — records exist that are still flagged
+    // active while carrying a past expiry date, and a lapsed pass must not
+    // earn a discount.
+    const isMember = hasActiveMembership((activePurchases ?? []).map(fromPurchaseRow));
 
     return NextResponse.json({
       isMember,

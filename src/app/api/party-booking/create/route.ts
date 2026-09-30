@@ -14,9 +14,13 @@ import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
 import { getPartyTypeForDate } from '@/lib/businessHours';
+import {
+  MEMBERSHIP_DISCOUNT_PERCENT,
+  fromPurchaseRow,
+  hasActiveMembership,
+} from '@/lib/membership';
 
 const MEMBERSHIP_COUPON_ID = 'MEMBER10';
-const MEMBERSHIP_DISCOUNT_PERCENT = 10;
 const MEMBERSHIP_COUPON_NAME = 'Membership Party Discount';
 
 export async function POST(request: NextRequest) {
@@ -172,13 +176,12 @@ export async function POST(request: NextRequest) {
         const adminSupabase = createAdminClient();
         const { data: activePurchases } = await adminSupabase
           .from('purchases')
-          .select('id, type, status')
+          .select('id, type, status, expiry_date, actual_expiry_date')
           .eq('customer_id', customerId)
           .eq('type', 'monthly_pass')
-          .eq('status', 'active')
-          .limit(1);
+          .eq('status', 'active');
 
-        if (activePurchases && activePurchases.length > 0) {
+        if (hasActiveMembership((activePurchases ?? []).map(fromPurchaseRow))) {
           // User is an active member - ensure MEMBER10 coupon exists in Stripe
           const stripe = await getStripeClient();
           try {
