@@ -7,7 +7,7 @@ export function pinErrorMessage(
   if (status === 429) {
     return `Too many tries. Try again in ${Math.ceil((body.retryAfterSeconds ?? 600) / 60)} minutes.`;
   }
-  if (status === 503) return 'No staff PIN is set yet. Ask the owner to set one in Settings.';
+  if (status === 503) return 'No staff code is set yet. The owner sets the codes during setup.';
   if (status === 401) {
     const left = body.remaining;
     if (typeof left === 'number' && left <= 2) {

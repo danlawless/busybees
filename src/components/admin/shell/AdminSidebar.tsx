@@ -8,6 +8,7 @@ import { navFor, type Level } from '@/lib/admin/nav';
 import { activeHref } from '@/lib/admin/active-href';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
+import { LOCK_FAILED, lockSession } from './lock-session';
 
 export function AdminSidebar({ level }: { level: Level }) {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export function AdminSidebar({ level }: { level: Level }) {
   const activeGroup = groups.find(g => g.items.some(i => i.href === active))?.id ?? groups[0].id;
   const [open, setOpen] = useState(activeGroup);
   const [drawer, setDrawer] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
 
   useEffect(() => { setOpen(activeGroup); setDrawer(false); }, [activeGroup, pathname]);
 
@@ -28,7 +30,12 @@ export function AdminSidebar({ level }: { level: Level }) {
   }, [drawer]);
 
   async function lock() {
-    await fetch('/api/admin/session', { method: 'DELETE' });
+    setLockError(null);
+    // Stay on the page unless the server confirmed the session ended
+    if (!(await lockSession())) {
+      setLockError(LOCK_FAILED);
+      return;
+    }
     router.replace('/admin/login');
     router.refresh();
   }
@@ -95,6 +102,7 @@ export function AdminSidebar({ level }: { level: Level }) {
         <button type="button" onClick={lock} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 hover:bg-white/10">
           <LogOut className="h-4 w-4" /> Lock
         </button>
+        {lockError && <p role="alert" className="mt-2 px-3 text-xs text-red-300">{lockError}</p>}
       </div>
     </nav>
   );

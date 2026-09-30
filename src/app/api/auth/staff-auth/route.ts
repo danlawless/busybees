@@ -117,7 +117,9 @@ export async function POST(request: NextRequest) {
     const { staff_password_hash, pin_hash, web_password_hash, ...safeUser } = user;
 
     const ok = NextResponse.json({ user: safeUser, message: 'Login successful' }, { status: 200, headers: response.headers });
-    if (process.env.ADMIN_SESSION_SECRET) {
+    if (!process.env.ADMIN_SESSION_SECRET) {
+      logger.error('ADMIN_SESSION_SECRET is not set; staff admin calls will be refused');
+    } else {
       // Bind the stamp to the session that was just created (same id as users.id)
       const sessionUserId = signIn.user?.id ?? user.id;
       ok.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), sessionUserId, process.env.ADMIN_SESSION_SECRET), stampCookieOptions());

@@ -30,8 +30,11 @@ describe('decidePageAccess', () => {
     expect(decidePageAccess({ pathname: '/editor/app.js', role: 'staff', startedAt: fresh, now })).toEqual({ kind: 'login', to: '/admin/settings' });
     expect(decidePageAccess({ pathname: '/editor/app.js', role: 'admin', startedAt: fresh, now })).toEqual({ kind: 'allow' });
   });
-  it('a stamp dated in the future is not live', () => {
-    expect(decidePageAccess({ pathname: '/admin', role: 'admin', startedAt: now + 60_000, now }).kind).toBe('login');
+  it('a stamp dated past the clock-skew allowance is not live', () => {
+    expect(decidePageAccess({ pathname: '/admin', role: 'admin', startedAt: now + 120_000, now }).kind).toBe('login');
+  });
+  it('a stamp a few seconds in the future (clock skew) is live', () => {
+    expect(decidePageAccess({ pathname: '/admin', role: 'admin', startedAt: now + 30_000, now })).toEqual({ kind: 'allow' });
   });
   it('admin is allowed everywhere', () => {
     expect(decidePageAccess({ pathname: '/admin/reports', role: 'admin', startedAt: fresh, now })).toEqual({ kind: 'allow' });
@@ -73,7 +76,8 @@ describe('decideApiAccess', () => {
     expect(decideApiAccess({ pathname: '/api/settings/pos-mode', method: 'POST', role: null, signedIn: false, startedAt: null, now })).toEqual({ kind: 'deny', status: 401 });
   });
   it('a future-dated stamp is a 401', () => {
-    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'admin', startedAt: now + 60_000 })).toEqual({ kind: 'deny', status: 401 });
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'admin', startedAt: now + 120_000 })).toEqual({ kind: 'deny', status: 401 });
+    expect(decideApiAccess({ ...base, pathname: '/api/admin/customers', role: 'admin', startedAt: now + 30_000 })).toEqual({ kind: 'allow' });
   });
   it('kiosk settings writes need admin with a fresh stamp', () => {
     const p = '/api/settings/pos-mode';
@@ -97,7 +101,8 @@ describe('liveAdminLevel', () => {
   it('null when the stamp is missing, stale or in the future', () => {
     expect(liveAdminLevel({ role: 'admin', startedAt: null, now })).toBeNull();
     expect(liveAdminLevel({ role: 'admin', startedAt: stale, now })).toBeNull();
-    expect(liveAdminLevel({ role: 'staff', startedAt: now + 60_000, now })).toBeNull();
+    expect(liveAdminLevel({ role: 'staff', startedAt: now + 120_000, now })).toBeNull();
+    expect(liveAdminLevel({ role: 'staff', startedAt: now + 30_000, now })).toBe('staff');
   });
   it('null at exactly the 12-hour edge', () => {
     expect(liveAdminLevel({ role: 'staff', startedAt: now - 12 * 60 * 60 * 1000, now })).toBeNull();

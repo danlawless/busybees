@@ -5,7 +5,11 @@ import { MAX_SESSION_MS } from './session-stamp';
 type PageDecision = { kind: 'allow' } | { kind: 'login'; to: string } | { kind: 'upgrade' };
 type ApiDecision = { kind: 'allow' } | { kind: 'deny'; status: 401 | 403 };
 
-const live = (startedAt: number | null, now: number) => startedAt !== null && now - startedAt < MAX_SESSION_MS && startedAt <= now;
+/** Tolerated clock skew between the server that signed the stamp and the one reading it. */
+const CLOCK_SKEW_MS = 60_000;
+
+const live = (startedAt: number | null, now: number) =>
+  startedAt !== null && now - startedAt < MAX_SESSION_MS && startedAt <= now + CLOCK_SKEW_MS;
 
 export function decidePageAccess(i: { pathname: string; role: string | null; startedAt: number | null; now: number }): PageDecision {
   if (i.pathname === '/admin/login' || i.pathname.startsWith('/admin/login/')) return { kind: 'allow' };

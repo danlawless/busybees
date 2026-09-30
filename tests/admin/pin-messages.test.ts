@@ -10,7 +10,7 @@ describe('pinErrorMessage', () => {
     expect(pinErrorMessage(429, {})).toBe('Too many tries. Try again in 10 minutes.');
   });
   it('explains a missing staff PIN', () => {
-    expect(pinErrorMessage(503, {})).toBe('No staff PIN is set yet. Ask the owner to set one in Settings.');
+    expect(pinErrorMessage(503, {})).toBe('No staff code is set yet. The owner sets the codes during setup.');
   });
   it('shows tries left only when 2 or fewer remain', () => {
     expect(pinErrorMessage(401, { remaining: 2 })).toBe("That code didn't match. 2 tries left.");
