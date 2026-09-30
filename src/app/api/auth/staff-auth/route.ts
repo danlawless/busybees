@@ -8,6 +8,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
 import { logger } from '@/lib/logger';
+import { STAMP_COOKIE, signStamp, stampCookieOptions } from '@/lib/admin/session-stamp';
 
 export async function POST(request: NextRequest) {
   try {
@@ -115,13 +116,11 @@ export async function POST(request: NextRequest) {
 
     const { staff_password_hash, pin_hash, web_password_hash, ...safeUser } = user;
 
-    return NextResponse.json({
-      user: safeUser,
-      message: 'Login successful',
-    }, {
-      status: 200,
-      headers: response.headers,
-    });
+    const ok = NextResponse.json({ user: safeUser, message: 'Login successful' }, { status: 200, headers: response.headers });
+    if (process.env.ADMIN_SESSION_SECRET) {
+      ok.cookies.set(STAMP_COOKIE, await signStamp(Date.now(), process.env.ADMIN_SESSION_SECRET), stampCookieOptions());
+    }
+    return ok;
   } catch (error) {
     logger.error({ error }, 'Staff auth error');
     return NextResponse.json(
