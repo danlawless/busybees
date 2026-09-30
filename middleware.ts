@@ -82,6 +82,14 @@ export async function middleware(request: NextRequest) {
       return withCookies(response, NextResponse.redirect(loginUrl));
     }
 
+    if (isAdminPage) {
+      // Layouts cannot read the pathname, so forward it as a request header
+      const fwdHeaders = new Headers(request.headers);
+      fwdHeaders.set('x-pathname', pathname);
+      const forwarded = NextResponse.next({ request: { headers: fwdHeaders } });
+      return withCookies(response, forwarded);
+    }
+
     // Allowed editor requests fall through; next.config.ts rewrites /editor and /editor/ to index.html
     return response;
   }
