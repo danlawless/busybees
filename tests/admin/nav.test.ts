@@ -42,7 +42,8 @@ describe('levelForPath', () => {
   });
 
   it('does not match on a shared prefix that is not a path segment', () => {
-    expect(levelForPath('/admin/salesforce')).toBe('admin'); // unknown, fail closed
+    expect(levelForPath('/admin/partiesX')).toBe('admin'); // /admin/parties prefix but not segment
+    expect(levelForPath('/admin/sessionsfoo')).toBe('admin'); // /admin/sessions prefix but not segment
   });
 
   it('defaults unknown admin paths to admin', () => {
