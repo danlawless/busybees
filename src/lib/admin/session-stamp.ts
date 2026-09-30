@@ -21,10 +21,12 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export async function signStamp(startedAt: number, secret: string): Promise<string> {
+  if (!secret) throw new Error('ADMIN_SESSION_SECRET is not set');
   return `${startedAt}.${await hmac(String(startedAt), secret)}`;
 }
 
 export async function readStamp(value: string | undefined, secret: string): Promise<number | null> {
+  if (!secret) return null;
   if (!value) return null;
   const dot = value.indexOf('.');
   if (dot <= 0) return null;

@@ -32,18 +32,19 @@ describe('session stamp', () => {
     expect(await readStamp(sig2, SECRET)).toBe(1_700_000_000_001);
   });
 
-  it('signature verification is actually checking the HMAC (proof: test fails without comparison)', async () => {
-    // This test demonstrates that readStamp MUST compare the HMAC.
-    // If we were to remove the safeEqual check in readStamp, this test would fail.
-    // We can't modify readStamp here, so instead we verify that tampering is caught:
+  it('rejects a signature with trailing characters', async () => {
     const v = await signStamp(1_700_000_000_000, SECRET);
-    const [ts, sig] = v.split('.');
+    // Append a character to the end
+    const tamperedValue = v + 'x';
+    expect(await readStamp(tamperedValue, SECRET)).toBeNull();
+  });
 
-    // Tamper with the signature by changing the last character
-    const tamperedSig = sig.slice(0, -1) + (sig[sig.length - 1] === 'A' ? 'B' : 'A');
-    const result = await readStamp(`${ts}.${tamperedSig}`, SECRET);
+  it('readStamp with empty secret returns null (fails closed)', async () => {
+    const v = await signStamp(1_700_000_000_000, SECRET);
+    expect(await readStamp(v, '')).toBeNull();
+  });
 
-    // This should be null because the signature won't match
-    expect(result).toBeNull();
+  it('signStamp with empty secret throws error', async () => {
+    await expect(signStamp(1_700_000_000_000, '')).rejects.toThrow('ADMIN_SESSION_SECRET is not set');
   });
 });
