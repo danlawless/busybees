@@ -31,6 +31,7 @@
 - Rate limit: **5** wrong PINs per IP in **10 minutes** → locked **10 minutes**.
 - `?to` redirect honored only when it starts with `/admin` and not `//`.
 - Unknown admin API path defaults to level `admin` (fail closed).
+- Commits: `emoji type: description` per repo CLAUDE.md (✨ feature, 🐛 fix, 🔒 security). Never `--no-verify`.
 - Copy rules (Light Brands house style): US English, no em or en dashes in UI strings.
 - The public site, customer accounts, and POS checkout behavior do not change.
 
@@ -337,7 +338,7 @@ Temporarily change the last line of `levelForPath` to `return hit ? hit.level : 
 ```bash
 git add package.json pnpm-lock.yaml vitest.config.ts src/lib/admin/nav.ts tests/admin/nav.test.ts
 git diff --cached --stat
-git commit -m "feat(admin): nav source of truth with levels, plus vitest"
+git commit -m "✨ feat: nav source of truth with levels, plus vitest"
 ```
 
 ---
@@ -504,7 +505,7 @@ Temporarily change `under` to `return pathname.startsWith(prefix);`, run the tes
 ```bash
 git add src/lib/admin/api-access.ts tests/admin/api-access.test.ts
 git diff --cached --stat
-git commit -m "feat(admin): classify every admin and settings API route by level"
+git commit -m "✨ feat: classify every admin and settings API route by level"
 ```
 
 ---
@@ -612,7 +613,7 @@ If `Buffer` is unavailable in the edge runtime during Task 5 manual testing, rep
 ```bash
 git add src/lib/admin/session-stamp.ts tests/admin/session-stamp.test.ts
 git diff --cached --stat
-git commit -m "feat(admin): signed 12-hour session stamp"
+git commit -m "✨ feat: signed 12-hour session stamp"
 ```
 
 ---
@@ -883,7 +884,7 @@ Expected: `clean`.
 ```bash
 git add src/lib/admin/pin-login.ts src/lib/admin/rate-limit.ts src/lib/admin/shared-accounts.ts src/app/api/admin/session/route.ts src/app/api/auth/staff-auth/route.ts env.example tests/admin/pin-login.test.ts tests/admin/rate-limit.test.ts
 git diff --cached --stat
-git commit -m "feat(admin): PIN session endpoint with admin-first match and rate limit"
+git commit -m "✨ feat: PIN session endpoint with admin-first match and rate limit"
 ```
 
 ---
@@ -1099,7 +1100,7 @@ Run `pnpm dev`, then:
 ```bash
 git add src/lib/admin/access.ts tests/admin/access.test.ts middleware.ts
 git diff --cached --stat
-git commit -m "feat(admin): one gate for admin pages, editor and admin APIs"
+git commit -m "✨ feat: one gate for admin pages, editor and admin APIs"
 ```
 
 ---
@@ -1258,7 +1259,7 @@ Before writing, confirm the logo path: `ls public/images | grep -i logo`. Use th
 ```bash
 git add src/components/admin/shell/PinPad.tsx src/app/admin/login/page.tsx src/app/globals.css
 git diff --cached --stat
-git commit -m "feat(admin): PIN pad login screen"
+git commit -m "✨ feat: PIN pad login screen"
 ```
 
 ---
@@ -1503,7 +1504,7 @@ With test hashes in the local DB (`1234` staff, `5678` admin): sign in with `123
 ```bash
 git add src/lib/admin/guard.ts src/components/admin/shell/AdminSidebar.tsx src/components/admin/shell/AdminPageHeader.tsx src/components/admin/shell/UpgradePrompt.tsx "src/app/admin/(shell)/layout.tsx" middleware.ts package.json pnpm-lock.yaml
 git diff --cached --stat
-git commit -m "feat(admin): sidebar shell with accordion groups, mobile drawer and owner upgrade prompt"
+git commit -m "✨ feat: sidebar shell with accordion groups, mobile drawer and owner upgrade prompt"
 ```
 
 ---
@@ -1559,7 +1560,7 @@ Expected: `clean`, tests pass, `types clean`. Then `pnpm dev` and click each of 
 ```bash
 git add -A "src/app/admin"
 git diff --cached --stat
-git commit -m "refactor(admin): existing admin pages live in the shell, per-page PIN screens removed"
+git commit -m "♻️ refactor: existing admin pages live in the shell, per-page PIN screens removed"
 ```
 
 ---
@@ -1712,7 +1713,7 @@ Static folders (`parties`, `events`, `after-dark`, `reports`, `discounts`, `logi
 ```bash
 git add src/hooks/usePosCatalog.ts src/app/pos/page.tsx src/components/pos/AdminPanel.tsx src/components/admin/AdminPanelBridge.tsx "src/app/admin/(shell)/page.tsx" "src/app/admin/(shell)/[view]/page.tsx"
 git diff --cached --stat
-git commit -m "feat(admin): every sidebar item opens, bridging views still inside AdminPanel"
+git commit -m "✨ feat: every sidebar item opens, bridging views still inside AdminPanel"
 ```
 
 ---
@@ -1900,7 +1901,7 @@ Temporarily add `const DEFAULT_STAFF_PIN = 'x';` to `staff-login/route.ts`, run 
 ```bash
 git add -A src/app/api/admin/check-admin-pin src/app/api/auth/staff-login/route.ts src/app/api/admin/gift-cards/send-reminders/route.ts src/app/api/editor/auth/route.ts src/app/api/admin/pins/route.ts "src/app/admin/(shell)/settings" src/lib/admin/nav.ts tests/admin/no-hardcoded-secrets.test.ts
 git diff --cached --stat
-git commit -m "fix(admin): drop hardcoded PIN and editor fallbacks, owner can change access codes"
+git commit -m "🔒 fix: drop hardcoded PIN and editor fallbacks, owner can change access codes"
 ```
 
 ---
@@ -2011,7 +2012,7 @@ Fix type errors only; do not run the script against production here.
 ```bash
 git add scripts/admin-access-setup.ts package.json
 git diff --cached --stat
-git commit -m "chore(admin): one-time setup for shared accounts and hashed PINs"
+git commit -m "🔧 chore: one-time setup for shared accounts and hashed PINs"
 ```
 
 ---
@@ -2140,7 +2141,7 @@ Expected: tests pass, build completes.
 ```bash
 git add playwright.config.ts e2e/admin-shell.spec.ts package.json pnpm-lock.yaml
 git diff --cached --stat
-git commit -m "test(admin): end-to-end smoke for login, sidebar, upgrade, lock and API gate"
+git commit -m "✅ test: end-to-end smoke for login, sidebar, upgrade, lock and API gate"
 ```
 
 ---
