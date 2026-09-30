@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { WaiverModal } from '@/components/ui/WaiverModal';
+import {
+  GROUP_RATE_PRICE_PER_CHILD,
+  GROUP_RATE_PRIVATE_MINIMUM,
+  calculateGroupRatePrice,
+} from '@/lib/validations/party-booking';
 
 interface GroupChild {
   id: string;
@@ -36,8 +41,6 @@ interface SavedCard {
   is_default: boolean;
 }
 
-const PRICE_AGE_2_PLUS = 12;
-const PRICE_UNDER_2 = 5;
 
 interface GroupsStats {
   total: number;
@@ -54,10 +57,6 @@ function calculateAge(birthdate: string): number {
     age--;
   }
   return age;
-}
-
-function getChildPrice(birthdate: string): number {
-  return calculateAge(birthdate) >= 2 ? PRICE_AGE_2_PLUS : PRICE_UNDER_2;
 }
 
 export function GroupsManager() {
@@ -97,6 +96,8 @@ export function GroupsManager() {
 
   // Invoice state
   const [invoiceGenerated, setInvoiceGenerated] = useState(false);
+  // Whether the group had the play area to itself, which sets a price floor.
+  const [exclusiveUse, setExclusiveUse] = useState(false);
 
   // Group edit state
   const [editingGroup, setEditingGroup] = useState(false);
@@ -202,6 +203,7 @@ export function GroupsManager() {
         body: JSON.stringify({
           payment_method_id: selectedCardId,
           active_child_ids: Array.from(activeChildIds),
+          exclusive_use: exclusiveUse,
         }),
       });
       const data = await response.json();
@@ -225,9 +227,11 @@ export function GroupsManager() {
     if (!selectedGroup || activeChildIds.size === 0) return;
 
     const activeChildren = children.filter(c => activeChildIds.has(c.id));
-    const over2 = activeChildren.filter(c => calculateAge(c.birthdate) >= 2);
-    const under2 = activeChildren.filter(c => calculateAge(c.birthdate) < 2);
-    const total = (over2.length * PRICE_AGE_2_PLUS) + (under2.length * PRICE_UNDER_2);
+    // One rate for every age, with a floor when the group had the place to
+    // itself. The invoice must show what the card is charged, so both read
+    // the same quote.
+    const quote = calculateGroupRatePrice(activeChildren.length, { exclusiveUse });
+    const total = quote.total;
     const today = new Date();
     const invoiceNum = `INV-${selectedGroup.phone.slice(-4)}-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
     const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -300,19 +304,18 @@ export function GroupsManager() {
             </tr>
           </thead>
           <tbody>
-            ${over2.length > 0 ? `
             <tr>
-              <td>Group Visit — Children Ages 2+</td>
-              <td style="text-align: center;">${over2.length}</td>
-              <td style="text-align: right;">$${PRICE_AGE_2_PLUS}.00</td>
-              <td style="text-align: right;">$${(over2.length * PRICE_AGE_2_PLUS).toFixed(2)}</td>
-            </tr>` : ''}
-            ${under2.length > 0 ? `
+              <td>Group Visit${exclusiveUse ? ' — Exclusive Use' : ''}</td>
+              <td style="text-align: center;">${activeChildren.length}</td>
+              <td style="text-align: right;">$${GROUP_RATE_PRICE_PER_CHILD}.00</td>
+              <td style="text-align: right;">$${quote.perChildTotal.toFixed(2)}</td>
+            </tr>
+            ${quote.minimumApplied ? `
             <tr>
-              <td>Group Visit — Children Under 2</td>
-              <td style="text-align: center;">${under2.length}</td>
-              <td style="text-align: right;">$${PRICE_UNDER_2}.00</td>
-              <td style="text-align: right;">$${(under2.length * PRICE_UNDER_2).toFixed(2)}</td>
+              <td>Exclusive-use minimum</td>
+              <td style="text-align: center;">&mdash;</td>
+              <td style="text-align: right;">$${GROUP_RATE_PRIVATE_MINIMUM}.00</td>
+              <td style="text-align: right;">$${(quote.total - quote.perChildTotal).toFixed(2)}</td>
             </tr>` : ''}
             <tr class="total-row">
               <td colspan="3">Total</td>
@@ -799,28 +802,42 @@ export function GroupsManager() {
             {/* Tally */}
             {(() => {
               const activeChildren = children.filter(c => activeChildIds.has(c.id));
-              const over2Count = activeChildren.filter(c => calculateAge(c.birthdate) >= 2).length;
-              const under2Count = activeChildren.filter(c => calculateAge(c.birthdate) < 2).length;
-              const groupTotal = activeChildren.reduce((sum, c) => sum + getChildPrice(c.birthdate), 0);
+              const quote = calculateGroupRatePrice(activeChildren.length, { exclusiveUse });
 
               return (
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  {over2Count > 0 && (
+                  <label className="flex items-start gap-3 cursor-pointer mb-3 pb-3 border-b border-gray-200">
+                    <input
+                      type="checkbox"
+                      checked={exclusiveUse}
+                      onChange={(e) => setExclusiveUse(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium text-gray-900">Exclusive use of the play area</span>
+                      <span className="block text-gray-600">
+                        The group had the place to itself. Minimum ${GROUP_RATE_PRIVATE_MINIMUM}.
+                      </span>
+                    </span>
+                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600">
+                      {activeChildren.length} x ${GROUP_RATE_PRICE_PER_CHILD}
+                    </span>
+                    <span className="font-semibold">${quote.perChildTotal.toFixed(2)}</span>
+                  </div>
+                  {quote.minimumApplied && (
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-gray-600">Ages 2+ ({over2Count} x ${PRICE_AGE_2_PLUS})</span>
-                      <span className="font-semibold">${(over2Count * PRICE_AGE_2_PLUS).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {under2Count > 0 && (
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-gray-600">Under 2 ({under2Count} x ${PRICE_UNDER_2})</span>
-                      <span className="font-semibold">${(under2Count * PRICE_UNDER_2).toFixed(2)}</span>
+                      <span className="text-amber-800">Exclusive-use minimum</span>
+                      <span className="font-semibold text-amber-800">
+                        +${(quote.total - quote.perChildTotal).toFixed(2)}
+                      </span>
                     </div>
                   )}
                   <div className="border-t border-gray-300 pt-2 mt-2 flex items-center justify-between">
                     <span className="text-lg font-bold text-gray-900">Total</span>
                     <span className="text-lg font-bold text-gray-900">
-                      ${groupTotal.toFixed(2)}
+                      ${quote.total.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -906,7 +923,7 @@ export function GroupsManager() {
                     ? 'Processing...'
                     : activeChildIds.size === 0
                     ? 'Select children to pay'
-                    : `Charge $${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)} to Card`
+                    : `Charge $${calculateGroupRatePrice(children.filter(c => activeChildIds.has(c.id)).length, { exclusiveUse }).total.toFixed(2)} to Card`
                   }
                 </Button>
 
@@ -927,7 +944,7 @@ export function GroupsManager() {
                 >
                   {activeChildIds.size === 0
                     ? 'Select children for invoice'
-                    : `Pay with Invoice ($${children.filter(c => activeChildIds.has(c.id)).reduce((sum, c) => sum + getChildPrice(c.birthdate), 0).toFixed(2)})`
+                    : `Pay with Invoice ($${calculateGroupRatePrice(children.filter(c => activeChildIds.has(c.id)).length, { exclusiveUse }).total.toFixed(2)})`
                   }
                 </Button>
               </div>

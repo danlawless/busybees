@@ -160,7 +160,7 @@ export const PACKAGE_PRICING = {
   queen_bee: {
     name: 'Queen Bee+',
     semiPrivatePrice: 500,
-    privatePrice: 575,
+    privatePrice: 600,
     maxGuests: 25,
     includedKids: 20,
     duration: 2,
@@ -180,7 +180,7 @@ export const PACKAGE_PRICING = {
   worker_bee: {
     name: 'Worker Bee+',
     semiPrivatePrice: 450,
-    privatePrice: 525,
+    privatePrice: 550,
     maxGuests: 20,
     includedKids: 15,
     duration: 2,
@@ -200,13 +200,13 @@ export const PACKAGE_PRICING = {
   basic_bee: {
     name: 'Basic Bee',
     semiPrivatePrice: 400,
-    privatePrice: 475,
+    privatePrice: 500,
     maxGuests: 20,
-    includedKids: 15,
+    includedKids: 10,
     duration: 2,
-    description: 'Standard package with paper goods',
+    description: 'Standard package — 10 kids included',
     features: [
-      '15 kids included',
+      '10 kids included',
       'Paper goods (plates, cups, napkins, utensils)',
       'Exclusive use of party room',
       'Customized digital invitations for your guests',
@@ -223,10 +223,9 @@ export const PACKAGE_PRICING = {
     privatePrice: 0, // Not applicable - uses per-child pricing
     maxGuests: 30,
     duration: 2,
-    description: 'Group rate: $12 per child (2+), $5 per child (under 2), min 10, max 30',
+    description: 'Group rate: $15 per child, any age, min 10, max 30',
     features: [
-      '$12 per child (ages 2 and up)',
-      '$5 per child (under 2)',
+      '$15 per child, any age',
       'Minimum 10 children',
       'Maximum 30 children',
       'Access to play area',
@@ -235,19 +234,98 @@ export const PACKAGE_PRICING = {
   },
 } as const;
 
+/**
+ * The October 2026 ladder took effect at midnight Eastern on 1 October, and it
+ * changed what Basic Bee includes: 15 children before, 10 after. Anyone who
+ * booked before that was quoted the old count, and the announcement promised
+ * booked parties keep the price they were quoted -- so anything that judges an
+ * existing booking (overage charges, the thank-you recap, the admin guest list)
+ * must ask what that booking was sold with, not what the package says today.
+ *
+ * Bookings are dated by when they were made, not when the party is; a party in
+ * November booked in August was quoted in August.
+ */
+export const PARTY_LADDER_CUTOVER = new Date('2026-10-01T00:00:00-04:00');
+
+const INCLUDED_KIDS_BEFORE_CUTOVER: Record<string, number> = {
+  queen_bee: 20,
+  worker_bee: 15,
+  basic_bee: 15,
+};
+
+export function includedKidsForBooking(
+  packageName: string,
+  bookedAt: Date | string
+): number {
+  const booked = bookedAt instanceof Date ? bookedAt : new Date(bookedAt);
+  if (booked < PARTY_LADDER_CUTOVER) {
+    return INCLUDED_KIDS_BEFORE_CUTOVER[packageName] ?? 0;
+  }
+  const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
+  return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
+}
+
 // Time slots are now stored in the database (party_time_slots table)
 // No hardcoded fallbacks - fetch from /api/party-booking/time-slots
 
 // Additional kids pricing - per issue #101
 export const ADDITIONAL_KIDS_PRICE = 15; // $15 per additional kid
-export const INCLUDED_KIDS = 15; // 15 kids included with each package
+/**
+ * Fallback for screens that need a number before a package has been chosen.
+ * The authoritative count is PACKAGE_PRICING[pkg].includedKids, which differs
+ * per tier -- do not treat this as "what a package includes".
+ */
+export const INCLUDED_KIDS = 15;
 export const MAX_CHILDREN = 20; // Maximum 20 children total per issue #101
 
 // Group rate pricing (age-based)
-export const GROUP_RATE_PRICE_AGE_2_PLUS = 12; // $12 for children 2 years and older
-export const GROUP_RATE_PRICE_UNDER_2 = 5;     // $5 for children under 2 years old
+/**
+ * One rate per child, whatever their age. The group rate used to split at age
+ * two ($12 / $5); from 1 October 2026 it is flat, so there is a single number
+ * here rather than two that have to be kept in step.
+ */
+export const GROUP_RATE_PRICE_PER_CHILD = 15;
 export const GROUP_RATE_MIN_CHILDREN = 10;
 export const GROUP_RATE_MAX_CHILDREN = 30;
+
+/**
+ * What an exclusive-use group visit costs at minimum.
+ *
+ * Per-child pricing alone breaks down when the group has the place to itself:
+ * ten children at $15 is $150 for the same two hours and the same room a Basic
+ * Bee party pays $500 for, and a third of the $450 we have actually charged
+ * for a private playgroup. The floor is that proven price, so a small group
+ * cannot buy exclusivity for less than the room is worth. It binds up to 30
+ * children, at which point per-child pricing reaches $450 on its own.
+ */
+export const GROUP_RATE_PRIVATE_MINIMUM = 450;
+
+export interface GroupRateQuote {
+  /** Head count x the per-child rate, before any minimum. */
+  perChildTotal: number;
+  /** What to charge. */
+  total: number;
+  /** True when the minimum, not the head count, set the price. */
+  minimumApplied: boolean;
+}
+
+/**
+ * Price a group visit. `exclusiveUse` means the group has the play area to
+ * itself; a group sharing the floor during open hours pays per child.
+ */
+export function calculateGroupRatePrice(
+  childCount: number,
+  { exclusiveUse }: { exclusiveUse: boolean }
+): GroupRateQuote {
+  const perChildTotal = childCount * GROUP_RATE_PRICE_PER_CHILD;
+  const total = exclusiveUse ? Math.max(perChildTotal, GROUP_RATE_PRIVATE_MINIMUM) : perChildTotal;
+
+  return {
+    perChildTotal,
+    total,
+    minimumApplied: total !== perChildTotal,
+  };
+}
 
 /**
  * Calculate total price for a party booking
@@ -257,10 +335,12 @@ export function calculateBookingPrice(
   partyType: PartyType,
   guestCount: number
 ): { basePrice: number; additionalKidsPrice: number; totalPrice: number; additionalKids: number } {
-  // Group rate uses age-based per-child pricing
-  // Without individual ages, estimate using the 2+ rate ($12) as the default
+  // Group rate is charged per child at one flat rate, so the guest count is
+  // the whole calculation -- no base price and no additional-child tier.
+  // partyType is about the party room, not the run of the place, so a booking
+  // is not exclusive use; that is priced through calculateGroupRatePrice.
   if (packageName === 'group_rate') {
-    const totalPrice = guestCount * GROUP_RATE_PRICE_AGE_2_PLUS;
+    const { total: totalPrice } = calculateGroupRatePrice(guestCount, { exclusiveUse: false });
     return {
       basePrice: 0,
       additionalKidsPrice: 0,

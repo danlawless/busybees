@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { Layout } from '@/components/layout/Layout'
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
+import {
+  GROUP_RATE_PRICE_PER_CHILD,
+  GROUP_RATE_PRIVATE_MINIMUM,
+  GROUP_RATE_MIN_CHILDREN,
+  GROUP_RATE_MAX_CHILDREN,
+} from '@/lib/validations/party-booking'
 import { Users, GraduationCap, Heart, Calendar, DollarSign, CheckCircle, Mail, Send, Loader2 } from 'lucide-react'
 
 const groupTypes = [
@@ -116,12 +122,14 @@ export default function GroupsPage() {
                 </h2>
               </div>
               <p className="text-lg text-charcoal-600 mb-4">
-                We believe group play should be accessible to everyone. That&apos;s why we only charge
-                for the kids who actually show up — no group minimums, no upfront deposits, no surprises.
+                We believe group play should be accessible to everyone. That&apos;s why we charge one
+                flat rate per child — ${GROUP_RATE_PRICE_PER_CHILD}, whatever their age — and only for
+                the kids who actually show up. No upfront deposits, no surprises.
               </p>
               <p className="text-lg text-charcoal-600">
-                Whether you bring 5 kids or 25, you only pay for the children who walk through the door.
-                It&apos;s that simple.
+                Groups start at {GROUP_RATE_MIN_CHILDREN} children and we can host up to{' '}
+                {GROUP_RATE_MAX_CHILDREN}. Want the play area to yourselves? We can do that too —
+                exclusive visits are ${GROUP_RATE_PRIVATE_MINIMUM} minimum.
               </p>
             </motion.div>
 
@@ -134,9 +142,9 @@ export default function GroupsPage() {
               <Card className="p-8 bg-white border-2 border-green-200">
                 <div className="text-center mb-6">
                   <p className="text-sm font-medium text-green-700 uppercase tracking-wide mb-2">How It Works</p>
-                  <p className="text-4xl font-bold text-charcoal-800">Pay Per Child</p>
+                  <p className="text-4xl font-bold text-charcoal-800">${GROUP_RATE_PRICE_PER_CHILD} per child</p>
                   <p className="text-charcoal-600 mt-2">Only charged for kids who attend</p>
-                  <p className="text-sm text-amber-700 font-medium mt-2">10 kid minimum &bull; Reduced rates for toddlers &amp; infants</p>
+                  <p className="text-sm text-amber-700 font-medium mt-2">{GROUP_RATE_MIN_CHILDREN} kid minimum &bull; One rate for every age</p>
                 </div>
                 <div className="space-y-3">
                   {['Schedule your group visit', 'Bring your kids to play', 'Only pay for who shows up'].map((step, i) => (

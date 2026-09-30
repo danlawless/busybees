@@ -32,8 +32,13 @@ export function isSummerHoursActive(now: Date = new Date()): boolean {
  *
  * Pass the party date (not "now") so the type reflects when the party happens.
  */
-export function getPartyTypeForDate(date: Date): 'private' | 'semi_private' {
-  return isSummerHoursActive(date) ? 'semi_private' : 'private';
+export function getPartyTypeForDate(_date: Date): 'private' | 'semi_private' {
+  // Semi-private parties retired on 1 October 2026. Every party ever booked was
+  // private, and the summer schedule no longer changes that -- so this always
+  // answers 'private'. The semi_private branch of the type, the stored bookings
+  // and the admin views are left intact so historical records still read
+  // correctly; nothing new is created with it.
+  return 'private';
 }
 
 /**
