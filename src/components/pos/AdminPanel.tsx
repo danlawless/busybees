@@ -46,6 +46,7 @@ import { CouponsAdmin } from './CouponsAdmin';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
+import type { AdminView } from '@/lib/admin/nav';
 
 interface Child {
   id: string;
@@ -138,6 +139,8 @@ interface AdminPanelProps {
   volumeDiscounts: VolumeDiscount[];
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
   userRole?: 'staff' | 'admin';
+  initialView?: AdminView;
+  hideViewNav?: boolean;
 }
 
 interface StaffUser {
@@ -150,8 +153,6 @@ interface StaffUser {
   last_login: string | null;
   created_at: string;
 }
-
-type AdminView = 'dashboard' | 'customers' | 'sales' | 'sessions' | 'marketing' | 'newsletter' | 'passes' | 'parties' | 'products' | 'gift-cards' | 'coupons' | 'groups' | 'monthly-members' | 'punch-cards' | 'announcements' | 'after-dark' | 'events' | 'settings';
 
 interface NewsletterSubscriber {
   id: string;
@@ -184,9 +185,11 @@ export function AdminPanel({
   volumeDiscounts,
   onUpdateVolumeDiscounts,
   userRole = 'admin',
+  initialView,
+  hideViewNav,
 }: AdminPanelProps) {
   const isAdmin = userRole === 'admin';
-  const [currentView, setCurrentView] = useState<AdminView>('dashboard');
+  const [currentView, setCurrentView] = useState<AdminView>(initialView ?? 'dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('today');
   const [salesDate, setSalesDate] = useState(() => {
@@ -5559,6 +5562,8 @@ export function AdminPanel({
 
   return (
     <div className="space-y-6">
+      {!hideViewNav && (
+      <>
       {/* Admin Navigation */}
       <Card className="p-4">
         <nav className="flex flex-wrap gap-3">
@@ -5685,6 +5690,8 @@ export function AdminPanel({
           </Button>
         </nav>
       </Card>
+      </>
+      )}
 
       {/* Content */}
       {currentView === 'dashboard' && renderDashboard()}
@@ -5715,6 +5722,8 @@ export function AdminPanel({
         onCustomerUpdated={handleCustomerUpdated}
       />
 
+      {!hideViewNav && (
+      <>
       {/* Quick Access: Admin Parties Dashboard */}
       <Card className="p-4 mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
         <div className="flex items-center justify-between">
@@ -5821,6 +5830,8 @@ export function AdminPanel({
           </a>
         </div>
       </Card>
+      </>
+      )}
     </div>
   );
 }

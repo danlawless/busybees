@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { logger } from "@/lib/client-logger";
 import { PhoneLogin } from "@/components/pos/PhoneLogin";
 import { PosPinGate } from "@/components/pos/PosPinGate";
 import { CustomerDashboard } from "@/components/pos/CustomerDashboard";
@@ -12,26 +11,8 @@ import { AddPaymentMethodModal } from "@/components/pos/AddPaymentMethodModal";
 import { Toaster } from "sonner";
 import { useCheckinNotifications } from "@/hooks/useCheckinNotifications";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { usePosCatalog } from "@/hooks/usePosCatalog";
 import { PWAInstallPrompt } from "@/components/pos/PWAInstallPrompt";
-import {
-    PromoSpecial,
-    getPromosFromStorage,
-    savePromosToStorage,
-} from "@/lib/utils/promoHelpers";
-import { INITIAL_PROMOS, PROMO_VERSION } from "@/lib/utils/promoConstants";
-import {
-    PassProduct,
-    PartyProduct,
-    FoodProduct,
-    VolumeDiscount,
-    getVolumeDiscountsFromStorage,
-    saveVolumeDiscountsToStorage,
-} from "@/lib/utils/productHelpers";
-import {
-    fetchPasses,
-    fetchParties,
-    fetchProducts,
-} from "@/lib/api/products";
 
 interface Child {
     id: string;
@@ -139,15 +120,6 @@ export default function POSPage() {
     const [warningTimer, setWarningTimer] = useState<NodeJS.Timeout | null>(null);
     const [countdownTimer, setCountdownTimer] = useState<NodeJS.Timeout | null>(null);
 
-    // Promo specials state
-    const [promos, setPromos] = useState<PromoSpecial[]>([]);
-
-    // Product management state
-    const [passes, setPasses] = useState<PassProduct[]>([]);
-    const [parties, setParties] = useState<PartyProduct[]>([]);
-    const [products, setProducts] = useState<FoodProduct[]>([]);
-    const [volumeDiscounts, setVolumeDiscounts] = useState<VolumeDiscount[]>([]);
-
     // Register service worker for PWA
     useServiceWorker();
 
@@ -195,146 +167,12 @@ export default function POSPage() {
         restoreSession();
     }, []);
 
-    // Initialize promos from database
-    useEffect(() => {
-        const loadPromos = async () => {
-            try {
-                const response = await fetch('/api/promos');
-                if (response.ok) {
-                    const { promos: dbPromos } = await response.json();
-
-                    // Convert database format to UI format
-                    const formattedPromos: PromoSpecial[] = dbPromos.map((promo: any) => ({
-                        id: promo.id,
-                        name: promo.name,
-                        startDate: promo.start_date,
-                        endDate: promo.end_date,
-                        discountPercent: promo.discount_percent,
-                        description: promo.description,
-                        stripeCouponCode: promo.stripe_coupon_code,
-                        bannerStyle: promo.banner_style,
-                        isActive: promo.is_active,
-                        createdAt: promo.created_at,
-                        updatedAt: promo.updated_at,
-                    }));
-
-                    setPromos(formattedPromos);
-
-                    // Also save to localStorage for offline access
-                    savePromosToStorage(formattedPromos);
-                } else {
-                    // Fallback to localStorage if API fails
-                    const storedPromos = getPromosFromStorage();
-                    if (storedPromos.length > 0) {
-                        setPromos(storedPromos);
-                    } else {
-                        // Last resort: use hardcoded initial promos
-                        setPromos(INITIAL_PROMOS);
-                        savePromosToStorage(INITIAL_PROMOS);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load promos:', error);
-                // Fallback to localStorage
-                const storedPromos = getPromosFromStorage();
-                if (storedPromos.length > 0) {
-                    setPromos(storedPromos);
-                } else {
-                    setPromos(INITIAL_PROMOS);
-                    savePromosToStorage(INITIAL_PROMOS);
-                }
-            }
-        };
-
-        loadPromos();
-    }, []);
-
-    // Save promos to localStorage whenever they change (for offline caching)
-    useEffect(() => {
-        if (promos.length > 0) {
-            savePromosToStorage(promos);
-        }
-    }, [promos]);
-
-    // Fetch passes from database API
-    useEffect(() => {
-        const loadPasses = async () => {
-            try {
-                const dbPasses = await fetchPasses();
-                if (dbPasses.length === 0) {
-                    logger.error({}, "No passes found in database - run seed-all-products.sql");
-                }
-                setPasses(dbPasses);
-            } catch (error) {
-                logger.error({ error }, "Failed to fetch passes from database");
-            }
-        };
-        loadPasses();
-    }, []);
-
-    // Fetch parties from database API
-    useEffect(() => {
-        const loadParties = async () => {
-            try {
-                const dbParties = await fetchParties();
-                if (dbParties.length === 0) {
-                    logger.error({}, "No party packages found in database - run seed-all-products.sql");
-                }
-                setParties(dbParties);
-            } catch (error) {
-                logger.error({ error }, "Failed to fetch parties from database");
-            }
-        };
-        loadParties();
-    }, []);
-
-    // Fetch products from database API
-    useEffect(() => {
-        const loadProducts = async () => {
-            try {
-                const dbProducts = await fetchProducts();
-                if (dbProducts.length === 0) {
-                    logger.error({}, "No products found in database - run seed-all-products.sql");
-                }
-                setProducts(dbProducts);
-            } catch (error) {
-                logger.error({ error }, "Failed to fetch products from database");
-            }
-        };
-        loadProducts();
-    }, []);
-
-    // Load volume discounts from localStorage (no database table yet)
-    useEffect(() => {
-        const storedDiscounts = getVolumeDiscountsFromStorage();
-        setVolumeDiscounts(storedDiscounts);
-    }, []);
-
-    // Save volume discounts to localStorage whenever they change (no database table yet)
-    useEffect(() => {
-        if (volumeDiscounts.length > 0) {
-            saveVolumeDiscountsToStorage(volumeDiscounts);
-        }
-    }, [volumeDiscounts]);
-
-    // All customer data comes from API calls via PhoneLogin
-    const [customers, setCustomers] = useState<Customer[]>([]);
-
-    // Fetch customers from database when entering admin mode
-    const fetchCustomers = useCallback(async () => {
-        try {
-            const response = await fetch('/api/pos/customers');
-            if (response.ok) {
-                const data = await response.json();
-                setCustomers(data.customers || []);
-                logger.info({ customerCount: (data.customers || []).length }, "Loaded customers for admin panel");
-            } else {
-                logger.error({ status: response.status }, "Failed to fetch customers");
-            }
-        } catch (error) {
-            logger.error({ error }, "Error fetching customers");
-        }
-    }, []);
+    // Catalog (promos, passes, parties, products, volume discounts, customers).
+    // Called here so its effects keep their original position after the two above.
+    const {
+        customers, setCustomers, promos, setPromos, passes, setPasses, parties, setParties,
+        products, setProducts, volumeDiscounts, setVolumeDiscounts, refreshCustomers: fetchCustomers,
+    } = usePosCatalog<Customer>({ loadCustomers: false });
 
     // Fetch customers when entering admin mode
     useEffect(() => {
