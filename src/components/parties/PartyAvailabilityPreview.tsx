@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, ArrowRight } from 'lucide-r
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatDateToYYYYMMDD, parseDateString } from '@/lib/utils';
+import { PhotoBackdrop } from '@/components/home/PhotoBackdrop';
 
 interface TimeSlot {
   startTime: string;
@@ -158,7 +159,9 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
 
   return (
     <section id="party-availability" className="relative py-16 bg-white overflow-hidden">
-      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      {/* Lara Barrios photograph under the same scrim as the homepage bands */}
+      <PhotoBackdrop src="/images/backgrounds/party-handprints.jpg" />
+      <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
@@ -169,9 +172,9 @@ export function PartyAvailabilityPreview({ onBookDate }: PartyAvailabilityPrevie
           <span className="inline-block px-4 py-2 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 rounded-full text-sm font-medium mb-4">
             Real-Time Availability
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-charcoal-800 mb-4">
             Check Availability
-          </h2>
+          </h1>
           <p className="text-lg text-charcoal-600 max-w-2xl mx-auto">
             Browse our calendar to find the perfect date for your party. Click any available date to
             see open time slots.
