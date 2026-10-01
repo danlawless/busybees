@@ -774,8 +774,8 @@ WHAT'S NEXT?
 • Sign waivers for your little ones
 • Book a birthday party!
 
-QUICK TIP: When you visit Busy Bees, just enter your phone
-number at our check-in kiosk to access your account!
+QUICK TIP: When you visit Busy Bees, just give your phone
+number to the front desk associate and you'll be checked in!
 
 Visit your dashboard: ${siteUrl}/customer/dashboard
 
@@ -897,7 +897,7 @@ ${siteUrl}
                 <tr>
                   <td style="padding: 16px 20px;">
                     <p style="margin: 0; font-size: 14px; color: #854d0e;">
-                      <strong>💡 Quick Tip:</strong> When you visit Busy Bees, just enter your phone number at our check-in kiosk to access your account!
+                      <strong>💡 Quick Tip:</strong> When you visit Busy Bees, just give your phone number to the front desk associate and you'll be checked in!
                     </p>
                   </td>
                 </tr>
