@@ -983,10 +983,9 @@ Amount: $${data.purchasePrice.toFixed(2)}
 Valid Until: ${expiryInfo}
 
 HOW TO USE YOUR PASS:
-1. Visit Busy Bees Indoor Play Center
-2. Enter your phone number at the check-in kiosk
-3. Select your pass and check in your children
-4. Enjoy your play time!
+1. Visit Busy Bees
+2. Provide your phone number to the front desk associate
+3. You will be checked in and can start playing!
 
 View your purchases: ${siteUrl}/customer/dashboard
 
@@ -1075,10 +1074,9 @@ ${siteUrl}
                       🎟️ How to Use Your Pass
                     </p>
                     <table cellpadding="0" cellspacing="0">
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">1.</span> Visit Busy Bees Indoor Play Center</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">2.</span> Enter your phone number at the kiosk</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">3.</span> Select your pass and check in</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">4.</span> Enjoy your play time! 🎉</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">1.</span> Visit Busy Bees</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">2.</span> Provide your phone number to the front desk associate</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">3.</span> You will be checked in and can start playing! 🎉</td></tr>
                     </table>
                   </td>
                 </tr>
