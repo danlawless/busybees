@@ -32,6 +32,9 @@ import {
     type SelectablePass,
 } from "@/lib/pos/passSelection";
 
+/** appliedCoupons key for the pass screen's coupon (one per sale). */
+const PASS_COUPON_KEY = "pass-screen";
+
 interface SiblingDiscount {
     id: string;
     child_position: number;
@@ -192,6 +195,9 @@ export function CheckIn({
         applied: number;
         forfeited: number;
     }>>({});
+    // The pass screen's coupon is validated against one charge's total; it only
+    // counts while that total is unchanged (see couponTargetGroup).
+    const [passCouponTotal, setPassCouponTotal] = useState<number | null>(null);
     const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
     const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
     // The account punch card currently open in the "who's playing" picker,
@@ -223,7 +229,7 @@ export function CheckIn({
         message: "",
     });
     const [activeTab, setActiveTab] = useState<
-        "children" | "passes" | "parties" | "snacks" | "afterdark"
+        "children" | "parties" | "snacks" | "afterdark"
     >("children");
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -282,7 +288,6 @@ export function CheckIn({
         useState<string>("");
     const [isAddingChild, setIsAddingChild] = useState(false);
     const [isSigningWaiver, setIsSigningWaiver] = useState(false);
-    const [isDeletingChild, setIsDeletingChild] = useState(false);
 
     // Load passes, parties, and products from localStorage
     const [availablePasses, setAvailablePasses] = useState<any[]>([]);
@@ -294,7 +299,6 @@ export function CheckIn({
     const [siblingDiscounts, setSiblingDiscounts] = useState<SiblingDiscount[]>([]);
 
     // Filter states
-    const [passFilter, setPassFilter] = useState<"all" | "infant" | "toddler">("all");
 
     // Complimentary pass state (staff only)
     const [showComplimentaryModal, setShowComplimentaryModal] = useState(false);
@@ -709,65 +713,6 @@ export function CheckIn({
         }
     };
 
-    const handleDeleteChild = async (childId: string) => {
-        const customer = selectedCustomer || currentCustomer;
-        if (!customer) return;
-
-        // Check if child has any active passes
-        const hasActivePasses = customer.purchases.some(
-            (p) => p.childId === childId && p.status === "active"
-        );
-
-        if (hasActivePasses) {
-            setSuccessDetails({
-                title: "Cannot Delete Child",
-                message:
-                    "This child has active passes. Please wait for passes to expire or contact management.",
-            });
-            setShowSuccessModal(true);
-            return;
-        }
-
-        setIsDeletingChild(true);
-
-        try {
-            const response = await fetch(`/api/children/${childId}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to delete child");
-            }
-
-            // Remove the child from the customer's children array
-            const updatedCustomer = {
-                ...customer,
-                children: customer.children.filter((c) => c.id !== childId),
-            };
-
-            setSuccessDetails({
-                title: "Child Deleted",
-                message: "Child has been removed from the account.",
-            });
-            setShowSuccessModal(true);
-
-            // Trigger refresh via parent component with updated customer
-            onUpdateCustomer(updatedCustomer);
-        } catch (error) {
-            console.error("Error deleting child:", error);
-            setSuccessDetails({
-                title: "Error Deleting Child",
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to delete child. Please try again.",
-            });
-            setShowSuccessModal(true);
-        } finally {
-            setIsDeletingChild(false);
-        }
-    };
 
     const handleChildSelectionForPurchase = (childId: string) => {
         // Validate age against the product the user is buying BEFORE proceeding,
@@ -911,6 +856,22 @@ export function CheckIn({
                   )
               );
 
+    // Coupons are single-use and for day passes only. A day-pass sale can be
+    // more than one charge -- the infant rate is its own product -- so the
+    // coupon goes on the largest charge and is validated against that amount.
+    // If the selection changes after applying, the total it was checked
+    // against no longer matches and the coupon drops off until re-applied.
+    const couponTargetGroup =
+        passKind === "day" && passQuote.lines.length > 0
+            ? groupQuoteByProduct(passQuote).reduce((a, b) => (b.total > a.total ? b : a))
+            : null;
+    const passCoupon =
+        couponTargetGroup && passCouponTotal === couponTargetGroup.total
+            ? appliedCoupons[PASS_COUPON_KEY]
+            : undefined;
+    const passCouponDiscount = passCoupon?.applied ?? 0;
+    const passTotalAfterCoupon = Math.max(0, passQuote.total - passCouponDiscount);
+
     const togglePassChild = (childId: string) => {
         setPassError(null);
         setPassChildIds((prev) =>
@@ -953,6 +914,7 @@ export function CheckIn({
             childrenIds?: string[];
             splitPerChild?: boolean;
             childPrices?: number[];
+            couponCode?: string;
         }
     ): Promise<{ id: string; child_id: string | null }[]> => {
         const card =
@@ -980,6 +942,7 @@ export function CheckIn({
                       child_prices: sale.childPrices,
                       payment_method: "saved_card",
                       payment_method_id: card.id,
+                      coupon_code: sale.couponCode,
                       quantity: 1,
                       metadata: {},
                   }),
@@ -999,6 +962,7 @@ export function CheckIn({
                       splitPerChild: sale.splitPerChild ?? false,
                       childPrices: sale.childPrices,
                       paymentMethodId: card.id,
+                      couponCode: sale.couponCode,
                       quantity: 1,
                   }),
               });
@@ -1116,6 +1080,10 @@ export function CheckIn({
                     childrenIds: childIds,
                     splitPerChild: useSplit,
                     childPrices: useSplit ? group.lines.map((l) => l.price) : undefined,
+                    couponCode:
+                        passCoupon && couponTargetGroup?.pass.id === group.pass.id
+                            ? passCoupon.code
+                            : undefined,
                 });
             }
 
@@ -1123,14 +1091,20 @@ export function CheckIn({
             setSuccessDetails({
                 title: "Passes Purchased ✅",
                 message: `${PASS_KIND_LABEL[passKind]} for ${names}.`,
-                details: `💰 ${formatCurrency(passQuote.total)}${
+                details: `💰 ${formatCurrency(passTotalAfterCoupon)}${
                     passQuote.savings > 0
                         ? `\n🎉 ${passKind === "monthly" ? "Family membership" : "Sibling discount"} saved ${formatCurrency(passQuote.savings)}`
+                        : ""
+                }${
+                    passCoupon
+                        ? `\n🏷️ Coupon ${passCoupon.name || passCoupon.code}: −${formatCurrency(passCouponDiscount)}`
                         : ""
                 }`,
             });
             setShowSuccessModal(true);
             setPassChildIds([]);
+            handleRemoveCoupon(PASS_COUPON_KEY);
+            setPassCouponTotal(null);
 
             // Refresh the customer so the new passes show immediately
             const purchasesResponse = await fetch(
@@ -1250,29 +1224,11 @@ export function CheckIn({
         };
     }, [confirmTimeout, checkInTimeout]);
 
-    // Filter and sort passes based on selected filter
-    const getFilteredPasses = () => {
-        let filtered = [...availablePasses];
-
-        // Apply filter
-        if (passFilter === "infant") {
-            filtered = filtered.filter((pass) =>
-                pass.name.toLowerCase().includes("infant")
-            );
-        } else if (passFilter === "toddler") {
-            filtered = filtered.filter((pass) =>
-                pass.name.toLowerCase().includes("toddler")
-            );
-        }
-
-        // Sort by price (lowest to highest)
-        return filtered.sort((a, b) => a.price - b.price);
-    };
 
     // Party packages are no longer sold from the POS — parties are booked
     // through the website. The catalogue is still needed so the POS can
     // recognise a package a customer already owns and schedule it.
-    const AVAILABLE_PASS_PRODUCTS = getFilteredPasses();
+    const AVAILABLE_PASS_PRODUCTS = [...availablePasses].sort((a, b) => a.price - b.price);
     const AVAILABLE_PARTY_PRODUCTS = [...availableParties].sort(
         (a, b) => a.price - b.price
     );
@@ -3111,16 +3067,6 @@ export function CheckIn({
                                 👶 Children ({displayCustomer.children.length})
                             </button>
                             <button
-                                onClick={() => setActiveTab("passes")}
-                                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
-                                    activeTab === "passes"
-                                        ? "bg-blue-600 text-white shadow-md"
-                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                                }`}
-                            >
-                                🎫 Passes
-                            </button>
-                            <button
                                 onClick={() => setActiveTab("parties")}
                                 className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
                                     activeTab === "parties"
@@ -3156,633 +3102,6 @@ export function CheckIn({
                     {/* Children Management */}
                     {activeTab === "children" && (
                         <div className="space-y-8">
-                            {/* Children Header */}
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-2xl font-bold">Manage Children</h3>
-                                <Button
-                                    onClick={() => setShowAddChild(true)}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-                                >
-                                    <span className="text-lg mr-2">+</span>
-                                    Add Child
-                                </Button>
-                            </div>
-
-                            {/* Buy passes: pick who's playing, then the pass.
-                                The rate for each child comes from their age. */}
-                            {displayCustomer.children.length > 0 && (
-                                <Card className="p-6 border-l-4 border-l-amber-400">
-                                    <h4 className="text-xl font-bold mb-1">
-                                        {passKind === "punch"
-                                            ? "Buy a punch card"
-                                            : "Who's playing?"}
-                                    </h4>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        {passKind === "punch" ? (
-                                            "Choose a card below — any child on the account can use it."
-                                        ) : (
-                                            <>
-                                                Select the children, then choose a pass. The
-                                                right rate is worked out from each
-                                                child&apos;s age.
-                                            </>
-                                        )}
-                                    </p>
-
-                                    {passKind !== "punch" && (
-                                        <div className="flex flex-wrap gap-2 mb-5">
-                                            {displayCustomer.children.map((child) => {
-                                                const selected = passChildIds.includes(child.id);
-                                                return (
-                                                    <button
-                                                        key={child.id}
-                                                        type="button"
-                                                        onClick={() => togglePassChild(child.id)}
-                                                        aria-pressed={selected}
-                                                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                                            selected
-                                                                ? "bg-amber-100 border-amber-500"
-                                                                : "bg-white border-gray-300 hover:border-amber-400"
-                                                        }`}
-                                                    >
-                                                        <span className="block font-semibold text-gray-900">
-                                                            {selected ? "✓ " : ""}
-                                                            {child.name}
-                                                        </span>
-                                                        <span className="block text-xs text-gray-600">
-                                                            Age {child.age}
-                                                            {!child.waiverSigned && " · waiver needed"}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    <div className="flex flex-wrap gap-2 mb-5">
-                                        {PASS_KINDS.map((kind) => (
-                                            <button
-                                                key={kind}
-                                                type="button"
-                                                onClick={() => {
-                                                    setPassKind(kind);
-                                                    setPassError(null);
-                                                    setSelectedPunchCard(null);
-                                                }}
-                                                aria-pressed={passKind === kind}
-                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                                    passKind === kind
-                                                        ? "bg-gray-900 text-white border-gray-900"
-                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
-                                                }`}
-                                            >
-                                                {PASS_KIND_LABEL[kind]}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {passKind === "punch" ? (
-                                        <div className="space-y-3">
-                                            {punchCardOptions(availablePasses).map((card) => (
-                                                <button
-                                                    key={card.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedPunchCard(card)}
-                                                    className={`w-full p-4 rounded-xl border-4 text-left transition-colors ${
-                                                        selectedPunchCard?.id === card.id
-                                                            ? "border-yellow-400 bg-yellow-50"
-                                                            : "border-gray-200 hover:bg-gray-50"
-                                                    }`}
-                                                >
-                                                    <span className="text-xl font-bold">
-                                                        {card.name}
-                                                    </span>
-                                                    <span className="ml-3 text-xl">
-                                                        {formatCurrency(card.price)}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    ) : passChildIds.length === 0 ? (
-                                        <p className="text-sm text-gray-500">
-                                            Select at least one child to see pricing.
-                                        </p>
-                                    ) : (
-                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
-                                            {passQuote.lines.map((line) => (
-                                                <div
-                                                    key={line.child.id}
-                                                    className="flex justify-between items-baseline py-1"
-                                                >
-                                                    <span className="text-gray-800">
-                                                        {line.child.name}
-                                                        <span className="text-gray-500 text-sm">
-                                                            {" "}
-                                                            · {line.pass.name}
-                                                        </span>
-                                                        {line.includedFree ? (
-                                                            <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                {passKind === "monthly" ? "on the family membership" : "plays free"}
-                                                            </span>
-                                                        ) : (
-                                                            line.discountPercent > 0 && (
-                                                                <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                    sibling −{line.discountPercent}%
-                                                                </span>
-                                                            )
-                                                        )}
-                                                    </span>
-                                                    <span className="font-semibold tabular-nums">
-                                                        {line.includedFree ? (
-                                                            <span className="text-green-700">
-                                                                {passKind === "monthly" ? "Included" : "Free"}
-                                                            </span>
-                                                        ) : (
-                                                            <>
-                                                                {line.discountPercent > 0 && (
-                                                                    <span className="line-through text-gray-400 font-normal mr-2">
-                                                                        {formatCurrency(line.basePrice)}
-                                                                    </span>
-                                                                )}
-                                                                {formatCurrency(line.price)}
-                                                            </>
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            ))}
-
-                                            {passQuote.unresolved.length > 0 && (
-                                                <p className="mt-2 text-sm text-red-700">
-                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
-                                                    available for{" "}
-                                                    {passQuote.unresolved
-                                                        .map((c) => c.name)
-                                                        .join(", ")}
-                                                    .
-                                                </p>
-                                            )}
-
-                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
-                                                <span className="font-bold text-lg">Total</span>
-                                                <span className="font-bold text-lg tabular-nums">
-                                                    {formatCurrency(passQuote.total)}
-                                                </span>
-                                            </div>
-                                            {passQuote.savings > 0 && (
-                                                <p className="text-sm text-green-700 text-right">
-                                                    Sibling discount saves{" "}
-                                                    {formatCurrency(passQuote.savings)}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {passError && (
-                                        <p className="mt-3 text-sm font-medium text-red-700">
-                                            {passError}
-                                        </p>
-                                    )}
-
-                                    <Button
-                                        onClick={handleBuyPasses}
-                                        disabled={
-                                            buyingPasses ||
-                                            (passKind === "punch"
-                                                ? !selectedPunchCard
-                                                : passQuote.lines.length === 0)
-                                        }
-                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
-                                    >
-                                        {buyingPasses
-                                            ? "Processing…"
-                                            : passKind === "punch"
-                                              ? selectedPunchCard
-                                                    ? `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(selectedPunchCard.price)}`
-                                                    : `Buy ${PASS_KIND_LABEL[passKind]}`
-                                              : passQuote.lines.length === 0
-                                                ? `Buy ${PASS_KIND_LABEL[passKind]}`
-                                                : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
-                                    </Button>
-                                </Card>
-                            )}
-
-                            {/* Children List */}
-                            {displayCustomer.children.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="text-6xl mb-4">👶</div>
-                                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                                        No Children Added
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        Add children to this customer account to
-                                        purchase passes and track waivers
-                                    </p>
-                                    <Button
-                                        onClick={() => setShowAddChild(true)}
-                                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg"
-                                    >
-                                        Add First Child
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {displayCustomer.children.map((child) => (
-                                        <Card
-                                            key={child.id}
-                                            className="p-6 border-l-4 border-l-green-400"
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex-1">
-                                                    <h4 className="font-semibold text-lg">
-                                                        {child.name}
-                                                    </h4>
-                                                    <p className="text-gray-600">
-                                                        Age: {child.age}
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        Born:{" "}
-                                                        {new Date(
-                                                            child.birthdate
-                                                        ).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        handleDeleteChild(child.id)
-                                                    }
-                                                    className="text-red-500 hover:text-red-700 p-1"
-                                                    title="Delete child"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {/* Waiver Status */}
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-medium">
-                                                        Waiver Status:
-                                                    </span>
-                                                    <div className="flex items-center space-x-2">
-                                                        {child.waiverSigned ? (
-                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                ✅ Signed{child.waiverSignedDate ? ` ${new Date(child.waiverSignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
-                                                            </span>
-                                                        ) : (
-                                                            <>
-                                                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                    ❌ Not Signed
-                                                                </span>
-                                                                <Button
-                                                                    onClick={() => {
-                                                                        setWaiverChild(
-                                                                            child
-                                                                        );
-                                                                        setShowWaiverModal(
-                                                                            true
-                                                                        );
-                                                                    }}
-                                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                                                                >
-                                                                    Sign Waiver
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                        <Button
-                                                            onClick={() => {
-                                                                setViewWaiverChildName(child.name);
-                                                                setShowViewWaiverModal(true);
-                                                            }}
-                                                            variant="outline"
-                                                            className="px-3 py-1 rounded text-sm"
-                                                            title="View full waiver document"
-                                                        >
-                                                            📄 View Waiver
-                                                        </Button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Active Passes for this child - grouped by pass type */}
-                                                {(() => {
-                                                    const childPasses =
-                                                        displayCustomer.purchases.filter(
-                                                            (p) =>
-                                                                p.childId ===
-                                                                    child.id &&
-                                                                p.status === "active"
-                                                        );
-
-// Group passes by type and sum remaining sessions
-                                                    // Extract pass type from name if type field is missing
-                                                    const inferPassType = (name: string, type?: string): string => {
-                                                        const lowerName = name.toLowerCase();
-                                                        // Event passes get their own group based on name
-                                                        if (lowerName.includes('easter egg') || lowerName.includes('egg hunt')) return 'event_easter';
-                                                        if (type && type !== 'undefined') return type;
-                                                        if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
-                                                        if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
-                                                        if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
-                                                        if (lowerName.includes('party')) return 'party_package';
-                                                        return 'day_pass'; // Default fallback
-                                                    };
-
-                                                    // Map type to friendly display name
-                                                    const getPassTypeName = (type: string, passName?: string) => {
-                                                        if (type.startsWith('event_')) {
-                                                            return passName || 'Event Pass';
-                                                        }
-                                                        switch (type) {
-                                                            case 'day_pass': return 'Day Pass';
-                                                            case 'weekly_pass': return 'Punch Card';
-                                                            case 'monthly_pass': return 'Monthly Pass';
-                                                            case 'party_package': return 'Party Package';
-                                                            default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                                                        }
-                                                    };
-
-                                                    const groupedPasses = childPasses.reduce((acc, pass) => {
-                                                        // Normalize type - infer from name if missing
-                                                        const normalizedType = inferPassType(pass.name, pass.type);
-                                                        const key = normalizedType;
-                                                        if (!acc[key]) {
-                                                            acc[key] = {
-                                                                type: normalizedType,
-                                                                name: getPassTypeName(normalizedType, pass.name),
-                                                                totalRemaining: 0,
-                                                                isUnlimited: false,
-                                                                purchaseIds: [],
-                                                            };
-                                                        }
-                                                        const remaining = pass.totalSessions - pass.usedSessions;
-                                                        if (pass.totalSessions === 999) {
-                                                            acc[key].isUnlimited = true;
-                                                        }
-                                                        acc[key].totalRemaining += remaining;
-                                                        acc[key].purchaseIds.push(pass.id);
-                                                        return acc;
-                                                    }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean; purchaseIds: string[] }>);
-
-                                                    const groupedPassesList = Object.values(groupedPasses);
-
-                                                    return (
-                                                        groupedPassesList.length > 0 && (
-                                                            <div>
-                                                                <p className="font-medium text-sm text-gray-700 mb-2">
-                                                                    Active Passes:
-                                                                </p>
-                                                                {groupedPassesList.map(
-                                                                    (passGroup) => (
-                                                                            <div
-                                                                                key={passGroup.type}
-                                                                                className="bg-yellow-50 p-2 rounded text-sm flex items-center justify-between mb-1"
-                                                                            >
-                                                                                <div className="flex items-center gap-2">
-                                                                                    {!passGroup.isUnlimited && passGroup.totalRemaining > 1 && (
-                                                                                        <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
-                                                                                            {passGroup.totalRemaining}x
-                                                                                        </span>
-                                                                                    )}
-                                                                                    <span className="font-medium">
-                                                                                        {passGroup.name}
-                                                                                    </span>
-                                                                                </div>
-                                                                                {passGroup.isUnlimited ? (
-                                                                                    <span className="text-green-600 text-xs font-medium">
-                                                                                        ∞ Unlimited
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-gray-500 text-xs">
-                                                                                        {passGroup.totalRemaining} visit{passGroup.totalRemaining !== 1 ? 's' : ''} left
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        )
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    );
-                                                })()}
-
-                                                {child.waiverSigned &&
-                                                    child.waiverSignedDate && (
-                                                        <p className="text-xs text-gray-500">
-                                                            Waiver signed:{" "}
-                                                            {new Date(
-                                                                child.waiverSignedDate
-                                                            ).toLocaleDateString()}
-                                                        </p>
-                                                    )}
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Add Child Modal */}
-                            {showAddChild && (
-                                <div
-                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                    onClick={(e) => {
-                                        if (e.target === e.currentTarget) {
-                                            setShowAddChild(false);
-                                            setChildName("");
-                                            setChildBirthdate("");
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Escape") {
-                                            setShowAddChild(false);
-                                            setChildName("");
-                                            setChildBirthdate("");
-                                        }
-                                    }}
-                                >
-                                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
-                                        {/* Close Button */}
-                                        <button
-                                            onClick={() => {
-                                                setShowAddChild(false);
-                                                setChildName("");
-                                                setChildBirthdate("");
-                                            }}
-                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            ✕
-                                        </button>
-
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Add New Child
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Child's Name
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={childName}
-                                                    onChange={(e) =>
-                                                        setChildName(e.target.value)
-                                                    }
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                    placeholder="Enter child's full name"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Date of Birth
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    value={childBirthdate}
-                                                    onChange={(e) =>
-                                                        setChildBirthdate(
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                    max={
-                                                        new Date()
-                                                            .toISOString()
-                                                            .split("T")[0]
-                                                    }
-                                                />
-                                            </div>
-                                            {childBirthdate && (
-                                                <p className="text-sm text-gray-600">
-                                                    Age: {calculateAge(childBirthdate)}{" "}
-                                                    years old
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-end space-x-3 mt-6">
-                                            <Button
-                                                onClick={() => {
-                                                    setShowAddChild(false);
-                                                    setChildName("");
-                                                    setChildBirthdate("");
-                                                }}
-                                                variant="secondary"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                onClick={handleAddChild}
-                                                className="bg-green-500 hover:bg-green-600 text-white"
-                                                disabled={
-                                                    !childName.trim() ||
-                                                    !childBirthdate ||
-                                                    isAddingChild
-                                                }
-                                            >
-                                                {isAddingChild
-                                                    ? "Adding..."
-                                                    : "Add Child"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Waiver Modal */}
-                            {showWaiverModal && waiverChild && (
-                                <div
-                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                    onClick={(e) => {
-                                        if (e.target === e.currentTarget) {
-                                            setShowWaiverModal(false);
-                                            setWaiverChild(null);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Escape") {
-                                            setShowWaiverModal(false);
-                                            setWaiverChild(null);
-                                        }
-                                    }}
-                                >
-                                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
-                                        {/* Close Button */}
-                                        <button
-                                            onClick={() => {
-                                                setShowWaiverModal(false);
-                                                setWaiverChild(null);
-                                            }}
-                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
-                                        >
-                                            ✕
-                                        </button>
-
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Waiver for {waiverChild.name}
-                                        </h3>
-                                        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
-                                            <h4 className="font-medium mb-2">
-                                                LIABILITY WAIVER AND RELEASE
-                                            </h4>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I hereby acknowledge that I am the
-                                                parent/guardian of {waiverChild.name},
-                                                age {waiverChild.age}, and I understand
-                                                that participation in activities at Busy
-                                                Bees Indoor Playground involves inherent
-                                                risks.
-                                            </p>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I hereby release, waive, discharge and
-                                                covenant not to sue Busy Bees Indoor
-                                                Playground, its owners, employees, and
-                                                agents from any and all liability,
-                                                claims, demands, actions and causes of
-                                                action whatsoever arising out of or
-                                                related to any loss, damage, or injury
-                                                that may be sustained by my child while
-                                                participating in activities.
-                                            </p>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I acknowledge that I have read and
-                                                understood this waiver and that I am
-                                                signing it voluntarily. This waiver
-                                                shall be binding upon my heirs,
-                                                executors, administrators and assigns.
-                                            </p>
-                                            <p className="text-sm font-medium text-gray-800">
-                                                By clicking "I Agree and Sign", I
-                                                electronically sign this waiver on
-                                                behalf of my child.
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-end space-x-3">
-                                            <Button
-                                                onClick={() => {
-                                                    setShowWaiverModal(false);
-                                                    setWaiverChild(null);
-                                                }}
-                                                variant="secondary"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                onClick={() =>
-                                                    handleSignWaiver(waiverChild)
-                                                }
-                                                className="bg-green-500 hover:bg-green-600 text-white"
-                                                disabled={isSigningWaiver}
-                                            >
-                                                {isSigningWaiver
-                                                    ? "Signing..."
-                                                    : "I Agree and Sign"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Pass Management */}
-                    {activeTab === "passes" && (
-                        <div className="space-y-10">
                             {/* Currently Checked In Passes */}
                             {(() => {
                                 // Driven by open sessions, not purchase status. Migration
@@ -4470,279 +3789,531 @@ export function CheckIn({
                                 );
                             })()}
 
-                            {/* Quick Purchase Passes - Always Visible */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase New Passes
-                                </h3>
+                            {/* Children Header */}
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-2xl font-bold">Manage Children</h3>
+                                <Button
+                                    onClick={() => setShowAddChild(true)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                                >
+                                    <span className="text-lg mr-2">+</span>
+                                    Add Child
+                                </Button>
+                            </div>
 
-                                {/* Pass Filter Tabs */}
-                                <div className="flex space-x-2 mb-4">
-                                    <button
-                                        onClick={() => setPassFilter("all")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "all"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        All ({availablePasses.length})
-                                    </button>
-                                    <button
-                                        onClick={() => setPassFilter("infant")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "infant"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Infant (
-                                        {
-                                            availablePasses.filter((p) =>
-                                                p.name.toLowerCase().includes("infant")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                    <button
-                                        onClick={() => setPassFilter("toddler")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "toddler"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Toddler (
-                                        {
-                                            availablePasses.filter((p) =>
-                                                p.name.toLowerCase().includes("toddler")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                </div>
+                            {/* Buy passes: pick who's playing, then the pass.
+                                The rate for each child comes from their age. */}
+                            {displayCustomer.children.length > 0 && (
+                                <Card className="p-6 border-l-4 border-l-amber-400">
+                                    <h4 className="text-xl font-bold mb-1">
+                                        {passKind === "punch"
+                                            ? "Buy a punch card"
+                                            : "Who's playing?"}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        {passKind === "punch" ? (
+                                            "Choose a card below — any child on the account can use it."
+                                        ) : (
+                                            <>
+                                                Select the children, then choose a pass. The
+                                                right rate is worked out from each
+                                                child&apos;s age.
+                                            </>
+                                        )}
+                                    </p>
 
-                                {/* Child Selection Required */}
-                                {displayCustomer.children.length === 0 && (
-                                    <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
-                                        <div className="flex items-center">
-                                            <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center mr-3">
-                                                <span className="text-white">👶</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-blue-800">
-                                                    Children Required
-                                                </h4>
-                                                <p className="text-blue-600 text-sm">
-                                                    This customer needs to add children
-                                                    with signed waivers before
-                                                    purchasing passes.
-                                                    <br />
-                                                    <strong>💡 Tip:</strong> Have them
-                                                    use their own device to add children
-                                                    in the customer dashboard.
-                                                </p>
-                                            </div>
+                                    {passKind !== "punch" && (
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {displayCustomer.children.map((child) => {
+                                                const selected = passChildIds.includes(child.id);
+                                                return (
+                                                    <button
+                                                        key={child.id}
+                                                        type="button"
+                                                        onClick={() => togglePassChild(child.id)}
+                                                        aria-pressed={selected}
+                                                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                            selected
+                                                                ? "bg-amber-100 border-amber-500"
+                                                                : "bg-white border-gray-300 hover:border-amber-400"
+                                                        }`}
+                                                    >
+                                                        <span className="block font-semibold text-gray-900">
+                                                            {selected ? "✓ " : ""}
+                                                            {child.name}
+                                                        </span>
+                                                        <span className="block text-xs text-gray-600">
+                                                            Age {child.age}
+                                                            {!child.waiverSigned && " · waiver needed"}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                    </Card>
-                                )}
+                                    )}
 
-                                <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
-                                    <div className="grid gap-4 text-left">
-                                        {AVAILABLE_PASS_PRODUCTS.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                                    {/* A child without a signed waiver cannot be bought a pass; sign it here. */}
+                                    {displayCustomer.children.some((c) => !c.waiverSigned) && (
+                                        <div className="flex flex-wrap items-center gap-2 mb-5 text-sm">
+                                            <span className="font-medium text-red-700">Waiver needed:</span>
+                                            {displayCustomer.children
+                                                .filter((c) => !c.waiverSigned)
+                                                .map((child) => (
+                                                    <Button
+                                                        key={child.id}
+                                                        onClick={() => {
+                                                            setWaiverChild(child);
+                                                            setShowWaiverModal(true);
+                                                        }}
+                                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                                    >
+                                                        Sign waiver for {child.name}
+                                                    </Button>
+                                                ))}
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2 mb-5">
+                                        {PASS_KINDS.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPassKind(kind);
+                                                    setPassError(null);
+                                                    setSelectedPunchCard(null);
+                                                }}
+                                                aria-pressed={passKind === kind}
+                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                    passKind === kind
+                                                        ? "bg-gray-900 text-white border-gray-900"
+                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                                                }`}
                                             >
-                                                <div className="flex-1">
-                                                    <span className="font-medium text-gray-900 text-lg">
-                                                        {product.id === "day_pass"
-                                                            ? "🎫"
-                                                            : product.id ===
-                                                              "weekly_pass"
-                                                            ? "📅"
-                                                            : "🗓️"}{" "}
-                                                        {product.name}
-                                                    </span>
-                                                    <p className="text-sm text-gray-600">
-                                                        {product.description}
-                                                    </p>
-                                                    <div className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${product.price.toFixed(2)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Apply Coupon — single day passes only (Infant / Toddler / Combo).
-                                                    Excludes punch cards even if they share category='day'. */}
-                                                {product.name.toLowerCase().startsWith('day pass') && (
-                                                    <div className="mr-4 min-w-[200px]">
-                                                        {appliedCoupons[product.id] ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="text-sm font-medium text-green-700">
-                                                                    ✓ {appliedCoupons[product.id].name || appliedCoupons[product.id].code}
-                                                                </div>
-                                                                <div className="text-xs text-gray-600">
-                                                                    {appliedCoupons[product.id].discountType === 'percent'
-                                                                        ? `−$${appliedCoupons[product.id].applied.toFixed(2)} off`
-                                                                        : `−$${appliedCoupons[product.id].applied.toFixed(2)}`}
-                                                                    {appliedCoupons[product.id].forfeited > 0 && (
-                                                                        <span className="text-amber-600 ml-1">
-                                                                            (${appliedCoupons[product.id].forfeited.toFixed(2)} forfeited)
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveCoupon(product.id)}
-                                                                    className="text-xs text-red-600 hover:underline self-start"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="flex items-center gap-1">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={couponInputs[product.id] || ''}
-                                                                        onChange={e =>
-                                                                            setCouponInputs(prev => ({ ...prev, [product.id]: e.target.value }))
-                                                                        }
-                                                                        placeholder="Coupon"
-                                                                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded font-mono uppercase"
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleApplyCoupon(product.id, product.price)}
-                                                                        disabled={couponLoading[product.id]}
-                                                                        className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                                                                    >
-                                                                        {couponLoading[product.id] ? '...' : 'Apply'}
-                                                                    </button>
-                                                                </div>
-                                                                {couponErrors[product.id] && (
-                                                                    <div className="text-xs text-red-600">
-                                                                        {couponErrors[product.id]}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <Button
-                                                    onClick={() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer) return;
-
-                                                        // Step 1: Add Child (highest priority)
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            setActiveTab("children");
-                                                            return;
-                                                        }
-
-                                                        // Step 2: Add Payment Method
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            // Show payment modal instead of alert
-                                                            setShowPaymentModal(true);
-                                                            return;
-                                                        }
-
-                                                        // Step 3: Show Child Selection Modal
-                                                        if (
-                                                            confirmingProduct ===
-                                                            product.id
-                                                        ) {
-                                                            handleConfirmPurchase(
-                                                                product.id
-                                                            );
-                                                        } else {
-                                                            // Show child selection modal
-                                                            setSelectedProductForPurchase(
-                                                                product.id
-                                                            );
-                                                            setSelectedChildrenForFamilyPass([]);
-                                                            setComboChildId(null);
-                                                            setComboInfantId(null);
-                                                            setShowChildSelectionModal(
-                                                                true
-                                                            );
-                                                        }
-                                                    }}
-                                                    size="lg"
-                                                    disabled={
-                                                        purchasingProduct ===
-                                                        product.id
-                                                    }
-                                                    className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer)
-                                                            return "bg-gray-400";
-
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            return "bg-blue-500 hover:bg-blue-600";
-                                                        }
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "bg-yellow-500 hover:bg-yellow-600";
-                                                        }
-                                                        return confirmingProduct ===
-                                                            product.id
-                                                            ? "bg-green-600 hover:bg-green-700 animate-pulse"
-                                                            : purchasingProduct ===
-                                                              product.id
-                                                            ? "bg-blue-600"
-                                                            : "bg-green-600 hover:bg-green-700";
-                                                    })()}`}
-                                                >
-                                                    {(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer)
-                                                            return "No Customer";
-
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            return "👶 Add Child First";
-                                                        }
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "💳 Add Payment First";
-                                                        }
-                                                        return purchasingProduct ===
-                                                            product.id
-                                                            ? "Processing..."
-                                                            : confirmingProduct ===
-                                                              product.id
-                                                            ? "✓ Confirm Purchase"
-                                                            : "Buy Now";
-                                                    })()}
-                                                </Button>
-                                            </div>
+                                                {PASS_KIND_LABEL[kind]}
+                                            </button>
                                         ))}
                                     </div>
+
+                                    {passKind === "punch" ? (
+                                        <div className="space-y-3">
+                                            {punchCardOptions(availablePasses).map((card) => (
+                                                <button
+                                                    key={card.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPunchCard(card)}
+                                                    className={`w-full p-4 rounded-xl border-4 text-left transition-colors ${
+                                                        selectedPunchCard?.id === card.id
+                                                            ? "border-yellow-400 bg-yellow-50"
+                                                            : "border-gray-200 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <span className="text-xl font-bold">
+                                                        {card.name}
+                                                    </span>
+                                                    <span className="ml-3 text-xl">
+                                                        {formatCurrency(card.price)}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : passChildIds.length === 0 ? (
+                                        <p className="text-sm text-gray-500">
+                                            Select at least one child to see pricing.
+                                        </p>
+                                    ) : (
+                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                                            {passQuote.lines.map((line) => (
+                                                <div
+                                                    key={line.child.id}
+                                                    className="flex justify-between items-baseline py-1"
+                                                >
+                                                    <span className="text-gray-800">
+                                                        {line.child.name}
+                                                        <span className="text-gray-500 text-sm">
+                                                            {" "}
+                                                            · {line.pass.name}
+                                                        </span>
+                                                        {line.includedFree ? (
+                                                            <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                {passKind === "monthly" ? "on the family membership" : "plays free"}
+                                                            </span>
+                                                        ) : (
+                                                            line.discountPercent > 0 && (
+                                                                <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                    sibling −{line.discountPercent}%
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </span>
+                                                    <span className="font-semibold tabular-nums">
+                                                        {line.includedFree ? (
+                                                            <span className="text-green-700">
+                                                                {passKind === "monthly" ? "Included" : "Free"}
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {line.discountPercent > 0 && (
+                                                                    <span className="line-through text-gray-400 font-normal mr-2">
+                                                                        {formatCurrency(line.basePrice)}
+                                                                    </span>
+                                                                )}
+                                                                {formatCurrency(line.price)}
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            ))}
+
+                                            {passQuote.unresolved.length > 0 && (
+                                                <p className="mt-2 text-sm text-red-700">
+                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
+                                                    available for{" "}
+                                                    {passQuote.unresolved
+                                                        .map((c) => c.name)
+                                                        .join(", ")}
+                                                    .
+                                                </p>
+                                            )}
+
+                                            {passCoupon && (
+                                                <div className="flex justify-between items-baseline mt-3 text-green-700">
+                                                    <span className="text-sm font-medium">
+                                                        Coupon {passCoupon.name || passCoupon.code}
+                                                        {passCoupon.forfeited > 0 && (
+                                                            <span className="text-amber-600 ml-1">
+                                                                ({formatCurrency(passCoupon.forfeited)} forfeited)
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="text-sm font-semibold tabular-nums">
+                                                        −{formatCurrency(passCouponDiscount)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
+                                                <span className="font-bold text-lg">Total</span>
+                                                <span className="font-bold text-lg tabular-nums">
+                                                    {formatCurrency(passTotalAfterCoupon)}
+                                                </span>
+                                            </div>
+                                            {passQuote.savings > 0 && (
+                                                <p className="text-sm text-green-700 text-right">
+                                                    {passKind === "monthly" ? "Family membership" : "Sibling discount"} saves{" "}
+                                                    {formatCurrency(passQuote.savings)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Coupon — day passes only, one per sale (see couponTargetGroup). */}
+                                    {couponTargetGroup && (
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                            {passCoupon ? (
+                                                <>
+                                                    <span className="text-sm font-medium text-green-700">
+                                                        ✓ Coupon {passCoupon.name || passCoupon.code} applied
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleRemoveCoupon(PASS_COUPON_KEY);
+                                                            setPassCouponTotal(null);
+                                                        }}
+                                                        className="text-xs text-red-600 hover:underline"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <input
+                                                        id="pass-coupon-code"
+                                                        type="text"
+                                                        value={couponInputs[PASS_COUPON_KEY] || ""}
+                                                        onChange={(e) =>
+                                                            setCouponInputs((prev) => ({
+                                                                ...prev,
+                                                                [PASS_COUPON_KEY]: e.target.value,
+                                                            }))
+                                                        }
+                                                        placeholder="Coupon code"
+                                                        aria-label="Coupon code"
+                                                        className="w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono uppercase"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setPassCouponTotal(couponTargetGroup.total);
+                                                            void handleApplyCoupon(
+                                                                PASS_COUPON_KEY,
+                                                                couponTargetGroup.total
+                                                            );
+                                                        }}
+                                                        disabled={couponLoading[PASS_COUPON_KEY]}
+                                                        className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                                                    >
+                                                        {couponLoading[PASS_COUPON_KEY] ? "…" : "Apply"}
+                                                    </button>
+                                                    {couponErrors[PASS_COUPON_KEY] && (
+                                                        <span className="text-sm text-red-600">
+                                                            {couponErrors[PASS_COUPON_KEY]}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {passError && (
+                                        <p className="mt-3 text-sm font-medium text-red-700">
+                                            {passError}
+                                        </p>
+                                    )}
+
+                                    <Button
+                                        onClick={handleBuyPasses}
+                                        disabled={
+                                            buyingPasses ||
+                                            (passKind === "punch"
+                                                ? !selectedPunchCard
+                                                : passQuote.lines.length === 0)
+                                        }
+                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
+                                    >
+                                        {buyingPasses
+                                            ? "Processing…"
+                                            : passKind === "punch"
+                                              ? selectedPunchCard
+                                                    ? `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(selectedPunchCard.price)}`
+                                                    : `Buy ${PASS_KIND_LABEL[passKind]}`
+                                              : passQuote.lines.length === 0
+                                                ? `Buy ${PASS_KIND_LABEL[passKind]}`
+                                                : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passTotalAfterCoupon)}`}
+                                    </Button>
                                 </Card>
+                            )}
+
+                            {/* No children yet: the pass picker needs at least one. Child details
+                                (edits, removal, waivers on file) are managed in Staff Admin. */}
+                            {displayCustomer.children.length === 0 && (
+                            <div className="text-center py-12">
+                                <div className="text-6xl mb-4">👶</div>
+                                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                                    No Children Added
+                                </h3>
+                                <p className="text-gray-600 mb-6">
+                                    Add children to this customer account to
+                                    purchase passes and track waivers
+                                </p>
+                                <Button
+                                    onClick={() => setShowAddChild(true)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg"
+                                >
+                                    Add First Child
+                                </Button>
                             </div>
+                            )}
+
+                            {/* Add Child Modal */}
+                            {showAddChild && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                    onClick={(e) => {
+                                        if (e.target === e.currentTarget) {
+                                            setShowAddChild(false);
+                                            setChildName("");
+                                            setChildBirthdate("");
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                            setShowAddChild(false);
+                                            setChildName("");
+                                            setChildBirthdate("");
+                                        }
+                                    }}
+                                >
+                                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
+                                        {/* Close Button */}
+                                        <button
+                                            onClick={() => {
+                                                setShowAddChild(false);
+                                                setChildName("");
+                                                setChildBirthdate("");
+                                            }}
+                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+
+                                        <h3 className="text-lg font-semibold mb-4">
+                                            Add New Child
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Child's Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={childName}
+                                                    onChange={(e) =>
+                                                        setChildName(e.target.value)
+                                                    }
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    placeholder="Enter child's full name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Date of Birth
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={childBirthdate}
+                                                    onChange={(e) =>
+                                                        setChildBirthdate(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    max={
+                                                        new Date()
+                                                            .toISOString()
+                                                            .split("T")[0]
+                                                    }
+                                                />
+                                            </div>
+                                            {childBirthdate && (
+                                                <p className="text-sm text-gray-600">
+                                                    Age: {calculateAge(childBirthdate)}{" "}
+                                                    years old
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-end space-x-3 mt-6">
+                                            <Button
+                                                onClick={() => {
+                                                    setShowAddChild(false);
+                                                    setChildName("");
+                                                    setChildBirthdate("");
+                                                }}
+                                                variant="secondary"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                onClick={handleAddChild}
+                                                className="bg-green-500 hover:bg-green-600 text-white"
+                                                disabled={
+                                                    !childName.trim() ||
+                                                    !childBirthdate ||
+                                                    isAddingChild
+                                                }
+                                            >
+                                                {isAddingChild
+                                                    ? "Adding..."
+                                                    : "Add Child"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Waiver Modal */}
+                            {showWaiverModal && waiverChild && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                    onClick={(e) => {
+                                        if (e.target === e.currentTarget) {
+                                            setShowWaiverModal(false);
+                                            setWaiverChild(null);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                            setShowWaiverModal(false);
+                                            setWaiverChild(null);
+                                        }
+                                    }}
+                                >
+                                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+                                        {/* Close Button */}
+                                        <button
+                                            onClick={() => {
+                                                setShowWaiverModal(false);
+                                                setWaiverChild(null);
+                                            }}
+                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                                        >
+                                            ✕
+                                        </button>
+
+                                        <h3 className="text-lg font-semibold mb-4">
+                                            Waiver for {waiverChild.name}
+                                        </h3>
+                                        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
+                                            <h4 className="font-medium mb-2">
+                                                LIABILITY WAIVER AND RELEASE
+                                            </h4>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I hereby acknowledge that I am the
+                                                parent/guardian of {waiverChild.name},
+                                                age {waiverChild.age}, and I understand
+                                                that participation in activities at Busy
+                                                Bees Indoor Playground involves inherent
+                                                risks.
+                                            </p>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I hereby release, waive, discharge and
+                                                covenant not to sue Busy Bees Indoor
+                                                Playground, its owners, employees, and
+                                                agents from any and all liability,
+                                                claims, demands, actions and causes of
+                                                action whatsoever arising out of or
+                                                related to any loss, damage, or injury
+                                                that may be sustained by my child while
+                                                participating in activities.
+                                            </p>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I acknowledge that I have read and
+                                                understood this waiver and that I am
+                                                signing it voluntarily. This waiver
+                                                shall be binding upon my heirs,
+                                                executors, administrators and assigns.
+                                            </p>
+                                            <p className="text-sm font-medium text-gray-800">
+                                                By clicking "I Agree and Sign", I
+                                                electronically sign this waiver on
+                                                behalf of my child.
+                                            </p>
+                                        </div>
+                                        <div className="flex justify-end space-x-3">
+                                            <Button
+                                                onClick={() => {
+                                                    setShowWaiverModal(false);
+                                                    setWaiverChild(null);
+                                                }}
+                                                variant="secondary"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    handleSignWaiver(waiverChild)
+                                                }
+                                                className="bg-green-500 hover:bg-green-600 text-white"
+                                                disabled={isSigningWaiver}
+                                            >
+                                                {isSigningWaiver
+                                                    ? "Signing..."
+                                                    : "I Agree and Sign"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
