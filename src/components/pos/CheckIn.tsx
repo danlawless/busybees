@@ -929,6 +929,87 @@ export function CheckIn({
      * child to price against at all — they belong to the account — and are
      * handled by their own early branch below.
      */
+    /**
+     * Pay for a pass with the customer's card on file, in either POS mode.
+     *
+     * The front desk looks a customer up by phone, which signs this browser in
+     * as that customer, so the staff-only /api/purchases/pos refuses the sale.
+     * In that mode the sale goes through the kiosk route, which charges the
+     * customer's own saved card. A staff session keeps the staff route and
+     * names the saved card explicitly -- with no payment method at all it
+     * defaulted to 'test', which live mode rejects.
+     *
+     * Returns every purchase row created, so a sale covering several children
+     * can find each child's own new pass.
+     */
+    const buyWithCardOnFile = async (
+        customer: Customer,
+        sale: {
+            productId: string;
+            productName: string;
+            productPrice: number;
+            purchaseType: "day_pass" | "weekly_pass" | "monthly_pass";
+            childId: string | null;
+            childrenIds?: string[];
+            splitPerChild?: boolean;
+            childPrices?: number[];
+        }
+    ): Promise<{ id: string; child_id: string | null }[]> => {
+        const card =
+            customer.savedCards.find((c) => c.isDefault) || customer.savedCards[0];
+        if (!card) {
+            throw new Error(
+                "No card on file for this customer. Add a payment method on the Payment tab first."
+            );
+        }
+
+        const response = isStaffMode
+            ? await fetch("/api/purchases/pos", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                      customer_id: customer.id,
+                      product_id: sale.productId,
+                      product_name: sale.productName,
+                      product_price: sale.productPrice,
+                      product_description: "",
+                      purchase_type: sale.purchaseType,
+                      child_id: sale.childId,
+                      children_ids: sale.childrenIds,
+                      split_per_child: sale.splitPerChild ?? false,
+                      child_prices: sale.childPrices,
+                      payment_method: "saved_card",
+                      payment_method_id: card.id,
+                      quantity: 1,
+                      metadata: {},
+                  }),
+              })
+            : await fetch("/api/stripe/kiosk-payment", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                      customerId: customer.id,
+                      productId: sale.productId,
+                      productName: sale.productName,
+                      productPrice: sale.productPrice,
+                      productDescription: "",
+                      purchaseType: sale.purchaseType,
+                      childId: sale.childId ?? undefined,
+                      childrenIds: sale.childrenIds,
+                      splitPerChild: sale.splitPerChild ?? false,
+                      childPrices: sale.childPrices,
+                      paymentMethodId: card.id,
+                      quantity: 1,
+                  }),
+              });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Purchase failed");
+        }
+        return (data.purchases ?? []) as { id: string; child_id: string | null }[];
+    };
+
     const handleBuyPasses = async () => {
         const customer = displayCustomer;
 
@@ -945,27 +1026,15 @@ export function CheckIn({
             setPassError(null);
 
             try {
-                const response = await fetch("/api/purchases/pos", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        customer_id: customer.id,
-                        product_id: selectedPunchCard.id,
-                        product_name: selectedPunchCard.name,
-                        product_price: selectedPunchCard.price,
-                        product_description: "",
-                        purchase_type: "weekly_pass",
-                        child_id: null,
-                        pass_scope: "account",
-                        quantity: 1,
-                        metadata: {},
-                    }),
+                // The card's account scope is derived server-side from the
+                // product, so no child is named here.
+                await buyWithCardOnFile(customer, {
+                    productId: selectedPunchCard.id,
+                    productName: selectedPunchCard.name,
+                    productPrice: selectedPunchCard.price,
+                    purchaseType: "weekly_pass",
+                    childId: null,
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Purchase failed");
-                }
 
                 setSuccessDetails({
                     title: "Punch Card Purchased ✅",
@@ -1036,34 +1105,18 @@ export function CheckIn({
                 // per-child split with the exact prices we quoted.
                 const useSplit = passKind === "day" && !group.isCombo;
 
-                const response = await fetch("/api/purchases/pos", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        customer_id: customer.id,
-                        product_id: group.pass.id,
-                        product_name: group.pass.name,
-                        product_price: group.total,
-                        product_description: "",
-                        // Punch cards return above before this point — only
-                        // day and monthly passes are ever bought per child here.
-                        purchase_type:
-                            passKind === "monthly" ? "monthly_pass" : "day_pass",
-                        child_id: childIds[0],
-                        children_ids: childIds,
-                        split_per_child: useSplit,
-                        child_prices: useSplit
-                            ? group.lines.map((l) => l.price)
-                            : undefined,
-                        quantity: 1,
-                        metadata: {},
-                    }),
+                await buyWithCardOnFile(customer, {
+                    productId: group.pass.id,
+                    productName: group.pass.name,
+                    productPrice: group.total,
+                    // Punch cards return above before this point — only
+                    // day and monthly passes are ever bought per child here.
+                    purchaseType: passKind === "monthly" ? "monthly_pass" : "day_pass",
+                    childId: childIds[0],
+                    childrenIds: childIds,
+                    splitPerChild: useSplit,
+                    childPrices: useSplit ? group.lines.map((l) => l.price) : undefined,
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Purchase failed");
-                }
             }
 
             const names = passQuote.lines.map((l) => l.child.name).join(", ");
@@ -1367,31 +1420,16 @@ export function CheckIn({
                 // groupQuoteByProduct does for a direct purchase) is safe here.
                 const groups = groupDayPassLines(allocation.lines);
                 for (const { pass, lines, total } of groups) {
-                    const response = await fetch("/api/purchases/pos", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            customer_id: customer.id,
-                            product_id: pass.id,
-                            product_name: pass.name,
-                            product_price: total,
-                            product_description: "",
-                            purchase_type: "day_pass",
-                            child_id: lines[0].child.id,
-                            children_ids: lines.map((l) => l.child.id),
-                            split_per_child: true,
-                            child_prices: lines.map((l) => l.price),
-                            quantity: 1,
-                            metadata: {},
-                        }),
+                    const created = await buyWithCardOnFile(customer, {
+                        productId: pass.id,
+                        productName: pass.name,
+                        productPrice: total,
+                        purchaseType: "day_pass",
+                        childId: lines[0].child.id,
+                        childrenIds: lines.map((l) => l.child.id),
+                        splitPerChild: true,
+                        childPrices: lines.map((l) => l.price),
                     });
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || "Purchase failed");
-                    }
-                    const { purchases: created } = (await response.json()) as {
-                        purchases: { id: string; child_id: string | null }[];
-                    };
                     for (const line of lines) {
                         const match = created.find((p) => p.child_id === line.child.id);
                         if (!match) throw new Error(`No purchase returned for ${line.child.name}`);
