@@ -229,7 +229,7 @@ export function CheckIn({
         message: "",
     });
     const [activeTab, setActiveTab] = useState<
-        "children" | "parties" | "snacks" | "afterdark"
+        "children" | "parties" | "products" | "afterdark"
     >("children");
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -3077,14 +3077,14 @@ export function CheckIn({
                                 🎉 Parties
                             </button>
                             <button
-                                onClick={() => setActiveTab("snacks")}
+                                onClick={() => setActiveTab("products")}
                                 className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
-                                    activeTab === "snacks"
+                                    activeTab === "products"
                                         ? "bg-orange-600 text-white shadow-md"
                                         : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
                                 }`}
                             >
-                                🍎 Snacks
+                                🛍️ Products
                             </button>
                             <button
                                 onClick={() => setActiveTab("afterdark")}
@@ -4610,10 +4610,10 @@ export function CheckIn({
                         </div>
                     )}
 
-                    {/* Snacks & Drinks Management */}
-                    {activeTab === "snacks" && (
+                    {/* Products: snacks, drinks and retail (bracelets, hats, ...) */}
+                    {activeTab === "products" && (
                         <div className="space-y-10">
-                            {/* Recent Snack Purchases */}
+                            {/* Recent Product Purchases */}
                             {(() => {
                                 const snackPurchases = displayCustomer.purchases.filter(
                                     (p) => p.type === "food_beverage"
@@ -4622,7 +4622,7 @@ export function CheckIn({
                                 return snackPurchases.length > 0 ? (
                                     <div>
                                         <h3 className="text-2xl font-bold mb-6">
-                                            🍿 Recent Snack Purchases
+                                            🛍️ Recent Product Purchases
                                         </h3>
                                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                             {snackPurchases
@@ -4657,10 +4657,10 @@ export function CheckIn({
                                 ) : null;
                             })()}
 
-                            {/* Purchase Snacks & Drinks */}
+                            {/* Purchase Products */}
                             <div>
                                 <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase Snacks & Drinks
+                                    🛒 Purchase Products
                                 </h3>
                                 <Card className="p-6 border-l-8 border-l-orange-300 bg-orange-50">
                                     <div className="grid gap-4 text-left">
@@ -4820,7 +4820,7 @@ export function CheckIn({
                                             <span className="font-semibold">
                                                 💡 Quick Purchase:
                                             </span>{" "}
-                                            No child association required! Snacks can be
+                                            No child association required! Products can be
                                             purchased independently at any time.
                                         </p>
                                     </div>
