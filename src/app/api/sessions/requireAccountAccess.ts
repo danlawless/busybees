@@ -8,11 +8,11 @@
  * self-service device checks in as that customer. The requirement is that the
  * caller be entitled to the account they name, which is what this enforces.
  *
- * Same shape as `requireStaff` -- lifted from
- * `src/app/api/purchases/pos/route.ts` -- so all the session endpoints answer
- * the same way: it returns the response to send when the caller is not allowed,
- * or null to continue. `requireStaff` stays as it is for `DELETE`, which
- * reverses an already-spent punch and is not self-service.
+ * Same shape as the staff check in `src/app/api/purchases/pos/route.ts`, so
+ * all the session endpoints answer the same way: it returns the response to
+ * send when the caller is not allowed, or null to continue. `DELETE` has its
+ * own gate, `requireUndoAccess`, because it reverses an already-spent punch
+ * and is not self-service.
  *
  * The decision itself lives in `accountAccess.ts` and is unit tested there.
  */

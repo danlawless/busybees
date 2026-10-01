@@ -1725,9 +1725,21 @@ export function CheckIn({
             return;
         }
 
+        // Undoing gives the punch back, so the server needs to know staff are
+        // doing it. A staff session already proves that; on the phone-lookup
+        // screen the POS is signed in as the customer, so staff confirm with
+        // the POS PIN instead.
+        let pinHeader: Record<string, string> = {};
+        if (!isStaffMode) {
+            const pin = prompt("Staff PIN to undo this check-in:");
+            if (pin === null) return;
+            pinHeader = { "X-POS-PIN": pin.trim() };
+        }
+
         try {
             const response = await fetch(`/api/sessions/${sessionId}`, {
                 method: "DELETE",
+                headers: pinHeader,
             });
 
             if (!response.ok) {

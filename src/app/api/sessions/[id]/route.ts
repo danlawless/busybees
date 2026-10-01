@@ -1,9 +1,11 @@
 /**
  * API Route: Session by ID
  * PUT    - End a session (check-out)
- * DELETE - Undo a check-in (staff/admin only)
+ * DELETE - Undo a check-in (staff/admin, or the front desk with the POS PIN)
  *
- * DELETE requires a staff session because it refunds a punch. PUT deliberately
+ * DELETE refunds a punch, so it needs staff -- or, on the phone-lookup screen
+ * where the POS is signed in as the customer, that customer's own check-in plus
+ * the POS PIN (see undoAccess.ts). PUT deliberately
  * does not: checking out costs nothing, and nobody should be stuck inside
  * because the front desk cannot log in.
  */
@@ -11,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { endSession, voidSession } from '@/lib/services/sessions';
-import { requireStaff } from '../requireStaff';
+import { requireUndoAccess } from '../requireUndoAccess';
 
 const sessionIdSchema = z.string().uuid();
 
@@ -50,14 +52,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const denied = await requireStaff();
-    if (denied) return denied;
-
     const { id } = await params;
     const parsedId = sessionIdSchema.safeParse(id);
     if (!parsedId.success) {
       return NextResponse.json({ error: 'Invalid session id' }, { status: 400 });
     }
+
+    const denied = await requireUndoAccess(request, parsedId.data);
+    if (denied) return denied;
+
     await voidSession(parsedId.data);
 
     return NextResponse.json({ voided: true });
