@@ -7,7 +7,13 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking'
 
-const faqs = [
+/** FAQ answers that quote live prices, built server-side by the /info page. */
+export interface FaqPricingAnswers {
+  admission: string
+  punchCards: string
+}
+
+const buildFaqs = (pricing: FaqPricingAnswers) => [
   {
     category: 'General Information',
     questions: [
@@ -55,11 +61,11 @@ const faqs = [
       },
       {
         question: 'What\'s included in party packages?',
-        answer: 'Private parties get exclusive use of the party room and play space. All packages include 2 hours of celebration time, tables and chairs. Worker Bee and Queen Bee packages also include paper goods, cutlery and table cloths. Basic Bee includes 10 kids. Worker Bee includes 15 kids. Queen Bee package includes 20 kids. Additional kids are $15 and will be automatically tallied at check in.'
+        answer: `Private parties get exclusive use of the party room and play space. Every package includes 2 hours of celebration time, tables and chairs, paper goods (plates, cups, napkins, utensils), customized digital invitations, a dedicated party host, and setup and cleanup. ${PACKAGE_PRICING.basic_bee.name} includes ${PACKAGE_PRICING.basic_bee.includedKids} kids, ${PACKAGE_PRICING.worker_bee.name} ${PACKAGE_PRICING.worker_bee.includedKids}, and ${PACKAGE_PRICING.queen_bee.name} ${PACKAGE_PRICING.queen_bee.includedKids}. Additional kids are $${ADDITIONAL_KIDS_PRICE} each and are tallied automatically at check in.`
       },
       {
         question: 'Can I bring my own decorations and cake?',
-        answer: 'Absolutely! You can bring your own decorations, cake, and party favors. We provide basic decorations, but you\'re welcome to personalize the space for your child\'s special day.'
+        answer: 'Absolutely! Families bring their own food, cake, decorations and party favors, so you can personalize the space for your child\'s special day.'
       },
       {
         question: 'How many kids are included in a party package?',
@@ -72,7 +78,7 @@ const faqs = [
     questions: [
       {
         question: 'How much is general admission?',
-        answer: 'General admission is $17 per child ages 2+, and $7 for infants under 2 years old. Infants are FREE with a paid sibling admission! This gives you all-day access to our play areas with no time limits.'
+        answer: pricing.admission
       },
       {
         question: 'How does the monthly membership work?',
@@ -80,7 +86,7 @@ const faqs = [
       },
       {
         question: 'Do punch cards expire?',
-        answer: 'No! Our 10-visit punch cards never expire and can be transferred to family or friends. Toddler punch cards are $150 (10 visits at $15 each) and infant punch cards are $50 (10 visits at $5 each).'
+        answer: pricing.punchCards
       },
       {
         question: 'What if the weather is bad?',
@@ -94,7 +100,8 @@ const faqs = [
   }
 ]
 
-export function FAQ() {
+export function FAQ({ pricing }: { pricing: FaqPricingAnswers }) {
+  const faqs = buildFaqs(pricing)
   const [openItems, setOpenItems] = useState<string[]>([])
 
   const toggleItem = (id: string) => {
