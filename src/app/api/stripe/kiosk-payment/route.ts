@@ -420,6 +420,15 @@ export async function POST(request: NextRequest) {
         // table cannot block the sale.
         const passScope = await resolvePassScope(productId, adminSupabase);
 
+        // Monthly memberships default to auto-renew on, renewing 7 days before
+        // expiry -- the same as /api/purchases/pos, so a membership sold at the
+        // front desk renews like any other. The customer can turn it off in
+        // My Account (/api/purchases/[id]/auto-renew).
+        const isMonthlyPass = purchaseType === "monthly_pass";
+        const nextRenewalDate = isMonthlyPass && expiryDate
+            ? new Date(expiryDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            : null;
+
         // Child + Infant combo pass: create individual purchases per child
         const isComboPass = (productName.toLowerCase().includes('child') || productName.toLowerCase().includes('toddler')) && productName.toLowerCase().includes('infant');
         const comboChildrenIds = isComboPass && Array.isArray(childrenIds) && childrenIds.length === 2
@@ -574,6 +583,8 @@ export async function POST(request: NextRequest) {
                     stripe_payment_intent_id: paymentIntent?.id || null,
                     gift_card_amount_used: giftCardAmountUsed,
                     pass_scope: passScope,
+                    auto_renew: isMonthlyPass,
+                    next_renewal_date: nextRenewalDate,
                 })
                 .select()
                 .single();
