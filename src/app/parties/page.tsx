@@ -4,14 +4,12 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Layout } from '@/components/layout/Layout'
 import { useAuth } from '@/hooks/useAuth'
-import { PartiesHero } from '@/components/parties/PartiesHero'
 import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyAvailabilityPreview } from '@/components/parties/PartyAvailabilityPreview'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
 import { SummerPartyNotice } from '@/components/parties/SummerPartyNotice'
 import { motion } from 'framer-motion'
-import { Gift, AlertCircle, X } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { AlertCircle, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 function PartiesContent() {
@@ -75,12 +73,10 @@ function PartiesContent() {
         </div>
       )}
 
-      <PartiesHero onBookParty={handleBookParty} />
-
       {/* Summer Hours: Semi-Private notice (only renders during the summer window) */}
       <SummerPartyNotice />
 
-      {/* Availability Calendar — moved to the top, in place of the hero party-room image */}
+      {/* Availability Calendar — the top of the page */}
       <PartyAvailabilityPreview
         onBookDate={() => {
           router.push('/customer/login?redirect=/customer/dashboard?tab=parties')
@@ -91,35 +87,6 @@ function PartiesContent() {
       <div id="party-packages">
         <PartyPackageBackdrop onChoose={handleBookParty} />
       </div>
-
-      {/* Bottom CTA */}
-      <section className="relative py-16 bg-charcoal-800 overflow-hidden">
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Let&apos;s Celebrate Together!
-            </h2>
-            <p className="text-lg text-gray-300 mb-8">
-              Create magical memories at Busy Bees Indoor Play Center.
-              Book your party today!
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => router.push('/customer/login')}
-              className="bg-primary-500 hover:bg-primary-600 text-charcoal-800 font-bold text-lg shadow-soft hover:shadow-medium border-0"
-            >
-              <Gift className="w-6 h-6 mr-2" />
-              Purchase in My Account
-            </Button>
-          </motion.div>
-        </div>
-      </section>
 
       {/* Booking Wizard Modal */}
       {showBookingWizard && (
