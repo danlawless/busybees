@@ -87,9 +87,9 @@ function PartiesContent() {
         }}
       />
 
-      {/* Party Packages with Hexagon Backdrop */}
+      {/* Party Packages — the same cards as the homepage */}
       <div id="party-packages">
-        <PartyPackageBackdrop />
+        <PartyPackageBackdrop onChoose={handleBookParty} />
       </div>
 
       {/* Bottom CTA */}
