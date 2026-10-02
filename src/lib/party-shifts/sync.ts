@@ -119,7 +119,16 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
     const live = shifts.filter((s) => s.status !== 'deleted');
     if (live.length === 0 || live.some((s) => s.lastError === HELD_BACK_NOTE)) return;
     if (!(await notify('held-back', booking, live[0].id, null, () => heldBackAlert(booking)))) return;
-    for (const row of live) await store.setError(row.id, HELD_BACK_NOTE).catch(() => {});
+    for (const row of live) {
+      // Without the note the next run emails again, so a failed write must show up.
+      await store.setError(row.id, HELD_BACK_NOTE).catch((error: unknown) => {
+        summary.errors.push({
+          bookingId: booking.id,
+          action: 'note:held-back',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
   };
 
   /**

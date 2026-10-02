@@ -250,6 +250,20 @@ describe('runPartyShiftSync', () => {
       expect(alerts).toHaveLength(1);
     });
 
+    it('reports a failed note write, since without it the next run emails again', async () => {
+      const rows = startedRows();
+      const { store } = memoryStore([moved()], rows);
+      const { client } = fakeClient(remoteFor(rows));
+      store.setError = async () => { throw new Error('db down'); };
+      const alerts: unknown[] = [];
+      const summary = await runPartyShiftSync({ ...base(store, client, alerts), now: during });
+      expect(alerts).toHaveLength(1);
+      expect(summary.errors).toEqual([
+        { bookingId: B, action: 'note:held-back', message: 'db down' },
+        { bookingId: B, action: 'note:held-back', message: 'db down' },
+      ]);
+    });
+
     it('sends nothing and writes nothing in dry-run', async () => {
       const rows = startedRows();
       const { store, shifts } = memoryStore([moved()], rows);

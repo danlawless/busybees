@@ -1,7 +1,7 @@
 # Party shifts in 7shifts — design
 
 **Date:** 1 October 2026
-**Status:** Approved in conversation; awaiting review of this document
+**Status:** Built; live-tested against 7shifts 1 Oct 2026
 **Owner:** Tim
 
 ## Problem
@@ -167,8 +167,12 @@ The employee's name comes from the 7shifts user record (`GET /v2/company/{id}/us
 - **Shift deleted by hand in 7shifts:** a move/delete that gets 404 marks the row
   `deleted` and, for a still-confirmed party, the next run recreates it (and
   alerts, since someone removed it on purpose or by mistake).
-- **Overlapping runs:** the job takes a Postgres advisory lock at the start and
-  exits if another run holds it.
+- **Overlapping runs:** the job takes a five-minute lease row in `sync_leases`
+  (`try_acquire_sync_lease` / `release_sync_lease`) and exits if another run
+  holds it. A Postgres advisory lock would not hold across PostgREST's pooled
+  connections. The route's `maxDuration` (120 s) keeps a run inside its lease.
+- **Cron secret:** the route refuses every request unless `CRON_SECRET` is set
+  and the bearer header matches, in every environment.
 - **Bad settings:** with any required setting missing the job does nothing and
   returns an error, rather than guessing.
 
@@ -191,8 +195,16 @@ The employee's name comes from the 7shifts user record (`GET /v2/company/{id}/us
 - The 7shifts client is exercised in the read-only check, the dry run and the
   one supervised live test — not mocked into false confidence.
 
-## Open items
+## Settled during the build (1 Oct 2026)
 
-- Confirm the Vercel plan, to choose between a Vercel cron and Supabase `pg_cron`.
-- Confirm the retrieve and delete shift paths against the live API (step 2).
-- Manager alert address (`PARTY_SHIFTS_ALERT_EMAIL`).
+- **IDs:** company 404191, location 490587, department Operations 779751, role
+  Employee 2664998.
+- **Live API check** (`scripts/party-shifts-smoke.ts`): create, read, date-range
+  search (both ends honoured, notes returned), move and delete all work. 7shifts
+  marks an open shift with `user_id: 0`, not null.
+- **Schedule:** Vercel cron, every 10 minutes (Pro plan).
+- **Alerts** go to info@busybeesipc.com, and the address is required in live mode.
+- **A shift that has started freezes its party:** once any shift has started, the
+  sync leaves the booking alone and emails the manager once to handle a change by hand.
+- **Deleting a party in admin** is refused while it has shifts not yet started
+  ("cancel it first"); the foreign key is `ON DELETE RESTRICT`.
