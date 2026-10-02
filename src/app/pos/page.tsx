@@ -113,6 +113,8 @@ type ViewMode = "login" | "customer" | "checkin" | "admin";
 export default function POSPage() {
     const [currentView, setCurrentView] = useState<ViewMode>("login");
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+    // Set from the admin customer popup's "Sell products"; Check In opens on this customer.
+    const [sellProductsFor, setSellProductsFor] = useState<string | null>(null);
     const [isStaffMode, setIsStaffMode] = useState(false);
     // POS access lock. Unlocks for the browser session once the PIN is entered.
     const [posUnlocked, setPosUnlocked] = useState(false);
@@ -1004,6 +1006,8 @@ export default function POSPage() {
                             customers={customers}
                             currentCustomer={currentCustomer}
                             isStaffMode={isStaffMode}
+                            preselectedCustomerId={sellProductsFor}
+                            onPreselectHandled={() => setSellProductsFor(null)}
                             onUpdateCustomer={(updatedCustomer) => {
                                 if (currentCustomer?.id === updatedCustomer.id) {
                                     setCurrentCustomer(updatedCustomer);
@@ -1034,6 +1038,10 @@ export default function POSPage() {
                             volumeDiscounts={volumeDiscounts}
                             onUpdateVolumeDiscounts={setVolumeDiscounts}
                             userRole={staffUser?.role || 'staff'}
+                            onSellProducts={(customer) => {
+                                setSellProductsFor(customer.id);
+                                setCurrentView("checkin");
+                            }}
                         />
                     )}
                 </div>

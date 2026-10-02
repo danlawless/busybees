@@ -139,6 +139,8 @@ interface AdminPanelProps {
   volumeDiscounts: VolumeDiscount[];
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
   userRole?: 'staff' | 'admin';
+  /** Takes the front desk to Check In for this customer, on the Products tab. */
+  onSellProducts?: (customer: Customer) => void;
 }
 
 interface StaffUser {
@@ -185,6 +187,7 @@ export function AdminPanel({
   volumeDiscounts,
   onUpdateVolumeDiscounts,
   userRole = 'admin',
+  onSellProducts,
 }: AdminPanelProps) {
   const isAdmin = userRole === 'admin';
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
@@ -5735,6 +5738,14 @@ export function AdminPanel({
         isOpen={showCustomerDetail}
         onClose={handleCloseCustomerDetail}
         onCustomerUpdated={handleCustomerUpdated}
+        onSellProducts={
+          onSellProducts
+            ? (customer) => {
+                handleCloseCustomerDetail();
+                onSellProducts(customer);
+              }
+            : undefined
+        }
       />
 
       {/* Quick Access: Admin Parties Dashboard */}
