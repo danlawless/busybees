@@ -44,12 +44,40 @@ export function planPartyShifts(
   // Groups are billed and staffed differently; out of scope.
   if (booking.package_name === 'group_rate') return [];
 
+  const live = shifts.filter((s) => s.status !== 'deleted');
+  // Once a shift has started the schedule is history: never rewrite it, even
+  // if the party has since been moved or cancelled.
+  if (hasStarted(live, now)) return [];
+
   const window = shiftWindow(booking.party_date, booking.start_time, booking.end_time);
-  // Once the shift has started the schedule is history: never rewrite it.
   if (new Date(window.startsAt).getTime() <= now.getTime()) return [];
 
-  const live = shifts.filter((s) => s.status !== 'deleted');
+  return changesFor(booking, live, window);
+}
 
+/**
+ * True when started shifts are the only reason the planner left this booking
+ * alone: without them it would move, delete or adopt something. The sync
+ * reports these so a change to a party in progress is not silently dropped.
+ */
+export function heldBackByStartedShifts(booking: BookingForShifts, shifts: RecordedShift[], now: Date): boolean {
+  if (booking.package_name === 'group_rate') return false;
+  const live = shifts.filter((s) => s.status !== 'deleted');
+  if (!hasStarted(live, now)) return false;
+  const window = shiftWindow(booking.party_date, booking.start_time, booking.end_time);
+  return changesFor(booking, live, window).length > 0;
+}
+
+function hasStarted(live: RecordedShift[], now: Date): boolean {
+  return live.some((s) => new Date(s.startsAt).getTime() <= now.getTime());
+}
+
+/** The actions the booking's status and window call for, ignoring the clock. */
+function changesFor(
+  booking: BookingForShifts,
+  live: RecordedShift[],
+  window: { startsAt: string; endsAt: string }
+): ShiftAction[] {
   if (booking.status === 'done') return [];
 
   if (booking.status === 'cancelled' || booking.status === 'pending') {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planPartyShifts, type BookingForShifts, type RecordedShift } from '@/lib/party-shifts/plan';
+import { heldBackByStartedShifts, planPartyShifts, type BookingForShifts, type RecordedShift } from '@/lib/party-shifts/plan';
 
 const NOW = new Date('2026-10-02T15:00:00Z');
 
@@ -87,6 +87,26 @@ describe('planPartyShifts', () => {
     const during = new Date('2026-10-18T17:00:00Z');
     expect(planPartyShifts(booking({ status: 'cancelled' }), [shift(1)], during)).toEqual([]);
     expect(planPartyShifts(booking(), [], during)).toEqual([]);
+  });
+
+  it('never moves a started shift, even when the party is moved later that day', () => {
+    const during = new Date('2026-10-18T17:00:00Z');
+    const moved = booking({ start_time: '18:00:00', end_time: '20:00:00' });
+    expect(planPartyShifts(moved, [shift(1), shift(2)], during)).toEqual([]);
+    expect(heldBackByStartedShifts(moved, [shift(1), shift(2)], during)).toBe(true);
+  });
+
+  it('never deletes a started shift, even when the party is cancelled', () => {
+    const during = new Date('2026-10-18T17:00:00Z');
+    const cancelled = booking({ status: 'cancelled' });
+    expect(planPartyShifts(cancelled, [shift(1), shift(2)], during)).toEqual([]);
+    expect(heldBackByStartedShifts(cancelled, [shift(1), shift(2)], during)).toBe(true);
+  });
+
+  it('does not report an unchanged party in progress as held back', () => {
+    const during = new Date('2026-10-18T17:00:00Z');
+    expect(heldBackByStartedShifts(booking(), [shift(1), shift(2)], during)).toBe(false);
+    expect(heldBackByStartedShifts(booking({ status: 'cancelled' }), [shift(1)], NOW)).toBe(false);
   });
 
   it('never creates shifts for group visits', () => {

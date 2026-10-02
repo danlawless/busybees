@@ -53,6 +53,14 @@ export function shiftWindow(
   return { startsAt: new Date(start).toISOString(), endsAt: new Date(end).toISOString() };
 }
 
+/** The Eastern calendar date (YYYY-MM-DD) at this instant. */
+export function easternDateOf(iso: string): string {
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(
+    new Date(iso)
+  );
+}
+
 /** Midnight to midnight Eastern, as UTC ISO strings. */
 export function easternDayBounds(date: string): { fromIso: string; toIso: string } {
   const [y, m, d] = date.split('-').map(Number);

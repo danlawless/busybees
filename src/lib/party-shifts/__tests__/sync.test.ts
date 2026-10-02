@@ -37,15 +37,19 @@ function fakeClient(existing: SevenShiftsShift[] = []) {
   const remote = new Map<number, SevenShiftsShift>(existing.map((s) => [s.id, { ...s }]));
   let nextId = 500;
   const calls: string[] = [];
+  const searches: string[] = [];
   const client: SevenShiftsClient = {
     createOpenShift: async (i) => { calls.push('create'); const s = { id: ++nextId, start: i.startsAt, end: i.endsAt, user_id: null, notes: i.notes }; remote.set(s.id, s); return s; },
     getShift: async (id) => remote.get(id) ?? null,
     moveShift: async (id, i) => { calls.push(`move ${id}`); const s = { ...remote.get(id)!, start: i.startsAt, end: i.endsAt }; remote.set(id, s); return s; },
     deleteShift: async (id) => { calls.push(`delete ${id}`); remote.delete(id); },
-    findShiftsBetween: async () => [...remote.values()],
+    findShiftsBetween: async (from, to) => {
+      searches.push(from.slice(0, 10));
+      return [...remote.values()].filter((s) => s.start >= from && s.start <= to);
+    },
     getUserName: async () => 'Jamie S.',
   };
-  return { client, remote, calls };
+  return { client, remote, calls, searches };
 }
 
 const base = (store: ShiftStore, client: SevenShiftsClient, alerts: unknown[], mode: 'live' | 'dry-run' = 'live'): SyncDeps => ({
@@ -152,5 +156,56 @@ describe('runPartyShiftSync', () => {
     expect(summary.errors).toHaveLength(0);
     expect(alerts).toHaveLength(1);
     expect(alerts[0].text).toContain('Someone');
+  });
+
+  it('adopts an interrupted create left on the old day after the party moved date', async () => {
+    const old = { startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z' };
+    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending' };
+    const active: RecordedShift = { ...pending, id: 'row-2', slot: 2, sevenShiftsShiftId: 402, status: 'active' };
+    const orphan = { id: 401, start: old.startsAt, end: old.endsAt, user_id: null, notes: shiftNote(booking(), 1) };
+    const moved = booking({ party_date: '2026-10-25' });
+    const { store, shifts } = memoryStore([moved], [pending, active]);
+    const { client, calls, searches } = fakeClient([orphan, { ...orphan, id: 402, notes: shiftNote(booking(), 2) }]);
+    const summary = await runPartyShiftSync(base(store, client, []));
+    expect(calls).not.toContain('create');
+    expect(calls).toEqual(['move 401', 'move 402']);
+    expect(searches[0]).toBe('2026-10-18');
+    expect(summary.adopted).toBe(1);
+    expect(shifts.get('row-1')).toMatchObject({ status: 'active', sevenShiftsShiftId: 401, startsAt: '2026-10-25T16:30:00.000Z' });
+  });
+
+  it('finds and deletes the shift behind a pending row with no id before calling it gone', async () => {
+    const old = { startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z' };
+    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending' };
+    const orphan = { id: 401, start: old.startsAt, end: old.endsAt, user_id: null, notes: shiftNote(booking(), 1) };
+    const { store, shifts } = memoryStore([booking({ party_date: '2026-10-25', status: 'cancelled' })], [pending]);
+    const { client, calls, searches } = fakeClient([orphan]);
+    const summary = await runPartyShiftSync(base(store, client, []));
+    expect(searches[0]).toBe('2026-10-18');
+    expect(calls).toEqual(['delete 401']);
+    expect(summary.deleted).toBe(1);
+    expect(shifts.get('row-1')!.status).toBe('deleted');
+  });
+
+  it('reports a party changed after its shifts started instead of touching them', async () => {
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const { store } = memoryStore([booking({ start_time: '18:00:00', end_time: '20:00:00' })], rows);
+    const { client, calls } = fakeClient(rows.map((r) => ({ id: r.sevenShiftsShiftId!, start: r.startsAt, end: r.endsAt, user_id: 42, notes: '' })));
+    const deps = { ...base(store, client, []), now: new Date('2026-10-18T17:00:00Z') };
+    const summary = await runPartyShiftSync(deps);
+    expect(calls).toEqual([]);
+    expect(summary.skipped).toEqual([{ bookingId: B, reason: 'shifts already started' }]);
+    expect(summary.unchanged).toBe(0);
+  });
+
+  it('records a malformed booking as a plan error and still syncs the next one', async () => {
+    const bad = booking({ id: '00000000-0000-4000-8000-000000000000', start_time: 'garbage' });
+    const { store, shifts } = memoryStore([bad, booking()]);
+    const { client, calls } = fakeClient();
+    const summary = await runPartyShiftSync(base(store, client, []));
+    expect(summary.errors).toEqual([{ bookingId: bad.id, action: 'plan', message: expect.any(String) }]);
+    expect(summary.created).toBe(2);
+    expect(calls).toEqual(['create', 'create']);
+    expect([...shifts.values()].map((s) => s.status)).toEqual(['active', 'active']);
   });
 });

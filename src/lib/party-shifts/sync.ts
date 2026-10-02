@@ -8,13 +8,14 @@ import { cancelledAlert, movedAlert, removedByHandAlert, type ShiftAlert } from 
 import { parseShiftTag, shiftNote } from '@/lib/party-shifts/note';
 import {
   describeAction,
+  heldBackByStartedShifts,
   planPartyShifts,
   type BookingForShifts,
   type RecordedShift,
   type ShiftAction,
 } from '@/lib/party-shifts/plan';
 import { isHeld, type SevenShiftsClient, type SevenShiftsShift } from '@/lib/party-shifts/sevenShifts';
-import { easternDayBounds, sameWindow } from '@/lib/party-shifts/window';
+import { easternDateOf, easternDayBounds, sameWindow } from '@/lib/party-shifts/window';
 
 type Window = { startsAt: string; endsAt: string };
 
@@ -48,13 +49,15 @@ export interface SyncSummary {
   alerts: number;
   errors: { bookingId: string; action: string; message: string }[];
   planned: { bookingId: string; actions: string[] }[];
+  /** Bookings changed after their shifts began; left alone for the manager. */
+  skipped: { bookingId: string; reason: 'shifts already started' }[];
 }
 
 export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
   const { store, client } = deps;
   const summary: SyncSummary = {
     mode: deps.mode, bookings: 0, created: 0, adopted: 0, moved: 0, deleted: 0, unchanged: 0,
-    alerts: 0, errors: [], planned: [],
+    alerts: 0, errors: [], planned: [], skipped: [],
   };
 
   const bookings = await store.loadBookings(deps.syncStart, deps.todayEastern);
@@ -97,16 +100,24 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
     }
   };
 
-  /** Our shift for this booking and slot, found in 7shifts by its note tag. */
-  const findTagged = async (booking: BookingForShifts, slot: 1 | 2): Promise<SevenShiftsShift | null> => {
-    const { fromIso, toIso } = easternDayBounds(booking.party_date);
-    const shifts = await client.findShiftsBetween(fromIso, toIso);
-    return (
-      shifts.find((s) => {
+  /**
+   * Our shift for this row, found in 7shifts by its note tag. Searched on the
+   * day the row was recorded for, then on the party's date if it has moved
+   * since: a create cut short before a reschedule leaves its shift on the old day.
+   */
+  const findTagged = async (booking: BookingForShifts, row: RecordedShift): Promise<SevenShiftsShift | null> => {
+    const days = [easternDateOf(row.startsAt)];
+    if (days[0] !== booking.party_date) days.push(booking.party_date);
+    for (const date of days) {
+      const { fromIso, toIso } = easternDayBounds(date);
+      const shifts = await client.findShiftsBetween(fromIso, toIso);
+      const found = shifts.find((s) => {
         const tag = parseShiftTag(s.notes);
-        return tag?.bookingId === booking.id.toLowerCase() && tag.slot === slot;
-      }) ?? null
-    );
+        return tag?.bookingId === booking.id.toLowerCase() && tag.slot === row.slot;
+      });
+      if (found) return found;
+    }
+    return null;
   };
 
   const createShift = async (booking: BookingForShifts, slot: 1 | 2, window: Window) => {
@@ -147,7 +158,7 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
         return;
 
       case 'adopt': {
-        const found = await findTagged(booking, action.shift.slot);
+        const found = await findTagged(booking, action.shift);
         if (!found) {
           await createShift(booking, action.shift.slot, action);
           summary.created += 1;
@@ -168,7 +179,7 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
       }
 
       case 'delete': {
-        const id = action.shift.sevenShiftsShiftId ?? (await findTagged(booking, action.shift.slot))?.id ?? null;
+        const id = action.shift.sevenShiftsShiftId ?? (await findTagged(booking, action.shift))?.id ?? null;
         let held: SevenShiftsShift | null = null;
         if (id !== null) {
           const current = await client.getShift(id);
@@ -191,7 +202,20 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
   };
 
   for (const booking of bookings) {
-    const actions = planPartyShifts(booking, recorded.get(booking.id) ?? [], deps.now);
+    const shifts = recorded.get(booking.id) ?? [];
+    let actions: ShiftAction[];
+    try {
+      actions = planPartyShifts(booking, shifts, deps.now);
+      if (actions.length === 0 && heldBackByStartedShifts(booking, shifts, deps.now)) {
+        summary.skipped.push({ bookingId: booking.id, reason: 'shifts already started' });
+        continue;
+      }
+    } catch (error) {
+      // A malformed booking (e.g. an unreadable time) must not stop the others.
+      const message = error instanceof Error ? error.message : String(error);
+      summary.errors.push({ bookingId: booking.id, action: 'plan', message });
+      continue;
+    }
     if (actions.length === 0) {
       summary.unchanged += 1;
       continue;
