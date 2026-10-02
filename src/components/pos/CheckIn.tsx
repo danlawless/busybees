@@ -162,6 +162,9 @@ interface CheckInProps {
     currentCustomer: Customer | null;
     isStaffMode: boolean;
     onUpdateCustomer: (customer: Customer) => void;
+    /** Open on this customer's Products tab, as if their phone had been looked up. */
+    preselectedCustomerId?: string | null;
+    onPreselectHandled?: () => void;
 }
 
 export function CheckIn({
@@ -169,6 +172,8 @@ export function CheckIn({
     currentCustomer,
     isStaffMode,
     onUpdateCustomer,
+    preselectedCustomerId,
+    onPreselectHandled,
 }: CheckInProps) {
     const [searchPhone, setSearchPhone] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -1263,6 +1268,19 @@ export function CheckIn({
         const lowerName = productName.toLowerCase();
         return (lowerName.includes('child') || lowerName.includes('toddler')) && lowerName.includes('infant');
     };
+
+    // Arriving from the admin customer popup's "Sell products": load that
+    // customer exactly as a phone lookup would, and open on Products.
+    useEffect(() => {
+        if (!preselectedCustomerId) return;
+        const customer = customers.find((c) => c.id === preselectedCustomerId);
+        if (customer) {
+            setSearchPhone(formatPhoneNumber(customer.phone));
+            setSelectedCustomer(customer);
+            setActiveTab("products");
+        }
+        onPreselectHandled?.();
+    }, [preselectedCustomerId, customers, onPreselectHandled]);
 
     const handlePhoneSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatPhoneNumber(e.target.value);
