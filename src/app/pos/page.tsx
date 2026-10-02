@@ -376,7 +376,8 @@ export default function POSPage() {
 
     const handleStaffToggle = () => {
         if (isStaffMode) {
-            handleStaffLogout();
+            // The logo is "home" for staff; logging out is the Logout button's job.
+            setCurrentView("admin");
         } else {
             setShowStaffLoginModal(true);
             setStaffPhone("");
