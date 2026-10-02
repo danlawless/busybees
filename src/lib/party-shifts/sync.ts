@@ -4,7 +4,14 @@
  * changes. In dry-run mode it only reports what it would do.
  */
 
-import { cancelledAlert, movedAlert, removedByHandAlert, type ShiftAlert } from '@/lib/party-shifts/alerts';
+import {
+  cancelledAlert,
+  HELD_BACK_NOTE,
+  heldBackAlert,
+  movedAlert,
+  removedByHandAlert,
+  type ShiftAlert,
+} from '@/lib/party-shifts/alerts';
 import { parseShiftTag, shiftNote } from '@/lib/party-shifts/note';
 import {
   describeAction,
@@ -73,9 +80,10 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
    * Tells the manager. The 7shifts change is already recorded by now, so a
    * failure here is its own error and never undoes or re-runs the action.
    * A failed name lookup still sends the alert, naming "Someone".
+   * Returns whether the alert was sent.
    */
   const notify = async (
-    kind: ShiftAction['kind'],
+    kind: ShiftAction['kind'] | 'held-back',
     booking: BookingForShifts,
     rowId: string,
     userId: number | null,
@@ -92,12 +100,26 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
     const built = build(holder);
     try {
       await alert(built);
+      return true;
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       const message = `alert not sent (${built.subject}): ${reason}`;
       summary.errors.push({ bookingId: booking.id, action: `alert:${kind}`, message });
       await store.setError(rowId, message).catch(() => {});
+      return false;
     }
+  };
+
+  /**
+   * Tells the manager once that a changed party's started shifts were left
+   * alone. The note on the live rows is what stops the next run (every ten
+   * minutes) sending it again; it is set only after the email went out.
+   */
+  const reportHeldBack = async (booking: BookingForShifts, shifts: RecordedShift[]) => {
+    const live = shifts.filter((s) => s.status !== 'deleted');
+    if (live.length === 0 || live.some((s) => s.lastError === HELD_BACK_NOTE)) return;
+    if (!(await notify('held-back', booking, live[0].id, null, () => heldBackAlert(booking)))) return;
+    for (const row of live) await store.setError(row.id, HELD_BACK_NOTE).catch(() => {});
   };
 
   /**
@@ -208,6 +230,7 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
       actions = planPartyShifts(booking, shifts, deps.now);
       if (actions.length === 0 && heldBackByStartedShifts(booking, shifts, deps.now)) {
         summary.skipped.push({ bookingId: booking.id, reason: 'shifts already started' });
+        if (deps.mode === 'live') await reportHeldBack(booking, shifts);
         continue;
       }
     } catch (error) {

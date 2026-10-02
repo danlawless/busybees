@@ -3,6 +3,7 @@ import { runPartyShiftSync, type ShiftStore, type SyncDeps } from '@/lib/party-s
 import type { BookingForShifts, RecordedShift } from '@/lib/party-shifts/plan';
 import type { SevenShiftsClient, SevenShiftsShift } from '@/lib/party-shifts/sevenShifts';
 import { shiftNote } from '@/lib/party-shifts/note';
+import { HELD_BACK_NOTE } from '@/lib/party-shifts/alerts';
 
 const B = '6f1c2a5e-9d3b-4c1a-8e7f-0a1b2c3d4e5f';
 const booking = (over: Partial<BookingForShifts> = {}): BookingForShifts => ({
@@ -22,13 +23,13 @@ function memoryStore(bookings: BookingForShifts[], rows: RecordedShift[] = []) {
     },
     upsertPending: async (_b, slot, w) => {
       const existing = [...shifts.values()].find((s) => s.slot === slot);
-      const row: RecordedShift = { id: existing?.id ?? `row-${++n}`, slot, sevenShiftsShiftId: null, ...w, status: 'pending' };
+      const row: RecordedShift = { id: existing?.id ?? `row-${++n}`, slot, sevenShiftsShiftId: null, ...w, status: 'pending', lastError: null };
       shifts.set(row.id, row);
       return { ...row };
     },
-    markActive: async (id, sid, w) => { shifts.set(id, { ...shifts.get(id)!, sevenShiftsShiftId: sid, ...w, status: 'active' }); },
+    markActive: async (id, sid, w) => { shifts.set(id, { ...shifts.get(id)!, sevenShiftsShiftId: sid, ...w, status: 'active', lastError: null }); },
     markDeleted: async (id) => { shifts.set(id, { ...shifts.get(id)!, status: 'deleted' }); },
-    setError: async () => {},
+    setError: async (id, message) => { shifts.set(id, { ...shifts.get(id)!, lastError: message }); },
   };
   return { store, shifts };
 }
@@ -77,8 +78,8 @@ describe('runPartyShiftSync', () => {
   });
 
   it('adopts an interrupted create instead of duplicating it', async () => {
-    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'pending' };
-    const active: RecordedShift = { ...pending, id: 'row-2', slot: 2, sevenShiftsShiftId: 402, status: 'active' };
+    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'pending', lastError: null };
+    const active: RecordedShift = { ...pending, id: 'row-2', slot: 2, sevenShiftsShiftId: 402, status: 'active', lastError: null };
     const orphan = { id: 401, start: pending.startsAt, end: pending.endsAt, user_id: null, notes: shiftNote(booking(), 1) };
     const { store, shifts } = memoryStore([booking()], [pending, active]);
     const { client, calls } = fakeClient([orphan, { ...orphan, id: 402, notes: shiftNote(booking(), 2) }]);
@@ -89,7 +90,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('moves shifts silently when nobody holds them', async () => {
-    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null }));
     const { store } = memoryStore([booking({ start_time: '15:00:00', end_time: '17:00:00' })], rows);
     const { client, calls } = fakeClient(rows.map((r) => ({ id: r.sevenShiftsShiftId!, start: r.startsAt, end: r.endsAt, user_id: null, notes: '' })));
     const alerts: unknown[] = [];
@@ -100,7 +101,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('emails the manager when a held shift is cancelled', async () => {
-    const row: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: 401, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' };
+    const row: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: 401, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null };
     const { store, shifts } = memoryStore([booking({ status: 'cancelled' })], [row]);
     const { client, calls } = fakeClient([{ id: 401, start: row.startsAt, end: row.endsAt, user_id: 42, notes: '' }]);
     const alerts: { subject: string }[] = [];
@@ -112,7 +113,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('marks a shift deleted by hand so the next run recreates it, and alerts', async () => {
-    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null }));
     const { store, shifts } = memoryStore([booking({ start_time: '15:00:00', end_time: '17:00:00' })], rows);
     const { client } = fakeClient([{ id: 402, start: rows[1].startsAt, end: rows[1].endsAt, user_id: null, notes: '' }]);
     const alerts: { subject: string }[] = [];
@@ -131,7 +132,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('still deletes and records a held shift when the cancellation alert cannot be sent', async () => {
-    const row: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: 401, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' };
+    const row: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: 401, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null };
     const { store, shifts } = memoryStore([booking({ status: 'cancelled' })], [row]);
     const { client, calls } = fakeClient([{ id: 401, start: row.startsAt, end: row.endsAt, user_id: 42, notes: '' }]);
     const deps = base(store, client, []);
@@ -146,7 +147,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('sends the moved alert naming "Someone" when the holder lookup fails', async () => {
-    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null }));
     const { store } = memoryStore([booking({ start_time: '15:00:00', end_time: '17:00:00' })], rows);
     const { client } = fakeClient([{ id: 401, start: rows[0].startsAt, end: rows[0].endsAt, user_id: 42, notes: '' }, { id: 402, start: rows[1].startsAt, end: rows[1].endsAt, user_id: null, notes: '' }]);
     client.getUserName = async () => { throw new Error('lookup failed'); };
@@ -160,8 +161,8 @@ describe('runPartyShiftSync', () => {
 
   it('adopts an interrupted create left on the old day after the party moved date', async () => {
     const old = { startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z' };
-    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending' };
-    const active: RecordedShift = { ...pending, id: 'row-2', slot: 2, sevenShiftsShiftId: 402, status: 'active' };
+    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending', lastError: null };
+    const active: RecordedShift = { ...pending, id: 'row-2', slot: 2, sevenShiftsShiftId: 402, status: 'active', lastError: null };
     const orphan = { id: 401, start: old.startsAt, end: old.endsAt, user_id: null, notes: shiftNote(booking(), 1) };
     const moved = booking({ party_date: '2026-10-25' });
     const { store, shifts } = memoryStore([moved], [pending, active]);
@@ -176,7 +177,7 @@ describe('runPartyShiftSync', () => {
 
   it('finds and deletes the shift behind a pending row with no id before calling it gone', async () => {
     const old = { startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z' };
-    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending' };
+    const pending: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: null, ...old, status: 'pending', lastError: null };
     const orphan = { id: 401, start: old.startsAt, end: old.endsAt, user_id: null, notes: shiftNote(booking(), 1) };
     const { store, shifts } = memoryStore([booking({ party_date: '2026-10-25', status: 'cancelled' })], [pending]);
     const { client, calls, searches } = fakeClient([orphan]);
@@ -188,7 +189,7 @@ describe('runPartyShiftSync', () => {
   });
 
   it('reports a party changed after its shifts started instead of touching them', async () => {
-    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null }));
     const { store } = memoryStore([booking({ start_time: '18:00:00', end_time: '20:00:00' })], rows);
     const { client, calls } = fakeClient(rows.map((r) => ({ id: r.sevenShiftsShiftId!, start: r.startsAt, end: r.endsAt, user_id: 42, notes: '' })));
     const deps = { ...base(store, client, []), now: new Date('2026-10-18T17:00:00Z') };
@@ -196,6 +197,70 @@ describe('runPartyShiftSync', () => {
     expect(calls).toEqual([]);
     expect(summary.skipped).toEqual([{ bookingId: B, reason: 'shifts already started' }]);
     expect(summary.unchanged).toBe(0);
+  });
+
+  describe('a changed party whose shifts have started', () => {
+    const startedRows = (): RecordedShift[] =>
+      [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active', lastError: null }));
+    const remoteFor = (rows: RecordedShift[]) => rows.map((r) => ({ id: r.sevenShiftsShiftId!, start: r.startsAt, end: r.endsAt, user_id: 42, notes: '' }));
+    const during = new Date('2026-10-18T17:00:00Z');
+    const moved = () => booking({ start_time: '18:00:00', end_time: '20:00:00' });
+
+    it('alerts the manager once and notes its live rows', async () => {
+      const rows = startedRows();
+      const { store, shifts } = memoryStore([moved()], rows);
+      const { client, calls } = fakeClient(remoteFor(rows));
+      const alerts: { subject: string }[] = [];
+      const summary = await runPartyShiftSync({ ...base(store, client, alerts), now: during });
+      expect(calls).toEqual([]);
+      expect(summary.skipped).toEqual([{ bookingId: B, reason: 'shifts already started' }]);
+      expect(summary.alerts).toBe(1);
+      expect(alerts.map((a) => a.subject)).toEqual(["Party shifts need a manager: Ava's party, Sun Oct 18"]);
+      expect([...shifts.values()].map((r) => r.lastError)).toEqual([HELD_BACK_NOTE, HELD_BACK_NOTE]);
+    });
+
+    it('sends nothing on the next run once the note is set', async () => {
+      const rows = startedRows().map((r) => ({ ...r, lastError: HELD_BACK_NOTE }));
+      const { store, shifts } = memoryStore([moved()], rows);
+      const { client } = fakeClient(remoteFor(rows));
+      const alerts: unknown[] = [];
+      const summary = await runPartyShiftSync({ ...base(store, client, alerts), now: during });
+      expect(alerts).toHaveLength(0);
+      expect(summary.alerts).toBe(0);
+      expect(summary.skipped).toHaveLength(1);
+      expect([...shifts.values()].map((r) => r.lastError)).toEqual([HELD_BACK_NOTE, HELD_BACK_NOTE]);
+    });
+
+    it('records an alert error and leaves the note unset when the send fails, so the next run retries', async () => {
+      const rows = startedRows();
+      const { store, shifts } = memoryStore([moved()], rows);
+      const { client } = fakeClient(remoteFor(rows));
+      const deps = { ...base(store, client, []), now: during };
+      deps.sendAlert = async () => { throw new Error('smtp down'); };
+      const summary = await runPartyShiftSync(deps);
+      expect(summary.errors).toEqual([
+        { bookingId: B, action: 'alert:held-back', message: expect.stringMatching(/^alert not sent \(Party shifts need a manager.*smtp down$/) },
+      ]);
+      expect(shifts.get('row-1')!.lastError).toMatch(/^alert not sent/);
+      expect(shifts.get('row-2')!.lastError).toBeNull();
+      expect([...shifts.values()].some((r) => r.lastError === HELD_BACK_NOTE)).toBe(false);
+
+      const alerts: unknown[] = [];
+      await runPartyShiftSync({ ...base(store, client, alerts), now: during });
+      expect(alerts).toHaveLength(1);
+    });
+
+    it('sends nothing and writes nothing in dry-run', async () => {
+      const rows = startedRows();
+      const { store, shifts } = memoryStore([moved()], rows);
+      const { client, calls } = fakeClient(remoteFor(rows));
+      const alerts: unknown[] = [];
+      const summary = await runPartyShiftSync({ ...base(store, client, alerts, 'dry-run'), now: during });
+      expect(summary.skipped).toHaveLength(1);
+      expect(alerts).toHaveLength(0);
+      expect(calls).toEqual([]);
+      expect([...shifts.values()]).toEqual(rows);
+    });
   });
 
   it('records a malformed booking as a plan error and still syncs the next one', async () => {

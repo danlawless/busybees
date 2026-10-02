@@ -17,6 +17,7 @@ type ShiftRow = {
   starts_at: string;
   ends_at: string;
   status: 'pending' | 'active' | 'deleted';
+  last_error: string | null;
 };
 
 const toRecorded = (r: ShiftRow): RecordedShift => ({
@@ -26,6 +27,7 @@ const toRecorded = (r: ShiftRow): RecordedShift => ({
   startsAt: r.starts_at,
   endsAt: r.ends_at,
   status: r.status,
+  lastError: r.last_error,
 });
 
 export function createSupabaseShiftStore(supabase: Admin): ShiftStore {
@@ -49,7 +51,7 @@ export function createSupabaseShiftStore(supabase: Admin): ShiftStore {
       if (bookingIds.length === 0) return map;
       const { data, error } = await supabase
         .from('party_shifts')
-        .select('id, party_booking_id, slot, seven_shifts_shift_id, starts_at, ends_at, status')
+        .select('id, party_booking_id, slot, seven_shifts_shift_id, starts_at, ends_at, status, last_error')
         .in('party_booking_id', bookingIds);
       fail('load party_shifts', error);
       for (const row of (data ?? []) as ShiftRow[]) {
@@ -74,7 +76,7 @@ export function createSupabaseShiftStore(supabase: Admin): ShiftStore {
           },
           { onConflict: 'party_booking_id,slot' }
         )
-        .select('id, party_booking_id, slot, seven_shifts_shift_id, starts_at, ends_at, status')
+        .select('id, party_booking_id, slot, seven_shifts_shift_id, starts_at, ends_at, status, last_error')
         .single();
       fail('record pending shift', error);
       return toRecorded(data as ShiftRow);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cancelledAlert, formatEasternDatedRange, formatEasternRange, movedAlert, removedByHandAlert } from '@/lib/party-shifts/alerts';
+import { cancelledAlert, HELD_BACK_NOTE, heldBackAlert, formatEasternDatedRange, formatEasternRange, movedAlert, removedByHandAlert } from '@/lib/party-shifts/alerts';
 import type { BookingForShifts } from '@/lib/party-shifts/plan';
 
 const booking: BookingForShifts = {
@@ -60,5 +60,24 @@ describe('alerts', () => {
     expect(alert.subject).toBe("Party shift recreated: Ava's party, Sun Oct 18");
     expect(alert.text).toContain('was deleted in 7shifts');
     expect(alert.text).toContain('a new open shift will be posted within about ten minutes.');
+  });
+
+  it('tells the manager a changed party was left as it was', () => {
+    const alert = heldBackAlert(booking);
+    expect(alert.subject).toBe("Party shifts need a manager: Ava's party, Sun Oct 18");
+    expect(alert.text).toBe(
+      "Ava's party on Sun Oct 18 (3:00 PM–5:00 PM) was changed after one of its shifts had started, " +
+        'so its shifts in 7shifts were left as they were.\n\nPlease update the shifts in 7shifts by hand.'
+    );
+  });
+
+  it('says cancelled when the held-back party was cancelled', () => {
+    const alert = heldBackAlert({ ...booking, status: 'cancelled' });
+    expect(alert.text).toContain("Ava's party on Sun Oct 18 (3:00 PM–5:00 PM) was cancelled after one of its shifts had started,");
+    expect(alert.text).not.toContain('was changed');
+  });
+
+  it('exports the note recorded once the manager is told', () => {
+    expect(HELD_BACK_NOTE).toBe('held back: shifts already started; manager alerted');
   });
 });

@@ -25,6 +25,7 @@ export interface RecordedShift {
   startsAt: string;
   endsAt: string;
   status: 'pending' | 'active' | 'deleted';
+  lastError: string | null;
 }
 
 export type ShiftAction =

@@ -23,6 +23,7 @@ const shift = (slot: 1 | 2, over: Partial<RecordedShift> = {}): RecordedShift =>
   sevenShiftsShiftId: 1000 + slot,
   ...WIN,
   status: 'active',
+  lastError: null,
   ...over,
 });
 

@@ -1,6 +1,6 @@
 /**
  * Emails to the manager when the sync changes a shift someone had picked up,
- * or finds a party shift deleted by hand. Plain text; sent via sendEmail.
+ * finds a party shift deleted by hand, or leaves a changed party's started shifts alone. Plain text; sent via sendEmail.
  */
 
 import { formatEasternClock } from '@/lib/party-shifts/note';
@@ -61,6 +61,20 @@ export function cancelledAlert(booking: BookingForShifts, holder: string, window
       `${partyName(booking)} on ${partyDay(booking)} was cancelled.\n\n` +
       `${holder} had picked up the ${formatEasternDatedRange(window)} shift; it has been removed from 7shifts.\n\n` +
       `Let ${holder} know they are no longer needed.`,
+  };
+}
+
+/** Recorded on a booking's live rows once the manager has been told it was held back, so the alert is sent once. */
+export const HELD_BACK_NOTE = 'held back: shifts already started; manager alerted';
+
+export function heldBackAlert(booking: BookingForShifts): ShiftAlert {
+  const change = booking.status === 'cancelled' ? 'was cancelled' : 'was changed';
+  return {
+    subject: `Party shifts need a manager: ${partyName(booking)}, ${partyDay(booking)}`,
+    text:
+      `${partyName(booking)} on ${partyDay(booking)} (${partyTime(booking)}) ${change} after one of its shifts had started, ` +
+      `so its shifts in 7shifts were left as they were.\n\n` +
+      `Please update the shifts in 7shifts by hand.`,
   };
 }
 
