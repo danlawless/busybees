@@ -5463,8 +5463,14 @@ export function CheckIn({
 
                 return (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="w-full max-w-xl">
-                            <Card className="max-h-[90vh] overflow-y-auto">
+                        {/* The wrapper scrolls, inline: Card's honeycomb-hover class sets
+                            overflow:hidden, which beat overflow-y-auto on the Card and
+                            clipped Confirm off the bottom with many children. */}
+                        <div
+                            className="w-full max-w-xl"
+                            style={{ maxHeight: "90vh", overflowY: "auto" }}
+                        >
+                            <Card>
                                 <PunchCardCheckIn
                                     purchase={punchCardPurchase}
                                     // eslint-disable-next-line react/no-children-prop -- `children` here is the account's list of kids, not JSX content.
