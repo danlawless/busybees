@@ -20,13 +20,17 @@ const LEASE = 'party_shifts';
 const LEASE_SECONDS = 300;
 
 export const dynamic = 'force-dynamic';
+// Must stay below LEASE_SECONDS so a run never outlives its lease.
+export const maxDuration = 120;
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-  if (process.env.NODE_ENV === 'production' && cronSecret) {
-    if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!cronSecret) {
+    logger.error({}, 'Party shifts sync: CRON_SECRET not configured');
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const loaded = loadPartyShiftsConfig(process.env);
@@ -83,6 +87,7 @@ export async function GET(request: NextRequest) {
     Sentry.captureException(error, { tags: { component: 'party-shifts-sync' } });
     return NextResponse.json({ error: 'Party shifts sync failed' }, { status: 500 });
   } finally {
-    await supabase.rpc('release_sync_lease', { p_name: LEASE });
+    const { error: releaseError } = await supabase.rpc('release_sync_lease', { p_name: LEASE });
+    if (releaseError) logger.warn({ error: releaseError }, 'Party shifts sync: lease release failed');
   }
 }
