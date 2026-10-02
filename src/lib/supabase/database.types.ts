@@ -675,6 +675,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      party_shifts: {
+        Row: {
+          id: string;
+          party_booking_id: string;
+          slot: number;
+          seven_shifts_shift_id: number | null;
+          starts_at: string;
+          ends_at: string;
+          status: 'pending' | 'active' | 'deleted';
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          party_booking_id: string;
+          slot: number;
+          seven_shifts_shift_id?: number | null;
+          starts_at: string;
+          ends_at: string;
+          status?: 'pending' | 'active' | 'deleted';
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          party_booking_id?: string;
+          slot?: number;
+          seven_shifts_shift_id?: number | null;
+          starts_at?: string;
+          ends_at?: string;
+          status?: 'pending' | 'active' | 'deleted';
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       party_time_slots: {
         Row: {
           id: string;
@@ -1088,7 +1127,14 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      try_acquire_sync_lease: {
+        Args: { p_name: string; p_seconds: number };
+        Returns: boolean;
+      };
+      release_sync_lease: {
+        Args: { p_name: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: 'customer' | 'staff' | 'admin';
