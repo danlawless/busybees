@@ -11,6 +11,8 @@
 import type { PartyShiftsConfig } from '@/lib/party-shifts/config';
 
 const API = 'https://api.7shifts.com/v2';
+/** Per request, so one hung call cannot eat the cron's whole run time. */
+const REQUEST_TIMEOUT_MS = 15000;
 
 export interface SevenShiftsShift {
   id: number;
@@ -62,6 +64,7 @@ export function createSevenShiftsClient(
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (response.status === 204) return undefined as T;
     const text = await response.text();

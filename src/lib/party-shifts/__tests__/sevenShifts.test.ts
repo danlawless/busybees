@@ -33,6 +33,17 @@ describe('createSevenShiftsClient', () => {
     });
   });
 
+  it('gives every request a timeout signal', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const f = fakeFetch(200, { data: { id: 5, start: 's', end: 'e', user_id: null, notes: null } });
+    const client = createSevenShiftsClient(CFG, f as unknown as typeof fetch);
+    await client.getShift(5);
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(timeout).toHaveBeenCalledWith(15000);
+    timeout.mockRestore();
+  });
+
   it('returns null for a shift that is gone', async () => {
     const client = createSevenShiftsClient(CFG, fakeFetch(404, { message: 'nope' }) as unknown as typeof fetch);
     expect(await client.getShift(5)).toBeNull();

@@ -38,7 +38,9 @@ export function easternToUtc(date: string, time: string): Date {
   const [hh, mm] = time.split(':').map(Number);
   const wall = Date.UTC(y, m - 1, d, hh, mm);
   // Guess with the offset at the wall time, then correct with the offset at
-  // the guess — the second pass settles the hours around a DST change.
+  // the guess — the second pass settles the hours around a DST change. A time
+  // that happens twice (01:xx on fall-back night) resolves to the first, EDT,
+  // occurrence; one that never happens (02:xx on spring-forward) lands an hour early.
   const first = wall - easternOffsetMinutes(new Date(wall)) * 60000;
   return new Date(wall - easternOffsetMinutes(new Date(first)) * 60000);
 }
