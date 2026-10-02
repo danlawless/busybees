@@ -66,6 +66,37 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
     summary.alerts += 1;
   };
 
+  /**
+   * Tells the manager. The 7shifts change is already recorded by now, so a
+   * failure here is its own error and never undoes or re-runs the action.
+   * A failed name lookup still sends the alert, naming "Someone".
+   */
+  const notify = async (
+    kind: ShiftAction['kind'],
+    booking: BookingForShifts,
+    rowId: string,
+    userId: number | null,
+    build: (holder: string) => ShiftAlert
+  ) => {
+    let holder = 'Someone';
+    if (userId !== null) {
+      try {
+        holder = await client.getUserName(userId);
+      } catch {
+        // keep "Someone"
+      }
+    }
+    const built = build(holder);
+    try {
+      await alert(built);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      const message = `alert not sent (${built.subject}): ${reason}`;
+      summary.errors.push({ bookingId: booking.id, action: `alert:${kind}`, message });
+      await store.setError(rowId, message).catch(() => {});
+    }
+  };
+
   /** Our shift for this booking and slot, found in 7shifts by its note tag. */
   const findTagged = async (booking: BookingForShifts, slot: 1 | 2): Promise<SevenShiftsShift | null> => {
     const { fromIso, toIso } = easternDayBounds(booking.party_date);
@@ -84,19 +115,26 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
     await store.markActive(row.id, shift.id, window);
   };
 
-  const moveShift = async (booking: BookingForShifts, row: RecordedShift, id: number, window: Window) => {
+  const moveShift = async (
+    kind: ShiftAction['kind'],
+    booking: BookingForShifts,
+    row: RecordedShift,
+    id: number,
+    window: Window
+  ) => {
     const current = await client.getShift(id);
     if (!current) {
       // Deleted by hand in 7shifts: forget it; the next run recreates it.
       await store.markDeleted(row.id);
-      await alert(removedByHandAlert(booking, row.slot));
+      await notify(kind, booking, row.id, null, () => removedByHandAlert(booking, row.slot));
       return 'gone' as const;
     }
     await client.moveShift(id, { ...window, notes: shiftNote(booking, row.slot) });
     await store.markActive(row.id, id, window);
     if (isHeld(current)) {
-      const holder = await client.getUserName(current.user_id as number);
-      await alert(movedAlert(booking, holder, { startsAt: current.start, endsAt: current.end }, window));
+      await notify(kind, booking, row.id, current.user_id, (holder) =>
+        movedAlert(booking, holder, { startsAt: current.start, endsAt: current.end }, window)
+      );
     }
     return 'moved' as const;
   };
@@ -118,31 +156,35 @@ export async function runPartyShiftSync(deps: SyncDeps): Promise<SyncSummary> {
         await store.markActive(action.shift.id, found.id, { startsAt: found.start, endsAt: found.end });
         summary.adopted += 1;
         if (!sameWindow({ startsAt: found.start, endsAt: found.end }, action)) {
-          if ((await moveShift(booking, action.shift, found.id, action)) === 'moved') summary.moved += 1;
+          if ((await moveShift('adopt', booking, action.shift, found.id, action)) === 'moved') summary.moved += 1;
         }
         return;
       }
 
       case 'move': {
         const id = action.shift.sevenShiftsShiftId as number;
-        if ((await moveShift(booking, action.shift, id, action)) === 'moved') summary.moved += 1;
+        if ((await moveShift('move', booking, action.shift, id, action)) === 'moved') summary.moved += 1;
         return;
       }
 
       case 'delete': {
         const id = action.shift.sevenShiftsShiftId ?? (await findTagged(booking, action.shift.slot))?.id ?? null;
+        let held: SevenShiftsShift | null = null;
         if (id !== null) {
           const current = await client.getShift(id);
           if (current) {
             await client.deleteShift(id);
-            if (isHeld(current)) {
-              const holder = await client.getUserName(current.user_id as number);
-              await alert(cancelledAlert(booking, holder, { startsAt: current.start, endsAt: current.end }));
-            }
+            if (isHeld(current)) held = current;
           }
         }
         await store.markDeleted(action.shift.id);
         summary.deleted += 1;
+        if (held) {
+          const { start, end, user_id } = held;
+          await notify('delete', booking, action.shift.id, user_id, (holder) =>
+            cancelledAlert(booking, holder, { startsAt: start, endsAt: end })
+          );
+        }
         return;
       }
     }

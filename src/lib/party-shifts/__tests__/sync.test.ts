@@ -125,4 +125,32 @@ describe('runPartyShiftSync', () => {
     expect(summary.errors).toHaveLength(2);
     expect(summary.errors[0].message).toBe('7shifts down');
   });
+
+  it('still deletes and records a held shift when the cancellation alert cannot be sent', async () => {
+    const row: RecordedShift = { id: 'row-1', slot: 1, sevenShiftsShiftId: 401, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' };
+    const { store, shifts } = memoryStore([booking({ status: 'cancelled' })], [row]);
+    const { client, calls } = fakeClient([{ id: 401, start: row.startsAt, end: row.endsAt, user_id: 42, notes: '' }]);
+    const deps = base(store, client, []);
+    deps.sendAlert = async () => { throw new Error('smtp down'); };
+    const summary = await runPartyShiftSync(deps);
+    expect(calls).toEqual(['delete 401']);
+    expect(shifts.get('row-1')!.status).toBe('deleted');
+    expect(summary.deleted).toBe(1);
+    expect(summary.errors).toHaveLength(1);
+    expect(summary.errors[0].action).toBe('alert:delete');
+    expect(summary.errors[0].message).toMatch(/^alert not sent \(Party cancelled: Ava's party.*\): smtp down$/);
+  });
+
+  it('sends the moved alert naming "Someone" when the holder lookup fails', async () => {
+    const rows: RecordedShift[] = [1, 2].map((slot) => ({ id: `row-${slot}`, slot: slot as 1 | 2, sevenShiftsShiftId: 400 + slot, startsAt: '2026-10-18T16:30:00.000Z', endsAt: '2026-10-18T19:30:00.000Z', status: 'active' }));
+    const { store } = memoryStore([booking({ start_time: '15:00:00', end_time: '17:00:00' })], rows);
+    const { client } = fakeClient([{ id: 401, start: rows[0].startsAt, end: rows[0].endsAt, user_id: 42, notes: '' }, { id: 402, start: rows[1].startsAt, end: rows[1].endsAt, user_id: null, notes: '' }]);
+    client.getUserName = async () => { throw new Error('lookup failed'); };
+    const alerts: { subject: string; text: string }[] = [];
+    const summary = await runPartyShiftSync(base(store, client, alerts));
+    expect(summary.moved).toBe(2);
+    expect(summary.errors).toHaveLength(0);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].text).toContain('Someone');
+  });
 });
