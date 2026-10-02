@@ -1422,7 +1422,17 @@ export function AdminPanel({
           <div className="space-y-3">
             {activeSessions.map((customer) => (
               <div key={customer.id} className="space-y-2">
-                <div className="font-medium">{customer.name} ({formatPhoneNumber(customer.phone)})</div>
+                <div className="font-medium">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCustomerDetail(customer)}
+                    className="underline decoration-dotted underline-offset-4 hover:text-amber-700 hover:decoration-solid"
+                    title="Open this customer's account"
+                  >
+                    {customer.name}
+                  </button>{' '}
+                  ({formatPhoneNumber(customer.phone)})
+                </div>
                 {(customer.activeSessions || []).map(session => {
                   const purchase = customer.purchases.find(p => p.id === session.purchaseId);
                   const linkedChildIds = purchase?.childIds?.length
