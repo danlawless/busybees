@@ -63,7 +63,12 @@ export function PunchCardCheckIn({
   // play — null and false both mean "not signed."
   const eligible = children.filter((c) => !inside.has(c.id) && c.waiverSigned === true);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(() => eligible.map((c) => c.id));
+  // Nobody is ticked to start: staff tick who is actually here. A locked retry
+  // keeps the old all-ticked display -- its boxes can't be changed, and the
+  // parent replays what was already bought rather than reading this selection.
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    locked ? eligible.map((c) => c.id) : []
+  );
   const [preferPunchIds, setPreferPunchIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
