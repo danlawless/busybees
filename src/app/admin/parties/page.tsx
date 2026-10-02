@@ -677,7 +677,14 @@ export default function AdminPartiesPage() {
         method: 'DELETE',
       });
       if (!response.ok) {
-        throw new Error('Failed to delete booking');
+        let message = 'Failed to delete booking';
+        try {
+          const body = await response.json();
+          if (typeof body?.error === 'string' && body.error) message = body.error;
+        } catch {
+          // Body was not JSON; keep the generic message.
+        }
+        throw new Error(message);
       }
       setBookings((prev) => prev.filter((b) => b.id !== bookingId));
       setSuccessMessage('Booking deleted');
