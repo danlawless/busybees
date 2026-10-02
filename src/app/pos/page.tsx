@@ -742,6 +742,15 @@ export default function POSPage() {
                             </button>
 
                             <div className="flex items-center space-x-4">
+                                {/* Staff reach Check In from a customer's "Sell products"; this is the way back. */}
+                                {isStaffMode && currentView === "checkin" && (
+                                    <button
+                                        onClick={() => setCurrentView("admin")}
+                                        className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition-colors text-sm font-semibold"
+                                    >
+                                        ← Back to Dashboard
+                                    </button>
+                                )}
                                 {isStaffMode && (
                                     <button
                                         onClick={handleStaffLogout}
