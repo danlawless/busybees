@@ -63,6 +63,9 @@ export async function GET(request: NextRequest) {
       syncStart: config.syncStart,
       sendAlert: async (alert) => {
         if (!config.alertEmail) {
+          // Live mode cannot get here (config requires the address); fail
+          // loudly if it ever does rather than count the alert as sent.
+          if (mode === 'live') throw new Error('PARTY_SHIFTS_ALERT_EMAIL not set');
           logger.warn({ subject: alert.subject }, 'Party shifts sync: no PARTY_SHIFTS_ALERT_EMAIL, alert not sent');
           return;
         }

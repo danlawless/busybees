@@ -1,7 +1,8 @@
 /**
  * Settings for the party shifts sync, from the environment. Off unless
  * SEVENSHIFTS_SYNC_MODE says otherwise; switched on, every required value
- * must be present or the job does nothing.
+ * must be present or the job does nothing. Live mode also needs
+ * PARTY_SHIFTS_ALERT_EMAIL, so manager alerts always have somewhere to go.
  */
 
 export type SyncMode = 'off' | 'dry-run' | 'live';
@@ -34,6 +35,7 @@ export function loadPartyShiftsConfig(
 
   const value = (key: string) => env[key]?.trim() || '';
   const missing: string[] = REQUIRED.filter((key) => !value(key));
+  if (mode === 'live' && !value('PARTY_SHIFTS_ALERT_EMAIL')) missing.push('PARTY_SHIFTS_ALERT_EMAIL');
 
   const syncStartMs = Date.parse(value('SEVENSHIFTS_SYNC_START'));
   if (value('SEVENSHIFTS_SYNC_START') && Number.isNaN(syncStartMs)) missing.push('SEVENSHIFTS_SYNC_START');

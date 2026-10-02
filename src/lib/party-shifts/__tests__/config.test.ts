@@ -44,7 +44,25 @@ describe('loadPartyShiftsConfig', () => {
         'SEVENSHIFTS_LOCATION_ID',
         'SEVENSHIFTS_ROLE_ID',
         'SEVENSHIFTS_SYNC_START',
+        'PARTY_SHIFTS_ALERT_EMAIL',
       ],
+    });
+  });
+
+  it('requires an alert email in live mode', () => {
+    const rest = { ...FULL, PARTY_SHIFTS_ALERT_EMAIL: undefined };
+    expect(loadPartyShiftsConfig({ ...rest, SEVENSHIFTS_SYNC_MODE: 'live' })).toEqual({
+      ok: false,
+      mode: 'live',
+      missing: ['PARTY_SHIFTS_ALERT_EMAIL'],
+    });
+    expect(loadPartyShiftsConfig({ ...rest, SEVENSHIFTS_SYNC_MODE: 'live', PARTY_SHIFTS_ALERT_EMAIL: '  ' })).toMatchObject({
+      ok: false,
+      missing: ['PARTY_SHIFTS_ALERT_EMAIL'],
+    });
+    expect(loadPartyShiftsConfig({ ...FULL, SEVENSHIFTS_SYNC_MODE: 'live' })).toMatchObject({
+      ok: true,
+      config: { mode: 'live', alertEmail: 'tim@busybeesipc.com' },
     });
   });
 
@@ -57,7 +75,7 @@ describe('loadPartyShiftsConfig', () => {
     expect(result).toMatchObject({ ok: false, missing: ['SEVENSHIFTS_SYNC_START'] });
   });
 
-  it('allows no department and no alert email', () => {
+  it('allows no department and no alert email in dry-run', () => {
     const { SEVENSHIFTS_DEPARTMENT_ID: _d, PARTY_SHIFTS_ALERT_EMAIL: _a, ...rest } = FULL;
     const result = loadPartyShiftsConfig(rest);
     expect(result).toMatchObject({ ok: true, config: { departmentId: null, alertEmail: null } });
