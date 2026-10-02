@@ -8,7 +8,10 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.party_shifts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  party_booking_id UUID NOT NULL REFERENCES public.party_bookings(id) ON DELETE CASCADE,
+  -- RESTRICT, not CASCADE: dropping these rows with the booking would leave
+  -- their shifts published in 7shifts with nothing to clean them up. The admin
+  -- delete refuses while any row is pending/active and clears deleted rows.
+  party_booking_id UUID NOT NULL REFERENCES public.party_bookings(id) ON DELETE RESTRICT,
   slot SMALLINT NOT NULL CHECK (slot IN (1, 2)),
   -- Null while a create is in flight; the next run adopts the shift by its note tag.
   seven_shifts_shift_id BIGINT,

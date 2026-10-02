@@ -69,6 +69,43 @@ export async function DELETE(
     // Use admin client to bypass RLS (POS staff auth is PIN-based)
     const adminSupabase = createAdminClient();
 
+    // Shifts still live in 7shifts would be orphaned by deleting the booking.
+    // Cancelling lets the sync take them down first; checked before anything
+    // (including the purchase) is deleted.
+    const { data: liveShifts, error: shiftsError } = await adminSupabase
+      .from('party_shifts')
+      .select('id')
+      .eq('party_booking_id', id)
+      .in('status', ['pending', 'active'])
+      .limit(1);
+
+    if (shiftsError) {
+      logger.error({ error: shiftsError, bookingId: id }, 'Failed to check party shifts before delete');
+      return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
+    }
+
+    if (liveShifts && liveShifts.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            'This party has shifts in 7shifts. Cancel the party first; it can be deleted after the next sync (about 10 minutes).',
+        },
+        { status: 409 }
+      );
+    }
+
+    // Only deleted shift rows remain; they would block the booking delete (ON DELETE RESTRICT).
+    const { error: clearError } = await adminSupabase
+      .from('party_shifts')
+      .delete()
+      .eq('party_booking_id', id)
+      .eq('status', 'deleted');
+
+    if (clearError) {
+      logger.error({ error: clearError, bookingId: id }, 'Failed to clear deleted party shifts');
+      return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
+    }
+
     // Delete linked purchase first to avoid FK constraint
     const { data: booking } = await adminSupabase
       .from('party_bookings')
