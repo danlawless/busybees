@@ -68,15 +68,18 @@ export async function DELETE(
 
     // Use admin client to bypass RLS (POS staff auth is PIN-based)
     const adminSupabase = createAdminClient();
+    const nowIso = new Date().toISOString();
 
-    // Shifts still live in 7shifts would be orphaned by deleting the booking.
-    // Cancelling lets the sync take them down first; checked before anything
-    // (including the purchase) is deleted.
+    // Shifts still up for grabs in 7shifts would be orphaned by deleting the
+    // booking. Cancelling lets the sync take them down first; checked before
+    // anything (including the purchase) is deleted. Shifts that have already
+    // started are not blocking: the sync never acts on them again.
     const { data: liveShifts, error: shiftsError } = await adminSupabase
       .from('party_shifts')
       .select('id')
       .eq('party_booking_id', id)
       .in('status', ['pending', 'active'])
+      .gt('starts_at', nowIso)
       .limit(1);
 
     if (shiftsError) {
@@ -94,15 +97,17 @@ export async function DELETE(
       );
     }
 
-    // Only deleted shift rows remain; they would block the booking delete (ON DELETE RESTRICT).
+    // Deleted and already-started shift rows can never be acted on again, and
+    // would block the booking delete (ON DELETE RESTRICT). Only our tracking
+    // row goes; the 7shifts shift stays as the record of time worked.
     const { error: clearError } = await adminSupabase
       .from('party_shifts')
       .delete()
       .eq('party_booking_id', id)
-      .eq('status', 'deleted');
+      .or(`status.eq.deleted,starts_at.lte.${nowIso}`);
 
     if (clearError) {
-      logger.error({ error: clearError, bookingId: id }, 'Failed to clear deleted party shifts');
+      logger.error({ error: clearError, bookingId: id }, 'Failed to clear finished party shifts');
       return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
     }
 
