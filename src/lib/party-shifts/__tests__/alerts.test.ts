@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cancelledAlert, formatEasternRange, movedAlert, removedByHandAlert } from '@/lib/party-shifts/alerts';
+import { cancelledAlert, formatEasternDatedRange, formatEasternRange, movedAlert, removedByHandAlert } from '@/lib/party-shifts/alerts';
 import type { BookingForShifts } from '@/lib/party-shifts/plan';
 
 const booking: BookingForShifts = {
@@ -20,22 +20,45 @@ describe('alerts', () => {
     expect(formatEasternRange(OLD)).toBe('12:30 PM–3:30 PM');
   });
 
+  it('formats an Eastern range with its day', () => {
+    expect(formatEasternDatedRange(OLD)).toBe('Sun Oct 18, 12:30 PM–3:30 PM');
+    // 11:30 PM Eastern is already the next day in UTC; the Eastern day is shown.
+    expect(formatEasternDatedRange({ startsAt: '2026-10-19T03:30:00.000Z', endsAt: '2026-10-19T04:00:00.000Z' })).toBe(
+      'Sun Oct 18, 11:30 PM–12:00 AM'
+    );
+  });
+
   it('tells the manager a picked-up shift moved', () => {
     const alert = movedAlert(booking, 'Jamie S.', OLD, NEW);
     expect(alert.subject).toBe("Party shift moved: Ava's party, Sun Oct 18");
     expect(alert.text).toContain("Ava's party on Sun Oct 18 moved to 3:00 PM–5:00 PM.");
-    expect(alert.text).toContain('Jamie S. had picked up the 12:30 PM–3:30 PM shift; it is now 2:30 PM–5:30 PM.');
+    expect(alert.text).toContain(
+      'Jamie S. had picked up the Sun Oct 18, 12:30 PM–3:30 PM shift; it is now Sun Oct 18, 2:30 PM–5:30 PM.'
+    );
+  });
+
+  it('names both days when only the date of the party changed', () => {
+    const moved = { ...booking, party_date: '2026-10-25', start_time: '13:00:00', end_time: '15:00:00' };
+    const to = { startsAt: '2026-10-25T16:30:00.000Z', endsAt: '2026-10-25T19:30:00.000Z' };
+    const alert = movedAlert(moved, 'Jamie S.', OLD, to);
+    expect(alert.subject).toBe("Party shift moved: Ava's party, Sun Oct 25");
+    expect(alert.text).toContain(
+      'Jamie S. had picked up the Sun Oct 18, 12:30 PM–3:30 PM shift; it is now Sun Oct 25, 12:30 PM–3:30 PM.'
+    );
   });
 
   it('tells the manager a picked-up shift was removed with the party', () => {
     const alert = cancelledAlert(booking, 'Jamie S.', OLD);
     expect(alert.subject).toBe("Party cancelled: Ava's party, Sun Oct 18");
-    expect(alert.text).toContain('Jamie S. had picked up the 12:30 PM–3:30 PM shift; it has been removed from 7shifts.');
+    expect(alert.text).toContain(
+      'Jamie S. had picked up the Sun Oct 18, 12:30 PM–3:30 PM shift; it has been removed from 7shifts.'
+    );
   });
 
   it('flags a shift someone deleted by hand', () => {
     const alert = removedByHandAlert(booking, 2);
     expect(alert.subject).toBe("Party shift recreated: Ava's party, Sun Oct 18");
     expect(alert.text).toContain('was deleted in 7shifts');
+    expect(alert.text).toContain('a new open shift will be posted within about ten minutes.');
   });
 });

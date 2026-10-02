@@ -14,8 +14,18 @@ const clock = (iso: string) =>
     .format(new Date(iso))
     .replace(/\s/g, ' ');
 
+const day = (iso: string) =>
+  new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' })
+    .format(new Date(iso))
+    .replace(',', '');
+
 export function formatEasternRange(w: Window): string {
   return `${clock(w.startsAt)}–${clock(w.endsAt)}`;
+}
+
+/** "Sat Oct 18, 12:30 PM–3:30 PM": the Eastern day the shift starts on, then its times. */
+export function formatEasternDatedRange(w: Window): string {
+  return `${day(w.startsAt)}, ${formatEasternRange(w)}`;
 }
 
 function partyDay(booking: BookingForShifts): string {
@@ -39,7 +49,7 @@ export function movedAlert(booking: BookingForShifts, holder: string, from: Wind
     subject: `Party shift moved: ${partyName(booking)}, ${partyDay(booking)}`,
     text:
       `${partyName(booking)} on ${partyDay(booking)} moved to ${partyTime(booking)}.\n\n` +
-      `${holder} had picked up the ${formatEasternRange(from)} shift; it is now ${formatEasternRange(to)}.\n\n` +
+      `${holder} had picked up the ${formatEasternDatedRange(from)} shift; it is now ${formatEasternDatedRange(to)}.\n\n` +
       `Let ${holder} know about the new time.`,
   };
 }
@@ -49,7 +59,7 @@ export function cancelledAlert(booking: BookingForShifts, holder: string, window
     subject: `Party cancelled: ${partyName(booking)}, ${partyDay(booking)}`,
     text:
       `${partyName(booking)} on ${partyDay(booking)} was cancelled.\n\n` +
-      `${holder} had picked up the ${formatEasternRange(window)} shift; it has been removed from 7shifts.\n\n` +
+      `${holder} had picked up the ${formatEasternDatedRange(window)} shift; it has been removed from 7shifts.\n\n` +
       `Let ${holder} know they are no longer needed.`,
   };
 }
@@ -59,7 +69,7 @@ export function removedByHandAlert(booking: BookingForShifts, slot: 1 | 2): Shif
     subject: `Party shift recreated: ${partyName(booking)}, ${partyDay(booking)}`,
     text:
       `Party shift ${slot} of 2 for ${partyName(booking)} on ${partyDay(booking)} (${partyTime(booking)}) ` +
-      `was deleted in 7shifts, but the party is still booked, so a new open shift has been posted.\n\n` +
+      `was deleted in 7shifts, but the party is still booked, so a new open shift will be posted within about ten minutes.\n\n` +
       `If the party should not be staffed, cancel the booking rather than deleting its shifts.`,
   };
 }
