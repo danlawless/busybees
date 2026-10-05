@@ -9,7 +9,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
 import { hiddenPasswordFor } from '@/lib/auth/hiddenPassword';
-import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
+import { beginAttempt, clientAddress, finishAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,12 +63,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password against stored hash
-    const ip = clientAddress(request);
-    if (!(await checkThrottle('web-login', ip))) {
+    const [byAddress, byAccount] = await Promise.all([
+      beginAttempt('web-login', clientAddress(request)),
+      beginAttempt('web-login-account', `user:${user.id}`),
+    ]);
+    if (!byAddress.allowed || !byAccount.allowed) {
       return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
     }
     const isValidPassword = await bcrypt.compare(password, user.web_password_hash);
-    await recordAttempt('web-login', ip, isValidPassword);
+    await Promise.all([finishAttempt(byAddress, isValidPassword), finishAttempt(byAccount, isValidPassword)]);
 
     if (!isValidPassword) {
       return NextResponse.json(
@@ -85,6 +88,9 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase session for the user
     // First, ensure their Supabase auth password is current
+    if (!user.email) {
+      return NextResponse.json({ error: 'This account has no email on file. Please contact us so we can add one.' }, { status: 409 });
+    }
     const authPassword = hiddenPasswordFor(user.id);
 
     const { error: updateError } = await supabase.auth.admin.updateUserById(

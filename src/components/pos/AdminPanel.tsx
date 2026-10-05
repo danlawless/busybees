@@ -855,10 +855,7 @@ export function AdminPanel({
     try {
       const response = await fetch('/api/stripe/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-staff-pin': '0297', // Staff mode authorization
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (response.ok) {
         const data = await response.json();

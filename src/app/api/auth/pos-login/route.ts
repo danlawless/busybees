@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('*')
       .eq('phone', cleanPhone)
+      // Customers only: a staff or admin account (or the shared /admin one)
+      // must never be signed into, or claimed, by phone number.
+      .eq('role', 'customer')
       .single();
 
     if (userError || !user) {
@@ -60,6 +63,9 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id);
 
     // Use phone-based password for Supabase auth
+    if (!user.email) {
+      return NextResponse.json({ error: 'This account has no email on file. Please ask a staff member to add one.' }, { status: 409 });
+    }
     const authPassword = hiddenPasswordFor(user.id);
 
     // Update user's password to phone-based format

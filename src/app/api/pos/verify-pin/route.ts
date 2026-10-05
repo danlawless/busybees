@@ -16,8 +16,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import { approveDevice } from '@/lib/auth/posDevice';
-import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
+import { approveDevice, isValidDeviceApproval, pinFingerprint, POS_DEVICE_COOKIE } from '@/lib/auth/posDevice';
+import { serverSecret } from '@/lib/auth/serverSecret';
+import { beginAttempt, clientAddress, finishAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,13 +37,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: true, configured: false });
     }
 
-    const ip = clientAddress(request);
-    if (!(await checkThrottle('pos-pin', ip))) {
+    // The store's own, already-approved device is never caught by the overall
+    // cap, so guessing elsewhere cannot lock the till out of its own POS.
+    const key = serverSecret();
+    const approved = isValidDeviceApproval(
+      request.cookies.get(POS_DEVICE_COOKIE)?.value,
+      pinFingerprint(String(setting!.value), key),
+      Date.now(),
+      key
+    );
+    const attempt = await beginAttempt('pos-pin', clientAddress(request), { skipOverall: approved });
+    if (!attempt.allowed) {
       return NextResponse.json({ valid: false, configured: true, error: TOO_MANY_ATTEMPTS }, { status: 429 });
     }
 
     const valid = typeof pin === 'string' && pin === String(setting!.value);
-    await recordAttempt('pos-pin', ip, valid);
+    await finishAttempt(attempt, valid);
 
     const response = NextResponse.json({ valid, configured: true });
     if (valid) approveDevice(response, pin);

@@ -8,7 +8,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
 import { hiddenPasswordFor } from '@/lib/auth/hiddenPassword';
-import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
+import { beginAttempt, clientAddress, finishAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -57,12 +57,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ip = clientAddress(request);
-    if (!(await checkThrottle('staff-login', ip))) {
+    const attempt = await beginAttempt('staff-login', clientAddress(request));
+    if (!attempt.allowed) {
       return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
     }
     const passwordValid = await bcrypt.compare(password, user.staff_password_hash);
-    await recordAttempt('staff-login', ip, passwordValid);
+    await finishAttempt(attempt, passwordValid);
     if (!passwordValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -80,10 +80,14 @@ export async function POST(request: NextRequest) {
     const staffPassword = hiddenPasswordFor(user.id);
 
     // Update auth password
-    await adminClient.auth.admin.updateUserById(user.id, {
+    const { error: passwordError } = await adminClient.auth.admin.updateUserById(user.id, {
       password: staffPassword,
       email_confirm: true,
     });
+    if (passwordError) {
+      logger.error({ error: passwordError, userId: user.id }, 'Failed to set staff auth password');
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
+    }
 
     const response = NextResponse.json({}, { status: 200 });
 

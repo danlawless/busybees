@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
       .eq('phone', cleanPhone)
       .single();
 
-    if (userError || !user) {
+    // Customers only: staff and admin accounts never get a password this way.
+    if (userError || !user || user.role !== 'customer') {
       return NextResponse.json(
         { error: 'No account found with that phone number. Please check your information or sign up.' },
         { status: 404 }

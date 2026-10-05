@@ -4,13 +4,15 @@
 -- can try every value. Each check (/api/auth/staff-login, /api/pos/verify-pin,
 -- /api/auth/web-login, /api/auth/staff-auth) records its attempt here and
 -- refuses while there are too many recent failures from that address, or for
--- that check overall. Written and read only by the server (service role).
+-- that check overall. Each attempt is recorded before it is judged, so a burst
+-- of simultaneous guesses cannot slip through together. Written and read only
+-- by the server (service role).
 -- Apply by hand in the Supabase SQL Editor. Safe to re-run.
 
 CREATE TABLE IF NOT EXISTS public.auth_attempts (
   id BIGSERIAL PRIMARY KEY,
-  scope TEXT NOT NULL,          -- which check: 'admin-pin', 'pos-pin', 'web-login', 'staff-login'
-  ip TEXT NOT NULL,
+  scope TEXT NOT NULL,          -- which check: 'admin-pin', 'pos-pin', 'web-login', 'web-login-account', 'staff-login'
+  ip TEXT NOT NULL,             -- the key counted: an address (IPv6 by /64), or 'user:<id>' per account
   succeeded BOOLEAN NOT NULL DEFAULT FALSE,
   attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

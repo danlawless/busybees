@@ -3,10 +3,12 @@ import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import path from 'path'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'universal-editor-secret'
+// No fallback: a default secret in the source would let anyone mint a token.
+const JWT_SECRET = process.env.JWT_SECRET
 const CONTENT_FILE = path.join(process.cwd(), 'editor', 'shared', 'content.json')
 
 function verifyAuth(token: string) {
+  if (!JWT_SECRET) return null
   try {
     return jwt.verify(token, JWT_SECRET)
   } catch (error) {

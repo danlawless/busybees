@@ -176,6 +176,12 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         setIsLoading(false);
         return;
       }
+      if (!checkResponse.ok) {
+        // A failed lookup must not read as "no such customer" and start a signup.
+        setError(checkData?.error || 'Unable to look up that number. Please try again.');
+        setIsLoading(false);
+        return;
+      }
 
       if (!checkData.exists) {
         // New customer - go to signup

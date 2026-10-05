@@ -9,6 +9,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { createProductWithPrice, listStripeProducts } from '@/lib/stripe/products';
 import { logger } from '@/lib/logger';
+import { requireAdmin } from '@/lib/auth/requireRole';
 import Stripe from 'stripe';
 
 interface SyncResult {
@@ -89,31 +90,12 @@ export async function GET() {
 // Sync all products to Stripe
 export async function POST(request: NextRequest) {
   try {
-    // Check for staff PIN header (for POS staff mode)
-    const staffPin = request.headers.get('x-staff-pin');
-    const isStaffMode = staffPin === '0297'; // Same PIN as POS staff mode
+    // Admins only, by their session. (A hard-coded 'x-staff-pin: 0297' header
+    // used to be accepted instead -- and was sent from the public POS bundle.)
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
-    if (!isStaffMode) {
-      // Verify admin access via Supabase auth
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData || userData.role !== 'admin') {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-      }
-    }
-
-    logger.info({ staffMode: isStaffMode }, '🔐 Stripe sync authorized');
+    logger.info('🔐 Stripe sync authorized');
     const adminSupabase = createAdminClient();
     const result: SyncResult = {
       passes: { total: 0, synced: 0, errors: [] },

@@ -15,7 +15,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { hiddenPasswordFor, throwawayPassword } from '@/lib/auth/hiddenPassword';
-import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
+import { beginAttempt, clientAddress, finishAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 
 const STAFF_EMAIL = 'staff@busybees.internal';
 const STAFF_NAME = 'Staff User';
@@ -50,11 +50,12 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = clientAddress(request);
-    if (!(await checkThrottle('admin-pin', ip))) {
+    const attempt = await beginAttempt('admin-pin', ip);
+    if (!attempt.allowed) {
       return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
     }
     const valid = pin === String(pinSetting.value);
-    await recordAttempt('admin-pin', ip, valid);
+    await finishAttempt(attempt, valid);
     if (!valid) {
       logger.warn({ ip }, 'Invalid admin PIN attempt');
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });

@@ -58,14 +58,17 @@ export async function POST(request: NextRequest) {
     // Check if phone already exists in users table
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id, phone, email, has_web_password')
+      .select('id, phone, email, has_web_password, role')
       .eq('phone', cleanPhone)
       .single();
 
     if (existingUser) {
       // If user exists but doesn't have a web password, they may have signed up at POS
       // Allow them to set a web password
-      if (!existingUser.has_web_password) {
+      // Only a customer account can be claimed here. A staff or admin account
+      // (including the shared /admin one, whose details are in the source)
+      // gets its access through staff routes, never by setting a password.
+      if (!existingUser.has_web_password && existingUser.role === 'customer') {
         // A phone number is not proof of owning the account (the kiosk made
         // it from one). Ask for the email already on file, as the set-password
         // page does; otherwise anyone could claim a store-made account.
@@ -122,7 +125,15 @@ export async function POST(request: NextRequest) {
 
         // Give the account its hidden auth password, then sign in with it.
         const authPassword = hiddenPasswordFor(existingUser.id);
-        await supabase.auth.admin.updateUserById(existingUser.id, { password: authPassword });
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(existingUser.id, {
+          password: authPassword,
+        });
+        if (passwordError) {
+          return NextResponse.json({
+            user: { ...existingUser, has_web_password: true },
+            message: 'Password set successfully. Please log in.'
+          }, { status: 200 });
+        }
         const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
           email: existingUser.email,
           password: authPassword,

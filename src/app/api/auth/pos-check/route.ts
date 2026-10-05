@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id')
       .eq('phone', cleanPhone)
+      // Customers only: a staff or admin account (or the shared /admin one)
+      // must never be signed into, or claimed, by phone number.
+      .eq('role', 'customer')
       .single();
 
     if (!user) {
