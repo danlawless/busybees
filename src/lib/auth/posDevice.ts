@@ -76,6 +76,14 @@ export function approveDevice(response: NextResponse, pin: string): void {
   });
 }
 
+/** Does this request come from a device approved with the current POS PIN? */
+export async function requestHasApprovedDevice(request: NextRequest): Promise<boolean> {
+  const pin = await currentPosPin();
+  if (!pin) return false;
+  const key = serverSecret();
+  return isValidDeviceApproval(request.cookies.get(POS_DEVICE_COOKIE)?.value, pinFingerprint(pin, key), Date.now(), key);
+}
+
 export const DEVICE_LOCKED_ERROR = 'This device needs the POS PIN before customers can sign in here.';
 
 /**
@@ -83,12 +91,7 @@ export const DEVICE_LOCKED_ERROR = 'This device needs the POS PIN before custome
  * staff member. Returns the response to send, or null to continue.
  */
 export async function requireKioskDevice(request: NextRequest): Promise<NextResponse | null> {
-  const pin = await currentPosPin();
-  if (pin) {
-    const key = serverSecret();
-    const token = request.cookies.get(POS_DEVICE_COOKIE)?.value;
-    if (isValidDeviceApproval(token, pinFingerprint(pin, key), Date.now(), key)) return null;
-  }
+  if (await requestHasApprovedDevice(request)) return null;
   // No approval (or no POS PIN set at all): only staff may use phone-only sign-in.
   const staffDenied = await requireStaff();
   if (!staffDenied) return null;

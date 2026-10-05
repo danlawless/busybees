@@ -37,7 +37,9 @@ export const LIMITS: Record<ThrottleScope, ThrottleLimits> = {
   'pos-pin': { perKey: 5, overall: 50, windowMinutes: 60 },
   // Passwords: far more values, and people mistype them.
   'web-login': { perKey: 10, overall: null, windowMinutes: 15 },
-  'web-login-account': { perKey: 10, overall: null, windowMinutes: 15 },
+  // Per account: generous, since anyone who knows a customer's phone could
+  // otherwise keep that customer locked out with a trickle of wrong guesses.
+  'web-login-account': { perKey: 20, overall: null, windowMinutes: 15 },
   'staff-login': { perKey: 5, overall: null, windowMinutes: 15 },
 };
 
@@ -66,11 +68,18 @@ export function clientAddress(request: NextRequest): string {
   return normalizeAddress(ip);
 }
 
-/** Pure: IPv4 as-is, IPv6 cut to its /64 network. */
+/** Pure: IPv4 as-is (including IPv4-mapped IPv6), IPv6 cut to its /64 network. */
 export function normalizeAddress(ip: string): string {
   if (!ip.includes(':')) return ip;
-  const groups = ip.split('::')[0].split(':').filter(Boolean);
-  return `${groups.slice(0, 4).join(':')}::/64`;
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mapped) return mapped[1];
+  // Expand '::' so the first four groups are the real network prefix.
+  const [head, tail] = ip.toLowerCase().split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail !== undefined && tail !== '' ? tail.split(':') : [];
+  const groups =
+    tail === undefined ? left : [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right];
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`;
 }
 
 export const TOO_MANY_ATTEMPTS = 'Too many attempts. Please wait a while and try again.';
@@ -117,6 +126,10 @@ export async function beginAttempt(
 
     const decision = decideThrottle(forKey.count ?? 0, overall.count ?? 0, limits);
     if (!decision.allowed) {
+      // A refused attempt never reached the PIN or password, so it is not a
+      // failed guess: drop it, or a trickle of requests would keep extending
+      // a lockout (of a customer, the till, or /admin) for ever.
+      await db.from('auth_attempts').delete().eq('id', row.id);
       logger.warn({ scope, key, reason: decision.reason }, 'Login attempt throttled');
       if (decision.reason === 'overall') {
         Sentry.captureMessage(`Login check '${scope}' is under a guessing attack`, { level: 'warning' });

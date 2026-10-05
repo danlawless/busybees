@@ -16,6 +16,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { hiddenPasswordFor, throwawayPassword } from '@/lib/auth/hiddenPassword';
 import { beginAttempt, clientAddress, finishAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
+import { requestHasApprovedDevice } from '@/lib/auth/posDevice';
 
 const STAFF_EMAIL = 'staff@busybees.internal';
 const STAFF_NAME = 'Staff User';
@@ -50,7 +51,9 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = clientAddress(request);
-    const attempt = await beginAttempt('admin-pin', ip);
+    // An approved store device is exempt from the overall cap, so guessing
+    // from elsewhere cannot lock the store's own staff out of /admin.
+    const attempt = await beginAttempt('admin-pin', ip, { skipOverall: await requestHasApprovedDevice(request) });
     if (!attempt.allowed) {
       return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
     }

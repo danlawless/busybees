@@ -36,4 +36,10 @@ describe('normalizeAddress', () => {
     expect(normalizeAddress('2001:db8:1:2:aaaa::1')).toBe('2001:db8:1:2::/64');
     expect(normalizeAddress('2001:db8:1:2:bbbb:cccc:dddd:eeee')).toBe('2001:db8:1:2::/64');
   });
+
+  it('expands shortened IPv6 before grouping, and unwraps IPv4-mapped addresses', () => {
+    expect(normalizeAddress('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    expect(normalizeAddress('2001:DB8:0001:0002::5')).toBe('2001:db8:1:2::/64');
+    expect(normalizeAddress('::ffff:203.0.113.7')).toBe('203.0.113.7');
+  });
 });
