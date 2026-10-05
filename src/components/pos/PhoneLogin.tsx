@@ -86,6 +86,29 @@ interface PhoneLoginProps {
   onAdminAccess?: (user?: { id: string; name: string; role: 'staff' | 'admin' }) => void;
 }
 
+/**
+ * The server only allows phone-number sign-in on a device approved with the
+ * POS PIN (or with staff signed in). A device unlocked before that check
+ * existed -- or whose approval lapsed or whose PIN changed -- gets refused with
+ * code 'device_locked'. Lock the screen once so the PIN is entered again, which
+ * approves the device; if that already happened this session, just say so.
+ */
+const handleDeviceLocked = (
+  response: Response,
+  data: { code?: string } | null,
+  setError: (message: string) => void
+): boolean => {
+  if (response.status !== 403 || data?.code !== 'device_locked') return false;
+  if (sessionStorage.getItem('pos_relocked') !== '1') {
+    sessionStorage.setItem('pos_relocked', '1');
+    sessionStorage.removeItem('pos_unlocked');
+    window.location.reload();
+  } else {
+    setError('This device needs the POS PIN before customers can sign in here. Please ask a staff member.');
+  }
+  return true;
+};
+
 // Helper function to calculate age from birthdate
 const calculateAge = (birthdate: string): number => {
   const today = new Date();
@@ -149,6 +172,16 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         body: JSON.stringify({ phone: cleanPhone }),
       });
       const checkData = await checkResponse.json();
+      if (handleDeviceLocked(checkResponse, checkData, setError)) {
+        setIsLoading(false);
+        return;
+      }
+      if (!checkResponse.ok) {
+        // A failed lookup must not read as "no such customer" and start a signup.
+        setError(checkData?.error || 'Unable to look up that number. Please try again.');
+        setIsLoading(false);
+        return;
+      }
 
       if (!checkData.exists) {
         // New customer - go to signup
@@ -172,6 +205,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       });
 
       const data = await response.json();
+      if (handleDeviceLocked(response, data, setError)) {
+        setIsLoading(false);
+        return;
+      }
 
       if (response.ok) {
         // Fetch customer's children from database
@@ -374,6 +411,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       });
 
       const data = await response.json();
+      if (handleDeviceLocked(response, data, setError)) {
+        setIsLoading(false);
+        return;
+      }
 
       if (response.ok) {
         // Show success message with email verification notice

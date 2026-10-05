@@ -9,6 +9,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
 import { logger } from '@/lib/logger';
+import { throwawayPassword } from '@/lib/auth/hiddenPassword';
 
 async function verifyAdmin(request: NextRequest) {
   const adminClient = createAdminClient();
@@ -113,7 +114,8 @@ export async function POST(request: NextRequest) {
 
     // Hash password
     const staffPasswordHash = await bcrypt.hash(password, 12);
-    const authPassword = `STAFF-${cleanPhone}-AUTH`;
+    // Placeholder only: staff-auth sets the hidden password at first login.
+    const authPassword = throwawayPassword();
 
     // Create Supabase auth user
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({

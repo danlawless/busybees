@@ -18,7 +18,7 @@ export default function AdminAfterDarkPage() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const handlePinSubmit = async () => {
-    if (pinInput.length !== 4) return;
+    if (pinInput.length < 4 || pinInput.length > 8) return;
 
     setIsAuthenticating(true);
     setPinError('');
@@ -73,7 +73,7 @@ export default function AdminAfterDarkPage() {
                   onChange={(e) => setPinInput(e.target.value)}
                   onKeyDown={handlePinKeyDown}
                   placeholder="Enter PIN"
-                  maxLength={4}
+                  maxLength={8}
                   className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50"
                   autoFocus
                   disabled={isAuthenticating}

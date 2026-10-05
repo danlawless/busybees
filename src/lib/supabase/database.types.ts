@@ -510,6 +510,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      auth_attempts: {
+        Row: {
+          id: number;
+          scope: string;
+          ip: string;
+          succeeded: boolean;
+          attempted_at: string;
+        };
+        Insert: {
+          id?: number;
+          scope: string;
+          ip: string;
+          succeeded?: boolean;
+          attempted_at?: string;
+        };
+        Update: {
+          id?: number;
+          scope?: string;
+          ip?: string;
+          succeeded?: boolean;
+          attempted_at?: string;
+        };
+        Relationships: [];
+      };
       settings: {
         Row: {
           id: string;

@@ -6,11 +6,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireKioskDevice } from '@/lib/auth/posDevice';
+import { hiddenPasswordFor, throwawayPassword } from '@/lib/auth/hiddenPassword';
 import { sendWelcomeEmail } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
+    // Kiosk-only: the store's approved device (POS PIN entered) or staff.
+    const deviceDenied = await requireKioskDevice(request);
+    if (deviceDenied) return deviceDenied;
+
     const body = await request.json();
     const { phone, name, email } = body;
 
@@ -57,8 +63,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use phone-based password for Supabase auth
-    const authPassword = `PHONE-${cleanPhone}`;
+    // A throwaway password to create the auth user; the real one is derived
+    // from its id (lib/auth/hiddenPassword) and set straight after.
+    let authPassword = throwawayPassword();
 
     // Try to create Supabase Auth user first (generates proper UUID)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -83,6 +90,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      return NextResponse.json(
+        { error: 'Failed to create account. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Replace the throwaway with the account's hidden password before signing in.
+    authPassword = hiddenPasswordFor(authData.user.id);
+    const { error: hiddenPasswordError } = await supabase.auth.admin.updateUserById(authData.user.id, {
+      password: authPassword,
+    });
+    if (hiddenPasswordError) {
       return NextResponse.json(
         { error: 'Failed to create account. Please try again.' },
         { status: 500 }
