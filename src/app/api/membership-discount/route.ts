@@ -8,6 +8,7 @@ import { getStripeClient } from '@/lib/stripe/client';
 import { createPromotionCode } from '@/lib/stripe/coupons';
 import { logger } from '@/lib/logger';
 import { MEMBERSHIP_DISCOUNT_PERCENT } from '@/lib/membership';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const MEMBERSHIP_COUPON_ID = 'MEMBER10';
 const MEMBERSHIP_COUPON_NAME = 'Membership Party Discount';
@@ -83,7 +84,10 @@ export async function GET(): Promise<NextResponse<MembershipDiscountResponse>> {
 /**
  * POST - Create or enable the membership discount coupon
  */
-export async function POST(): Promise<NextResponse<MembershipDiscountResponse>> {
+export async function POST(): Promise<NextResponse<MembershipDiscountResponse | { error: string }>> {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const stripe = await getStripeClient();
 
@@ -167,7 +171,10 @@ export async function POST(): Promise<NextResponse<MembershipDiscountResponse>> 
 /**
  * DELETE - Deactivate the membership discount (deactivates the promotion code)
  */
-export async function DELETE(): Promise<NextResponse<MembershipDiscountResponse>> {
+export async function DELETE(): Promise<NextResponse<MembershipDiscountResponse | { error: string }>> {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const stripe = await getStripeClient();
 

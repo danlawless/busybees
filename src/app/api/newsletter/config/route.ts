@@ -5,8 +5,12 @@
 
 import { NextResponse } from 'next/server';
 import { isEmailServiceConfigured } from '@/lib/email/resend';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const configured = isEmailServiceConfigured();
 
   return NextResponse.json({

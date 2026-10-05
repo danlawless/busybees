@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { Database } from '@/lib/supabase/database.types';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 /**
  * Fetch rows in chunks to avoid Supabase/PostgREST URL length limits.
@@ -113,6 +114,9 @@ function calculateAge(birthdate: string): number {
 }
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     logger.info({}, '📊 POS customers API called');
     const supabase = createAdminClient();

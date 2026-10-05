@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const CreateGroupSchema = z.object({
   group_name: z.string().min(1, 'Group name is required').max(200),
@@ -19,6 +20,9 @@ const CreateGroupSchema = z.object({
 });
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
 
@@ -101,6 +105,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const parsed = CreateGroupSchema.safeParse(body);

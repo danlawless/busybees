@@ -11,6 +11,7 @@ import {
   Allergen,
   ProductCategory,
 } from '@/lib/utils/productHelpers';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 /**
  * GET /api/products
@@ -45,6 +46,9 @@ export async function GET(request: NextRequest) {
  * Create a new product (staff only)
  */
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 
@@ -159,6 +163,9 @@ export async function POST(request: NextRequest) {
  * Update an existing product (staff only)
  */
 export async function PUT(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 
@@ -284,6 +291,9 @@ export async function PUT(request: NextRequest) {
  * Delete a product (staff only)
  */
 export async function DELETE(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

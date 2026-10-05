@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 /**
  * GET /api/newsletter-subscribers
@@ -9,6 +10,9 @@ import { logger } from '@/lib/logger';
  * Using admin client to bypass RLS (consistent with other admin APIs like promos).
  */
 export async function GET(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
 

@@ -11,6 +11,7 @@ import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { includedKidsForBooking, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 // This route decides what a customer is charged for extra children, so the
 // included count must be the one the booking was sold with -- see
@@ -26,6 +27,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const supabase = createAdminClient();
@@ -70,6 +74,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const body = await request.json();

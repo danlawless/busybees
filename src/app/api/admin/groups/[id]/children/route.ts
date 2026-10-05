@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const AddChildSchema = z.object({
   name: z.string().min(1, 'Child name is required').max(200),
@@ -19,6 +20,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id: groupId } = await params;
     const supabase = createAdminClient();
@@ -57,6 +61,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id: groupId } = await params;
     const body = await request.json();

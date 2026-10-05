@@ -5,14 +5,14 @@
  * PUT - Update an existing pass (POS admin panel)
  * DELETE - Delete a pass (POS admin panel)
  *
- * Note: POS staff access is controlled via PIN at the application level.
- * The admin panel is only accessible after PIN verification on a locked network.
+ * Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getActivePasses, getAllPasses, createPass, updatePass, deletePass } from '@/lib/services/passes';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 // Schema for creating a pass
 const createPassSchema = z.object({
@@ -59,9 +59,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
-    // Note: POS staff access is controlled via PIN at the application level
-    // The admin panel is only accessible after PIN verification
+    // Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
     const body = await request.json();
 
     // Validate input
@@ -100,8 +102,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
-    // Note: POS staff access is controlled via PIN at the application level
+    // Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
     const body = await request.json();
 
     // Validate input
@@ -142,8 +147,11 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
-    // Note: POS staff access is controlled via PIN at the application level
+    // Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

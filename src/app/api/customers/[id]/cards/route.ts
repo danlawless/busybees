@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getStripeMode } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
+import { requireAccountAccess } from '@/app/api/sessions/requireAccountAccess';
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +19,9 @@ export async function GET(
     if (!customerId) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
+
+    const denied = await requireAccountAccess(customerId);
+    if (denied) return denied;
 
     const supabase = await createClient();
 

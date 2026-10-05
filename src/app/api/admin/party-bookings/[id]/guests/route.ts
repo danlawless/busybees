@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 const AddGuestSchema = z.object({
   child_name: z.string().min(1, 'Child name is required').max(200),
@@ -20,6 +21,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const supabase = createAdminClient();
@@ -46,6 +50,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const supabase = createAdminClient();

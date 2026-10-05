@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { buildNewsletterEmailPayload, buildHtmlNewsletterPayload, sendBatchEmails, isEmailServiceConfigured } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 // Allow up to 120 seconds for batch email sending (Vercel Pro max: 300s)
 export const maxDuration = 120;
@@ -31,6 +32,9 @@ const htmlSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const isHtmlMode = body.mode === 'html';

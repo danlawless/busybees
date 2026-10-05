@@ -18,12 +18,18 @@ import { getAllActiveSessions, getActiveSessions, createSession } from '@/lib/se
 import { getPurchaseAsAdmin, updatePurchase } from '@/lib/services/purchases';
 import { getCustomerChildIdsAsAdmin } from '@/lib/services/children';
 import { requireAccountAccess } from './requireAccountAccess';
+import { requireStaff } from '@/lib/auth/requireRole';
 import { OWNERSHIP_MISMATCH_MESSAGE } from './batch/validation';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customer_id');
+
+    // One account's sessions for that customer or staff; everyone who is in
+    // (names, phones, children) for staff only.
+    const denied = customerId ? await requireAccountAccess(customerId) : await requireStaff();
+    if (denied) return denied;
 
     // Return sessions for specific customer or all active sessions
     const sessions = customerId

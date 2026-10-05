@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAllCustomers, createCustomer } from '@/lib/services/customers';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,6 +41,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Inserts a users row with the service role -- including its role -- so it
+  // must never be open: an anonymous caller could create themselves an admin.
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const customer = await createCustomer(body);
