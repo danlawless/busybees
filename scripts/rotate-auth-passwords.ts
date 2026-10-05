@@ -8,8 +8,9 @@
  * that never logs in again would keep its old pattern password for ever. This
  * gives every auth user a random password; their next login sets the hidden one.
  *
- * Nobody notices: no customer or staff member ever types this password, and
- * existing signed-in sessions are not ended by a password change made here.
+ * No customer or staff member ever types this password, so nothing changes
+ * for them. If Supabase ends existing sessions on a password change, people
+ * simply sign in again as usual (run it at a quiet time, e.g. after close).
  *
  *   npx -y tsx scripts/rotate-auth-passwords.ts           # dry run: counts only
  *   npx -y tsx scripts/rotate-auth-passwords.ts --apply   # does it (ask Tim first)
