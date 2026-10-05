@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
+import { hiddenPasswordFor, throwawayPassword } from '@/lib/auth/hiddenPassword';
 import { sendWelcomeEmail } from '@/lib/email/resend';
 import bcrypt from 'bcryptjs';
 
@@ -65,6 +66,22 @@ export async function POST(request: NextRequest) {
       // If user exists but doesn't have a web password, they may have signed up at POS
       // Allow them to set a web password
       if (!existingUser.has_web_password) {
+        // A phone number is not proof of owning the account (the kiosk made
+        // it from one). Ask for the email already on file, as the set-password
+        // page does; otherwise anyone could claim a store-made account.
+        if (
+          !existingUser.email ||
+          String(email ?? '').trim().toLowerCase() !== existingUser.email.trim().toLowerCase()
+        ) {
+          return NextResponse.json(
+            {
+              error: 'An account with this phone number already exists. Use the email on that account, or log in instead.',
+              needsPasswordSetup: true,
+            },
+            { status: 409 }
+          );
+        }
+
         const webPasswordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
         const { error: updateError } = await supabase
@@ -103,8 +120,9 @@ export async function POST(request: NextRequest) {
           }
         );
 
-        // Sign in with their existing Supabase auth
-        const authPassword = `PHONE-${cleanPhone}`;
+        // Give the account its hidden auth password, then sign in with it.
+        const authPassword = hiddenPasswordFor(existingUser.id);
+        await supabase.auth.admin.updateUserById(existingUser.id, { password: authPassword });
         const { data: signInData, error: signInError } = await supabaseResponse.auth.signInWithPassword({
           email: existingUser.email,
           password: authPassword,
@@ -136,8 +154,9 @@ export async function POST(request: NextRequest) {
     // Hash the web password
     const webPasswordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Use phone-based password for Supabase auth (for session management)
-    const authPassword = `PHONE-${cleanPhone}`;
+    // A throwaway password to create the auth user; the real one is derived
+    // from its id (lib/auth/hiddenPassword) and set straight after.
+    let authPassword = throwawayPassword();
 
     // Try to create Supabase Auth user first (generates proper UUID)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -162,6 +181,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      return NextResponse.json(
+        { error: 'Failed to create account. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Replace the throwaway with the account's hidden password before signing in.
+    authPassword = hiddenPasswordFor(authData.user.id);
+    const { error: hiddenPasswordError } = await supabase.auth.admin.updateUserById(authData.user.id, {
+      password: authPassword,
+    });
+    if (hiddenPasswordError) {
       return NextResponse.json(
         { error: 'Failed to create account. Please try again.' },
         { status: 500 }

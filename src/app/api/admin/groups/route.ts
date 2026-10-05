@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { requireStaff } from '@/lib/auth/requireRole';
+import { throwawayPassword } from '@/lib/auth/hiddenPassword';
 
 const CreateGroupSchema = z.object({
   group_name: z.string().min(1, 'Group name is required').max(200),
@@ -182,7 +183,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create auth user first (required for users table FK)
-    const authPassword = `PHONE-${cleanPhone}`;
+    // Nobody signs in with this: every login route sets the account's hidden
+    // password (lib/auth/hiddenPassword) before signing in.
+    const authPassword = throwawayPassword();
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email || `group-${cleanPhone}@busybeesipc.com`,
       password: authPassword,

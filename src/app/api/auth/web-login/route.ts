@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
+import { hiddenPasswordFor } from '@/lib/auth/hiddenPassword';
+import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +63,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password against stored hash
+    const ip = clientAddress(request);
+    if (!(await checkThrottle('web-login', ip))) {
+      return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+    }
     const isValidPassword = await bcrypt.compare(password, user.web_password_hash);
+    await recordAttempt('web-login', ip, isValidPassword);
 
     if (!isValidPassword) {
       return NextResponse.json(
@@ -78,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase session for the user
     // First, ensure their Supabase auth password is current
-    const authPassword = `PHONE-${cleanPhone}`;
+    const authPassword = hiddenPasswordFor(user.id);
 
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       user.id,

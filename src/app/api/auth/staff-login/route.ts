@@ -1,18 +1,25 @@
 /**
- * @deprecated Use /api/auth/staff-auth instead (phone+password auth).
- * This PIN-based route is kept for backward compatibility during transition.
- * Staff Login API Route - Authenticates staff using PIN and creates a Supabase session
+ * /admin PIN login -- signs in to the shared admin account (staff@busybees.internal).
+ *
+ * The PIN is the only credential, so: it must be set in settings (`staff_pin`,
+ * 4-8 digits; there is no built-in default -- a hard-coded 0297 used to be
+ * accepted alongside whatever was set), wrong guesses are limited
+ * (lib/auth/throttle), and the shared account signs in with its hidden auth
+ * password (lib/auth/hiddenPassword), never one derived from the PIN.
+ *
+ * Personal logins for the POS go through /api/auth/staff-auth instead.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { hiddenPasswordFor, throwawayPassword } from '@/lib/auth/hiddenPassword';
+import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 
 const STAFF_EMAIL = 'staff@busybees.internal';
 const STAFF_NAME = 'Staff User';
 const STAFF_PHONE = '0000000000';
-const DEFAULT_STAFF_PIN = '0297';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,36 +30,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'PIN is required' }, { status: 400 });
     }
 
-    // Validate PIN format (4 digits)
-    if (!/^\d{4}$/.test(pin)) {
+    // Validate PIN format (4-8 digits)
+    if (!/^\d{4,8}$/.test(pin)) {
       return NextResponse.json({ error: 'Invalid PIN format' }, { status: 400 });
     }
 
     // Use admin client to read settings (bypasses RLS)
     const adminClient = createAdminClient();
 
-    // Get the staff PIN from settings, fall back to default
-    let expectedPin = DEFAULT_STAFF_PIN;
+    // The PIN must be set; there is no default to fall back on.
     const { data: pinSetting, error: settingsError } = await adminClient
       .from('settings')
       .select('value')
       .eq('key', 'staff_pin')
-      .single();
-
-    if (pinSetting?.value) {
-      expectedPin = pinSetting.value;
-    } else if (settingsError) {
-      logger.warn({ error: settingsError }, 'Failed to fetch staff PIN setting, using default');
+      .maybeSingle();
+    if (settingsError || !pinSetting?.value) {
+      logger.error({ error: settingsError }, 'Admin PIN login refused: no staff_pin is set');
+      return NextResponse.json({ error: 'Admin PIN is not set up.' }, { status: 503 });
     }
 
-    // Verify PIN against DB value or default
-    if (pin !== expectedPin && pin !== DEFAULT_STAFF_PIN) {
-      logger.warn('Invalid staff PIN attempt');
+    const ip = clientAddress(request);
+    if (!(await checkThrottle('admin-pin', ip))) {
+      return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+    }
+    const valid = pin === String(pinSetting.value);
+    await recordAttempt('admin-pin', ip, valid);
+    if (!valid) {
+      logger.warn({ ip }, 'Invalid admin PIN attempt');
       return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
     }
 
-    // PIN is valid - generate password for Supabase auth
-    const staffPassword = `STAFF-PIN-${pin}-AUTH`;
+    // PIN is valid. The shared account's auth password is its hidden one,
+    // derived from its id once known -- never from the PIN.
 
     // Ensure staff auth user exists with correct password.
     // Use create-first approach: try to create, and if user already exists,
@@ -61,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
       email: STAFF_EMAIL,
-      password: staffPassword,
+      password: throwawayPassword(),
       email_confirm: true,
       user_metadata: {
         name: STAFF_NAME,
@@ -130,16 +139,6 @@ export async function POST(request: NextRequest) {
 
       staffUserId = staffAuthUser.id;
 
-      // Update password to match current PIN
-      const { error: updateError } = await adminClient.auth.admin.updateUserById(staffUserId, {
-        password: staffPassword,
-      });
-
-      if (updateError) {
-        logger.error({ error: updateError }, 'Failed to update staff user password');
-        return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
-      }
-
       // Ensure user exists in users table with admin role
       await adminClient
         .from('users')
@@ -150,6 +149,16 @@ export async function POST(request: NextRequest) {
           email: STAFF_EMAIL,
           role: 'admin',
         }, { onConflict: 'id' });
+    }
+
+    // Give the shared account its hidden auth password, then sign in with it.
+    const staffPassword = hiddenPasswordFor(staffUserId);
+    const { error: passwordError } = await adminClient.auth.admin.updateUserById(staffUserId, {
+      password: staffPassword,
+    });
+    if (passwordError) {
+      logger.error({ error: passwordError }, 'Failed to set staff account password');
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
     }
 
     // Create session by signing in as staff user

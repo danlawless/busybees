@@ -120,7 +120,11 @@ export default function POSPage() {
     const [posUnlocked, setPosUnlocked] = useState(false);
     const [pinConfigured, setPinConfigured] = useState<boolean | null>(null); // null = still checking
     const handlePosUnlock = () => {
-        if (typeof window !== "undefined") sessionStorage.setItem("pos_unlocked", "1");
+        if (typeof window !== "undefined") {
+            sessionStorage.setItem("pos_unlocked", "1");
+            // The PIN just approved this device for kiosk sign-in (see PhoneLogin).
+            sessionStorage.removeItem("pos_relocked");
+        }
         setPosUnlocked(true);
     };
     const [staffUser, setStaffUser] = useState<{ id: string; name: string; role: 'staff' | 'admin' } | null>(null);

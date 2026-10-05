@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import bcrypt from 'bcryptjs';
+import { hiddenPasswordFor } from '@/lib/auth/hiddenPassword';
+import { checkThrottle, clientAddress, recordAttempt, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -55,7 +57,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const ip = clientAddress(request);
+    if (!(await checkThrottle('staff-login', ip))) {
+      return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+    }
     const passwordValid = await bcrypt.compare(password, user.staff_password_hash);
+    await recordAttempt('staff-login', ip, passwordValid);
     if (!passwordValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id);
 
     // Create Supabase session
-    const staffPassword = `STAFF-${cleanPhone}-AUTH`;
+    const staffPassword = hiddenPasswordFor(user.id);
 
     // Update auth password
     await adminClient.auth.admin.updateUserById(user.id, {

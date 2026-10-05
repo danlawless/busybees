@@ -13,17 +13,12 @@ const SALT_ROUNDS = 12;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, email, name, password, posFlow } = body;
+    const { phone, email, name, password } = body;
 
-    // POS flow only requires phone + password
-    if (posFlow) {
-      if (!phone || !password) {
-        return NextResponse.json(
-          { error: 'Phone and password are required' },
-          { status: 400 }
-        );
-      }
-    } else if (!phone || !email || !name || !password) {
+    // Always the email and name on file as well as the phone: a phone number
+    // alone is not proof of owning an account. (A phone-only "POS flow" used
+    // to skip this; nothing called it, and it let anyone claim an account.)
+    if (!phone || !email || !name || !password) {
       return NextResponse.json(
         { error: 'Phone, email, name, and password are required' },
         { status: 400 }
@@ -65,9 +60,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Skip email/name verification for POS flow (user already identified by phone at kiosk)
-    if (!posFlow) {
+    {
       // Verify email matches (case-insensitive)
-      if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
+      if (!user.email || user.email.toLowerCase() !== email.trim().toLowerCase()) {
         return NextResponse.json(
           { error: 'The email address does not match our records. Please check your information.' },
           { status: 400 }

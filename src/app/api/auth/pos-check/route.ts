@@ -5,9 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireKioskDevice } from '@/lib/auth/posDevice';
 
 export async function POST(request: NextRequest) {
   try {
+    // Kiosk-only: the store's approved device (POS PIN entered) or staff.
+    const deviceDenied = await requireKioskDevice(request);
+    if (deviceDenied) return deviceDenied;
+
     const body = await request.json();
     const { phone } = body;
 
