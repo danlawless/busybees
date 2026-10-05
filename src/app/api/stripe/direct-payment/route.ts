@@ -81,20 +81,30 @@ function getReturnUrl(): string {
  * chose and at its own price (sibling discounts included), all sharing one
  * payment reference -- the same shape the POS records siblings in.
  */
-async function insertDayPassRows(
+type PassDefaults = Map<string, Awaited<ReturnType<typeof resolvePurchaseDefaults>>>;
+
+/** Each pass's sessions and expiry, looked up before any charge is made. */
+async function resolveDayPassDefaults(
   db: ReturnType<typeof createAdminClient>,
-  customerId: string,
-  sale: DayPassSale,
-  paymentRef: string,
-  now: Date
-) {
-  const defaultsByPass = new Map<string, Awaited<ReturnType<typeof resolvePurchaseDefaults>>>();
+  sale: DayPassSale
+): Promise<PassDefaults> {
+  const defaultsByPass: PassDefaults = new Map();
   for (const line of sale.lines) {
     if (!defaultsByPass.has(line.pass.id)) {
       defaultsByPass.set(line.pass.id, await resolvePurchaseDefaults(line.pass.id, 'day_pass', db));
     }
   }
+  return defaultsByPass;
+}
 
+async function insertDayPassRows(
+  db: ReturnType<typeof createAdminClient>,
+  customerId: string,
+  sale: DayPassSale,
+  defaultsByPass: PassDefaults,
+  paymentRef: string,
+  now: Date
+) {
   const { data, error } = await db
     .from('purchases')
     .insert(
@@ -320,8 +330,10 @@ export async function POST(request: NextRequest) {
 
     // Validate pass exists BEFORE any charge — fail fast if product is invalid
     let purchaseDefaults;
+    let dayPassDefaults: PassDefaults = new Map();
     try {
       purchaseDefaults = await resolvePurchaseDefaults(productId, purchaseType, adminSupabase);
+      if (daySale) dayPassDefaults = await resolveDayPassDefaults(adminSupabase, daySale);
     } catch (defaultsError) {
       logger.error({ ...logContext, error: defaultsError }, '❌ Invalid product — pass lookup failed');
       return NextResponse.json(
@@ -345,7 +357,7 @@ export async function POST(request: NextRequest) {
       logger.info({ ...logContext, amount: totalAmount }, '🎁 Purchase fully covered by gift card');
 
       if (daySale) {
-        const rows = await insertDayPassRows(adminSupabase, user.id, daySale, `giftcard_${Date.now()}`, now);
+        const rows = await insertDayPassRows(adminSupabase, user.id, daySale, dayPassDefaults, `giftcard_${Date.now()}`, now);
         await applyGiftCardBalance(user.id, giftCardAmountUsed);
         await adminSupabase
           .from('purchases')
@@ -486,7 +498,7 @@ export async function POST(request: NextRequest) {
     let purchase;
 
     if (daySale) {
-      const rows = await insertDayPassRows(adminSupabase, user.id, daySale, paymentIntent.id, now);
+      const rows = await insertDayPassRows(adminSupabase, user.id, daySale, dayPassDefaults, paymentIntent.id, now);
       purchase = rows[0];
       logger.info(
         { purchaseIds: rows.map((r) => r.id), customerId: user.id, total: daySale.total },

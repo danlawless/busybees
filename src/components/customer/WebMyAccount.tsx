@@ -21,7 +21,7 @@ import { WaiverModal } from '@/components/ui/WaiverModal';
 import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
-import { getPassKind, type SelectablePass, type SiblingRule } from '@/lib/pos/passSelection';
+import { getPassKind, resolvePassForChild, type SelectablePass, type SiblingRule } from '@/lib/pos/passSelection';
 import { hasActiveMembership } from '@/lib/membership';
 import { DayPassPicker } from '@/components/customer/DayPassPicker';
 import { parseDateString } from '@/lib/utils';
@@ -51,6 +51,8 @@ function WebMyAccountContent() {
   const [availablePasses, setAvailablePasses] = useState<any[]>([]);
   // Day passes for several children at once, priced with the POS's sibling rules.
   const [siblingRules, setSiblingRules] = useState<SiblingRule[]>([]);
+  // Prices shown before the rules load would be full price and then refused.
+  const [siblingRulesStatus, setSiblingRulesStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [showDayPassPicker, setShowDayPassPicker] = useState(false);
   const [availableParties, setAvailableParties] = useState<any[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
@@ -232,9 +234,12 @@ function WebMyAccountContent() {
           fetch('/api/sibling-discounts'),
         ]);
 
-        if (siblingResponse.ok) {
-          const rules: unknown = await siblingResponse.json();
-          if (Array.isArray(rules)) setSiblingRules(rules as SiblingRule[]);
+        const rules: unknown = siblingResponse.ok ? await siblingResponse.json() : null;
+        if (Array.isArray(rules)) {
+          setSiblingRules(rules as SiblingRule[]);
+          setSiblingRulesStatus('ready');
+        } else {
+          setSiblingRulesStatus('failed');
         }
 
         // Process passes
@@ -1734,7 +1739,14 @@ function WebMyAccountContent() {
                               setSelectedChildrenForFamily([]);
                               setSelectedProductForPurchase(product.id);
                               setShowChildSelectionModal(true);
-                            } else if (isDayPass) {
+                            } else if (
+                              // Only the passes a child's age would be sold, so an event
+                              // pass filed under "day" keeps its own buying flow.
+                              getPassKind(product) === 'day' &&
+                              eligibleChildren.some(
+                                (c) => resolvePassForChild(c, 'day', selectablePasses)?.id === product.id
+                              )
+                            ) {
                               // Day passes: pick who's coming; each child's pass comes from
                               // their age and siblings get the discount, as at the front desk.
                               setShowDayPassPicker(true);
@@ -2531,6 +2543,7 @@ function WebMyAccountContent() {
             passes={selectablePasses}
             siblingRules={siblingRules}
             isMember={hasActiveMembership(purchases)}
+            rulesStatus={siblingRulesStatus}
             cardLast4={getDefaultPaymentMethod()?.last4 || ''}
             giftCardBalance={giftCardBalance}
             onCancel={() => setShowDayPassPicker(false)}

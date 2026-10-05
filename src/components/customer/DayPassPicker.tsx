@@ -21,6 +21,8 @@ interface DayPassPickerProps {
   passes: SelectablePass[];
   siblingRules: SiblingRule[];
   isMember: boolean;
+  /** The sibling rules must be loaded before a price is shown or paid. */
+  rulesStatus: 'loading' | 'ready' | 'failed';
   cardLast4: string;
   giftCardBalance: number;
   onCancel: () => void;
@@ -32,6 +34,7 @@ export function DayPassPicker({
   passes,
   siblingRules,
   isMember,
+  rulesStatus,
   cardLast4,
   giftCardBalance,
   onCancel,
@@ -60,7 +63,8 @@ export function DayPassPicker({
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const giftCredit = Math.min(giftCardBalance, quote.total);
-  const canPay = !paying && quote.lines.length > 0 && quote.unresolved.length === 0;
+  const rulesReady = rulesStatus === 'ready';
+  const canPay = rulesReady && !paying && quote.lines.length > 0 && quote.unresolved.length === 0;
 
   const pay = async () => {
     setPaying(true);
@@ -126,7 +130,7 @@ export function DayPassPicker({
                       {line && <p className="text-xs text-gray-500">{line.pass.name}</p>}
                     </div>
                   </div>
-                  {line && (
+                  {line && rulesReady && (
                     <div className="text-right">
                       {line.discountPercent > 0 && (
                         <p className="text-xs text-gray-400 line-through">{formatCurrency(line.basePrice)}</p>
@@ -143,13 +147,19 @@ export function DayPassPicker({
           })}
         </div>
 
+        {rulesStatus === 'failed' && (
+          <p className="mt-3 text-sm text-red-600">
+            We couldn&apos;t load today&apos;s prices. Please refresh the page and try again.
+          </p>
+        )}
+
         {quote.unresolved.length > 0 && (
           <p className="mt-3 text-sm text-red-600">
             No day pass is set up for {quote.unresolved.map((c) => c.name).join(', ')}. Please ask at the front desk.
           </p>
         )}
 
-        {quote.lines.length > 0 && (
+        {rulesReady && quote.lines.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
             <div className="flex justify-between font-semibold text-gray-900 text-base">
               <span>Total</span>
@@ -185,6 +195,8 @@ export function DayPassPicker({
           >
             {paying
               ? 'Processing…'
+              : rulesStatus === 'loading'
+              ? 'Loading prices…'
               : quote.lines.length === 0
               ? 'Choose who’s coming'
               : `Pay ${formatCurrency(quote.total)} (•••• ${cardLast4})`}

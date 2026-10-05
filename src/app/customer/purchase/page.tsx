@@ -96,6 +96,9 @@ export default function PurchasePage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // 409: the saved price is out of date. Drop it so the next try starts
+        // from the current price rather than repeating the refusal.
+        if (response.status === 409) sessionStorage.removeItem('purchaseIntent');
         throw new Error(data.error || 'Payment failed');
       }
 
