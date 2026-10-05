@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import { requireAdmin } from '@/lib/auth/requireRole';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const PIN_KEY = 'pos_access_pin';
 
@@ -32,7 +32,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const denied = await requireAdmin();
+  const denied = await requireStaff();
   if (denied) return denied;
 
   try {

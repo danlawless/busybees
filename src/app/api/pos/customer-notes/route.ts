@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireAccountAccess } from '@/app/api/sessions/requireAccountAccess';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,8 @@ export async function GET(request: NextRequest) {
     if (!customerId) {
       return NextResponse.json({ error: 'customerId is required' }, { status: 400 });
     }
+    const denied = await requireAccountAccess(customerId);
+    if (denied) return denied;
 
     const admin = createAdminClient();
     const { data, error } = await admin

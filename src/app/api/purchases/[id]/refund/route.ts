@@ -2,8 +2,7 @@
  * API Route: Purchase Refund
  * POST - Process a refund for a purchase via Stripe
  *
- * Note: POS staff access is controlled via PIN at the application level.
- * This endpoint is only accessible from the admin panel after PIN verification.
+ * Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

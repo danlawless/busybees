@@ -39,8 +39,7 @@ export async function PUT(
   if (denied) return denied;
 
   try {
-    // Note: POS staff access is controlled via PIN at the application level
-    // The admin panel is only accessible after PIN verification
+    // Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
     const { id } = await params;
     const body = await request.json();
 
@@ -80,7 +79,7 @@ export async function DELETE(
   if (denied) return denied;
 
   try {
-    // Note: POS staff access is controlled via PIN at the application level
+    // Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
     const { id } = await params;
     await deletePartyPackage(id);
 

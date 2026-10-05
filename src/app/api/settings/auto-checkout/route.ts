@@ -10,7 +10,7 @@ import {
   setClosingTime,
   setTimezone
 } from '@/lib/services/auto-checkout-settings';
-import { requireAdmin } from '@/lib/auth/requireRole';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET() {
   try {
@@ -26,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const denied = await requireAdmin();
+  const denied = await requireStaff();
   if (denied) return denied;
 
   try {
