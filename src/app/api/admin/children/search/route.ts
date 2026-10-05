@@ -6,8 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchChildrenByName } from '@/lib/services/group-bookings';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');

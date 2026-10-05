@@ -8,6 +8,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCustomer, updateCustomer, deleteCustomer, getCustomerWithDetails } from '@/lib/services/customers';
 import { logger } from '@/lib/logger';
+import { requireAdmin, requireStaff } from '@/lib/auth/requireRole';
+import { requireAccountAccess } from '@/app/api/sessions/requireAccountAccess';
+import { z } from 'zod';
+
+/**
+ * What a customer record update may change. Never role, password hashes or
+ * Stripe ids: an open version of this route let anyone make themselves admin.
+ */
+const customerUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    email: z.string().trim().email().nullable().optional(),
+    phone: z.string().trim().min(7).max(20).optional(),
+  })
+  .strict();
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +30,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const denied = await requireAccountAccess(id);
+    if (denied) return denied;
+
     const { searchParams } = new URL(request.url);
     const includeDetails = searchParams.get('details') === 'true';
 
@@ -41,10 +59,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
+    const denied = await requireStaff();
+    if (denied) return denied;
 
-    const customer = await updateCustomer(id, body);
+    const { id } = await params;
+    const parsed = customerUpdateSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Invalid update' },
+        { status: 400 }
+      );
+    }
+
+    const customer = await updateCustomer(id, parsed.data);
     return NextResponse.json(customer);
   } catch (error) {
     logger.error({ error }, 'Error updating customer');
@@ -64,6 +91,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
 

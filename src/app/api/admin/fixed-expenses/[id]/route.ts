@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 const UpdateExpenseSchema = z.object({
   category: z.string().min(1).optional(),
@@ -22,6 +23,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -59,6 +63,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const supabase = createAdminClient();

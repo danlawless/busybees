@@ -5,8 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { pin } = body;

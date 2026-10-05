@@ -6,8 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
     const eventId = request.nextUrl.searchParams.get('event_id');

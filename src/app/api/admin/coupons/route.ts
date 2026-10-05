@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { createCoupon, listCoupons } from '@/lib/services/coupons';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const CreateCouponSchema = z.object({
   code: z.string().trim().min(3).max(30).regex(/^[A-Za-z0-9_-]+$/, 'Letters, numbers, dashes, underscores only').optional(),
@@ -25,6 +26,9 @@ const CreateCouponSchema = z.object({
 );
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const coupons = await listCoupons();
 
@@ -44,6 +48,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const parsed = CreateCouponSchema.safeParse(body);

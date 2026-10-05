@@ -15,6 +15,7 @@ import {
   calculateGroupRatePrice,
 } from '@/lib/validations/party-booking';
 
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const GroupPaymentSchema = z.object({
   payment_method_id: z.string().min(1, 'Payment method required'),
@@ -27,6 +28,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id: groupId } = await params;
     const supabase = createAdminClient();
@@ -56,6 +60,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id: groupId } = await params;
     const body = await request.json();

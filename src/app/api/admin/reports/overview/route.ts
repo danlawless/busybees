@@ -16,9 +16,13 @@ import {
   formatDateET,
   fetchAllRows,
 } from '@/lib/services/report-aggregations';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
     const today = todayStr();

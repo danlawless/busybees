@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPartyPackage, updatePartyPackage, deletePartyPackage } from '@/lib/services/parties';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET(
   request: NextRequest,
@@ -34,6 +35,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: POS staff access is controlled via PIN at the application level
     // The admin panel is only accessible after PIN verification
@@ -72,6 +76,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: POS staff access is controlled via PIN at the application level
     const { id } = await params;

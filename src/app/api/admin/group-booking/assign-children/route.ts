@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { assignChildrenToBooking, getGroupBookingChildren } from '@/lib/services/group-bookings';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const AssignChildrenSchema = z.object({
   booking_id: z.string().uuid('Invalid booking ID'),
@@ -21,6 +22,9 @@ const AssignChildrenSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 

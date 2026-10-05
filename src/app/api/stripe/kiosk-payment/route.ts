@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { requireAccountAccess } from '@/app/api/sessions/requireAccountAccess';
 import { createAdminClient } from "@/lib/supabase/server";
 import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from "@/lib/stripe/client";
 import { getOrCreateStripeCustomer } from "@/lib/stripe/payment-methods";
@@ -66,6 +67,11 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Staff at the till, or the customer the kiosk signed in (pos-login)
+        // paying on their own account -- never anyone else's saved card.
+        const denied = await requireAccountAccess(customerId);
+        if (denied) return denied;
 
         if (!productId || !productName || productPrice === undefined || !purchaseType) {
             return NextResponse.json(

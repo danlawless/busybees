@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getActivePasses, getAllPasses, createPass, updatePass, deletePass } from '@/lib/services/passes';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 // Schema for creating a pass
 const createPassSchema = z.object({
@@ -59,6 +60,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: POS staff access is controlled via PIN at the application level
     // The admin panel is only accessible after PIN verification
@@ -100,6 +104,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: POS staff access is controlled via PIN at the application level
     const body = await request.json();
@@ -142,6 +149,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: POS staff access is controlled via PIN at the application level
     const { searchParams } = new URL(request.url);

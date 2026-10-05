@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const draftSchema = z.object({
   id: z.string().uuid().optional(),
@@ -18,6 +19,9 @@ const draftSchema = z.object({
 });
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -38,6 +42,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const validationResult = draftSchema.safeParse(body);

@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 type AdminSupabase = ReturnType<typeof createAdminClient>;
 
@@ -66,6 +67,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const { id: purchaseId } = await params;
 
   const logContext = { purchaseId };

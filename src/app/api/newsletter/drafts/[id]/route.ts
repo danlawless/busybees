@@ -7,11 +7,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const supabase = createAdminClient();
@@ -40,6 +44,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const supabase = createAdminClient();
