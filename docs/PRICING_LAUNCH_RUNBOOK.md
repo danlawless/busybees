@@ -27,8 +27,8 @@ payment-handling routes, not just the POS:
 - `POST /api/purchases/pos`
 - `POST /api/stripe/direct-payment`
 - `POST /api/stripe/kiosk-payment`
-- `POST /api/stripe/checkout` (the branch where gift card credit covers the
-  whole price and the row is written without a Stripe round trip)
+- ~~`POST /api/stripe/checkout`~~ (retired 5 Oct 2026: it trusted the
+  caller's price and metadata; it now refuses every request)
 - `POST /api/stripe/webhook`
 
 That is **every** route that records a pass. There is no remaining path that

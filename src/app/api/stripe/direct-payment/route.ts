@@ -27,6 +27,37 @@ import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } 
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { getActivePartyPromoByCode } from '@/lib/services/promos';
 import { sendPurchaseConfirmationEmail, sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
+import { z } from 'zod';
+import {
+  assertChildrenOwned,
+  browserMetadata,
+  CatalogPriceError,
+  resolveCatalogItem,
+  type CatalogItem,
+} from '@/lib/stripe/catalogPrice';
+import { loadDayPassSale, type DayPassSale } from '@/lib/stripe/dayPassSale';
+
+/**
+ * What the browser may send. The price it showed is checked against the
+ * catalogue, never charged; name and description come from the catalogue too.
+ */
+const directPaymentSchema = z.object({
+  productId: z.string().min(1),
+  productPrice: z.number().finite(),
+  purchaseType: z.enum(['day_pass', 'weekly_pass', 'monthly_pass', 'party_package']),
+  childId: z.string().uuid().nullish(),
+  childrenIds: z.array(z.string().uuid()).max(10).nullish(),
+  quantity: z.literal(1).default(1),
+  paymentMethodId: z.string().min(1, 'Payment method required. Please add a payment method first.'),
+  useGiftCardBalance: z.boolean().default(true),
+  promoCode: z.string().nullish(),
+  metadata: z.unknown().optional(),
+  /**
+   * Day passes for these children in one charge, priced by the server with the
+   * POS's sibling rules. `productPrice` is then the total the customer was shown.
+   */
+  dayPassChildIds: z.array(z.string().uuid()).min(1).max(10).nullish(),
+});
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -45,6 +76,66 @@ function getReturnUrl(): string {
   return 'https://busybeesipc.com/customer/purchases';
 }
 
+/**
+ * One purchase row per child for a day-pass sale, each on the pass its age
+ * chose and at its own price (sibling discounts included), all sharing one
+ * payment reference -- the same shape the POS records siblings in.
+ */
+type PassDefaults = Map<string, Awaited<ReturnType<typeof resolvePurchaseDefaults>>>;
+
+/** Each pass's sessions and expiry, looked up before any charge is made. */
+async function resolveDayPassDefaults(
+  db: ReturnType<typeof createAdminClient>,
+  sale: DayPassSale
+): Promise<PassDefaults> {
+  const defaultsByPass: PassDefaults = new Map();
+  for (const line of sale.lines) {
+    if (!defaultsByPass.has(line.pass.id)) {
+      defaultsByPass.set(line.pass.id, await resolvePurchaseDefaults(line.pass.id, 'day_pass', db));
+    }
+  }
+  return defaultsByPass;
+}
+
+async function insertDayPassRows(
+  db: ReturnType<typeof createAdminClient>,
+  customerId: string,
+  sale: DayPassSale,
+  defaultsByPass: PassDefaults,
+  paymentRef: string,
+  now: Date
+) {
+  const { data, error } = await db
+    .from('purchases')
+    .insert(
+      sale.lines.map((line) => {
+        const defaults = defaultsByPass.get(line.pass.id)!;
+        return {
+          customer_id: customerId,
+          child_id: line.child.id,
+          type: 'day_pass' as const,
+          product_id: line.pass.id,
+          name: line.pass.name,
+          price: line.price,
+          purchase_date: now.toISOString(),
+          expiry_date: defaults.expiryDate?.toISOString() || null,
+          used_sessions: 0,
+          total_sessions: defaults.totalSessions,
+          status: 'active' as const,
+          stripe_payment_intent_id: paymentRef,
+          pass_scope: 'child',
+        };
+      })
+    )
+    .select();
+
+  if (error || !data || data.length === 0) {
+    logger.error({ error, customerId, paymentRef }, '❌ CRITICAL: day-pass sale paid but purchase rows not saved');
+    throw error ?? new Error('Day-pass purchase rows not saved');
+  }
+  return data;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Auth check — only thing that needs the cookie-based client
@@ -57,40 +148,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const parsed = directPaymentSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Invalid purchase request' },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
     const {
-      productId,
-      productName,
-      productPrice,
-      productDescription,
-      purchaseType,
+      productId: requestedProductId,
+      productPrice: shownPrice,
       childId,
-      childrenIds = [] as string[],
-      quantity = 1,
+      quantity,
       paymentMethodId,
-      useGiftCardBalance = true,
-      metadata = {},
+      useGiftCardBalance,
+      metadata,
     } = body;
-
-    // Validate required fields
-    if (!productId || !productName || productPrice === undefined || !purchaseType) {
-      return NextResponse.json(
-        { error: 'Missing required fields: productId, productName, productPrice, purchaseType' },
-        { status: 400 }
-      );
-    }
-
-    if (!paymentMethodId) {
-      return NextResponse.json(
-        { error: 'Payment method required. Please add a payment method first.' },
-        { status: 400 }
-      );
-    }
+    const childrenIds: string[] = body.childrenIds ?? [];
 
     const logContext = {
       userId: user.id,
-      productId,
-      purchaseType,
+      productId: requestedProductId,
+      purchaseType: body.purchaseType,
       paymentMethodId: paymentMethodId.substring(0, 10) + '...',
     };
 
@@ -130,10 +210,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Age gate validation for passes with age restrictions
+    // The catalogue sets the price, name and type -- never the request -- and
+    // every child named must be this account's own.
+    let catalogItem: CatalogItem;
+    let daySale: DayPassSale | null = null;
+    try {
+      if (body.dayPassChildIds) {
+        if (body.purchaseType !== 'day_pass' || childId || childrenIds.length > 0) {
+          throw new CatalogPriceError(400, 'Day passes for several children are bought on their own.');
+        }
+        daySale = await loadDayPassSale(adminSupabase, user.id, body.dayPassChildIds, shownPrice);
+        catalogItem = { name: daySale.label, description: daySale.label, price: daySale.total, purchaseType: 'day_pass' };
+      } else {
+        catalogItem = await resolveCatalogItem(adminSupabase, requestedProductId, body.purchaseType, shownPrice);
+        await assertChildrenOwned(adminSupabase, user.id, [...(childId ? [childId] : []), ...childrenIds]);
+      }
+    } catch (catalogError) {
+      if (catalogError instanceof CatalogPriceError) {
+        logger.warn({ ...logContext, shownPrice, reason: catalogError.message }, '❌ Purchase refused by catalogue check');
+        return NextResponse.json({ error: catalogError.message }, { status: catalogError.status });
+      }
+      throw catalogError;
+    }
+    const { name: productName, description: productDescription, purchaseType } = catalogItem;
+    // A several-children sale is recorded against each child's own pass; the
+    // first stands for the sale where one product id is needed (defaults, Stripe).
+    const productId = daySale ? daySale.lines[0].pass.id : requestedProductId;
+
+    // Age gate validation for passes with age restrictions. A day-pass sale
+    // already chose each child's pass from their age, so it skips this.
     // An age-restricted pass with no child named skips the check below entirely,
     // so refuse it rather than sell a pass nobody has been checked against.
-    if (!childId && requiresChildSelection(productName)) {
+    if (!daySale && !childId && requiresChildSelection(productName)) {
       logger.warn(
         { productName },
         'Age-restricted pass rejected: no child selected'
@@ -172,7 +280,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate amounts
-    const totalAmount = productPrice * quantity;
+    const totalAmount = catalogItem.price * quantity;
 
     // Party promo code — party packages only, re-validated server-side (the client
     // price is never trusted). Reduces the sale price before any gift-card credit.
@@ -222,8 +330,10 @@ export async function POST(request: NextRequest) {
 
     // Validate pass exists BEFORE any charge — fail fast if product is invalid
     let purchaseDefaults;
+    let dayPassDefaults: PassDefaults = new Map();
     try {
       purchaseDefaults = await resolvePurchaseDefaults(productId, purchaseType, adminSupabase);
+      if (daySale) dayPassDefaults = await resolveDayPassDefaults(adminSupabase, daySale);
     } catch (defaultsError) {
       logger.error({ ...logContext, error: defaultsError }, '❌ Invalid product — pass lookup failed');
       return NextResponse.json(
@@ -245,6 +355,22 @@ export async function POST(request: NextRequest) {
     // If gift card covers entire purchase, skip Stripe payment
     if (amountToCharge === 0) {
       logger.info({ ...logContext, amount: totalAmount }, '🎁 Purchase fully covered by gift card');
+
+      if (daySale) {
+        const rows = await insertDayPassRows(adminSupabase, user.id, daySale, dayPassDefaults, `giftcard_${Date.now()}`, now);
+        await applyGiftCardBalance(user.id, giftCardAmountUsed);
+        await adminSupabase
+          .from('purchases')
+          .update({ gift_card_amount_used: giftCardAmountUsed })
+          .eq('id', rows[0].id);
+        return NextResponse.json({
+          success: true,
+          purchaseId: rows[0].id,
+          purchaseIds: rows.map((r) => r.id),
+          giftCardUsed: giftCardAmountUsed,
+          message: `Purchase completed using $${giftCardAmountUsed.toFixed(2)} gift card balance!`,
+        });
+      }
 
       // Direct insert (POS pattern — no gift_card_amount_used, let DB DEFAULT handle it)
       const { data: purchase, error: dbError } = await adminSupabase
@@ -320,16 +446,18 @@ export async function POST(request: NextRequest) {
       payment_method: paymentMethodId,
       description: productDescription || productName,
       metadata: {
+        // Browser keys first, so the server's own keys below always win.
+        ...browserMetadata(metadata),
         customer_id: user.id,
         product_id: productId,
         product_type: purchaseType,
         product_name: productName,
         child_id: childId || '',
+        child_ids: daySale ? daySale.lines.map((l) => l.child.id).join(',') : '',
         quantity: quantity.toString(),
         gift_card_amount: giftCardAmountUsed.toString(),
         original_amount: totalAmount.toString(),
         direct_payment: 'true',
-        ...metadata,
       },
       confirm: true,
       off_session: false,
@@ -369,7 +497,14 @@ export async function POST(request: NextRequest) {
 
     let purchase;
 
-    if (comboChildrenIds) {
+    if (daySale) {
+      const rows = await insertDayPassRows(adminSupabase, user.id, daySale, dayPassDefaults, paymentIntent.id, now);
+      purchase = rows[0];
+      logger.info(
+        { purchaseIds: rows.map((r) => r.id), customerId: user.id, total: daySale.total },
+        '✅ Day passes: one purchase per child'
+      );
+    } else if (comboChildrenIds) {
       // Create separate purchase for each child in the combo
       const pricePerChild = totalAmount / comboChildrenIds.length;
       const purchases = [];

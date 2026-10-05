@@ -16,6 +16,7 @@ import {
   sendRefundConfirmationEmail,
 } from '@/lib/email/resend';
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 import { resolvePurchaseDefaults, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
@@ -408,11 +409,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   // Idempotency: skip if a purchase record already exists for this PaymentIntent.
   // The direct-payment route creates its own record, so this prevents duplicates
   // while still acting as a safety net if that route failed after charging.
-  const { data: existingPurchase } = await supabase
+  // limit(1), not maybeSingle(): one payment can carry several rows (siblings
+  // bought together), and maybeSingle() answers null for more than one row --
+  // which read as "nothing recorded" and added a stray pass. A failed lookup
+  // throws so Stripe retries, rather than falling through to an insert.
+  const { data: existingRows, error: existingError } = await supabase
     .from('purchases')
     .select('id')
     .eq('stripe_payment_intent_id', paymentIntent.id)
-    .maybeSingle();
+    .limit(1);
+  if (existingError) throw existingError;
+  const existingPurchase = existingRows?.[0] ?? null;
 
   if (existingPurchase) {
     console.log('Purchase record already exists for PaymentIntent:', paymentIntent.id);
@@ -459,6 +466,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       }
     }
 
+    return;
+  }
+
+  // A sale for several children is recorded by the route that took it, one row
+  // per child at each child's own price. This fallback can only write one row,
+  // so it must not guess -- and the route may simply not have finished yet.
+  if (metadata.child_ids) {
+    console.error(
+      'Multi-child sale has no purchase rows yet; not writing a single fallback row. Check it if this persists:',
+      paymentIntent.id
+    );
+    // Usually the route is a moment from writing them; if it failed after the
+    // charge, this is how anyone finds out.
+    Sentry.captureMessage('Multi-child sale reached the webhook with no purchase rows', {
+      level: 'warning',
+      tags: { component: 'stripe-webhook' },
+      extra: { paymentIntentId: paymentIntent.id, childIds: metadata.child_ids },
+    });
     return;
   }
 
