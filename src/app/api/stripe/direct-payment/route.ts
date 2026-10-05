@@ -27,6 +27,30 @@ import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } 
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { getActivePartyPromoByCode } from '@/lib/services/promos';
 import { sendPurchaseConfirmationEmail, sendPartyBookingConfirmationEmail } from '@/lib/email/resend';
+import { z } from 'zod';
+import {
+  assertChildrenOwned,
+  browserMetadata,
+  CatalogPriceError,
+  resolveCatalogItem,
+} from '@/lib/stripe/catalogPrice';
+
+/**
+ * What the browser may send. The price it showed is checked against the
+ * catalogue, never charged; name and description come from the catalogue too.
+ */
+const directPaymentSchema = z.object({
+  productId: z.string().min(1),
+  productPrice: z.number().finite(),
+  purchaseType: z.enum(['day_pass', 'weekly_pass', 'monthly_pass', 'party_package']),
+  childId: z.string().uuid().nullish(),
+  childrenIds: z.array(z.string().uuid()).max(10).nullish(),
+  quantity: z.literal(1).default(1),
+  paymentMethodId: z.string().min(1, 'Payment method required. Please add a payment method first.'),
+  useGiftCardBalance: z.boolean().default(true),
+  promoCode: z.string().nullish(),
+  metadata: z.unknown().optional(),
+});
 
 /**
  * Get a valid return URL for Stripe 3DS redirect
@@ -57,40 +81,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const parsed = directPaymentSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Invalid purchase request' },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
     const {
       productId,
-      productName,
-      productPrice,
-      productDescription,
-      purchaseType,
+      productPrice: shownPrice,
       childId,
-      childrenIds = [] as string[],
-      quantity = 1,
+      quantity,
       paymentMethodId,
-      useGiftCardBalance = true,
-      metadata = {},
+      useGiftCardBalance,
+      metadata,
     } = body;
-
-    // Validate required fields
-    if (!productId || !productName || productPrice === undefined || !purchaseType) {
-      return NextResponse.json(
-        { error: 'Missing required fields: productId, productName, productPrice, purchaseType' },
-        { status: 400 }
-      );
-    }
-
-    if (!paymentMethodId) {
-      return NextResponse.json(
-        { error: 'Payment method required. Please add a payment method first.' },
-        { status: 400 }
-      );
-    }
+    const childrenIds: string[] = body.childrenIds ?? [];
 
     const logContext = {
       userId: user.id,
       productId,
-      purchaseType,
+      purchaseType: body.purchaseType,
       paymentMethodId: paymentMethodId.substring(0, 10) + '...',
     };
 
@@ -129,6 +142,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // The catalogue sets the price, name and type -- never the request -- and
+    // every child named must be this account's own.
+    let catalogItem;
+    try {
+      catalogItem = await resolveCatalogItem(adminSupabase, productId, body.purchaseType, shownPrice);
+      await assertChildrenOwned(adminSupabase, user.id, [...(childId ? [childId] : []), ...childrenIds]);
+    } catch (catalogError) {
+      if (catalogError instanceof CatalogPriceError) {
+        logger.warn({ ...logContext, shownPrice, reason: catalogError.message }, '❌ Purchase refused by catalogue check');
+        return NextResponse.json({ error: catalogError.message }, { status: catalogError.status });
+      }
+      throw catalogError;
+    }
+    const { name: productName, description: productDescription, purchaseType } = catalogItem;
 
     // Age gate validation for passes with age restrictions
     // An age-restricted pass with no child named skips the check below entirely,
@@ -172,7 +200,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate amounts
-    const totalAmount = productPrice * quantity;
+    const totalAmount = catalogItem.price * quantity;
 
     // Party promo code — party packages only, re-validated server-side (the client
     // price is never trusted). Reduces the sale price before any gift-card credit.
@@ -320,6 +348,8 @@ export async function POST(request: NextRequest) {
       payment_method: paymentMethodId,
       description: productDescription || productName,
       metadata: {
+        // Browser keys first, so the server's own keys below always win.
+        ...browserMetadata(metadata),
         customer_id: user.id,
         product_id: productId,
         product_type: purchaseType,
@@ -329,7 +359,6 @@ export async function POST(request: NextRequest) {
         gift_card_amount: giftCardAmountUsed.toString(),
         original_amount: totalAmount.toString(),
         direct_payment: 'true',
-        ...metadata,
       },
       confirm: true,
       off_session: false,
