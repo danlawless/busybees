@@ -22,6 +22,7 @@ import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabili
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
 import { getPassKind, resolvePassForChild, type SelectablePass, type SiblingRule } from '@/lib/pos/passSelection';
+import { TODDLER_AGE_THRESHOLD } from '@/lib/utils/ageUtils';
 import { hasActiveMembership } from '@/lib/membership';
 import { DayPassPicker } from '@/components/customer/DayPassPicker';
 import { parseDateString } from '@/lib/utils';
@@ -814,6 +815,49 @@ function WebMyAccountContent() {
     category: p.category,
     sessions_included: p.sessions,
   }));
+
+  /**
+   * The day passes the picker sells, shown as one "Day Pass" card: whichever
+   * product an infant would get and whichever a child of 1+ would get. Found
+   * the same way the picker prices them, so the card and the checkout agree,
+   * and read from the live catalogue so no price is restated here.
+   */
+  const sampleChild = (ageYears: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - Math.round(ageYears * 12));
+    return { id: `sample-${ageYears}`, name: '', birthdate: d.toISOString().slice(0, 10) };
+  };
+  const infantDayPass = resolvePassForChild(sampleChild(0.5), 'day', selectablePasses);
+  const childDayPass = resolvePassForChild(sampleChild(3), 'day', selectablePasses);
+  const combinedDayPassIds = new Set(
+    [infantDayPass?.id, childDayPass?.id].filter((id): id is string => Boolean(id))
+  );
+  const siblingPercent = siblingRules.find(
+    (r) => r.is_active && r.child_position === 2 && !r.applies_to_monthly_only
+  )?.discount_percent;
+
+  const openDayPassPicker = () => {
+    if (children.length === 0) {
+      setActiveTab('children');
+      return;
+    }
+    if (savedCards.length === 0) {
+      setActiveTab('payments');
+      return;
+    }
+    if (dayPassEligibleChildren.length === 0) {
+      setSuccessDetails({
+        title: 'No Eligible Children',
+        message: children.some((c) => c.waiverSigned)
+          ? 'All children already have a day pass for today.'
+          : 'A child needs a signed waiver before a day pass can be bought.',
+        variant: 'warning',
+      });
+      setShowSuccessModal(true);
+      return;
+    }
+    setShowDayPassPicker(true);
+  };
 
   const handleDayPassPay = async (childIds: string[], shownTotal: number) => {
     const paymentMethod = getDefaultPaymentMethod();
@@ -1679,7 +1723,56 @@ function WebMyAccountContent() {
                       <p className="text-sm">Please check back later or contact staff.</p>
                     </div>
                   ) : (
-                    availablePasses.map((product) => (
+                    <>
+                    {childDayPass && (
+                      <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900 text-lg">🎫 Day Pass</span>
+                          <p className="text-sm text-gray-600">
+                            {formatCurrency(childDayPass.price)} for children {TODDLER_AGE_THRESHOLD} and up
+                            {infantDayPass && infantDayPass.id !== childDayPass.id
+                              ? `, ${formatCurrency(infantDayPass.price)} for babies under ${TODDLER_AGE_THRESHOLD}`
+                              : ''}
+                            .{' '}
+                            {siblingPercent
+                              ? `Brothers and sisters get ${siblingPercent}% off automatically. `
+                              : ''}
+                            Choose who&apos;s coming at checkout.
+                          </p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">
+                            {formatCurrency(childDayPass.price)}
+                            {infantDayPass && infantDayPass.id !== childDayPass.id && (
+                              <span className="text-sm font-medium text-gray-600">
+                                {' '}· infants {formatCurrency(infantDayPass.price)}
+                              </span>
+                            )}
+                          </p>
+                          {savedCards.length > 0 && (
+                            <p className="text-xs text-green-600 mt-1">
+                              💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          onClick={openDayPassPicker}
+                          size="lg"
+                          className={`px-6 py-3 text-white transition-colors ${
+                            children.length === 0
+                              ? 'bg-blue-500 hover:bg-blue-600'
+                              : savedCards.length === 0
+                              ? 'bg-yellow-500 hover:bg-yellow-600'
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
+                        >
+                          {children.length === 0
+                            ? '👶 Add Child First'
+                            : savedCards.length === 0
+                            ? '💳 Add Payment First'
+                            : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`}
+                        </Button>
+                      </div>
+                    )}
+                    {availablePasses.filter((product) => !combinedDayPassIds.has(product.id)).map((product) => (
                       <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
                         <div className="flex-1">
                           <span className="font-medium text-gray-900 text-lg">
@@ -1781,7 +1874,8 @@ function WebMyAccountContent() {
                           }
                         </Button>
                       </div>
-                    ))
+                    ))}
+                    </>
                   )}
                 </div>
               </Card>
