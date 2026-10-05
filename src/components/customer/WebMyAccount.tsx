@@ -278,6 +278,8 @@ function WebMyAccountContent() {
         }
       } catch (error) {
         console.error('Error loading products from API:', error);
+        // Otherwise the day-pass picker would wait on "Loading prices…" for good.
+        setSiblingRulesStatus((status) => (status === 'loading' ? 'failed' : status));
       } finally {
         setProductsLoaded(true);
       }

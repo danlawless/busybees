@@ -16,6 +16,7 @@ import {
   sendRefundConfirmationEmail,
 } from '@/lib/email/resend';
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 import { resolvePurchaseDefaults, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
@@ -476,6 +477,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       'Multi-child sale has no purchase rows yet; not writing a single fallback row. Check it if this persists:',
       paymentIntent.id
     );
+    // Usually the route is a moment from writing them; if it failed after the
+    // charge, this is how anyone finds out.
+    Sentry.captureMessage('Multi-child sale reached the webhook with no purchase rows', {
+      level: 'warning',
+      tags: { component: 'stripe-webhook' },
+      extra: { paymentIntentId: paymentIntent.id, childIds: metadata.child_ids },
+    });
     return;
   }
 
