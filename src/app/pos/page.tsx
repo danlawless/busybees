@@ -75,12 +75,24 @@ interface Purchase {
     usedSessions: number;
     totalSessions: number;
     status: "active" | "expired" | "used";
+    // 'account' means any child on the account can use it — no one child to
+    // name. Typed to match CheckIn.tsx's own Purchase (this object is passed
+    // straight through as that component's `customers` prop).
+    passScope?: "child" | "account";
 }
 
 interface Session {
     id: string;
     customerId: string;
     purchaseId: string;
+    // Who actually played on this session. Set for account-scoped punch card
+    // check-ins (one session per child); absent for the older single-child
+    // pass path, where the purchase's own childId already says who it is.
+    // The database and /api/pos/customers actually produce `string | null`
+    // here (never omitted) — kept `?: string` to match CheckIn.tsx's own
+    // Session, which this object is passed straight through as a prop and
+    // must stay structurally assignable to.
+    childId?: string;
     startTime: string;
     endTime?: string;
     duration?: number;
@@ -101,12 +113,18 @@ type ViewMode = "login" | "customer" | "checkin" | "admin";
 export default function POSPage() {
     const [currentView, setCurrentView] = useState<ViewMode>("login");
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+    // Set from the admin customer popup's "Sell products"; Check In opens on this customer.
+    const [sellProductsFor, setSellProductsFor] = useState<string | null>(null);
     const [isStaffMode, setIsStaffMode] = useState(false);
     // POS access lock. Unlocks for the browser session once the PIN is entered.
     const [posUnlocked, setPosUnlocked] = useState(false);
     const [pinConfigured, setPinConfigured] = useState<boolean | null>(null); // null = still checking
     const handlePosUnlock = () => {
-        if (typeof window !== "undefined") sessionStorage.setItem("pos_unlocked", "1");
+        if (typeof window !== "undefined") {
+            sessionStorage.setItem("pos_unlocked", "1");
+            // The PIN just approved this device for kiosk sign-in (see PhoneLogin).
+            sessionStorage.removeItem("pos_relocked");
+        }
         setPosUnlocked(true);
     };
     const [staffUser, setStaffUser] = useState<{ id: string; name: string; role: 'staff' | 'admin' } | null>(null);
@@ -362,7 +380,8 @@ export default function POSPage() {
 
     const handleStaffToggle = () => {
         if (isStaffMode) {
-            handleStaffLogout();
+            // The logo is "home" for staff; logging out is the Logout button's job.
+            setCurrentView("admin");
         } else {
             setShowStaffLoginModal(true);
             setStaffPhone("");
@@ -728,6 +747,15 @@ export default function POSPage() {
                             </button>
 
                             <div className="flex items-center space-x-4">
+                                {/* Staff reach Check In from a customer's "Sell products"; this is the way back. */}
+                                {isStaffMode && currentView === "checkin" && (
+                                    <button
+                                        onClick={() => setCurrentView("admin")}
+                                        className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition-colors text-sm font-semibold"
+                                    >
+                                        ← Back to Dashboard
+                                    </button>
+                                )}
                                 {isStaffMode && (
                                     <button
                                         onClick={handleStaffLogout}
@@ -992,6 +1020,8 @@ export default function POSPage() {
                             customers={customers}
                             currentCustomer={currentCustomer}
                             isStaffMode={isStaffMode}
+                            preselectedCustomerId={sellProductsFor}
+                            onPreselectHandled={() => setSellProductsFor(null)}
                             onUpdateCustomer={(updatedCustomer) => {
                                 if (currentCustomer?.id === updatedCustomer.id) {
                                     setCurrentCustomer(updatedCustomer);
@@ -1022,6 +1052,10 @@ export default function POSPage() {
                             volumeDiscounts={volumeDiscounts}
                             onUpdateVolumeDiscounts={setVolumeDiscounts}
                             userRole={staffUser?.role || 'staff'}
+                            onSellProducts={(customer) => {
+                                setSellProductsFor(customer.id);
+                                setCurrentView("checkin");
+                            }}
                         />
                     )}
                 </div>

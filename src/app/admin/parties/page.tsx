@@ -12,7 +12,7 @@ import { WaiverModal } from '@/components/ui/WaiverModal';
 import { StaffDiscountApplicator } from '@/components/admin/StaffDiscountApplicator';
 import { logger } from '@/lib/client-logger';
 import { Database } from '@/lib/supabase/database.types';
-import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
+import { PACKAGE_PRICING, ADDITIONAL_KIDS_PRICE, includedKidsForBooking } from '@/lib/validations/party-booking';
 import { parseDateString, formatDateToYYYYMMDD } from '@/lib/utils';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
@@ -156,15 +156,12 @@ export default function AdminPartiesPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [overagePaid, setOveragePaid] = useState(false);
 
-  // Included guest counts and the overage rate come straight from the package
-  // configuration rather than being restated here. The tiers differ only by how
-  // many children they include, so a stale copy of those numbers would quietly
-  // overcharge or undercharge on every guest list.
-  const getIncludedKids = (packageName: string) => {
-    const pkg = PACKAGE_PRICING[packageName as keyof typeof PACKAGE_PRICING];
-    return pkg && 'includedKids' in pkg ? pkg.includedKids : 0;
-  };
-  const INCLUDED_KIDS = selectedBooking ? getIncludedKids(selectedBooking.package_name) : 0;
+  // The included count is whatever this booking was sold with, which depends on
+  // when it was booked -- not what the package includes today. Restating the
+  // numbers here would quietly overcharge or undercharge on every guest list.
+  const INCLUDED_KIDS = selectedBooking
+    ? includedKidsForBooking(selectedBooking.package_name, selectedBooking.created_at)
+    : 0;
   const EXTRA_KID_PRICE = ADDITIONAL_KIDS_PRICE;
 
   // Only fetch data after PIN is entered
@@ -850,7 +847,7 @@ export default function AdminPartiesPage() {
 
   // PIN verification - authenticates via staff login API
   const handlePinSubmit = async () => {
-    if (pinInput.length !== 4) return;
+    if (pinInput.length < 4 || pinInput.length > 8) return;
 
     setIsAuthenticating(true);
     setPinError('');
@@ -916,7 +913,7 @@ export default function AdminPartiesPage() {
                   onChange={(e) => setPinInput(e.target.value)}
                   onKeyDown={handlePinKeyDown}
                   placeholder="Enter PIN"
-                  maxLength={4}
+                  maxLength={8}
                   className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 disabled:opacity-50"
                   autoFocus
                   disabled={isAuthenticating}

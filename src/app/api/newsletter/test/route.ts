@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendNewsletterEmail, sendHtmlNewsletterEmail, isEmailServiceConfigured } from '@/lib/email/resend';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const legacyTestSchema = z.object({
   testEmail: z.string().email('Invalid test email address'),
@@ -25,6 +26,9 @@ const htmlTestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const isHtmlMode = body.mode === 'html';

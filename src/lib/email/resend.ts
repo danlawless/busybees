@@ -774,8 +774,8 @@ WHAT'S NEXT?
 • Sign waivers for your little ones
 • Book a birthday party!
 
-QUICK TIP: When you visit Busy Bees, just enter your phone
-number at our check-in kiosk to access your account!
+QUICK TIP: When you visit Busy Bees, just give your phone
+number to the front desk associate and you'll be checked in!
 
 Visit your dashboard: ${siteUrl}/customer/dashboard
 
@@ -897,7 +897,7 @@ ${siteUrl}
                 <tr>
                   <td style="padding: 16px 20px;">
                     <p style="margin: 0; font-size: 14px; color: #854d0e;">
-                      <strong>💡 Quick Tip:</strong> When you visit Busy Bees, just enter your phone number at our check-in kiosk to access your account!
+                      <strong>💡 Quick Tip:</strong> When you visit Busy Bees, just give your phone number to the front desk associate and you'll be checked in!
                     </p>
                   </td>
                 </tr>
@@ -983,10 +983,9 @@ Amount: $${data.purchasePrice.toFixed(2)}
 Valid Until: ${expiryInfo}
 
 HOW TO USE YOUR PASS:
-1. Visit Busy Bees Indoor Play Center
-2. Enter your phone number at the check-in kiosk
-3. Select your pass and check in your children
-4. Enjoy your play time!
+1. Visit Busy Bees
+2. Provide your phone number to the front desk associate
+3. You will be checked in and can start playing!
 
 View your purchases: ${siteUrl}/customer/dashboard
 
@@ -1075,10 +1074,9 @@ ${siteUrl}
                       🎟️ How to Use Your Pass
                     </p>
                     <table cellpadding="0" cellspacing="0">
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">1.</span> Visit Busy Bees Indoor Play Center</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">2.</span> Enter your phone number at the kiosk</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">3.</span> Select your pass and check in</td></tr>
-                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">4.</span> Enjoy your play time! 🎉</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">1.</span> Visit Busy Bees</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">2.</span> Provide your phone number to the front desk associate</td></tr>
+                      <tr><td style="padding: 4px 0; font-size: 14px; color: #4b5563;"><span style="color: #f59e0b; font-weight: 600;">3.</span> You will be checked in and can start playing! 🎉</td></tr>
                     </table>
                   </td>
                 </tr>

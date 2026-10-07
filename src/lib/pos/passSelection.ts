@@ -18,6 +18,13 @@ import {
 
 export type PassKind = 'day' | 'punch' | 'monthly';
 
+/**
+ * The kinds still bought per child. Punch cards became account-scoped on
+ * 1 October 2026 — they have no child, so resolving one against a child's age
+ * is meaningless and used to sell a family of three, three cards.
+ */
+export type PerChildPassKind = Exclude<PassKind, 'punch'>;
+
 export const PASS_KINDS: readonly PassKind[] = ['day', 'punch', 'monthly'] as const;
 
 export const PASS_KIND_LABEL: Record<PassKind, string> = {
@@ -89,7 +96,7 @@ export function getPassKind(pass: SelectablePass): PassKind | null {
  */
 export function resolvePassOptions(
   child: ChildLike,
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[]
 ): SelectablePass[] {
   const band: AgeGroup = getAgeGroupFromBirthdate(child.birthdate);
@@ -108,10 +115,27 @@ export function resolvePassOptions(
   );
 }
 
+/**
+ * The punch cards on offer, most sessions first.
+ *
+ * Account-scoped, so no child and no age band comes into it — after
+ * 1 October there is one flat card and any child on the account may spend it.
+ */
+export function punchCardOptions(
+  passes: readonly SelectablePass[]
+): SelectablePass[] {
+  return passes
+    .filter((p) => getPassKind(p) === 'punch' && !isMultiChildPass(p.name))
+    .sort(
+      (a, b) =>
+        (b.sessions_included ?? 0) - (a.sessions_included ?? 0) || a.price - b.price
+    );
+}
+
 /** The single best product of this kind for this child, or null if none fits. */
 export function resolvePassForChild(
   child: ChildLike,
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[]
 ): SelectablePass | null {
   return resolvePassOptions(child, kind, passes)[0] ?? null;
@@ -120,7 +144,8 @@ export function resolvePassForChild(
 export interface PricedLine {
   child: ChildLike;
   pass: SelectablePass;
-  /** 1 for the first child in the visit, 2 for the next, and so on. */
+  /** 1 for the first toddler in the visit, 2 for the next, and so on. 0 for a
+      child on the infant rate, which sits outside the sibling ladder. */
   position: number;
   basePrice: number;
   discountPercent: number;
@@ -149,7 +174,7 @@ export interface PassQuote {
  */
 export function quotePasses(
   children: readonly ChildLike[],
-  kind: PassKind,
+  kind: PerChildPassKind,
   passes: readonly SelectablePass[],
   siblingRules: readonly SiblingRule[],
   qualifiesForMemberPricing: boolean
@@ -202,6 +227,27 @@ export function quotePasses(
     remaining = children.filter((c) => !pairedIds.has(c.id));
   }
 
+  // Monthly is priced by head count, not per child: two or more children share
+  // one family membership, bought once and covering all of them.
+  const familyLines: PricedLine[] = [];
+  const family = kind === 'monthly' ? findFamilyMembership(passes, remaining.length) : null;
+  if (family) {
+    const groupId = `family-${family.id}`;
+    remaining.forEach((child, index) => {
+      familyLines.push({
+        child,
+        pass: family,
+        position: index + 1,
+        basePrice: index === 0 ? family.price : 0,
+        discountPercent: 0,
+        price: index === 0 ? family.price : 0,
+        groupId,
+        includedFree: index > 0,
+      });
+    });
+    remaining = [];
+  }
+
   const resolved: { child: ChildLike; pass: SelectablePass }[] = [];
   const unresolved: ChildLike[] = [];
 
@@ -228,9 +274,14 @@ export function quotePasses(
     }
   }
 
-  const siblingLines: PricedLine[] = resolved.map(({ child, pass }, index) => {
-    const position = index + 1;
-    const discountPercent = discountByPosition.get(position) ?? 0;
+  // The infant rate is already the reduced price for a baby, so it is never
+  // discounted again and never takes a sibling position: two infants are two
+  // infant rates, and the half-price ladder runs over the toddlers alone.
+  let toddlerPosition = 0;
+  const siblingLines: PricedLine[] = resolved.map(({ child, pass }) => {
+    const isInfantRate = getProductAgeGroup(pass.name) === 'infant';
+    const position = isInfantRate ? 0 : ++toddlerPosition;
+    const discountPercent = isInfantRate ? 0 : discountByPosition.get(position) ?? 0;
     const price = round2(pass.price * (1 - discountPercent / 100));
     return {
       child,
@@ -244,14 +295,15 @@ export function quotePasses(
     };
   });
 
-  const lines = [...comboLines, ...siblingLines];
+  const lines = [...comboLines, ...familyLines, ...siblingLines];
   const total = round2(lines.reduce((sum, l) => sum + l.price, 0));
 
   // What the same children would cost bought one at a time, so the saving
   // reflects both the combo and the sibling ladder.
   const listTotal = round2(
     lines.reduce((sum, l) => {
-      if (!l.includedFree) return sum + l.basePrice;
+      // A family membership is measured against one single membership per child.
+      if (!l.includedFree && !familyLines.includes(l)) return sum + l.basePrice;
       const standalone = resolvePassForChild(l.child, kind, passes);
       return sum + (standalone?.price ?? 0);
     }, 0)
@@ -278,12 +330,46 @@ function findComboPass(passes: readonly SelectablePass[]): SelectablePass | null
   );
 }
 
+/**
+ * The family membership for this many children, if the catalogue carries one.
+ *
+ * Family memberships say how many children they cover in the name —
+ * "Family (2 Kids)", "Family (3+ Kids)" — and that is what is matched: an exact
+ * count first, then the largest "N+" the head count reaches. One child, or a
+ * catalogue without a fitting family membership, returns null and the children
+ * are priced one membership each.
+ */
+function findFamilyMembership(
+  passes: readonly SelectablePass[],
+  childCount: number
+): SelectablePass | null {
+  if (childCount < 2) return null;
+
+  const covered = passes
+    .filter((p) => getPassKind(p) === 'monthly' && isMultiChildPass(p.name))
+    .map((pass) => {
+      const match = pass.name.match(/\((\d+)\s*(\+)?\s*kids?\)/i);
+      return match ? { pass, count: Number(match[1]), orMore: Boolean(match[2]) } : null;
+    })
+    .filter((f): f is { pass: SelectablePass; count: number; orMore: boolean } => f !== null);
+
+  const exact = covered.find((f) => !f.orMore && f.count === childCount);
+  if (exact) return exact.pass;
+
+  const orMore = covered
+    .filter((f) => f.orMore && childCount >= f.count)
+    .sort((a, b) => b.count - a.count)[0];
+  return orMore?.pass ?? null;
+}
+
 export interface QuoteGroup {
   pass: SelectablePass;
   lines: PricedLine[];
   total: number;
-  /** True when this group is one child+infant combo, which the purchase API
-      already knows how to split across its two children. */
+  /** True when one child's product covers the others in the group: the legacy
+      child+infant combo, which the purchase API splits across its two
+      children, or a family membership, recorded as one purchase linked to
+      every child. */
   isCombo: boolean;
 }
 

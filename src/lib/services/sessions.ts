@@ -67,8 +67,13 @@ export async function getAllActiveSessions(): Promise<Session[]> {
       .select(`
         *,
         customer:users!sessions_customer_id_fkey (id, name, phone),
-        purchase:purchases (id, name, type)
+        purchase:purchases (id, name, type),
+        child:children (id, name)
       `)
+      // child join above mirrors migration 052's get_active_sessions fix (child
+      // comes from the session, not the purchase). Unused today: the sole
+      // caller of this function returns rows straight through and nothing
+      // reads .child from the result yet.
       .is('end_time', null)
       .order('start_time', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
@@ -85,6 +90,90 @@ export async function getAllActiveSessions(): Promise<Session[]> {
   }
 
   return all;
+}
+
+/**
+ * Which of these children already have a session open, bypassing RLS.
+ *
+ * Feeds the batch check-in idempotency gate, which denies a child who is
+ * already inside. Like `getPurchaseAsAdmin` and `getCustomerChildIdsAsAdmin`,
+ * a gate that treats absence as "allow" must not be fed by a read that can
+ * return absence for an unrelated reason -- an RLS-scoped read with no auth
+ * session would report every child as free and let a retry spend a second
+ * punch on each of them. Do not swap this to `createClient()`.
+ *
+ * Returns an empty list for an empty request rather than issuing a query that
+ * would match nothing useful.
+ */
+export async function getOpenSessionChildIdsAsAdmin(childIds: string[]): Promise<string[]> {
+  if (childIds.length === 0) return [];
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('child_id')
+    .in('child_id', childIds)
+    .is('end_time', null);
+
+  if (error) {
+    console.error('Error reading open sessions for children:', error);
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => row.child_id)
+    .filter((id): id is string => id !== null);
+}
+
+/**
+ * Open several sessions at once.
+ *
+ * One array insert is a single statement, so a family checking in on one punch
+ * card either all get in or none do. Separate inserts could half-succeed and
+ * leave punches spent with children still outside.
+ */
+export async function createSessions(entries: SessionInsert[]): Promise<Session[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.from('sessions').insert(entries).select();
+
+  if (error) {
+    console.error('Error creating sessions:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Undo a check-in that has not ended yet. The AFTER DELETE trigger gives the
+ * punch back and, on a card returned to zero, clears the expiry clock its first
+ * use started.
+ */
+export async function voidSession(id: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data: session, error: readError } = await supabase
+    .from('sessions')
+    .select('id, end_time')
+    .eq('id', id)
+    .single();
+
+  if (readError) {
+    console.error('Error reading session to void:', readError);
+    throw readError;
+  }
+  if (session.end_time !== null) {
+    throw new Error('SESSION_ALREADY_ENDED');
+  }
+
+  const { error } = await supabase.from('sessions').delete().eq('id', id);
+
+  if (error) {
+    console.error('Error voiding session:', error);
+    throw error;
+  }
 }
 
 /**

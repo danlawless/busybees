@@ -21,6 +21,10 @@ import { WaiverModal } from '@/components/ui/WaiverModal';
 import { PartyAvailabilityCalendar } from '@/components/customer/PartyAvailabilityCalendar';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency } from '@/lib/utils/productHelpers';
+import { getPassKind, resolvePassForChild, type SelectablePass, type SiblingRule } from '@/lib/pos/passSelection';
+import { TODDLER_AGE_THRESHOLD } from '@/lib/utils/ageUtils';
+import { hasActiveMembership } from '@/lib/membership';
+import { DayPassPicker } from '@/components/customer/DayPassPicker';
 import { parseDateString } from '@/lib/utils';
 import {
   isComplimentaryPurchase,
@@ -46,6 +50,11 @@ function WebMyAccountContent() {
 
   // Products state - loads independently from user data
   const [availablePasses, setAvailablePasses] = useState<any[]>([]);
+  // Day passes for several children at once, priced with the POS's sibling rules.
+  const [siblingRules, setSiblingRules] = useState<SiblingRule[]>([]);
+  // Prices shown before the rules load would be full price and then refused.
+  const [siblingRulesStatus, setSiblingRulesStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [showDayPassPicker, setShowDayPassPicker] = useState(false);
   const [availableParties, setAvailableParties] = useState<any[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
 
@@ -176,6 +185,7 @@ function WebMyAccountContent() {
           autoRenew: p.auto_renew,
           nextRenewalDate: p.next_renewal_date,
           childId: p.child_id,
+          passScope: p.pass_scope,
           partyDate: p.party_date,
           partyStartTime: p.party_start_time,
           partyEndTime: p.party_end_time,
@@ -219,10 +229,19 @@ function WebMyAccountContent() {
     const loadProducts = async () => {
       try {
         // Fetch passes and parties in parallel
-        const [passesResponse, partiesResponse] = await Promise.all([
+        const [passesResponse, partiesResponse, siblingResponse] = await Promise.all([
           fetch('/api/passes'),
-          fetch('/api/parties')
+          fetch('/api/parties'),
+          fetch('/api/sibling-discounts'),
         ]);
+
+        const rules: unknown = siblingResponse.ok ? await siblingResponse.json() : null;
+        if (Array.isArray(rules)) {
+          setSiblingRules(rules as SiblingRule[]);
+          setSiblingRulesStatus('ready');
+        } else {
+          setSiblingRulesStatus('failed');
+        }
 
         // Process passes
         if (passesResponse.ok) {
@@ -260,6 +279,8 @@ function WebMyAccountContent() {
         }
       } catch (error) {
         console.error('Error loading products from API:', error);
+        // Otherwise the day-pass picker would wait on "Loading prices…" for good.
+        setSiblingRulesStatus((status) => (status === 'loading' ? 'failed' : status));
       } finally {
         setProductsLoaded(true);
       }
@@ -531,6 +552,14 @@ function WebMyAccountContent() {
     return productName.toLowerCase().includes('family');
   };
 
+  /**
+   * A punch card belongs to the account, not to one child, so buying one asks
+   * no "which child is this for?" question. Uses the same classifier the server
+   * derives pass_scope from, so the site and the database cannot disagree.
+   */
+  const isPunchCardProduct = (product: { id: string; name: string; price: number; category?: string | null }): boolean =>
+    getPassKind({ id: product.id, name: product.name, price: product.price, category: product.category }) === 'punch';
+
   const isChildInfantComboPass = (productName: string): boolean => {
     const lowerName = productName.toLowerCase();
     return (lowerName.includes('child') || lowerName.includes('toddler')) && lowerName.includes('infant');
@@ -611,7 +640,22 @@ function WebMyAccountContent() {
     const isPassPurchase = availablePasses.some(p => p.id === productId);
     const effectiveChildId = childId || selectedChildForPurchase;
 
-    if (isPassPurchase) {
+    const isPunchCard = isPassPurchase && isPunchCardProduct(product);
+
+    if (isPunchCard) {
+      // The card covers whoever plays, so there is no child to name here. It
+      // still needs somebody able to use it, and check-in enforces the waiver
+      // per child at the door.
+      if (!children.some(c => c.waiverSigned)) {
+        setSuccessDetails({
+          title: 'Waiver Required',
+          message: 'At least one child on your account needs a signed waiver before you can buy a punch card.',
+          variant: 'warning'
+        });
+        setShowSuccessModal(true);
+        return;
+      }
+    } else if (isPassPurchase) {
       if (!effectiveChildId) {
         setSuccessDetails({
           title: 'Child Selection Required',
@@ -687,9 +731,19 @@ function WebMyAccountContent() {
           productPrice: product.price,
           productDescription: product.description,
           purchaseType: purchaseType,
-          childId: isPassPurchase ? effectiveChildId : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
-          childrenIds: purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined,
-          childrenIds: (isPassPurchase && familyChildIds && familyChildIds.length > 0) ? familyChildIds : undefined,
+          childId: isPunchCard
+            ? undefined
+            : isPassPurchase
+              ? effectiveChildId
+              : (purchaseType === 'party_package' && selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren)[0] : undefined),
+          // One key, not two. This object previously declared childrenIds twice,
+          // so the second silently overwrote the first and a party package lost
+          // its birthday-child selection.
+          childrenIds: isPunchCard
+            ? undefined
+            : purchaseType === 'party_package'
+              ? (selectedBirthdayChildren.size > 0 ? Array.from(selectedBirthdayChildren) : undefined)
+              : (isPassPurchase && familyChildIds && familyChildIds.length > 0 ? familyChildIds : undefined),
           paymentMethodId: paymentMethod.id,
           quantity: 1,
         }),
@@ -747,6 +801,112 @@ function WebMyAccountContent() {
     } finally {
       setIsProcessing(false);
       setProcessingProduct('');
+    }
+  };
+
+  // Day passes for several children: one charge, priced on the server.
+  const dayPassEligibleChildren = children.filter(
+    (c) => c.waiverSigned && !childrenWithDayPassToday.has(c.id)
+  );
+  const selectablePasses: SelectablePass[] = availablePasses.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: Number(p.price),
+    category: p.category,
+    sessions_included: p.sessions,
+  }));
+
+  /**
+   * The day passes the picker sells, shown as one "Day Pass" card: whichever
+   * product an infant would get and whichever a child of 1+ would get. Found
+   * the same way the picker prices them, so the card and the checkout agree,
+   * and read from the live catalogue so no price is restated here.
+   */
+  const sampleChild = (ageYears: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - Math.round(ageYears * 12));
+    return { id: `sample-${ageYears}`, name: '', birthdate: d.toISOString().slice(0, 10) };
+  };
+  const infantDayPass = resolvePassForChild(sampleChild(0.5), 'day', selectablePasses);
+  const childDayPass = resolvePassForChild(sampleChild(3), 'day', selectablePasses);
+  const combinedDayPassIds = new Set(
+    [infantDayPass?.id, childDayPass?.id].filter((id): id is string => Boolean(id))
+  );
+  const siblingPercent = siblingRules.find(
+    (r) => r.is_active && r.child_position === 2 && !r.applies_to_monthly_only
+  )?.discount_percent;
+
+  const openDayPassPicker = () => {
+    if (children.length === 0) {
+      setActiveTab('children');
+      return;
+    }
+    if (savedCards.length === 0) {
+      setActiveTab('payments');
+      return;
+    }
+    if (dayPassEligibleChildren.length === 0) {
+      setSuccessDetails({
+        title: 'No Eligible Children',
+        message: children.some((c) => c.waiverSigned)
+          ? 'All children already have a day pass for today.'
+          : 'A child needs a signed waiver before a day pass can be bought.',
+        variant: 'warning',
+      });
+      setShowSuccessModal(true);
+      return;
+    }
+    setShowDayPassPicker(true);
+  };
+
+  const handleDayPassPay = async (childIds: string[], shownTotal: number) => {
+    const paymentMethod = getDefaultPaymentMethod();
+    if (!paymentMethod) {
+      setShowDayPassPicker(false);
+      setActiveTab('payments');
+      return;
+    }
+    // Any day pass identifies the sale; the server picks each child's own.
+    const dayPass = selectablePasses.find((p) => getPassKind(p) === 'day');
+    try {
+      const response = await fetch('/api/stripe/direct-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: dayPass?.id,
+          productPrice: shownTotal,
+          purchaseType: 'day_pass',
+          paymentMethodId: paymentMethod.id,
+          dayPassChildIds: childIds,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.requiresAction
+            ? 'Your bank requires additional verification. Please try again or use a different card.'
+            : data.error || 'Purchase failed'
+        );
+      }
+
+      setShowDayPassPicker(false);
+      const charged = typeof data.amountCharged === 'number' ? data.amountCharged : 0;
+      setSuccessDetails({
+        title: '🎉 Purchase Complete!',
+        message:
+          data.giftCardUsed > 0
+            ? `Day passes purchased! ${formatCurrency(charged)} charged to card ending in ${paymentMethod.last4}, ${formatCurrency(data.giftCardUsed)} gift card credit applied.`
+            : `Day passes purchased! ${formatCurrency(charged)} charged to card ending in ${paymentMethod.last4}.`,
+      });
+      setShowSuccessModal(true);
+      await fetchData();
+    } catch (error) {
+      setShowDayPassPicker(false);
+      setSuccessDetails({
+        title: 'Purchase Failed',
+        message: error instanceof Error ? error.message : 'Unable to process purchase. Please try again.',
+      });
+      setShowSuccessModal(true);
     }
   };
 
@@ -1402,11 +1562,15 @@ function WebMyAccountContent() {
                               </span>
                             )}
                           </div>
-                          {purchase.childId && (
+                          {purchase.passScope === 'account' ? (
+                            <p className="text-gray-600 font-medium text-sm">
+                              👨‍👩‍👧‍👦 Any child on the account
+                            </p>
+                          ) : purchase.childId ? (
                             <p className="text-blue-600 font-medium text-sm">
                               👶 {getChildName(purchase.childId)}
                             </p>
-                          )}
+                          ) : null}
                           <p className="text-gray-600 text-sm">
                             {getRemainingSessionsDisplay(purchase)}
                           </p>
@@ -1559,7 +1723,56 @@ function WebMyAccountContent() {
                       <p className="text-sm">Please check back later or contact staff.</p>
                     </div>
                   ) : (
-                    availablePasses.map((product) => (
+                    <>
+                    {childDayPass && (
+                      <div className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900 text-lg">🎫 Day Pass</span>
+                          <p className="text-sm text-gray-600">
+                            {formatCurrency(childDayPass.price)} for children {TODDLER_AGE_THRESHOLD} and up
+                            {infantDayPass && infantDayPass.id !== childDayPass.id
+                              ? `, ${formatCurrency(infantDayPass.price)} for babies under ${TODDLER_AGE_THRESHOLD}`
+                              : ''}
+                            .{' '}
+                            {siblingPercent
+                              ? `Brothers and sisters get ${siblingPercent}% off automatically. `
+                              : ''}
+                            Choose who&apos;s coming at checkout.
+                          </p>
+                          <p className="text-lg font-bold text-gray-900 mt-1">
+                            {formatCurrency(childDayPass.price)}
+                            {infantDayPass && infantDayPass.id !== childDayPass.id && (
+                              <span className="text-sm font-medium text-gray-600">
+                                {' '}· infants {formatCurrency(infantDayPass.price)}
+                              </span>
+                            )}
+                          </p>
+                          {savedCards.length > 0 && (
+                            <p className="text-xs text-green-600 mt-1">
+                              💳 One-click purchase with •••• {getDefaultPaymentMethod()?.last4 || ''}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          onClick={openDayPassPicker}
+                          size="lg"
+                          className={`px-6 py-3 text-white transition-colors ${
+                            children.length === 0
+                              ? 'bg-blue-500 hover:bg-blue-600'
+                              : savedCards.length === 0
+                              ? 'bg-yellow-500 hover:bg-yellow-600'
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
+                        >
+                          {children.length === 0
+                            ? '👶 Add Child First'
+                            : savedCards.length === 0
+                            ? '💳 Add Payment First'
+                            : `Buy Now (•••• ${getDefaultPaymentMethod()?.last4 || ''})`}
+                        </Button>
+                      </div>
+                    )}
+                    {availablePasses.filter((product) => !combinedDayPassIds.has(product.id)).map((product) => (
                       <div key={product.id} className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
                         <div className="flex-1">
                           <span className="font-medium text-gray-900 text-lg">
@@ -1607,7 +1820,10 @@ function WebMyAccountContent() {
                               setShowSuccessModal(true);
                               return;
                             }
-                            if (isComboProduct) {
+                            if (isPunchCardProduct(product)) {
+                              // Covers every child on the account, so nothing to assign.
+                              handleConfirmPurchase(product.id);
+                            } else if (isComboProduct) {
                               // Combo pass: always show dual child/infant selector
                               setComboChildId(null);
                               setComboInfantId(null);
@@ -1618,6 +1834,17 @@ function WebMyAccountContent() {
                               setSelectedChildrenForFamily([]);
                               setSelectedProductForPurchase(product.id);
                               setShowChildSelectionModal(true);
+                            } else if (
+                              // Only the passes a child's age would be sold, so an event
+                              // pass filed under "day" keeps its own buying flow.
+                              getPassKind(product) === 'day' &&
+                              eligibleChildren.some(
+                                (c) => resolvePassForChild(c, 'day', selectablePasses)?.id === product.id
+                              )
+                            ) {
+                              // Day passes: pick who's coming; each child's pass comes from
+                              // their age and siblings get the discount, as at the front desk.
+                              setShowDayPassPicker(true);
                             } else if (eligibleChildren.length === 1) {
                               handleConfirmPurchase(product.id, eligibleChildren[0].id);
                             } else {
@@ -1647,7 +1874,8 @@ function WebMyAccountContent() {
                           }
                         </Button>
                       </div>
-                    ))
+                    ))}
+                    </>
                   )}
                 </div>
               </Card>
@@ -2405,6 +2633,20 @@ function WebMyAccountContent() {
         )}
 
         {/* Child Selection Modal */}
+        {showDayPassPicker && (
+          <DayPassPicker
+            eligibleChildren={dayPassEligibleChildren}
+            passes={selectablePasses}
+            siblingRules={siblingRules}
+            isMember={hasActiveMembership(purchases)}
+            rulesStatus={siblingRulesStatus}
+            cardLast4={getDefaultPaymentMethod()?.last4 || ''}
+            giftCardBalance={giftCardBalance}
+            onCancel={() => setShowDayPassPicker(false)}
+            onPay={handleDayPassPay}
+          />
+        )}
+
         {showChildSelectionModal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"

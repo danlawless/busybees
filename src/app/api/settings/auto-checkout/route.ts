@@ -10,6 +10,7 @@ import {
   setClosingTime,
   setTimezone
 } from '@/lib/services/auto-checkout-settings';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET() {
   try {
@@ -25,6 +26,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     // Note: This endpoint is protected by staff mode PIN authentication on the frontend.
     // The POS admin panel requires PIN entry before accessing settings.

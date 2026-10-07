@@ -13,6 +13,7 @@
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import { Database } from "../src/lib/supabase/database.types";
+import { throwawayPassword } from "../src/lib/auth/hiddenPassword";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -121,7 +122,8 @@ async function bootstrapAdmins() {
       }
 
       // Create new auth user
-      const authPassword = `STAFF-${admin.phone || "0000000000"}-AUTH`;
+      // Placeholder only: staff-auth sets the hidden password at first login.
+      const authPassword = throwawayPassword();
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: admin.email,
         password: authPassword,

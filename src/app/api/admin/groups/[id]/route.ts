@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 const UpdateGroupSchema = z.object({
   group_name: z.string().min(1).max(200).optional(),
@@ -22,6 +23,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const { id: groupId } = await params;
 
   try {
@@ -75,6 +79,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const { id: groupId } = await params;
 
   try {

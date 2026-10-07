@@ -32,6 +32,43 @@ export async function getPurchase(id: string): Promise<Purchase | null> {
 }
 
 /**
+ * Get purchase by ID, bypassing RLS.
+ *
+ * Feeds server-side validation gates (batch check-in ownership and capacity)
+ * that deny on an absent row. Those routes do require a staff session -- they
+ * are not anonymous -- but that is not why this reads as admin. Under RLS a
+ * row that exists and is merely invisible comes back as PGRST116, the same
+ * code as a row that genuinely is not there: `getPurchase` above cannot tell
+ * "no such pass" from "cannot see that pass", and neither can a gate reading
+ * through it. A check that treats absence as "deny" must not be fed by a read
+ * that can report absence for an unrelated reason, so this reads with the
+ * same admin client the insert already uses. Do not swap this back to
+ * `createClient()`.
+ */
+export async function getPurchaseAsAdmin(id: string): Promise<Purchase | null> {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+        .from("purchases")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        // A genuinely missing row surfaces as PGRST116 ("no rows returned")
+        // -- that is a real "not found", not an RLS artifact, so return null
+        // rather than throwing.
+        if (error.code === "PGRST116") {
+            return null;
+        }
+        console.error("Error fetching purchase (admin):", error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
  * Get all purchases for a customer
  */
 export async function getCustomerPurchases(customerId: string): Promise<Purchase[]> {

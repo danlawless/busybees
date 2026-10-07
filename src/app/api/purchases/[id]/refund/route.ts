@@ -2,8 +2,7 @@
  * API Route: Purchase Refund
  * POST - Process a refund for a purchase via Stripe
  *
- * Note: POS staff access is controlled via PIN at the application level.
- * This endpoint is only accessible from the admin panel after PIN verification.
+ * Staff access is checked here (requireStaff / requireAdmin); the POS PIN only locks the screen.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { getStripeClient } from '@/lib/stripe/client';
 import { logger } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 type AdminSupabase = ReturnType<typeof createAdminClient>;
 
@@ -66,6 +66,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   const { id: purchaseId } = await params;
 
   const logContext = { purchaseId };

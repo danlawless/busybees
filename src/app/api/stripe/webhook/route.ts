@@ -16,7 +16,8 @@ import {
   sendRefundConfirmationEmail,
 } from '@/lib/email/resend';
 import Stripe from 'stripe';
-import { resolvePurchaseDefaults } from '@/lib/utils/purchaseDefaults';
+import * as Sentry from '@sentry/nextjs';
+import { resolvePurchaseDefaults, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 
 // This is important for Next.js to treat this as raw body
@@ -305,10 +306,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     supabase,
   );
 
+  // A punch card is always account-scoped — derived from the product itself
+  // (shared with /api/purchases/pos and /api/stripe/direct-payment), never
+  // from Stripe metadata. Day and monthly passes resolve to 'child', same as
+  // the column default.
+  const passScope = await resolvePassScope(product_id, supabase);
+
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note in
+    // /api/purchases/pos. Stripe metadata carries whatever child was selected
+    // when checkout started; on a punch card that child is meaningless and a
+    // row that is account-scoped *and* child-tagged is the contradiction the
+    // launch runbook asserts must not exist.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: purchase_type,
     product_id,
     name: session.line_items?.data[0]?.description || 'Purchase',
@@ -324,6 +336,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     party_start_time: party_time || null,
     party_guests: party_guests ? parseInt(party_guests) : null,
     party_notes: party_notes || null,
+    pass_scope: passScope,
   });
 
   if (error) {
@@ -396,11 +409,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   // Idempotency: skip if a purchase record already exists for this PaymentIntent.
   // The direct-payment route creates its own record, so this prevents duplicates
   // while still acting as a safety net if that route failed after charging.
-  const { data: existingPurchase } = await supabase
+  // limit(1), not maybeSingle(): one payment can carry several rows (siblings
+  // bought together), and maybeSingle() answers null for more than one row --
+  // which read as "nothing recorded" and added a stray pass. A failed lookup
+  // throws so Stripe retries, rather than falling through to an insert.
+  const { data: existingRows, error: existingError } = await supabase
     .from('purchases')
     .select('id')
     .eq('stripe_payment_intent_id', paymentIntent.id)
-    .maybeSingle();
+    .limit(1);
+  if (existingError) throw existingError;
+  const existingPurchase = existingRows?.[0] ?? null;
 
   if (existingPurchase) {
     console.log('Purchase record already exists for PaymentIntent:', paymentIntent.id);
@@ -450,6 +469,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     return;
   }
 
+  // A sale for several children is recorded by the route that took it, one row
+  // per child at each child's own price. This fallback can only write one row,
+  // so it must not guess -- and the route may simply not have finished yet.
+  if (metadata.child_ids) {
+    console.error(
+      'Multi-child sale has no purchase rows yet; not writing a single fallback row. Check it if this persists:',
+      paymentIntent.id
+    );
+    // Usually the route is a moment from writing them; if it failed after the
+    // charge, this is how anyone finds out.
+    Sentry.captureMessage('Multi-child sale reached the webhook with no purchase rows', {
+      level: 'warning',
+      tags: { component: 'stripe-webhook' },
+      extra: { paymentIntentId: paymentIntent.id, childIds: metadata.child_ids },
+    });
+    return;
+  }
+
   const {
     customer_id,
     product_id,
@@ -479,10 +516,17 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     resolvedTotalSessions = 1;
   }
 
+  // A punch card is always account-scoped — derived from the product itself
+  // (shared with /api/purchases/pos and /api/stripe/direct-payment), never
+  // from Stripe metadata. Day and monthly passes resolve to 'child', same as
+  // the column default.
+  const passScope = await resolvePassScope(product_id, supabase);
+
   // Create purchase record
   const { error } = await supabase.from('purchases').insert({
     customer_id,
-    child_id: child_id || null,
+    // An account-wide card names no child — see the note above.
+    child_id: passScope === 'account' ? null : (child_id || null),
     type: product_type as any,
     product_id,
     name: product_name,
@@ -494,6 +538,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     status: 'active',
     stripe_payment_intent_id: paymentIntent.id,
     gift_card_amount_used: parseFloat(metadata.gift_card_amount || '0'),
+    pass_scope: passScope,
   });
 
   if (error) {

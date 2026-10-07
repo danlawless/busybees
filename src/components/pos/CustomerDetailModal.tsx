@@ -80,6 +80,8 @@ interface CustomerDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCustomerUpdated: (customer: Customer) => void;
+  /** Opens the Check In screen for this customer on its Products tab. */
+  onSellProducts?: (customer: Customer) => void;
 }
 
 type TabType = 'profile' | 'children' | 'passes' | 'purchases' | 'payments';
@@ -89,6 +91,7 @@ export function CustomerDetailModal({
   isOpen,
   onClose,
   onCustomerUpdated,
+  onSellProducts,
 }: CustomerDetailModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [loading, setLoading] = useState(false);
@@ -482,14 +485,25 @@ export function CustomerDetailModal({
               <h2 className="text-2xl font-bold text-gray-900">{customer.name}</h2>
               <p className="text-gray-600">{formatPhoneNumber(customer.phone)}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {onSellProducts && (
+                <button
+                  type="button"
+                  onClick={() => onSellProducts(customer)}
+                  className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold transition-colors"
+                >
+                  🛒 Sell products
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}

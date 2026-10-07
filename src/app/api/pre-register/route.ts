@@ -13,6 +13,7 @@ import { subscribeToNewsletter } from '@/lib/services/newsletter';
 import { sendWelcomeEmail } from '@/lib/email/resend';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { throwawayPassword } from '@/lib/auth/hiddenPassword';
 
 // Child schema for validation
 const childSchema = z.object({
@@ -87,7 +88,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Supabase Auth user with phone-based password (same as POS signup)
-    const authPassword = `PHONE-${cleanPhone}`;
+    // Nobody signs in with this: every login route sets the account's hidden
+    // password (lib/auth/hiddenPassword) before signing in.
+    const authPassword = throwawayPassword();
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim().toLowerCase(),

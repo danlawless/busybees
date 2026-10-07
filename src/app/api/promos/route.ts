@@ -13,6 +13,7 @@ import {
   deletePromo,
 } from '@/lib/services/promos';
 import { Database } from '@/lib/supabase/database.types';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 type PromoInsert = Database['public']['Tables']['promos']['Insert'];
 type PromoUpdate = Database['public']['Tables']['promos']['Update'];
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
  * Create a new promo
  */
 export async function POST(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 
@@ -104,6 +108,9 @@ export async function POST(request: NextRequest) {
  * Update an existing promo
  */
 export async function PUT(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 
@@ -164,6 +171,9 @@ export async function PUT(request: NextRequest) {
  * Delete a promo
  */
 export async function DELETE(request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');

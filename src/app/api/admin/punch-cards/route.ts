@@ -8,15 +8,19 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 export async function GET() {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
 
     // Fetch active punch card purchases (weekly_pass type or name contains 'punch')
     const { data: purchases, error } = await supabase
       .from('purchases')
-      .select('id, customer_id, child_id, name, price, purchase_date, expiry_date, first_use_date, actual_expiry_date, status, used_sessions, total_sessions')
+      .select('id, customer_id, child_id, pass_scope, name, price, purchase_date, expiry_date, first_use_date, actual_expiry_date, status, used_sessions, total_sessions')
       .eq('status', 'active')
       .order('purchase_date', { ascending: false });
 
@@ -73,6 +77,7 @@ export async function GET() {
         customerName: customer?.name || 'Unknown',
         customerPhone: customer?.phone || '',
         customerEmail: customer?.email || null,
+        passScope: p.pass_scope,
         childName: p.child_id ? (childMap.get(p.child_id) || 'Unknown') : null,
         passName: p.name,
         price: p.price,

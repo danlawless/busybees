@@ -6,9 +6,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
+import { hiddenPasswordFor } from '@/lib/auth/hiddenPassword';
+import { requireKioskDevice } from '@/lib/auth/posDevice';
 
 export async function POST(request: NextRequest) {
   try {
+    // Phone number alone signs someone in, so only on the store's approved
+    // device (POS PIN entered) or with staff signed in -- never from anywhere.
+    const deviceDenied = await requireKioskDevice(request);
+    if (deviceDenied) return deviceDenied;
+
     const body = await request.json();
     const { phone } = body;
 
@@ -37,6 +44,9 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('*')
       .eq('phone', cleanPhone)
+      // Customers only: a staff or admin account (or the shared /admin one)
+      // must never be signed into, or claimed, by phone number.
+      .eq('role', 'customer')
       .single();
 
     if (userError || !user) {
@@ -53,7 +63,10 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id);
 
     // Use phone-based password for Supabase auth
-    const authPassword = `PHONE-${cleanPhone}`;
+    if (!user.email) {
+      return NextResponse.json({ error: 'This account has no email on file. Please ask a staff member to add one.' }, { status: 409 });
+    }
+    const authPassword = hiddenPasswordFor(user.id);
 
     // Update user's password to phone-based format
     // Also confirm email since they're verified in person at POS

@@ -12,6 +12,13 @@ const ALERT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
  * Sends a low-stock email alert (fire-and-forget from purchase flow)
  */
 export async function POST(request: NextRequest) {
+  // Called server-to-server by decrementInventoryAfterPurchase, which has no
+  // session to send, so it proves itself with the cron secret instead.
+  const secret = process.env.CRON_SECRET;
+  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { productId, productName, currentStock, threshold } = await request.json();
 

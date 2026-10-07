@@ -44,12 +44,26 @@ interface Purchase {
   autoRenew?: boolean;
   nextRenewalDate?: string;
   childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
+  // 'account' means any child on the account can use it — no one child to
+  // name. Typed to match CheckIn.tsx's own Purchase, since this object flows
+  // through page.tsx's Customer to CheckIn.tsx's `customers` prop.
+  passScope?: "child" | "account";
 }
 
 interface Session {
   id: string;
   customerId: string;
   purchaseId: string;
+  // Who actually played on this session. Set for account-scoped punch card
+  // check-ins (one session per child); absent for the older single-child
+  // pass path, where the purchase's own childId already says who it is.
+  // The database and /api/pos/customers actually produce `string | null`
+  // here (never omitted) — kept `?: string` because this object is passed
+  // to page.tsx's onLogin/onNewCustomer as page.tsx's own Customer type,
+  // which in turn must stay assignable to CheckIn.tsx's Session (also
+  // `childId?: string`, un-aligned — see task report). Realigning this file
+  // alone breaks that chain; all three need to move together.
+  childId?: string;
   startTime: string;
   endTime?: string;
   duration?: number;
@@ -71,6 +85,29 @@ interface PhoneLoginProps {
   onNewCustomer: (customer: Customer) => void;
   onAdminAccess?: (user?: { id: string; name: string; role: 'staff' | 'admin' }) => void;
 }
+
+/**
+ * The server only allows phone-number sign-in on a device approved with the
+ * POS PIN (or with staff signed in). A device unlocked before that check
+ * existed -- or whose approval lapsed or whose PIN changed -- gets refused with
+ * code 'device_locked'. Lock the screen once so the PIN is entered again, which
+ * approves the device; if that already happened this session, just say so.
+ */
+const handleDeviceLocked = (
+  response: Response,
+  data: { code?: string } | null,
+  setError: (message: string) => void
+): boolean => {
+  if (response.status !== 403 || data?.code !== 'device_locked') return false;
+  if (sessionStorage.getItem('pos_relocked') !== '1') {
+    sessionStorage.setItem('pos_relocked', '1');
+    sessionStorage.removeItem('pos_unlocked');
+    window.location.reload();
+  } else {
+    setError('This device needs the POS PIN before customers can sign in here. Please ask a staff member.');
+  }
+  return true;
+};
 
 // Helper function to calculate age from birthdate
 const calculateAge = (birthdate: string): number => {
@@ -135,6 +172,16 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
         body: JSON.stringify({ phone: cleanPhone }),
       });
       const checkData = await checkResponse.json();
+      if (handleDeviceLocked(checkResponse, checkData, setError)) {
+        setIsLoading(false);
+        return;
+      }
+      if (!checkResponse.ok) {
+        // A failed lookup must not read as "no such customer" and start a signup.
+        setError(checkData?.error || 'Unable to look up that number. Please try again.');
+        setIsLoading(false);
+        return;
+      }
 
       if (!checkData.exists) {
         // New customer - go to signup
@@ -158,6 +205,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       });
 
       const data = await response.json();
+      if (handleDeviceLocked(response, data, setError)) {
+        setIsLoading(false);
+        return;
+      }
 
       if (response.ok) {
         // Fetch customer's children from database
@@ -202,6 +253,7 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               firstUseDate: purchase.first_use_date,
               actualExpiryDate: purchase.actual_expiry_date,
               childId: purchase.child_id,
+              passScope: purchase.pass_scope,
               autoRenew: purchase.auto_renew,
               nextRenewalDate: purchase.next_renewal_date,
               stripePaymentIntentId: purchase.stripe_payment_intent_id,
@@ -228,6 +280,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
               id: session.id,
               customerId: session.customer_id,
               purchaseId: session.purchase_id,
+              // Who actually played on this session — needed so the check-in
+              // picker can tell which children on an account punch card are
+              // already inside (the purchase itself names no single child).
+              childId: session.child_id,
               startTime: session.start_time,
               endTime: session.end_time,
               autoCheckoutTime: session.auto_checkout_time,
@@ -355,6 +411,10 @@ export function PhoneLogin({ customers, onLogin, onNewCustomer, onAdminAccess }:
       });
 
       const data = await response.json();
+      if (handleDeviceLocked(response, data, setError)) {
+        setIsLoading(false);
+        return;
+      }
 
       if (response.ok) {
         // Show success message with email verification notice

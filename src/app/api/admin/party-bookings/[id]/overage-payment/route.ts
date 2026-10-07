@@ -10,14 +10,13 @@ import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { includedKidsForBooking, ADDITIONAL_KIDS_PRICE } from '@/lib/validations/party-booking';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
-const PACKAGE_INCLUDED_KIDS: Record<string, number> = {
-  queen_bee: 20,
-  worker_bee: 15,
-  basic_bee: 15,
-  group_rate: 0,
-};
-const EXTRA_KID_PRICE = 15;
+// This route decides what a customer is charged for extra children, so the
+// included count must be the one the booking was sold with -- see
+// includedKidsForBooking for why that depends on when it was booked.
+const EXTRA_KID_PRICE = ADDITIONAL_KIDS_PRICE;
 
 const OveragePaymentSchema = z.object({
   payment_method: z.enum(['saved_card', 'cash']),
@@ -28,6 +27,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const supabase = createAdminClient();
@@ -72,6 +74,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id: bookingId } = await params;
     const body = await request.json();
@@ -90,7 +95,7 @@ export async function POST(
     // Get booking details
     const { data: booking, error: bookingError } = await supabase
       .from('party_bookings')
-      .select('id, customer_id, customer_name, customer_email, customer_phone, package_name')
+      .select('id, customer_id, customer_name, customer_email, customer_phone, package_name, created_at')
       .eq('id', bookingId)
       .single();
 
@@ -109,7 +114,7 @@ export async function POST(
     }
 
     const guestCount = count || 0;
-    const includedKids = PACKAGE_INCLUDED_KIDS[booking.package_name] ?? 15;
+    const includedKids = includedKidsForBooking(booking.package_name, booking.created_at);
     const extraKids = Math.max(0, guestCount - includedKids);
 
     if (extraKids === 0) {

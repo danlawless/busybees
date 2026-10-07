@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { Database } from '@/lib/supabase/database.types';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 // Database row types
 type DbUser = Database['public']['Tables']['users']['Row'];
@@ -130,6 +131,9 @@ async function chunkedIn<T>(
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: NextRequest) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     logger.info({}, '📊 Admin customers API called');
     const supabase = createAdminClient();

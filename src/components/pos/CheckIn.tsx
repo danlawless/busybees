@@ -9,6 +9,9 @@ import { AddPaymentMethodModal } from "./AddPaymentMethodModal";
 import { WaiverModal } from "@/components/ui/WaiverModal";
 import { AfterDarkWaiver, type WaiverFormData as AfterDarkWaiverFormData } from "@/components/customer/AfterDarkWaiver";
 import { GroupChildrenManager } from "./GroupChildrenManager";
+import { PunchCardCheckIn } from "@/components/pos/PunchCardCheckIn";
+import { groupDayPassLines } from "@/lib/pos/punchAllocation";
+import type { AllocationLine, PunchAllocation } from "@/lib/pos/punchAllocation";
 import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
@@ -23,8 +26,14 @@ import {
     PASS_KIND_LABEL,
     groupQuoteByProduct,
     quotePasses,
+    punchCardOptions,
     type PassKind,
+    type PassQuote,
+    type SelectablePass,
 } from "@/lib/pos/passSelection";
+
+/** appliedCoupons key for the pass screen's coupon (one per sale). */
+const PASS_COUPON_KEY = "pass-screen";
 
 interface SiblingDiscount {
     id: string;
@@ -80,6 +89,7 @@ interface Purchase {
     nextRenewalDate?: string;
     childId?: string; // ID of the child this pass is for (required for passes, optional for party packages)
     childIds?: string[]; // For family passes: all children covered by this purchase
+    passScope?: 'child' | 'account';
     // Party scheduling fields
     partyDate?: string;
     partyStartTime?: string;
@@ -92,6 +102,10 @@ interface Session {
     id: string;
     customerId: string;
     purchaseId: string;
+    // Who actually played on this session. Set for account-scoped punch card
+    // check-ins (one session per child); absent for the older single-child
+    // pass path, where the purchase's own childId already says who it is.
+    childId?: string;
     startTime: string;
     endTime?: string;
     duration?: number;
@@ -122,6 +136,7 @@ interface PurchaseRow {
     total_sessions: number;
     status: Purchase["status"];
     child_id?: string;
+    pass_scope?: 'child' | 'account';
 }
 
 function toPurchase(row: PurchaseRow): Purchase {
@@ -138,6 +153,7 @@ function toPurchase(row: PurchaseRow): Purchase {
         totalSessions: row.total_sessions,
         status: row.status,
         childId: row.child_id,
+        passScope: row.pass_scope,
     };
 }
 
@@ -146,6 +162,9 @@ interface CheckInProps {
     currentCustomer: Customer | null;
     isStaffMode: boolean;
     onUpdateCustomer: (customer: Customer) => void;
+    /** Open on this customer's Products tab, as if their phone had been looked up. */
+    preselectedCustomerId?: string | null;
+    onPreselectHandled?: () => void;
 }
 
 export function CheckIn({
@@ -153,6 +172,8 @@ export function CheckIn({
     currentCustomer,
     isStaffMode,
     onUpdateCustomer,
+    preselectedCustomerId,
+    onPreselectHandled,
 }: CheckInProps) {
     const [searchPhone, setSearchPhone] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -179,8 +200,26 @@ export function CheckIn({
         applied: number;
         forfeited: number;
     }>>({});
+    // The pass screen's coupon is validated against one charge's total; it only
+    // counts while that total is unchanged (see couponTargetGroup).
+    const [passCouponTotal, setPassCouponTotal] = useState<number | null>(null);
     const [confirmTimeout, setConfirmTimeout] = useState<NodeJS.Timeout | null>(null);
     const [confirmingCheckIn, setConfirmingCheckIn] = useState<string | null>(null);
+    // The account punch card currently open in the "who's playing" picker,
+    // by purchase id.
+    const [punchCardCheckIn, setPunchCardCheckIn] = useState<string | null>(null);
+    // Set once any day-pass purchase has actually succeeded for a punch-card
+    // check-in but the check-in itself did not finish (the batch session
+    // call failed, or a later day-pass group failed after an earlier one
+    // went through). From this point on, that purchase id must never run the
+    // purchase loop again -- only retry opening sessions against what was
+    // already bought -- or the same passes get bought twice. Cleared only on
+    // a successful check-in; a Cancel intentionally leaves it in place.
+    const [pendingPunchCardRetry, setPendingPunchCardRetry] = useState<{
+        purchaseId: string;
+        entries: { purchase_id: string; child_id: string }[];
+        boughtSummary: string;
+    } | null>(null);
     const [checkInTimeout, setCheckInTimeout] = useState<NodeJS.Timeout | null>(null);
     const [showPartyModal, setShowPartyModal] = useState(false);
     const [selectedParty, setSelectedParty] = useState<Purchase | null>(null);
@@ -195,7 +234,7 @@ export function CheckIn({
         message: "",
     });
     const [activeTab, setActiveTab] = useState<
-        "children" | "passes" | "parties" | "snacks" | "afterdark"
+        "children" | "parties" | "products" | "afterdark"
     >("children");
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -238,6 +277,8 @@ export function CheckIn({
     // Child-first pass buying: pick who's playing, then the kind of pass.
     const [passChildIds, setPassChildIds] = useState<string[]>([]);
     const [passKind, setPassKind] = useState<PassKind>("day");
+    // Punch card buying is account-scoped: one card is picked, not a child.
+    const [selectedPunchCard, setSelectedPunchCard] = useState<SelectablePass | null>(null);
     const [buyingPasses, setBuyingPasses] = useState(false);
     const [passError, setPassError] = useState<string | null>(null);
     const [showAddChild, setShowAddChild] = useState(false);
@@ -252,7 +293,6 @@ export function CheckIn({
         useState<string>("");
     const [isAddingChild, setIsAddingChild] = useState(false);
     const [isSigningWaiver, setIsSigningWaiver] = useState(false);
-    const [isDeletingChild, setIsDeletingChild] = useState(false);
 
     // Load passes, parties, and products from localStorage
     const [availablePasses, setAvailablePasses] = useState<any[]>([]);
@@ -264,7 +304,6 @@ export function CheckIn({
     const [siblingDiscounts, setSiblingDiscounts] = useState<SiblingDiscount[]>([]);
 
     // Filter states
-    const [passFilter, setPassFilter] = useState<"all" | "infant" | "toddler">("all");
 
     // Complimentary pass state (staff only)
     const [showComplimentaryModal, setShowComplimentaryModal] = useState(false);
@@ -419,6 +458,16 @@ export function CheckIn({
                         price: pass.price,
                         description: pass.description,
                         sessions: pass.sessions_included || pass.sessionsIncluded || 1,
+                        // Kept under its own name as well: punchCardOptions and
+                        // resolvePassOptions sort on `sessions_included` first,
+                        // so renaming it to `sessions` on the way in left that
+                        // primary sort key undefined for every product and the
+                        // lists fell back to price-ascending — putting the $90
+                        // 5-punch card above the $170 10-punch card, and
+                        // handing resolvePassForChild ([0]) the wrong product
+                        // to price a shortfall against.
+                        sessions_included:
+                            pass.sessions_included || pass.sessionsIncluded || 1,
                         category: pass.category, // day, weekly, monthly
                         validity:
                             pass.category === "day"
@@ -669,65 +718,6 @@ export function CheckIn({
         }
     };
 
-    const handleDeleteChild = async (childId: string) => {
-        const customer = selectedCustomer || currentCustomer;
-        if (!customer) return;
-
-        // Check if child has any active passes
-        const hasActivePasses = customer.purchases.some(
-            (p) => p.childId === childId && p.status === "active"
-        );
-
-        if (hasActivePasses) {
-            setSuccessDetails({
-                title: "Cannot Delete Child",
-                message:
-                    "This child has active passes. Please wait for passes to expire or contact management.",
-            });
-            setShowSuccessModal(true);
-            return;
-        }
-
-        setIsDeletingChild(true);
-
-        try {
-            const response = await fetch(`/api/children/${childId}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to delete child");
-            }
-
-            // Remove the child from the customer's children array
-            const updatedCustomer = {
-                ...customer,
-                children: customer.children.filter((c) => c.id !== childId),
-            };
-
-            setSuccessDetails({
-                title: "Child Deleted",
-                message: "Child has been removed from the account.",
-            });
-            setShowSuccessModal(true);
-
-            // Trigger refresh via parent component with updated customer
-            onUpdateCustomer(updatedCustomer);
-        } catch (error) {
-            console.error("Error deleting child:", error);
-            setSuccessDetails({
-                title: "Error Deleting Child",
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to delete child. Please try again.",
-            });
-            setShowSuccessModal(true);
-        } finally {
-            setIsDeletingChild(false);
-        }
-    };
 
     const handleChildSelectionForPurchase = (childId: string) => {
         // Validate age against the product the user is buying BEFORE proceeding,
@@ -855,16 +845,37 @@ export function CheckIn({
         passChildIds.includes(c.id)
     );
 
-    const passQuote = quotePasses(
-        passChildren,
-        passKind,
-        availablePasses,
-        siblingDiscounts,
-        qualifiesForMemberPricing(
-            passKind === "monthly" ? "monthly_pass" : "day_pass",
-            true
-        )
-    );
+    // Punch cards are account-scoped from 1 October 2026 — there is no child to
+    // price them against, so the per-child quote does not apply to them.
+    const passQuote: PassQuote =
+        passKind === "punch"
+            ? { lines: [], unresolved: [], total: 0, savings: 0, productCount: 0 }
+            : quotePasses(
+                  passChildren,
+                  passKind,
+                  availablePasses,
+                  siblingDiscounts,
+                  qualifiesForMemberPricing(
+                      passKind === "monthly" ? "monthly_pass" : "day_pass",
+                      true
+                  )
+              );
+
+    // Coupons are single-use and for day passes only. A day-pass sale can be
+    // more than one charge -- the infant rate is its own product -- so the
+    // coupon goes on the largest charge and is validated against that amount.
+    // If the selection changes after applying, the total it was checked
+    // against no longer matches and the coupon drops off until re-applied.
+    const couponTargetGroup =
+        passKind === "day" && passQuote.lines.length > 0
+            ? groupQuoteByProduct(passQuote).reduce((a, b) => (b.total > a.total ? b : a))
+            : null;
+    const passCoupon =
+        couponTargetGroup && passCouponTotal === couponTargetGroup.total
+            ? appliedCoupons[PASS_COUPON_KEY]
+            : undefined;
+    const passCouponDiscount = passCoupon?.applied ?? 0;
+    const passTotalAfterCoupon = Math.max(0, passQuote.total - passCouponDiscount);
 
     const togglePassChild = (childId: string) => {
         setPassError(null);
@@ -879,11 +890,152 @@ export function CheckIn({
      * Buy the quoted passes.
      *
      * Day passes for siblings share one payment and record a row per child, so
-     * each child's pass is tracked at its own rate. Punch cards and monthly
-     * passes are bought per child at full price, so each is its own purchase.
+     * each child's pass is tracked at its own rate. Monthly passes are bought
+     * per child at full price, so each is its own purchase. Punch cards have no
+     * child to price against at all — they belong to the account — and are
+     * handled by their own early branch below.
      */
+    /**
+     * Pay for a pass with the customer's card on file, in either POS mode.
+     *
+     * The front desk looks a customer up by phone, which signs this browser in
+     * as that customer, so the staff-only /api/purchases/pos refuses the sale.
+     * In that mode the sale goes through the kiosk route, which charges the
+     * customer's own saved card. A staff session keeps the staff route and
+     * names the saved card explicitly -- with no payment method at all it
+     * defaulted to 'test', which live mode rejects.
+     *
+     * Returns every purchase row created, so a sale covering several children
+     * can find each child's own new pass.
+     */
+    const buyWithCardOnFile = async (
+        customer: Customer,
+        sale: {
+            productId: string;
+            productName: string;
+            productPrice: number;
+            purchaseType: "day_pass" | "weekly_pass" | "monthly_pass";
+            childId: string | null;
+            childrenIds?: string[];
+            splitPerChild?: boolean;
+            childPrices?: number[];
+            couponCode?: string;
+        }
+    ): Promise<{ id: string; child_id: string | null }[]> => {
+        const card =
+            customer.savedCards.find((c) => c.isDefault) || customer.savedCards[0];
+        if (!card) {
+            throw new Error(
+                "No card on file for this customer. Add a payment method on the Payment tab first."
+            );
+        }
+
+        const response = isStaffMode
+            ? await fetch("/api/purchases/pos", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                      customer_id: customer.id,
+                      product_id: sale.productId,
+                      product_name: sale.productName,
+                      product_price: sale.productPrice,
+                      product_description: "",
+                      purchase_type: sale.purchaseType,
+                      child_id: sale.childId,
+                      children_ids: sale.childrenIds,
+                      split_per_child: sale.splitPerChild ?? false,
+                      child_prices: sale.childPrices,
+                      payment_method: "saved_card",
+                      payment_method_id: card.id,
+                      coupon_code: sale.couponCode,
+                      quantity: 1,
+                      metadata: {},
+                  }),
+              })
+            : await fetch("/api/stripe/kiosk-payment", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                      customerId: customer.id,
+                      productId: sale.productId,
+                      productName: sale.productName,
+                      productPrice: sale.productPrice,
+                      productDescription: "",
+                      purchaseType: sale.purchaseType,
+                      childId: sale.childId ?? undefined,
+                      childrenIds: sale.childrenIds,
+                      splitPerChild: sale.splitPerChild ?? false,
+                      childPrices: sale.childPrices,
+                      paymentMethodId: card.id,
+                      couponCode: sale.couponCode,
+                      quantity: 1,
+                  }),
+              });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Purchase failed");
+        }
+        return (data.purchases ?? []) as { id: string; child_id: string | null }[];
+    };
+
     const handleBuyPasses = async () => {
         const customer = displayCustomer;
+
+        // A punch card belongs to the account, so there is no child to pick and
+        // no per-child quote to build — one card, one row.
+        if (passKind === "punch") {
+            if (!customer) return;
+            if (!selectedPunchCard) {
+                setPassError("Choose a punch card.");
+                return;
+            }
+
+            setBuyingPasses(true);
+            setPassError(null);
+
+            try {
+                // The card's account scope is derived server-side from the
+                // product, so no child is named here.
+                await buyWithCardOnFile(customer, {
+                    productId: selectedPunchCard.id,
+                    productName: selectedPunchCard.name,
+                    productPrice: selectedPunchCard.price,
+                    purchaseType: "weekly_pass",
+                    childId: null,
+                });
+
+                setSuccessDetails({
+                    title: "Punch Card Purchased ✅",
+                    message: `${selectedPunchCard.name} — any child on the account can use it.`,
+                    details: `💰 ${formatCurrency(selectedPunchCard.price)}`,
+                });
+                setShowSuccessModal(true);
+                setSelectedPunchCard(null);
+
+                // Refresh the customer so the new card shows immediately
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                    });
+                }
+            } catch (error) {
+                setPassError(
+                    error instanceof Error ? error.message : "Purchase failed. Please try again."
+                );
+            } finally {
+                setBuyingPasses(false);
+            }
+            return;
+        }
+
         if (!customer || passQuote.lines.length === 0) return;
 
         const missingWaiver = passQuote.lines.find((l) => !l.child.waiverSigned);
@@ -898,17 +1050,22 @@ export function CheckIn({
         setPassError(null);
 
         try {
-            // Day passes group onto one payment per product; punch cards and
-            // monthly passes stay one purchase per child.
+            // Day passes group onto one payment per product. A family monthly
+            // membership is one purchase covering every child on it; any other
+            // monthly pass stays one purchase per child.
             const groups =
                 passKind === "day"
                     ? groupQuoteByProduct(passQuote)
-                    : passQuote.lines.map((line) => ({
-                          pass: line.pass,
-                          lines: [line],
-                          total: line.price,
-                          isCombo: false,
-                      }));
+                    : groupQuoteByProduct(passQuote).flatMap((group) =>
+                          group.isCombo
+                              ? [group]
+                              : group.lines.map((line) => ({
+                                    pass: line.pass,
+                                    lines: [line],
+                                    total: line.price,
+                                    isCombo: false,
+                                }))
+                      );
 
             for (const group of groups) {
                 const childIds = group.lines.map((l) => l.child.id);
@@ -917,50 +1074,42 @@ export function CheckIn({
                 // per-child split with the exact prices we quoted.
                 const useSplit = passKind === "day" && !group.isCombo;
 
-                const response = await fetch("/api/purchases/pos", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        customer_id: customer.id,
-                        product_id: group.pass.id,
-                        product_name: group.pass.name,
-                        product_price: group.total,
-                        product_description: "",
-                        purchase_type:
-                            passKind === "monthly"
-                                ? "monthly_pass"
-                                : passKind === "punch"
-                                  ? "weekly_pass"
-                                  : "day_pass",
-                        child_id: childIds[0],
-                        children_ids: childIds,
-                        split_per_child: useSplit,
-                        child_prices: useSplit
-                            ? group.lines.map((l) => l.price)
+                await buyWithCardOnFile(customer, {
+                    productId: group.pass.id,
+                    productName: group.pass.name,
+                    productPrice: group.total,
+                    // Punch cards return above before this point — only
+                    // day and monthly passes are ever bought per child here.
+                    purchaseType: passKind === "monthly" ? "monthly_pass" : "day_pass",
+                    childId: childIds[0],
+                    childrenIds: childIds,
+                    splitPerChild: useSplit,
+                    childPrices: useSplit ? group.lines.map((l) => l.price) : undefined,
+                    couponCode:
+                        passCoupon && couponTargetGroup?.pass.id === group.pass.id
+                            ? passCoupon.code
                             : undefined,
-                        quantity: 1,
-                        metadata: {},
-                    }),
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Purchase failed");
-                }
             }
 
             const names = passQuote.lines.map((l) => l.child.name).join(", ");
             setSuccessDetails({
                 title: "Passes Purchased ✅",
                 message: `${PASS_KIND_LABEL[passKind]} for ${names}.`,
-                details: `💰 ${formatCurrency(passQuote.total)}${
+                details: `💰 ${formatCurrency(passTotalAfterCoupon)}${
                     passQuote.savings > 0
-                        ? `\n🎉 Sibling discount saved ${formatCurrency(passQuote.savings)}`
+                        ? `\n🎉 ${passKind === "monthly" ? "Family membership" : "Sibling discount"} saved ${formatCurrency(passQuote.savings)}`
+                        : ""
+                }${
+                    passCoupon
+                        ? `\n🏷️ Coupon ${passCoupon.name || passCoupon.code}: −${formatCurrency(passCouponDiscount)}`
                         : ""
                 }`,
             });
             setShowSuccessModal(true);
             setPassChildIds([]);
+            handleRemoveCoupon(PASS_COUPON_KEY);
+            setPassCouponTotal(null);
 
             // Refresh the customer so the new passes show immediately
             const purchasesResponse = await fetch(
@@ -1080,29 +1229,11 @@ export function CheckIn({
         };
     }, [confirmTimeout, checkInTimeout]);
 
-    // Filter and sort passes based on selected filter
-    const getFilteredPasses = () => {
-        let filtered = [...availablePasses];
-
-        // Apply filter
-        if (passFilter === "infant") {
-            filtered = filtered.filter((pass) =>
-                pass.name.toLowerCase().includes("infant")
-            );
-        } else if (passFilter === "toddler") {
-            filtered = filtered.filter((pass) =>
-                pass.name.toLowerCase().includes("toddler")
-            );
-        }
-
-        // Sort by price (lowest to highest)
-        return filtered.sort((a, b) => a.price - b.price);
-    };
 
     // Party packages are no longer sold from the POS — parties are booked
     // through the website. The catalogue is still needed so the POS can
     // recognise a package a customer already owns and schedule it.
-    const AVAILABLE_PASS_PRODUCTS = getFilteredPasses();
+    const AVAILABLE_PASS_PRODUCTS = [...availablePasses].sort((a, b) => a.price - b.price);
     const AVAILABLE_PARTY_PRODUCTS = [...availableParties].sort(
         (a, b) => a.price - b.price
     );
@@ -1137,6 +1268,19 @@ export function CheckIn({
         const lowerName = productName.toLowerCase();
         return (lowerName.includes('child') || lowerName.includes('toddler')) && lowerName.includes('infant');
     };
+
+    // Arriving from the admin customer popup's "Sell products": load that
+    // customer exactly as a phone lookup would, and open on Products.
+    useEffect(() => {
+        if (!preselectedCustomerId) return;
+        const customer = customers.find((c) => c.id === preselectedCustomerId);
+        if (customer) {
+            setSearchPhone(formatPhoneNumber(customer.phone));
+            setSelectedCustomer(customer);
+            setActiveTab("products");
+        }
+        onPreselectHandled?.();
+    }, [preselectedCustomerId, customers, onPreselectHandled]);
 
     const handlePhoneSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatPhoneNumber(e.target.value);
@@ -1183,6 +1327,211 @@ export function CheckIn({
                 return firstUseDate;
             default:
                 return new Date(firstUse.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        }
+    };
+
+    /**
+     * Confirm a punch card check-in.
+     *
+     * Day passes are bought first: a declined card must never leave children
+     * checked in. Then every child goes in on one batch insert, so a family
+     * either all gets in or none does.
+     *
+     * The picker's `remaining` comes from the client's stale `usedSessions`,
+     * so the batch call below can fail on capacity *after* the day passes
+     * above have already been paid for -- another till may have drawn the
+     * card down in between. Once any day-pass purchase has actually
+     * succeeded for this purchase id, this must never run the purchase loop
+     * again: a retry only reopens sessions against what was already bought.
+     * That lockout (`pendingPunchCardRetry`) is cleared solely by a
+     * successful check-in -- Cancel deliberately leaves it in place, since
+     * forgetting it would let the next Confirm buy the same passes twice.
+     */
+    const handlePunchCardConfirm = async (
+        customer: Customer,
+        purchaseId: string,
+        allocation: PunchAllocation
+    ) => {
+        const autoCheckoutTime = getNextClosingTime(
+            autoCheckoutSettings.timezone,
+            autoCheckoutSettings.closingTime
+        );
+
+        const retrying = pendingPunchCardRetry?.purchaseId === purchaseId;
+        let entries: { purchase_id: string; child_id: string }[];
+        // Set once day passes are known to have been bought -- either just
+        // now, or by an earlier attempt this retry is resuming.
+        let boughtSummary: string | null = retrying ? pendingPunchCardRetry!.boughtSummary : null;
+
+        // Money has moved for these lines: build the message that both locks
+        // out re-buying and tells staff plainly what already happened.
+        const describePurchased = (lines: readonly AllocationLine[]): string => {
+            const names = lines.map((l) => l.child.name).join(", ");
+            const total = formatCurrency(lines.reduce((sum, l) => sum + l.price, 0));
+            return `Day passes were already purchased for ${names} (${total}). Press Confirm again to finish checking them in — do not buy passes again. If it keeps failing, check them in individually from Available Passes below.`;
+        };
+
+        if (retrying) {
+            entries = pendingPunchCardRetry!.entries;
+        } else {
+            entries = allocation.lines
+                .filter((l) => l.method === "punch")
+                .map((l) => ({ purchase_id: purchaseId, child_id: l.child.id }));
+
+            // Lines whose day pass actually got bought this call, so a
+            // failure -- here or later, opening sessions -- can say exactly
+            // what already happened and this purchase id can be locked out
+            // of ever running the purchase loop again.
+            const purchasedLines: AllocationLine[] = [];
+
+            try {
+                // Different ages can resolve to different day-pass products in
+                // the same shortfall -- the under-1 rate is its own product --
+                // so this buys one purchase per product, never one purchase
+                // for the whole shortfall labeled under the first child's
+                // product. See groupDayPassLines for why keying by pass.id
+                // (rather than quotePasses' own groupId, the way
+                // groupQuoteByProduct does for a direct purchase) is safe here.
+                const groups = groupDayPassLines(allocation.lines);
+                for (const { pass, lines, total } of groups) {
+                    const created = await buyWithCardOnFile(customer, {
+                        productId: pass.id,
+                        productName: pass.name,
+                        productPrice: total,
+                        purchaseType: "day_pass",
+                        childId: lines[0].child.id,
+                        childrenIds: lines.map((l) => l.child.id),
+                        splitPerChild: true,
+                        childPrices: lines.map((l) => l.price),
+                    });
+                    for (const line of lines) {
+                        const match = created.find((p) => p.child_id === line.child.id);
+                        if (!match) throw new Error(`No purchase returned for ${line.child.name}`);
+                        entries.push({ purchase_id: match.id, child_id: line.child.id });
+                    }
+                    purchasedLines.push(...lines);
+                }
+            } catch (error) {
+                console.error("Punch card day-pass purchase failed:", error);
+                if (purchasedLines.length > 0) {
+                    // Some money already moved. This purchase id is locked out
+                    // of the purchase loop from here on -- a second press may
+                    // only retry opening sessions against what was bought.
+                    boughtSummary = describePurchased(purchasedLines);
+                    setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                    alert(`${boughtSummary}\n\n(Buying the rest failed: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`);
+                } else {
+                    // Nothing was charged yet, so a plain retry is safe.
+                    alert(error instanceof Error ? error.message : "Purchase failed");
+                }
+                return;
+            }
+
+            if (purchasedLines.length > 0) {
+                // Every group that needed buying succeeded. This purchase id
+                // is locked out of the purchase loop from here on even
+                // though nothing has failed yet -- if opening sessions fails
+                // next, it must not be allowed to buy these again.
+                boughtSummary = describePurchased(purchasedLines);
+            }
+        }
+
+        try {
+            const sessionsResponse = await fetch("/api/sessions/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    auto_checkout_time: autoCheckoutTime,
+                    entries,
+                }),
+            });
+            if (!sessionsResponse.ok) {
+                const errorData = await sessionsResponse.json();
+                throw new Error(errorData.error || "Check-in failed");
+            }
+            const { sessions: createdSessions } = (await sessionsResponse.json()) as {
+                sessions: {
+                    id: string;
+                    customer_id: string;
+                    purchase_id: string;
+                    child_id: string | null;
+                    start_time: string;
+                    auto_checkout_time: string;
+                }[];
+            };
+            const newSessions: Session[] = createdSessions.map((s) => ({
+                id: s.id,
+                customerId: s.customer_id,
+                purchaseId: s.purchase_id,
+                childId: s.child_id ?? undefined,
+                startTime: s.start_time,
+                autoCheckoutTime: s.auto_checkout_time,
+            }));
+
+            // The check-in itself has succeeded from here down: the sessions
+            // exist in the database and every day pass this attempt bought is
+            // spent. Nothing past this point may re-arm the retry lock or
+            // tell staff to press Confirm again -- a replay would only be
+            // rejected by checkBatchCapacity (these purchases are now used
+            // up), leaving this card stuck locked forever for no reason.
+            setPunchCardCheckIn(null);
+            setPendingPunchCardRetry(null);
+
+            // Refresh the customer's purchases so the card's reduced balance
+            // and any new day passes show immediately. Best-effort, and
+            // deliberately its own try/catch: a failure here is a stale
+            // screen, not a failed check-in, and must not be read as one by
+            // the outer catch below (which exists to handle check-in itself
+            // failing, not a follow-up refresh).
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    onUpdateCustomer({
+                        ...customer,
+                        purchases: (purchasesData || []).map(toPurchase),
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                } else {
+                    onUpdateCustomer({
+                        ...customer,
+                        activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                    });
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Punch card check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+                // The children are checked in either way -- fold in the new
+                // sessions so the screen doesn't read as if nobody is.
+                onUpdateCustomer({
+                    ...customer,
+                    activeSessions: [...(customer.activeSessions || []), ...newSessions],
+                });
+            }
+        } catch (error) {
+            console.error("Punch card check-in failed:", error);
+            if (boughtSummary) {
+                // Day passes for this card are already bought -- this attempt
+                // or an earlier one -- so stay locked into retry-only-sessions
+                // rather than letting the next press buy them again.
+                setPendingPunchCardRetry({ purchaseId, entries, boughtSummary });
+                alert(
+                    `${boughtSummary}\n\n(Check-in failed again: ${
+                        error instanceof Error ? error.message : "unknown error"
+                    })`
+                );
+            } else {
+                alert(error instanceof Error ? error.message : "Check-in failed");
+            }
         }
     };
 
@@ -1318,6 +1667,93 @@ export function CheckIn({
             onUpdateCustomer(updatedCustomer);
         } catch (error) {
             console.error('Error ending session:', error);
+        }
+    };
+
+    /**
+     * Undo a check-in.
+     *
+     * The remedy for a mis-tap, and deliberately not the same button as Check
+     * Out: checking out ends the visit and leaves the punch spent, while this
+     * deletes the session so the AFTER DELETE trigger hands the punch back (and
+     * clears the expiry clock a first use started, on a card returned to zero).
+     * It matters more now than it used to — a family confirmed on one account
+     * card spends a punch per child in a single tap, so the wrong card or the
+     * wrong family costs three punches at once.
+     *
+     * Destructive and irreversible in the other direction, so it confirms
+     * first. Only a session that has not ended can be voided; the server says
+     * so plainly if staff reach for it after checking someone out.
+     */
+    const handleUndoCheckIn = async (
+        customer: Customer,
+        sessionId: string,
+        childName: string | null
+    ) => {
+        const who = childName ? `${childName}'s` : "this";
+        if (
+            !confirm(
+                `Undo ${who} check-in? The punch goes back on the card and they will no longer be checked in.`
+            )
+        ) {
+            return;
+        }
+
+        // Undoing gives the punch back, so the server needs to know staff are
+        // doing it. A staff session already proves that; on the phone-lookup
+        // screen the POS is signed in as the customer, so staff confirm with
+        // the POS PIN instead.
+        let pinHeader: Record<string, string> = {};
+        if (!isStaffMode) {
+            const pin = prompt("Staff PIN to undo this check-in:");
+            if (pin === null) return;
+            pinHeader = { "X-POS-PIN": pin.trim() };
+        }
+
+        try {
+            const response = await fetch(`/api/sessions/${sessionId}`, {
+                method: "DELETE",
+                headers: pinHeader,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(
+                    errorData.error ||
+                        "Could not undo this check-in. Please try again."
+                );
+                return;
+            }
+
+            const activeSessions = (customer.activeSessions || []).filter(
+                (session) => session.id !== sessionId
+            );
+
+            // The punch is restored by a database trigger, so re-read the
+            // purchases rather than guessing the new balance. Best-effort: a
+            // failure here is a stale balance on screen, not a failed undo.
+            let purchases = customer.purchases;
+            try {
+                const purchasesResponse = await fetch(
+                    `/api/purchases?customer_id=${customer.id}`
+                );
+                if (purchasesResponse.ok) {
+                    const { purchases: purchasesData } = (await purchasesResponse.json()) as {
+                        purchases: PurchaseRow[] | null;
+                    };
+                    purchases = (purchasesData || []).map(toPurchase);
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Undo check-in succeeded but refreshing purchases failed:",
+                    refreshError
+                );
+            }
+
+            onUpdateCustomer({ ...customer, purchases, activeSessions });
+        } catch (error) {
+            console.error("Error undoing check-in:", error);
+            alert("Could not undo this check-in. Please try again.");
         }
     };
 
@@ -2649,16 +3085,6 @@ export function CheckIn({
                                 👶 Children ({displayCustomer.children.length})
                             </button>
                             <button
-                                onClick={() => setActiveTab("passes")}
-                                className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
-                                    activeTab === "passes"
-                                        ? "bg-blue-600 text-white shadow-md"
-                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                                }`}
-                            >
-                                🎫 Passes
-                            </button>
-                            <button
                                 onClick={() => setActiveTab("parties")}
                                 className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
                                     activeTab === "parties"
@@ -2669,14 +3095,14 @@ export function CheckIn({
                                 🎉 Parties
                             </button>
                             <button
-                                onClick={() => setActiveTab("snacks")}
+                                onClick={() => setActiveTab("products")}
                                 className={`flex-1 px-6 py-4 text-lg font-semibold rounded-lg transition-colors ${
-                                    activeTab === "snacks"
+                                    activeTab === "products"
                                         ? "bg-orange-600 text-white shadow-md"
                                         : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
                                 }`}
                             >
-                                🍎 Snacks
+                                🛍️ Products
                             </button>
                             <button
                                 onClick={() => setActiveTab("afterdark")}
@@ -2694,639 +3120,91 @@ export function CheckIn({
                     {/* Children Management */}
                     {activeTab === "children" && (
                         <div className="space-y-8">
-                            {/* Children Header */}
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-2xl font-bold">Manage Children</h3>
-                                <Button
-                                    onClick={() => setShowAddChild(true)}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-                                >
-                                    <span className="text-lg mr-2">+</span>
-                                    Add Child
-                                </Button>
-                            </div>
-
-                            {/* Buy passes: pick who's playing, then the pass.
-                                The rate for each child comes from their age. */}
-                            {displayCustomer.children.length > 0 && (
-                                <Card className="p-6 border-l-4 border-l-amber-400">
-                                    <h4 className="text-xl font-bold mb-1">
-                                        Who&apos;s playing?
-                                    </h4>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Select the children, then choose a pass. The right
-                                        rate is worked out from each child&apos;s age.
-                                    </p>
-
-                                    <div className="flex flex-wrap gap-2 mb-5">
-                                        {displayCustomer.children.map((child) => {
-                                            const selected = passChildIds.includes(child.id);
-                                            return (
-                                                <button
-                                                    key={child.id}
-                                                    type="button"
-                                                    onClick={() => togglePassChild(child.id)}
-                                                    aria-pressed={selected}
-                                                    className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                                        selected
-                                                            ? "bg-amber-100 border-amber-500"
-                                                            : "bg-white border-gray-300 hover:border-amber-400"
-                                                    }`}
-                                                >
-                                                    <span className="block font-semibold text-gray-900">
-                                                        {selected ? "✓ " : ""}
-                                                        {child.name}
-                                                    </span>
-                                                    <span className="block text-xs text-gray-600">
-                                                        Age {child.age}
-                                                        {!child.waiverSigned && " · waiver needed"}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2 mb-5">
-                                        {PASS_KINDS.map((kind) => (
-                                            <button
-                                                key={kind}
-                                                type="button"
-                                                onClick={() => {
-                                                    setPassKind(kind);
-                                                    setPassError(null);
-                                                }}
-                                                aria-pressed={passKind === kind}
-                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-                                                    passKind === kind
-                                                        ? "bg-gray-900 text-white border-gray-900"
-                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
-                                                }`}
-                                            >
-                                                {PASS_KIND_LABEL[kind]}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {passChildIds.length === 0 ? (
-                                        <p className="text-sm text-gray-500">
-                                            Select at least one child to see pricing.
-                                        </p>
-                                    ) : (
-                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
-                                            {passQuote.lines.map((line) => (
-                                                <div
-                                                    key={line.child.id}
-                                                    className="flex justify-between items-baseline py-1"
-                                                >
-                                                    <span className="text-gray-800">
-                                                        {line.child.name}
-                                                        <span className="text-gray-500 text-sm">
-                                                            {" "}
-                                                            · {line.pass.name}
-                                                        </span>
-                                                        {line.includedFree ? (
-                                                            <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                plays free
-                                                            </span>
-                                                        ) : (
-                                                            line.discountPercent > 0 && (
-                                                                <span className="ml-2 text-xs font-semibold text-green-700">
-                                                                    sibling −{line.discountPercent}%
-                                                                </span>
-                                                            )
-                                                        )}
-                                                    </span>
-                                                    <span className="font-semibold tabular-nums">
-                                                        {line.includedFree ? (
-                                                            <span className="text-green-700">Free</span>
-                                                        ) : (
-                                                            <>
-                                                                {line.discountPercent > 0 && (
-                                                                    <span className="line-through text-gray-400 font-normal mr-2">
-                                                                        {formatCurrency(line.basePrice)}
-                                                                    </span>
-                                                                )}
-                                                                {formatCurrency(line.price)}
-                                                            </>
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            ))}
-
-                                            {passQuote.unresolved.length > 0 && (
-                                                <p className="mt-2 text-sm text-red-700">
-                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
-                                                    available for{" "}
-                                                    {passQuote.unresolved
-                                                        .map((c) => c.name)
-                                                        .join(", ")}
-                                                    .
-                                                </p>
-                                            )}
-
-                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
-                                                <span className="font-bold text-lg">Total</span>
-                                                <span className="font-bold text-lg tabular-nums">
-                                                    {formatCurrency(passQuote.total)}
-                                                </span>
-                                            </div>
-                                            {passQuote.savings > 0 && (
-                                                <p className="text-sm text-green-700 text-right">
-                                                    Sibling discount saves{" "}
-                                                    {formatCurrency(passQuote.savings)}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {passError && (
-                                        <p className="mt-3 text-sm font-medium text-red-700">
-                                            {passError}
-                                        </p>
-                                    )}
-
-                                    <Button
-                                        onClick={handleBuyPasses}
-                                        disabled={
-                                            buyingPasses || passQuote.lines.length === 0
-                                        }
-                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
-                                    >
-                                        {buyingPasses
-                                            ? "Processing…"
-                                            : passQuote.lines.length === 0
-                                              ? `Buy ${PASS_KIND_LABEL[passKind]}`
-                                              : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passQuote.total)}`}
-                                    </Button>
-                                </Card>
-                            )}
-
-                            {/* Children List */}
-                            {displayCustomer.children.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="text-6xl mb-4">👶</div>
-                                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                                        No Children Added
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        Add children to this customer account to
-                                        purchase passes and track waivers
-                                    </p>
-                                    <Button
-                                        onClick={() => setShowAddChild(true)}
-                                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg"
-                                    >
-                                        Add First Child
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {displayCustomer.children.map((child) => (
-                                        <Card
-                                            key={child.id}
-                                            className="p-6 border-l-4 border-l-green-400"
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex-1">
-                                                    <h4 className="font-semibold text-lg">
-                                                        {child.name}
-                                                    </h4>
-                                                    <p className="text-gray-600">
-                                                        Age: {child.age}
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        Born:{" "}
-                                                        {new Date(
-                                                            child.birthdate
-                                                        ).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        handleDeleteChild(child.id)
-                                                    }
-                                                    className="text-red-500 hover:text-red-700 p-1"
-                                                    title="Delete child"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {/* Waiver Status */}
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-medium">
-                                                        Waiver Status:
-                                                    </span>
-                                                    <div className="flex items-center space-x-2">
-                                                        {child.waiverSigned ? (
-                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                ✅ Signed{child.waiverSignedDate ? ` ${new Date(child.waiverSignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
-                                                            </span>
-                                                        ) : (
-                                                            <>
-                                                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-                                                                    ❌ Not Signed
-                                                                </span>
-                                                                <Button
-                                                                    onClick={() => {
-                                                                        setWaiverChild(
-                                                                            child
-                                                                        );
-                                                                        setShowWaiverModal(
-                                                                            true
-                                                                        );
-                                                                    }}
-                                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                                                                >
-                                                                    Sign Waiver
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                        <Button
-                                                            onClick={() => {
-                                                                setViewWaiverChildName(child.name);
-                                                                setShowViewWaiverModal(true);
-                                                            }}
-                                                            variant="outline"
-                                                            className="px-3 py-1 rounded text-sm"
-                                                            title="View full waiver document"
-                                                        >
-                                                            📄 View Waiver
-                                                        </Button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Active Passes for this child - grouped by pass type */}
-                                                {(() => {
-                                                    const childPasses =
-                                                        displayCustomer.purchases.filter(
-                                                            (p) =>
-                                                                p.childId ===
-                                                                    child.id &&
-                                                                p.status === "active"
-                                                        );
-
-// Group passes by type and sum remaining sessions
-                                                    // Extract pass type from name if type field is missing
-                                                    const inferPassType = (name: string, type?: string): string => {
-                                                        const lowerName = name.toLowerCase();
-                                                        // Event passes get their own group based on name
-                                                        if (lowerName.includes('easter egg') || lowerName.includes('egg hunt')) return 'event_easter';
-                                                        if (type && type !== 'undefined') return type;
-                                                        if (lowerName.includes('day pass') || lowerName.includes('day_pass')) return 'day_pass';
-                                                        if (lowerName.includes('punch') || lowerName.includes('weekly')) return 'weekly_pass';
-                                                        if (lowerName.includes('monthly') || lowerName.includes('membership')) return 'monthly_pass';
-                                                        if (lowerName.includes('party')) return 'party_package';
-                                                        return 'day_pass'; // Default fallback
-                                                    };
-
-                                                    // Map type to friendly display name
-                                                    const getPassTypeName = (type: string, passName?: string) => {
-                                                        if (type.startsWith('event_')) {
-                                                            return passName || 'Event Pass';
-                                                        }
-                                                        switch (type) {
-                                                            case 'day_pass': return 'Day Pass';
-                                                            case 'weekly_pass': return 'Punch Card';
-                                                            case 'monthly_pass': return 'Monthly Pass';
-                                                            case 'party_package': return 'Party Package';
-                                                            default: return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                                                        }
-                                                    };
-
-                                                    const groupedPasses = childPasses.reduce((acc, pass) => {
-                                                        // Normalize type - infer from name if missing
-                                                        const normalizedType = inferPassType(pass.name, pass.type);
-                                                        const key = normalizedType;
-                                                        if (!acc[key]) {
-                                                            acc[key] = {
-                                                                type: normalizedType,
-                                                                name: getPassTypeName(normalizedType, pass.name),
-                                                                totalRemaining: 0,
-                                                                isUnlimited: false,
-                                                                purchaseIds: [],
-                                                            };
-                                                        }
-                                                        const remaining = pass.totalSessions - pass.usedSessions;
-                                                        if (pass.totalSessions === 999) {
-                                                            acc[key].isUnlimited = true;
-                                                        }
-                                                        acc[key].totalRemaining += remaining;
-                                                        acc[key].purchaseIds.push(pass.id);
-                                                        return acc;
-                                                    }, {} as Record<string, { type: string; name: string; totalRemaining: number; isUnlimited: boolean; purchaseIds: string[] }>);
-
-                                                    const groupedPassesList = Object.values(groupedPasses);
-
-                                                    return (
-                                                        groupedPassesList.length > 0 && (
-                                                            <div>
-                                                                <p className="font-medium text-sm text-gray-700 mb-2">
-                                                                    Active Passes:
-                                                                </p>
-                                                                {groupedPassesList.map(
-                                                                    (passGroup) => (
-                                                                            <div
-                                                                                key={passGroup.type}
-                                                                                className="bg-yellow-50 p-2 rounded text-sm flex items-center justify-between mb-1"
-                                                                            >
-                                                                                <div className="flex items-center gap-2">
-                                                                                    {!passGroup.isUnlimited && passGroup.totalRemaining > 1 && (
-                                                                                        <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
-                                                                                            {passGroup.totalRemaining}x
-                                                                                        </span>
-                                                                                    )}
-                                                                                    <span className="font-medium">
-                                                                                        {passGroup.name}
-                                                                                    </span>
-                                                                                </div>
-                                                                                {passGroup.isUnlimited ? (
-                                                                                    <span className="text-green-600 text-xs font-medium">
-                                                                                        ∞ Unlimited
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-gray-500 text-xs">
-                                                                                        {passGroup.totalRemaining} visit{passGroup.totalRemaining !== 1 ? 's' : ''} left
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        )
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    );
-                                                })()}
-
-                                                {child.waiverSigned &&
-                                                    child.waiverSignedDate && (
-                                                        <p className="text-xs text-gray-500">
-                                                            Waiver signed:{" "}
-                                                            {new Date(
-                                                                child.waiverSignedDate
-                                                            ).toLocaleDateString()}
-                                                        </p>
-                                                    )}
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Add Child Modal */}
-                            {showAddChild && (
-                                <div
-                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                    onClick={(e) => {
-                                        if (e.target === e.currentTarget) {
-                                            setShowAddChild(false);
-                                            setChildName("");
-                                            setChildBirthdate("");
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Escape") {
-                                            setShowAddChild(false);
-                                            setChildName("");
-                                            setChildBirthdate("");
-                                        }
-                                    }}
-                                >
-                                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
-                                        {/* Close Button */}
-                                        <button
-                                            onClick={() => {
-                                                setShowAddChild(false);
-                                                setChildName("");
-                                                setChildBirthdate("");
-                                            }}
-                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            ✕
-                                        </button>
-
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Add New Child
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Child's Name
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={childName}
-                                                    onChange={(e) =>
-                                                        setChildName(e.target.value)
-                                                    }
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                    placeholder="Enter child's full name"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Date of Birth
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    value={childBirthdate}
-                                                    onChange={(e) =>
-                                                        setChildBirthdate(
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                    max={
-                                                        new Date()
-                                                            .toISOString()
-                                                            .split("T")[0]
-                                                    }
-                                                />
-                                            </div>
-                                            {childBirthdate && (
-                                                <p className="text-sm text-gray-600">
-                                                    Age: {calculateAge(childBirthdate)}{" "}
-                                                    years old
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-end space-x-3 mt-6">
-                                            <Button
-                                                onClick={() => {
-                                                    setShowAddChild(false);
-                                                    setChildName("");
-                                                    setChildBirthdate("");
-                                                }}
-                                                variant="secondary"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                onClick={handleAddChild}
-                                                className="bg-green-500 hover:bg-green-600 text-white"
-                                                disabled={
-                                                    !childName.trim() ||
-                                                    !childBirthdate ||
-                                                    isAddingChild
-                                                }
-                                            >
-                                                {isAddingChild
-                                                    ? "Adding..."
-                                                    : "Add Child"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Waiver Modal */}
-                            {showWaiverModal && waiverChild && (
-                                <div
-                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                    onClick={(e) => {
-                                        if (e.target === e.currentTarget) {
-                                            setShowWaiverModal(false);
-                                            setWaiverChild(null);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Escape") {
-                                            setShowWaiverModal(false);
-                                            setWaiverChild(null);
-                                        }
-                                    }}
-                                >
-                                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
-                                        {/* Close Button */}
-                                        <button
-                                            onClick={() => {
-                                                setShowWaiverModal(false);
-                                                setWaiverChild(null);
-                                            }}
-                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
-                                        >
-                                            ✕
-                                        </button>
-
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Waiver for {waiverChild.name}
-                                        </h3>
-                                        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
-                                            <h4 className="font-medium mb-2">
-                                                LIABILITY WAIVER AND RELEASE
-                                            </h4>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I hereby acknowledge that I am the
-                                                parent/guardian of {waiverChild.name},
-                                                age {waiverChild.age}, and I understand
-                                                that participation in activities at Busy
-                                                Bees Indoor Playground involves inherent
-                                                risks.
-                                            </p>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I hereby release, waive, discharge and
-                                                covenant not to sue Busy Bees Indoor
-                                                Playground, its owners, employees, and
-                                                agents from any and all liability,
-                                                claims, demands, actions and causes of
-                                                action whatsoever arising out of or
-                                                related to any loss, damage, or injury
-                                                that may be sustained by my child while
-                                                participating in activities.
-                                            </p>
-                                            <p className="text-sm text-gray-700 mb-2">
-                                                I acknowledge that I have read and
-                                                understood this waiver and that I am
-                                                signing it voluntarily. This waiver
-                                                shall be binding upon my heirs,
-                                                executors, administrators and assigns.
-                                            </p>
-                                            <p className="text-sm font-medium text-gray-800">
-                                                By clicking "I Agree and Sign", I
-                                                electronically sign this waiver on
-                                                behalf of my child.
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-end space-x-3">
-                                            <Button
-                                                onClick={() => {
-                                                    setShowWaiverModal(false);
-                                                    setWaiverChild(null);
-                                                }}
-                                                variant="secondary"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                onClick={() =>
-                                                    handleSignWaiver(waiverChild)
-                                                }
-                                                className="bg-green-500 hover:bg-green-600 text-white"
-                                                disabled={isSigningWaiver}
-                                            >
-                                                {isSigningWaiver
-                                                    ? "Signing..."
-                                                    : "I Agree and Sign"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Pass Management */}
-                    {activeTab === "passes" && (
-                        <div className="space-y-10">
                             {/* Currently Checked In Passes */}
                             {(() => {
+                                // Driven by open sessions, not purchase status. Migration
+                                // 052 moved the punch deduction from check-out to
+                                // check-in, so a single-visit pass (a day pass, or a
+                                // punch card on its last punch) now flips to "used" the
+                                // instant the child walks in -- before this section ever
+                                // filtered on status, that flip would hide the tile and
+                                // leave staff with no way to check the child back out. A
+                                // purchase with an open session is, by definition,
+                                // someone in the building, regardless of what its
+                                // remaining-balance status says.
                                 const checkedInPasses =
                                     displayCustomer.purchases.filter(
                                         (p) =>
-                                            p.status === "active" &&
                                             p.type !== "party_package" &&
                                             (displayCustomer.activeSessions || []).some(
                                                 (session) => session.purchaseId === p.id
                                             )
                                     );
 
-                                if (checkedInPasses.length > 0) {
+                                // An account punch card can carry several open
+                                // sessions at once -- one per child playing on
+                                // it -- so it gets one tile per session, named,
+                                // each with its own Check Out. A child-scoped
+                                // pass still carries at most one open session
+                                // (the available-passes filter hides it the
+                                // moment a session opens), so it keeps its
+                                // original one-tile-per-purchase behaviour.
+                                const checkedInTiles = checkedInPasses.flatMap((purchase) => {
+                                    const purchaseSessions = (
+                                        displayCustomer.activeSessions || []
+                                    ).filter((session) => session.purchaseId === purchase.id);
+
+                                    if (purchase.passScope === "account") {
+                                        return purchaseSessions.map((session) => ({
+                                            key: session.id,
+                                            purchase,
+                                            session,
+                                            childName: session.childId
+                                                ? getChildName(session.childId, displayCustomer)
+                                                : null,
+                                        }));
+                                    }
+
+                                    const session =
+                                        purchaseSessions[purchaseSessions.length - 1];
+                                    if (!session) return [];
+                                    return [
+                                        {
+                                            key: purchase.id,
+                                            purchase,
+                                            session,
+                                            childName: purchase.childId
+                                                ? getChildName(purchase.childId, displayCustomer)
+                                                : null,
+                                        },
+                                    ];
+                                });
+
+                                if (checkedInTiles.length > 0) {
                                     return (
                                         <div>
                                             <h3 className="text-2xl font-bold mb-6 text-green-700">
                                                 ✅ Currently Checked In
                                             </h3>
                                             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-                                                {checkedInPasses.map((purchase) => {
-                                                    const activeSessions = (
-                                                        displayCustomer.activeSessions ||
-                                                        []
-                                                    ).filter(
-                                                        (session) =>
-                                                            session.purchaseId ===
-                                                            purchase.id
-                                                    );
-                                                    return (
-                                                        <Card
-                                                            key={purchase.id}
-                                                            className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
-                                                        >
-                                                            <div className="flex flex-col items-center text-center space-y-4">
-                                                                <div className="flex-1">
-                                                                    <h4 className="text-2xl font-bold text-gray-900 mb-3">
-                                                                        {purchase.name}
-                                                                    </h4>
-                                                                    {purchase.childId && (
-                                                                        <p className="text-blue-600 font-medium text-lg mb-2">
-                                                                            👶{" "}
-                                                                            {getChildName(
-                                                                                purchase.childId,
-                                                                                displayCustomer
-                                                                            )}
-                                                                        </p>
-                                                                    )}
-                                                                    {activeSessions.length >
-                                                                        0 && (
+                                                {checkedInTiles.map(
+                                                    ({ key, purchase, session, childName }) => {
+                                                        return (
+                                                            <Card
+                                                                key={key}
+                                                                className="p-8 border-l-8 border-l-green-500 bg-green-50 hover:bg-green-100 transition-colors min-w-[300px]"
+                                                            >
+                                                                <div className="flex flex-col items-center text-center space-y-4">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                                                                            {purchase.name}
+                                                                        </h4>
+                                                                        {childName && (
+                                                                            <p className="text-blue-600 font-medium text-lg mb-2">
+                                                                                👶{" "}
+                                                                                {childName}
+                                                                            </p>
+                                                                        )}
                                                                         <div className="p-3 bg-green-100 border border-green-300 rounded-lg mb-4">
                                                                             <p className="text-lg text-green-800 font-bold">
                                                                                 ✅
@@ -3336,56 +3214,68 @@ export function CheckIn({
                                                                             <p className="text-sm text-green-700 mt-1">
                                                                                 Since{" "}
                                                                                 {new Date(
-                                                                                    activeSessions[0].startTime
+                                                                                    session.startTime
                                                                                 ).toLocaleTimeString()}
                                                                             </p>
                                                                             <p className="text-sm text-green-700">
                                                                                 Duration:{" "}
                                                                                 {getSessionDuration(
-                                                                                    activeSessions[0]
-                                                                                        .startTime
+                                                                                    session.startTime
                                                                                 )}
                                                                             </p>
                                                                         </div>
-                                                                    )}
-                                                                    {/* Expiration & Auto-Renew Info */}
-                                                                    {purchase.actualExpiryDate && (
-                                                                        <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                                                                            <p className="text-sm text-gray-600">
-                                                                                Expires:{" "}
-                                                                                {formatDate(
-                                                                                    purchase.actualExpiryDate
-                                                                                )}
-                                                                                {purchase.autoRenew && (
-                                                                                    <span className="ml-2 text-blue-600 font-bold">
-                                                                                        🔄
-                                                                                        Auto-Renew
-                                                                                    </span>
-                                                                                )}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
+                                                                        {/* Expiration & Auto-Renew Info */}
+                                                                        {purchase.actualExpiryDate && (
+                                                                            <div className="p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                                                                                <p className="text-sm text-gray-600">
+                                                                                    Expires:{" "}
+                                                                                    {formatDate(
+                                                                                        purchase.actualExpiryDate
+                                                                                    )}
+                                                                                    {purchase.autoRenew && (
+                                                                                        <span className="ml-2 text-blue-600 font-bold">
+                                                                                            🔄
+                                                                                            Auto-Renew
+                                                                                        </span>
+                                                                                    )}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-col items-center gap-3">
+                                                                        <Button
+                                                                            onClick={() =>
+                                                                                void handleCheckOut(
+                                                                                    displayCustomer,
+                                                                                    session.id
+                                                                                )
+                                                                            }
+                                                                            size="lg"
+                                                                            variant="outline"
+                                                                            className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
+                                                                        >
+                                                                            Check Out
+                                                                        </Button>
+                                                                        {/* Mis-tap remedy: gives the punch back, unlike Check Out. */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                void handleUndoCheckIn(
+                                                                                    displayCustomer,
+                                                                                    session.id,
+                                                                                    childName
+                                                                                )
+                                                                            }
+                                                                            className="text-base text-gray-600 underline underline-offset-4 hover:text-red-600 font-medium px-3 py-2"
+                                                                        >
+                                                                            Undo check-in
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <Button
-                                                                    onClick={() =>
-                                                                        void handleCheckOut(
-                                                                            displayCustomer,
-                                                                            activeSessions[
-                                                                                activeSessions.length -
-                                                                                    1
-                                                                            ].id
-                                                                        )
-                                                                    }
-                                                                    size="lg"
-                                                                    variant="outline"
-                                                                    className="bg-white hover:bg-gray-50 text-xl px-10 py-5 min-w-[200px] font-bold border-2 border-gray-300"
-                                                                >
-                                                                    Check Out
-                                                                </Button>
-                                                            </div>
-                                                        </Card>
-                                                    );
-                                                })}
+                                                            </Card>
+                                                        );
+                                                    }
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -3402,11 +3292,14 @@ export function CheckIn({
                                             p.status === "active" &&
                                             p.type !== "party_package" &&
                                             !(p.actualExpiryDate && new Date(p.actualExpiryDate) < now) &&
-                                            !(
-                                                displayCustomer.activeSessions || []
-                                            ).some(
-                                                (session) => session.purchaseId === p.id
-                                            )
+                                            // A pass for one child is hidden while that child is
+                                            // inside. An account punch card stays available — the
+                                            // second and third child still have to get in — and
+                                            // double check-ins are stopped per child in the picker.
+                                            (p.passScope === 'account' ||
+                                                !(displayCustomer.activeSessions || []).some(
+                                                    (session) => session.purchaseId === p.id
+                                                ))
                                     );
 
                                 // Group passes by type + childId
@@ -3439,7 +3332,23 @@ export function CheckIn({
                                     const normalizedType = inferPassType(purchase.name, purchase.type);
                                     const isFamilyPurchase = (purchase.childIds?.length || 0) > 0;
 
-                                    if (isFamilyPurchase) {
+                                    if (purchase.passScope === 'account') {
+                                        // One tile for the card, not one per child — who is playing
+                                        // is asked after it is tapped.
+                                        const key = `${normalizedType}-account-${purchase.id}`;
+                                        acc[key] = {
+                                            type: normalizedType,
+                                            typeName: getPassTypeName(normalizedType, purchase.name),
+                                            childId: null,
+                                            childName: null,
+                                            totalVisits:
+                                                (purchase.totalSessions || 0) - (purchase.usedSessions || 0),
+                                            isUnlimited: purchase.totalSessions === 999,
+                                            purchases: [purchase],
+                                            firstPurchase: purchase,
+                                        };
+                                        return acc;
+                                    } else if (isFamilyPurchase) {
                                         // Family pass: create a group entry for each child on the pass
                                         for (const cId of purchase.childIds!) {
                                             const key = `${normalizedType}-${cId}-family-${purchase.id}`;
@@ -3501,7 +3410,12 @@ export function CheckIn({
                                                     const purchase = group.firstPurchase;
                                                     return (
                                                     <Card
-                                                        key={`${group.type}-${group.childId}`}
+                                                        // Two account cards of the same inferred
+                                                        // type (e.g. a 5-punch and a 10-punch both
+                                                        // read as "weekly_pass") both set childId
+                                                        // to null, so the key needs the purchase
+                                                        // id too or they'd collide.
+                                                        key={`${group.type}-${group.childId ?? "none"}-${group.firstPurchase.id}`}
                                                         className="p-8 border-l-8 border-l-blue-400 hover:bg-blue-50 transition-colors cursor-pointer min-w-[300px]"
                                                     >
                                                         <div className="flex flex-col items-center text-center space-y-4">
@@ -3514,11 +3428,15 @@ export function CheckIn({
                                                                     )}
                                                                     {group.typeName}
                                                                 </h4>
-                                                                {group.childName && (
+                                                                {group.childName ? (
                                                                     <p className="text-green-600 font-medium text-lg mb-3">
                                                                         👶 {group.childName}
                                                                     </p>
-                                                                )}
+                                                                ) : group.firstPurchase.passScope === 'account' ? (
+                                                                    <p className="text-green-600 font-medium text-lg mb-3">
+                                                                        👨‍👩‍👧‍👦 Any child on the account
+                                                                    </p>
+                                                                ) : null}
                                                                 {purchase.type ===
                                                                     "party_package" &&
                                                                 purchase.partyDate ? (
@@ -3785,6 +3703,15 @@ export function CheckIn({
                                                                         <Button
                                                                             onClick={() => {
                                                                                 if (
+                                                                                    purchase.passScope ===
+                                                                                    'account'
+                                                                                ) {
+                                                                                    // Account cards ask who's playing
+                                                                                    // instead of checking in directly.
+                                                                                    setPunchCardCheckIn(
+                                                                                        purchase.id
+                                                                                    );
+                                                                                } else if (
                                                                                     confirmingCheckIn ===
                                                                                     purchase.id
                                                                                 ) {
@@ -3880,279 +3807,531 @@ export function CheckIn({
                                 );
                             })()}
 
-                            {/* Quick Purchase Passes - Always Visible */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase New Passes
-                                </h3>
+                            {/* Children Header */}
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-2xl font-bold">Manage Children</h3>
+                                <Button
+                                    onClick={() => setShowAddChild(true)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                                >
+                                    <span className="text-lg mr-2">+</span>
+                                    Add Child
+                                </Button>
+                            </div>
 
-                                {/* Pass Filter Tabs */}
-                                <div className="flex space-x-2 mb-4">
-                                    <button
-                                        onClick={() => setPassFilter("all")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "all"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        All ({availablePasses.length})
-                                    </button>
-                                    <button
-                                        onClick={() => setPassFilter("infant")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "infant"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Infant (
-                                        {
-                                            availablePasses.filter((p) =>
-                                                p.name.toLowerCase().includes("infant")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                    <button
-                                        onClick={() => setPassFilter("toddler")}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            passFilter === "toddler"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Toddler (
-                                        {
-                                            availablePasses.filter((p) =>
-                                                p.name.toLowerCase().includes("toddler")
-                                            ).length
-                                        }
-                                        )
-                                    </button>
-                                </div>
+                            {/* Buy passes: pick who's playing, then the pass.
+                                The rate for each child comes from their age. */}
+                            {displayCustomer.children.length > 0 && (
+                                <Card className="p-6 border-l-4 border-l-amber-400">
+                                    <h4 className="text-xl font-bold mb-1">
+                                        {passKind === "punch"
+                                            ? "Buy a punch card"
+                                            : "Who's playing?"}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        {passKind === "punch" ? (
+                                            "Choose a card below — any child on the account can use it."
+                                        ) : (
+                                            <>
+                                                Select the children, then choose a pass. The
+                                                right rate is worked out from each
+                                                child&apos;s age.
+                                            </>
+                                        )}
+                                    </p>
 
-                                {/* Child Selection Required */}
-                                {displayCustomer.children.length === 0 && (
-                                    <Card className="p-6 mb-4 border-blue-200 bg-blue-50">
-                                        <div className="flex items-center">
-                                            <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center mr-3">
-                                                <span className="text-white">👶</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-blue-800">
-                                                    Children Required
-                                                </h4>
-                                                <p className="text-blue-600 text-sm">
-                                                    This customer needs to add children
-                                                    with signed waivers before
-                                                    purchasing passes.
-                                                    <br />
-                                                    <strong>💡 Tip:</strong> Have them
-                                                    use their own device to add children
-                                                    in the customer dashboard.
-                                                </p>
-                                            </div>
+                                    {passKind !== "punch" && (
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {displayCustomer.children.map((child) => {
+                                                const selected = passChildIds.includes(child.id);
+                                                return (
+                                                    <button
+                                                        key={child.id}
+                                                        type="button"
+                                                        onClick={() => togglePassChild(child.id)}
+                                                        aria-pressed={selected}
+                                                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                            selected
+                                                                ? "bg-amber-100 border-amber-500"
+                                                                : "bg-white border-gray-300 hover:border-amber-400"
+                                                        }`}
+                                                    >
+                                                        <span className="block font-semibold text-gray-900">
+                                                            {selected ? "✓ " : ""}
+                                                            {child.name}
+                                                        </span>
+                                                        <span className="block text-xs text-gray-600">
+                                                            Age {child.age}
+                                                            {!child.waiverSigned && " · waiver needed"}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                    </Card>
-                                )}
+                                    )}
 
-                                <Card className="p-6 border-l-8 border-l-green-300 bg-green-50">
-                                    <div className="grid gap-4 text-left">
-                                        {AVAILABLE_PASS_PRODUCTS.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                className="flex justify-between items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                                    {/* A child without a signed waiver cannot be bought a pass; sign it here. */}
+                                    {displayCustomer.children.some((c) => !c.waiverSigned) && (
+                                        <div className="flex flex-wrap items-center gap-2 mb-5 text-sm">
+                                            <span className="font-medium text-red-700">Waiver needed:</span>
+                                            {displayCustomer.children
+                                                .filter((c) => !c.waiverSigned)
+                                                .map((child) => (
+                                                    <Button
+                                                        key={child.id}
+                                                        onClick={() => {
+                                                            setWaiverChild(child);
+                                                            setShowWaiverModal(true);
+                                                        }}
+                                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                                    >
+                                                        Sign waiver for {child.name}
+                                                    </Button>
+                                                ))}
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2 mb-5">
+                                        {PASS_KINDS.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                type="button"
+                                                onClick={() => {
+                                                    setPassKind(kind);
+                                                    setPassError(null);
+                                                    setSelectedPunchCard(null);
+                                                }}
+                                                aria-pressed={passKind === kind}
+                                                className={`px-4 py-2 rounded-lg border-2 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                                                    passKind === kind
+                                                        ? "bg-gray-900 text-white border-gray-900"
+                                                        : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                                                }`}
                                             >
-                                                <div className="flex-1">
-                                                    <span className="font-medium text-gray-900 text-lg">
-                                                        {product.id === "day_pass"
-                                                            ? "🎫"
-                                                            : product.id ===
-                                                              "weekly_pass"
-                                                            ? "📅"
-                                                            : "🗓️"}{" "}
-                                                        {product.name}
-                                                    </span>
-                                                    <p className="text-sm text-gray-600">
-                                                        {product.description}
-                                                    </p>
-                                                    <div className="text-lg font-bold text-gray-900 mt-1">
-                                                        ${product.price.toFixed(2)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Apply Coupon — single day passes only (Infant / Toddler / Combo).
-                                                    Excludes punch cards even if they share category='day'. */}
-                                                {product.name.toLowerCase().startsWith('day pass') && (
-                                                    <div className="mr-4 min-w-[200px]">
-                                                        {appliedCoupons[product.id] ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="text-sm font-medium text-green-700">
-                                                                    ✓ {appliedCoupons[product.id].name || appliedCoupons[product.id].code}
-                                                                </div>
-                                                                <div className="text-xs text-gray-600">
-                                                                    {appliedCoupons[product.id].discountType === 'percent'
-                                                                        ? `−$${appliedCoupons[product.id].applied.toFixed(2)} off`
-                                                                        : `−$${appliedCoupons[product.id].applied.toFixed(2)}`}
-                                                                    {appliedCoupons[product.id].forfeited > 0 && (
-                                                                        <span className="text-amber-600 ml-1">
-                                                                            (${appliedCoupons[product.id].forfeited.toFixed(2)} forfeited)
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveCoupon(product.id)}
-                                                                    className="text-xs text-red-600 hover:underline self-start"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="flex items-center gap-1">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={couponInputs[product.id] || ''}
-                                                                        onChange={e =>
-                                                                            setCouponInputs(prev => ({ ...prev, [product.id]: e.target.value }))
-                                                                        }
-                                                                        placeholder="Coupon"
-                                                                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded font-mono uppercase"
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleApplyCoupon(product.id, product.price)}
-                                                                        disabled={couponLoading[product.id]}
-                                                                        className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                                                                    >
-                                                                        {couponLoading[product.id] ? '...' : 'Apply'}
-                                                                    </button>
-                                                                </div>
-                                                                {couponErrors[product.id] && (
-                                                                    <div className="text-xs text-red-600">
-                                                                        {couponErrors[product.id]}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <Button
-                                                    onClick={() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer) return;
-
-                                                        // Step 1: Add Child (highest priority)
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            setActiveTab("children");
-                                                            return;
-                                                        }
-
-                                                        // Step 2: Add Payment Method
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            // Show payment modal instead of alert
-                                                            setShowPaymentModal(true);
-                                                            return;
-                                                        }
-
-                                                        // Step 3: Show Child Selection Modal
-                                                        if (
-                                                            confirmingProduct ===
-                                                            product.id
-                                                        ) {
-                                                            handleConfirmPurchase(
-                                                                product.id
-                                                            );
-                                                        } else {
-                                                            // Show child selection modal
-                                                            setSelectedProductForPurchase(
-                                                                product.id
-                                                            );
-                                                            setSelectedChildrenForFamilyPass([]);
-                                                            setComboChildId(null);
-                                                            setComboInfantId(null);
-                                                            setShowChildSelectionModal(
-                                                                true
-                                                            );
-                                                        }
-                                                    }}
-                                                    size="lg"
-                                                    disabled={
-                                                        purchasingProduct ===
-                                                        product.id
-                                                    }
-                                                    className={`px-6 py-3 text-white disabled:opacity-50 transition-colors ${(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer)
-                                                            return "bg-gray-400";
-
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            return "bg-blue-500 hover:bg-blue-600";
-                                                        }
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "bg-yellow-500 hover:bg-yellow-600";
-                                                        }
-                                                        return confirmingProduct ===
-                                                            product.id
-                                                            ? "bg-green-600 hover:bg-green-700 animate-pulse"
-                                                            : purchasingProduct ===
-                                                              product.id
-                                                            ? "bg-blue-600"
-                                                            : "bg-green-600 hover:bg-green-700";
-                                                    })()}`}
-                                                >
-                                                    {(() => {
-                                                        const customer =
-                                                            selectedCustomer ||
-                                                            currentCustomer;
-                                                        if (!customer)
-                                                            return "No Customer";
-
-                                                        if (
-                                                            customer.children.length ===
-                                                            0
-                                                        ) {
-                                                            return "👶 Add Child First";
-                                                        }
-                                                        if (
-                                                            customer.savedCards
-                                                                .length === 0
-                                                        ) {
-                                                            return "💳 Add Payment First";
-                                                        }
-                                                        return purchasingProduct ===
-                                                            product.id
-                                                            ? "Processing..."
-                                                            : confirmingProduct ===
-                                                              product.id
-                                                            ? "✓ Confirm Purchase"
-                                                            : "Buy Now";
-                                                    })()}
-                                                </Button>
-                                            </div>
+                                                {PASS_KIND_LABEL[kind]}
+                                            </button>
                                         ))}
                                     </div>
+
+                                    {passKind === "punch" ? (
+                                        <div className="space-y-3">
+                                            {punchCardOptions(availablePasses).map((card) => (
+                                                <button
+                                                    key={card.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPunchCard(card)}
+                                                    className={`w-full p-4 rounded-xl border-4 text-left transition-colors ${
+                                                        selectedPunchCard?.id === card.id
+                                                            ? "border-yellow-400 bg-yellow-50"
+                                                            : "border-gray-200 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    <span className="text-xl font-bold">
+                                                        {card.name}
+                                                    </span>
+                                                    <span className="ml-3 text-xl">
+                                                        {formatCurrency(card.price)}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : passChildIds.length === 0 ? (
+                                        <p className="text-sm text-gray-500">
+                                            Select at least one child to see pricing.
+                                        </p>
+                                    ) : (
+                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                                            {passQuote.lines.map((line) => (
+                                                <div
+                                                    key={line.child.id}
+                                                    className="flex justify-between items-baseline py-1"
+                                                >
+                                                    <span className="text-gray-800">
+                                                        {line.child.name}
+                                                        <span className="text-gray-500 text-sm">
+                                                            {" "}
+                                                            · {line.pass.name}
+                                                        </span>
+                                                        {line.includedFree ? (
+                                                            <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                {passKind === "monthly" ? "on the family membership" : "plays free"}
+                                                            </span>
+                                                        ) : (
+                                                            line.discountPercent > 0 && (
+                                                                <span className="ml-2 text-xs font-semibold text-green-700">
+                                                                    sibling −{line.discountPercent}%
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </span>
+                                                    <span className="font-semibold tabular-nums">
+                                                        {line.includedFree ? (
+                                                            <span className="text-green-700">
+                                                                {passKind === "monthly" ? "Included" : "Free"}
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {line.discountPercent > 0 && (
+                                                                    <span className="line-through text-gray-400 font-normal mr-2">
+                                                                        {formatCurrency(line.basePrice)}
+                                                                    </span>
+                                                                )}
+                                                                {formatCurrency(line.price)}
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            ))}
+
+                                            {passQuote.unresolved.length > 0 && (
+                                                <p className="mt-2 text-sm text-red-700">
+                                                    No {PASS_KIND_LABEL[passKind].toLowerCase()} is
+                                                    available for{" "}
+                                                    {passQuote.unresolved
+                                                        .map((c) => c.name)
+                                                        .join(", ")}
+                                                    .
+                                                </p>
+                                            )}
+
+                                            {passCoupon && (
+                                                <div className="flex justify-between items-baseline mt-3 text-green-700">
+                                                    <span className="text-sm font-medium">
+                                                        Coupon {passCoupon.name || passCoupon.code}
+                                                        {passCoupon.forfeited > 0 && (
+                                                            <span className="text-amber-600 ml-1">
+                                                                ({formatCurrency(passCoupon.forfeited)} forfeited)
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="text-sm font-semibold tabular-nums">
+                                                        −{formatCurrency(passCouponDiscount)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-baseline border-t border-gray-300 mt-3 pt-3">
+                                                <span className="font-bold text-lg">Total</span>
+                                                <span className="font-bold text-lg tabular-nums">
+                                                    {formatCurrency(passTotalAfterCoupon)}
+                                                </span>
+                                            </div>
+                                            {passQuote.savings > 0 && (
+                                                <p className="text-sm text-green-700 text-right">
+                                                    {passKind === "monthly" ? "Family membership" : "Sibling discount"} saves{" "}
+                                                    {formatCurrency(passQuote.savings)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Coupon — day passes only, one per sale (see couponTargetGroup). */}
+                                    {couponTargetGroup && (
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                            {passCoupon ? (
+                                                <>
+                                                    <span className="text-sm font-medium text-green-700">
+                                                        ✓ Coupon {passCoupon.name || passCoupon.code} applied
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleRemoveCoupon(PASS_COUPON_KEY);
+                                                            setPassCouponTotal(null);
+                                                        }}
+                                                        className="text-xs text-red-600 hover:underline"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <input
+                                                        id="pass-coupon-code"
+                                                        type="text"
+                                                        value={couponInputs[PASS_COUPON_KEY] || ""}
+                                                        onChange={(e) =>
+                                                            setCouponInputs((prev) => ({
+                                                                ...prev,
+                                                                [PASS_COUPON_KEY]: e.target.value,
+                                                            }))
+                                                        }
+                                                        placeholder="Coupon code"
+                                                        aria-label="Coupon code"
+                                                        className="w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono uppercase"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setPassCouponTotal(couponTargetGroup.total);
+                                                            void handleApplyCoupon(
+                                                                PASS_COUPON_KEY,
+                                                                couponTargetGroup.total
+                                                            );
+                                                        }}
+                                                        disabled={couponLoading[PASS_COUPON_KEY]}
+                                                        className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                                                    >
+                                                        {couponLoading[PASS_COUPON_KEY] ? "…" : "Apply"}
+                                                    </button>
+                                                    {couponErrors[PASS_COUPON_KEY] && (
+                                                        <span className="text-sm text-red-600">
+                                                            {couponErrors[PASS_COUPON_KEY]}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {passError && (
+                                        <p className="mt-3 text-sm font-medium text-red-700">
+                                            {passError}
+                                        </p>
+                                    )}
+
+                                    <Button
+                                        onClick={handleBuyPasses}
+                                        disabled={
+                                            buyingPasses ||
+                                            (passKind === "punch"
+                                                ? !selectedPunchCard
+                                                : passQuote.lines.length === 0)
+                                        }
+                                        className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-50"
+                                    >
+                                        {buyingPasses
+                                            ? "Processing…"
+                                            : passKind === "punch"
+                                              ? selectedPunchCard
+                                                    ? `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(selectedPunchCard.price)}`
+                                                    : `Buy ${PASS_KIND_LABEL[passKind]}`
+                                              : passQuote.lines.length === 0
+                                                ? `Buy ${PASS_KIND_LABEL[passKind]}`
+                                                : `Buy ${PASS_KIND_LABEL[passKind]} · ${formatCurrency(passTotalAfterCoupon)}`}
+                                    </Button>
                                 </Card>
+                            )}
+
+                            {/* No children yet: the pass picker needs at least one. Child details
+                                (edits, removal, waivers on file) are managed in Staff Admin. */}
+                            {displayCustomer.children.length === 0 && (
+                            <div className="text-center py-12">
+                                <div className="text-6xl mb-4">👶</div>
+                                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                                    No Children Added
+                                </h3>
+                                <p className="text-gray-600 mb-6">
+                                    Add children to this customer account to
+                                    purchase passes and track waivers
+                                </p>
+                                <Button
+                                    onClick={() => setShowAddChild(true)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg"
+                                >
+                                    Add First Child
+                                </Button>
                             </div>
+                            )}
+
+                            {/* Add Child Modal */}
+                            {showAddChild && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                    onClick={(e) => {
+                                        if (e.target === e.currentTarget) {
+                                            setShowAddChild(false);
+                                            setChildName("");
+                                            setChildBirthdate("");
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                            setShowAddChild(false);
+                                            setChildName("");
+                                            setChildBirthdate("");
+                                        }
+                                    }}
+                                >
+                                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 relative">
+                                        {/* Close Button */}
+                                        <button
+                                            onClick={() => {
+                                                setShowAddChild(false);
+                                                setChildName("");
+                                                setChildBirthdate("");
+                                            }}
+                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+
+                                        <h3 className="text-lg font-semibold mb-4">
+                                            Add New Child
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Child's Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={childName}
+                                                    onChange={(e) =>
+                                                        setChildName(e.target.value)
+                                                    }
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    placeholder="Enter child's full name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Date of Birth
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={childBirthdate}
+                                                    onChange={(e) =>
+                                                        setChildBirthdate(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    max={
+                                                        new Date()
+                                                            .toISOString()
+                                                            .split("T")[0]
+                                                    }
+                                                />
+                                            </div>
+                                            {childBirthdate && (
+                                                <p className="text-sm text-gray-600">
+                                                    Age: {calculateAge(childBirthdate)}{" "}
+                                                    years old
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-end space-x-3 mt-6">
+                                            <Button
+                                                onClick={() => {
+                                                    setShowAddChild(false);
+                                                    setChildName("");
+                                                    setChildBirthdate("");
+                                                }}
+                                                variant="secondary"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                onClick={handleAddChild}
+                                                className="bg-green-500 hover:bg-green-600 text-white"
+                                                disabled={
+                                                    !childName.trim() ||
+                                                    !childBirthdate ||
+                                                    isAddingChild
+                                                }
+                                            >
+                                                {isAddingChild
+                                                    ? "Adding..."
+                                                    : "Add Child"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Waiver Modal */}
+                            {showWaiverModal && waiverChild && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                    onClick={(e) => {
+                                        if (e.target === e.currentTarget) {
+                                            setShowWaiverModal(false);
+                                            setWaiverChild(null);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                            setShowWaiverModal(false);
+                                            setWaiverChild(null);
+                                        }
+                                    }}
+                                >
+                                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+                                        {/* Close Button */}
+                                        <button
+                                            onClick={() => {
+                                                setShowWaiverModal(false);
+                                                setWaiverChild(null);
+                                            }}
+                                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                                        >
+                                            ✕
+                                        </button>
+
+                                        <h3 className="text-lg font-semibold mb-4">
+                                            Waiver for {waiverChild.name}
+                                        </h3>
+                                        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-h-64 overflow-y-auto">
+                                            <h4 className="font-medium mb-2">
+                                                LIABILITY WAIVER AND RELEASE
+                                            </h4>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I hereby acknowledge that I am the
+                                                parent/guardian of {waiverChild.name},
+                                                age {waiverChild.age}, and I understand
+                                                that participation in activities at Busy
+                                                Bees Indoor Playground involves inherent
+                                                risks.
+                                            </p>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I hereby release, waive, discharge and
+                                                covenant not to sue Busy Bees Indoor
+                                                Playground, its owners, employees, and
+                                                agents from any and all liability,
+                                                claims, demands, actions and causes of
+                                                action whatsoever arising out of or
+                                                related to any loss, damage, or injury
+                                                that may be sustained by my child while
+                                                participating in activities.
+                                            </p>
+                                            <p className="text-sm text-gray-700 mb-2">
+                                                I acknowledge that I have read and
+                                                understood this waiver and that I am
+                                                signing it voluntarily. This waiver
+                                                shall be binding upon my heirs,
+                                                executors, administrators and assigns.
+                                            </p>
+                                            <p className="text-sm font-medium text-gray-800">
+                                                By clicking "I Agree and Sign", I
+                                                electronically sign this waiver on
+                                                behalf of my child.
+                                            </p>
+                                        </div>
+                                        <div className="flex justify-end space-x-3">
+                                            <Button
+                                                onClick={() => {
+                                                    setShowWaiverModal(false);
+                                                    setWaiverChild(null);
+                                                }}
+                                                variant="secondary"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    handleSignWaiver(waiverChild)
+                                                }
+                                                className="bg-green-500 hover:bg-green-600 text-white"
+                                                disabled={isSigningWaiver}
+                                            >
+                                                {isSigningWaiver
+                                                    ? "Signing..."
+                                                    : "I Agree and Sign"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -4449,10 +4628,10 @@ export function CheckIn({
                         </div>
                     )}
 
-                    {/* Snacks & Drinks Management */}
-                    {activeTab === "snacks" && (
+                    {/* Products: snacks, drinks and retail (bracelets, hats, ...) */}
+                    {activeTab === "products" && (
                         <div className="space-y-10">
-                            {/* Recent Snack Purchases */}
+                            {/* Recent Product Purchases */}
                             {(() => {
                                 const snackPurchases = displayCustomer.purchases.filter(
                                     (p) => p.type === "food_beverage"
@@ -4461,7 +4640,7 @@ export function CheckIn({
                                 return snackPurchases.length > 0 ? (
                                     <div>
                                         <h3 className="text-2xl font-bold mb-6">
-                                            🍿 Recent Snack Purchases
+                                            🛍️ Recent Product Purchases
                                         </h3>
                                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                             {snackPurchases
@@ -4496,10 +4675,10 @@ export function CheckIn({
                                 ) : null;
                             })()}
 
-                            {/* Purchase Snacks & Drinks */}
+                            {/* Purchase Products */}
                             <div>
                                 <h3 className="text-2xl font-bold mb-6">
-                                    🛒 Purchase Snacks & Drinks
+                                    🛒 Purchase Products
                                 </h3>
                                 <Card className="p-6 border-l-8 border-l-orange-300 bg-orange-50">
                                     <div className="grid gap-4 text-left">
@@ -4659,7 +4838,7 @@ export function CheckIn({
                                             <span className="font-semibold">
                                                 💡 Quick Purchase:
                                             </span>{" "}
-                                            No child association required! Snacks can be
+                                            No child association required! Products can be
                                             purchased independently at any time.
                                         </p>
                                     </div>
@@ -5253,6 +5432,72 @@ export function CheckIn({
                     </Card>
                 </div>
             )}
+
+            {/* Punch Card Check-In Picker ("who's playing?") */}
+            {punchCardCheckIn && displayCustomer && (() => {
+                const punchCardPurchase = displayCustomer.purchases.find(
+                    (p) => p.id === punchCardCheckIn
+                );
+                if (!punchCardPurchase) return null;
+
+                const retry =
+                    pendingPunchCardRetry?.purchaseId === punchCardPurchase.id
+                        ? pendingPunchCardRetry
+                        : null;
+
+                // A child reads as "inside" either because an account punch
+                // card session names them directly, or because an active
+                // session's purchase belongs to them alone (the older
+                // single-child pass path never sets session.childId).
+                const childrenInsideIds = (displayCustomer.activeSessions || []).flatMap(
+                    (session) => {
+                        const ids: string[] = [];
+                        if (session.childId) ids.push(session.childId);
+                        const sessionPurchase = displayCustomer.purchases.find(
+                            (p) => p.id === session.purchaseId
+                        );
+                        if (sessionPurchase?.childId) ids.push(sessionPurchase.childId);
+                        return ids;
+                    }
+                );
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        {/* The wrapper scrolls, inline: Card's honeycomb-hover class sets
+                            overflow:hidden, which beat overflow-y-auto on the Card and
+                            clipped Confirm off the bottom with many children. */}
+                        <div
+                            className="w-full max-w-xl"
+                            style={{ maxHeight: "90vh", overflowY: "auto" }}
+                        >
+                            <Card>
+                                <PunchCardCheckIn
+                                    purchase={punchCardPurchase}
+                                    // eslint-disable-next-line react/no-children-prop -- `children` here is the account's list of kids, not JSX content.
+                                    children={displayCustomer.children}
+                                    childrenInsideIds={childrenInsideIds}
+                                    passes={availablePasses}
+                                    siblingRules={siblingDiscounts}
+                                    qualifiesForMemberPricing={qualifiesForMemberPricing(
+                                        "day_pass",
+                                        true
+                                    )}
+                                    onConfirm={(allocation) =>
+                                        handlePunchCardConfirm(
+                                            displayCustomer,
+                                            punchCardPurchase.id,
+                                            allocation
+                                        )
+                                    }
+                                    onCancel={() => setPunchCardCheckIn(null)}
+                                    notice={retry?.boughtSummary ?? null}
+                                    locked={retry !== null}
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Party Details Modal */}
             {showPartyModal && selectedParty && (

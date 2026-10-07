@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { Database } from '@/lib/supabase/database.types';
+import { requireStaff } from '@/lib/auth/requireRole';
 
 type DbChild = Database['public']['Tables']['children']['Row'];
 type DbPurchase = Database['public']['Tables']['purchases']['Row'];
@@ -29,6 +30,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     logger.info({ customerId: id }, '📊 Fetching customer details');
@@ -126,6 +130,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireStaff();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const body = await request.json();

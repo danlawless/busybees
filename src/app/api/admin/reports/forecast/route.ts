@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { formatDateET, easternNow, fetchAllRows } from '@/lib/services/report-aggregations';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 function formatDate(d: Date): string {
   return formatDateET(d);
@@ -30,6 +31,9 @@ function futureDate(days: number): string {
 }
 
 export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
     const today = formatDate(new Date());

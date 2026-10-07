@@ -1,23 +1,20 @@
 'use client'
 
 import React from 'react'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { PhotoBackdrop } from '@/components/home/PhotoBackdrop'
+import { PartyPackageCards } from '@/components/parties/PartyPackageCards'
 
-export function PartyPackageBackdrop() {
+/**
+ * The packages section of /parties: the same cards as the homepage, read from
+ * the pricing catalog, so prices here can never go stale the way the old
+ * overview image did. Choosing a package starts booking.
+ */
+export function PartyPackageBackdrop({ onChoose }: { onChoose: () => void }) {
   return (
     <section className="relative py-20 overflow-hidden min-h-[24rem] flex flex-col">
-      {/* Section background - hero image with light overlay */}
-      <div className="absolute inset-0 z-0" aria-hidden>
-        <Image
-          src="/hero-background.png"
-          alt=""
-          fill
-          className="object-cover object-center"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#FFFDF7]/25 via-[#FFF8E7]/15 to-[#FFFDF7]/25" aria-hidden />
-      </div>
+      {/* Lara Barrios photograph under the same scrim as the homepage bands */}
+      <PhotoBackdrop src="/images/backgrounds/party-tea-set.jpg" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <motion.div
@@ -35,24 +32,9 @@ export function PartyPackageBackdrop() {
           </p>
         </motion.div>
 
-        <motion.div
-          className="relative max-w-4xl mx-auto mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="relative w-full rounded-2xl overflow-hidden shadow-soft border border-primary-200/30 bg-white/90">
-            <Image
-              src="/party-packages.png"
-              alt="Busy Bees party packages — Basic Bee, Worker Bee+ and Queen Bee+, each two hours with a private party room and access to the play area. Current prices are listed on the package cards below."
-              width={1200}
-              height={1500}
-              className="w-full h-auto"
-              priority
-            />
-          </div>
-        </motion.div>
+        <div className="mb-4">
+          <PartyPackageCards onChoose={onChoose} />
+        </div>
       </div>
     </section>
   )

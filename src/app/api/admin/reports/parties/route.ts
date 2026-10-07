@@ -14,6 +14,7 @@ import {
   todayStr,
   fetchAllRows,
 } from '@/lib/services/report-aggregations';
+import { requireAdmin } from '@/lib/auth/requireRole';
 
 const PACKAGE_LABELS: Record<string, string> = {
   queen_bee: 'Queen Bee',
@@ -23,6 +24,9 @@ const PACKAGE_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const supabase = createAdminClient();
     const searchParams = request.nextUrl.searchParams;

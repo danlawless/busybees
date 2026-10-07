@@ -14,11 +14,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 import { getStripeClient, getStripeCustomerIdColumn, getStripeMode } from '@/lib/stripe/client';
 import { getOrCreateStripeCustomer } from '@/lib/stripe/payment-methods';
 import { logger } from '@/lib/logger';
-import { validateBirthdateForProduct, hasAgeRestriction } from '@/lib/utils/ageUtils';
-import { resolvePurchaseDefaults, checkDuplicateMonthlyPass } from '@/lib/utils/purchaseDefaults';
+import { validateBirthdateForProduct, hasAgeRestriction, requiresChildSelection, CHILD_REQUIRED_ERROR } from '@/lib/utils/ageUtils';
+import { resolvePurchaseDefaults, checkDuplicateMonthlyPass, resolvePassScope } from '@/lib/utils/purchaseDefaults';
 import { decrementInventoryAfterPurchase } from '@/lib/services/products';
 import { validateCoupon, redeemCoupon, computeCouponDiscount } from '@/lib/services/coupons';
 import { getUserGiftCardBalance, applyGiftCardBalance } from '@/lib/services/gift-cards';
@@ -31,6 +32,11 @@ import {
 } from '@/lib/membership';
 
 type PaymentMethod = 'terminal' | 'saved_card' | 'test' | 'cash' | 'complimentary';
+
+// The exact row shape `.insert(...).select().single()` resolves to for this
+// table — used to type the per-child purchases returned to the caller so
+// Task 8 can open each child's session against their own new pass.
+type PurchaseRow = Database['public']['Tables']['purchases']['Row'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +70,7 @@ export async function POST(request: NextRequest) {
       children_ids, // For family passes: array of child IDs
       split_per_child, // Record one purchase row per child in children_ids (day passes bought for siblings)
       child_prices, // Optional exact price per child, aligned with children_ids; must sum to product_price
+      pass_scope,
       quantity = 1,
       metadata = {},
       // Payment method options
@@ -73,6 +80,13 @@ export async function POST(request: NextRequest) {
       coupon_code, // Optional: single-use coupon code (day-pass purchases only)
       use_gift_card_balance = true, // Apply the customer's account gift card credit (default on)
     } = body;
+
+    // Punch cards are bought for the account from 1 October 2026. Anything that
+    // does not say so is a pass for one named child, which is what every row
+    // sold before then is. This is provisional -- overridden below once the
+    // product itself is resolved, because a punch card must always be
+    // account-scoped no matter what (or whether) the caller sent pass_scope.
+    let passScope: 'child' | 'account' = pass_scope === 'account' ? 'account' : 'child';
 
     // Validate required fields
     if (!customer_id || !product_id || !product_name || product_price === undefined || !purchase_type) {
@@ -97,6 +111,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Age gate validation for passes with age restrictions
+    // An age-restricted pass with no child named skips the check below entirely,
+    // so refuse it rather than sell a pass nobody has been checked against.
+    if (!child_id && requiresChildSelection(product_name)) {
+      logger.warn(
+        { product_name },
+        'Age-restricted pass rejected: no child selected'
+      );
+      return NextResponse.json({ error: CHILD_REQUIRED_ERROR }, { status: 400 });
+    }
+
     if (child_id && hasAgeRestriction(product_name)) {
       const { data: child } = await adminSupabase
         .from('children')
@@ -382,6 +406,21 @@ export async function POST(request: NextRequest) {
       adminSupabase,
     );
 
+    // A punch card is always account-scoped, regardless of what pass_scope the
+    // caller sent (or, from a screen that predates this, never sends at all).
+    // Several screens post here — the POS product grid, the customer
+    // dashboard's own purchase flow, and this route's own card-first punch
+    // flow — and a client-supplied scope on a money-bearing column is the
+    // wrong shape: any future caller that forgets to send pass_scope: 'account'
+    // would silently create a card that only works for one child. Deriving it
+    // from the product itself (shared with /api/stripe/direct-payment and the
+    // Stripe webhook, so all three callers agree) makes forgetting impossible.
+    // Day and monthly passes are untouched: they stay whatever passScope
+    // already resolved to above.
+    if ((await resolvePassScope(product_id, adminSupabase)) === 'account') {
+      passScope = 'account';
+    }
+
     // Monthly passes default to auto-renew on (renew 7 days before expiry)
     const isMonthlyPass = purchase_type === 'monthly_pass';
     const nextRenewalDate = isMonthlyPass && expiryDate
@@ -421,12 +460,17 @@ export async function POST(request: NextRequest) {
     }
 
     let purchase;
+    // Every row created by this request, in addition to `purchase` above.
+    // Task 8 needs each child's own new pass id to open that child's session,
+    // which `purchase` alone (the split branch's "use first for the response")
+    // cannot provide.
+    let createdPurchases: PurchaseRow[] = [];
 
     if (splitChildrenIds) {
       // Create a separate purchase for each child sharing this payment
       const evenPrice = (payment_method === 'complimentary' ? 0 : Number(product_price)) / splitChildrenIds.length;
       const giftCardPerChild = giftCardAmountUsed / splitChildrenIds.length;
-      const purchases = [];
+      const purchases: PurchaseRow[] = [];
 
       for (const [index, comboChildId] of splitChildrenIds.entries()) {
         const pricePerChild = payment_method === 'complimentary'
@@ -449,6 +493,12 @@ export async function POST(request: NextRequest) {
             status: 'active',
             stripe_payment_intent_id: paymentIntentId,
             gift_card_amount_used: giftCardPerChild,
+            // One row per named child is a per-child pass by construction --
+            // the split exists precisely because each child gets their own.
+            // Written out rather than left to the column default so the
+            // "forgetting is impossible" claim above holds on every insert in
+            // this route, not just the single-purchase one.
+            pass_scope: 'child',
           })
           .select()
           .single();
@@ -458,10 +508,11 @@ export async function POST(request: NextRequest) {
           throw childDbError;
         }
 
-        purchases.push(childPurchase);
+        purchases.push(childPurchase!);
       }
 
       purchase = purchases[0]; // Use first for the response
+      createdPurchases = purchases;
       logger.info(
         { purchaseIds: purchases.map(p => p.id), customer_id, exactPrices: perChildPrices !== null },
         'Multi-child pass: created individual purchases for each child'
@@ -472,7 +523,13 @@ export async function POST(request: NextRequest) {
         .from('purchases')
         .insert({
           customer_id,
-          child_id: child_id || null,
+          // An account-wide card names no child. A screen that still sends one
+          // (the product grid does, from whoever happens to be selected) would
+          // otherwise leave a row that is account-scoped *and* child-tagged --
+          // a contradiction the launch runbook asserts must not exist, and one
+          // that would make the card look child-locked wherever child_id is
+          // read instead of pass_scope.
+          child_id: passScope === 'account' ? null : (child_id || null),
           type: purchase_type,
           product_id,
           name: product_name,
@@ -490,6 +547,7 @@ export async function POST(request: NextRequest) {
           party_start_time: metadata.party_time || null,
           party_guests: metadata.party_guests ? parseInt(metadata.party_guests) : null,
           party_notes: metadata.party_notes || null,
+          pass_scope: passScope,
         })
         .select()
         .single();
@@ -500,6 +558,7 @@ export async function POST(request: NextRequest) {
       }
 
       purchase = singlePurchase;
+      createdPurchases = [singlePurchase!];
 
       // Atomically redeem the coupon against this purchase
       if (validatedCouponId && coupon_code) {
@@ -561,6 +620,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       purchase,
+      purchases: createdPurchases,
       payment_intent_id: paymentIntentId,
       payment_status: paymentStatus,
       payment_method,

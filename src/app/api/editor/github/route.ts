@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'universal-editor-secret'
+// No fallback: a default secret in the source would let anyone mint a token.
+const JWT_SECRET = process.env.JWT_SECRET
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
 const GITHUB_REPO = process.env.GITHUB_REPO || 'danlawless/busybees'
 
 function verifyAuth(token: string) {
+  if (!JWT_SECRET) return null
   try {
     return jwt.verify(token, JWT_SECRET)
   } catch (error) {

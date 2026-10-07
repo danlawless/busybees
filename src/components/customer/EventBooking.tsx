@@ -489,32 +489,6 @@ export function EventBooking({ customerName, customerEmail, customerPhone, child
                     </div>
                   )}
 
-                  {/* Availability */}
-                  {selectedEventDetail.availability.maxCapacity && (
-                    <div className="mb-6 p-3 rounded-xl bg-gray-50 text-center">
-                      <p className="text-sm text-gray-600">
-                        <span className={`font-bold ${
-                          selectedEventDetail.availability.isFull ? 'text-red-600'
-                          : (selectedEventDetail.availability.remaining || 0) <= 10 ? 'text-amber-600'
-                          : 'text-green-600'
-                        }`}>
-                          {selectedEventDetail.availability.isFull ? 'FULL' : `${selectedEventDetail.availability.remaining} spots remaining`}
-                        </span>
-                        {' '}of {selectedEventDetail.availability.maxCapacity} total
-                      </p>
-                      <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden max-w-xs mx-auto">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${(selectedEventDetail.availability.booked / selectedEventDetail.availability.maxCapacity) * 100}%`,
-                            background: selectedEventDetail.availability.isFull ? '#ef4444'
-                              : (selectedEventDetail.availability.remaining || 0) <= 10 ? '#f59e0b' : '#22c55e',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   {selectedEventDetail.availability.isFull ? (
                     <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center">
                       <p className="text-sm text-red-800 font-medium">This event is fully booked. Please check back later for cancellations.</p>

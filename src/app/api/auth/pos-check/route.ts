@@ -5,9 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireKioskDevice } from '@/lib/auth/posDevice';
 
 export async function POST(request: NextRequest) {
   try {
+    // Kiosk-only: the store's approved device (POS PIN entered) or staff.
+    const deviceDenied = await requireKioskDevice(request);
+    if (deviceDenied) return deviceDenied;
+
     const body = await request.json();
     const { phone } = body;
 
@@ -27,6 +32,9 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id')
       .eq('phone', cleanPhone)
+      // Customers only: a staff or admin account (or the shared /admin one)
+      // must never be signed into, or claimed, by phone number.
+      .eq('role', 'customer')
       .single();
 
     if (!user) {

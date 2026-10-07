@@ -46,6 +46,7 @@ import { CouponsAdmin } from './CouponsAdmin';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { parseDateString } from '@/lib/utils';
+import { countSessionsByPassKind } from '@/lib/pos/sessionPassMix';
 
 interface Child {
   id: string;
@@ -138,6 +139,8 @@ interface AdminPanelProps {
   volumeDiscounts: VolumeDiscount[];
   onUpdateVolumeDiscounts: (discounts: VolumeDiscount[]) => void;
   userRole?: 'staff' | 'admin';
+  /** Takes the front desk to Check In for this customer, on the Products tab. */
+  onSellProducts?: (customer: Customer) => void;
 }
 
 interface StaffUser {
@@ -184,6 +187,7 @@ export function AdminPanel({
   volumeDiscounts,
   onUpdateVolumeDiscounts,
   userRole = 'admin',
+  onSellProducts,
 }: AdminPanelProps) {
   const isAdmin = userRole === 'admin';
   const [currentView, setCurrentView] = useState<AdminView>('dashboard');
@@ -328,6 +332,7 @@ export function AdminPanel({
     customerName: string;
     customerPhone: string;
     customerEmail: string | null;
+    passScope: string; // 'account' means any child on the account can use it — no one child to name
     childName: string | null;
     passName: string;
     price: number;
@@ -850,10 +855,7 @@ export function AdminPanel({
     try {
       const response = await fetch('/api/stripe/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-staff-pin': '0297', // Staff mode authorization
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (response.ok) {
         const data = await response.json();
@@ -1024,7 +1026,6 @@ export function AdminPanel({
 
   // Analytics calculations
   const activeSessions = customers.filter(c => (c.activeSessions || []).length > 0);
-  const totalCustomers = customers.length;
 
   // Net (cash/card) revenue for a purchase: full price minus any amount paid from
   // gift-card/account credit. That redeemed portion was already booked as revenue
@@ -1299,11 +1300,15 @@ export function AdminPanel({
   };
 
   const totalKidSessions = activeSessions.reduce((sum, c) => sum + (c.activeSessions || []).length, 0);
+  // Of the children inside now, how many came in on a punch card or membership
+  // -- visits that bring in no money on the day, so Today's Revenue omits them.
+  const sessionPassMix = countSessionsByPassKind(activeSessions);
+  const prepaidSessions = sessionPassMix.punch + sessionPassMix.monthly;
 
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
         <Card className="p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1330,12 +1335,15 @@ export function AdminPanel({
 
         <Card className="p-6">
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📊</span>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="text-2xl">🎟️</span>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Customers</p>
-              <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
+              <p className="text-sm font-medium text-gray-600">Punch Card &amp; Member Sessions</p>
+              <p className="text-2xl font-bold text-gray-900">{prepaidSessions}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                🎟️ {sessionPassMix.punch} punch · ⭐ {sessionPassMix.monthly} monthly
+              </p>
             </div>
           </div>
         </Card>
@@ -1414,7 +1422,17 @@ export function AdminPanel({
           <div className="space-y-3">
             {activeSessions.map((customer) => (
               <div key={customer.id} className="space-y-2">
-                <div className="font-medium">{customer.name} ({formatPhoneNumber(customer.phone)})</div>
+                <div className="font-medium">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCustomerDetail(customer)}
+                    className="underline decoration-dotted underline-offset-4 hover:text-amber-700 hover:decoration-solid"
+                    title="Open this customer's account"
+                  >
+                    {customer.name}
+                  </button>{' '}
+                  ({formatPhoneNumber(customer.phone)})
+                </div>
                 {(customer.activeSessions || []).map(session => {
                   const purchase = customer.purchases.find(p => p.id === session.purchaseId);
                   const linkedChildIds = purchase?.childIds?.length
@@ -5073,7 +5091,11 @@ export function AdminPanel({
                         <div className="text-xs text-gray-500">{card.customerPhone}</div>
                       </td>
                       <td className="py-3 px-2 text-gray-600">
-                        {card.childName || '—'}
+                        {card.passScope === 'account' ? (
+                          <span className="text-gray-600">Any child on the account</span>
+                        ) : (
+                          card.childName || '—'
+                        )}
                       </td>
                       <td className="py-3 px-2 text-gray-900">{card.passName}</td>
                       <td className="py-3 px-2 text-center">
@@ -5713,6 +5735,14 @@ export function AdminPanel({
         isOpen={showCustomerDetail}
         onClose={handleCloseCustomerDetail}
         onCustomerUpdated={handleCustomerUpdated}
+        onSellProducts={
+          onSellProducts
+            ? (customer) => {
+                handleCloseCustomerDetail();
+                onSellProducts(customer);
+              }
+            : undefined
+        }
       />
 
       {/* Quick Access: Admin Parties Dashboard */}
