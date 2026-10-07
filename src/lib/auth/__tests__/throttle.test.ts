@@ -43,3 +43,9 @@ describe('normalizeAddress', () => {
     expect(normalizeAddress('::ffff:203.0.113.7')).toBe('203.0.113.7');
   });
 });
+
+describe('guest-pass lookups', () => {
+  it('limits guest-pass lookups per address without an overall cap', () => {
+    expect(LIMITS['guest-lookup']).toEqual({ perKey: 30, overall: null, windowMinutes: 60 });
+  });
+});
