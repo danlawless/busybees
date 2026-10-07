@@ -291,6 +291,7 @@ export interface Database {
           party_notes: string | null;
           gift_card_amount_used: number;
           pass_scope: string;
+          guest_of_purchase_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -320,6 +321,7 @@ export interface Database {
           party_notes?: string | null;
           gift_card_amount_used?: number;
           pass_scope?: string;
+          guest_of_purchase_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -349,6 +351,7 @@ export interface Database {
           party_notes?: string | null;
           gift_card_amount_used?: number;
           pass_scope?: string;
+          guest_of_purchase_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1112,7 +1115,20 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      issue_guest_pass: {
+        Args: {
+          p_member_id: string
+          p_guest_customer_id: string
+          p_child_id: string
+          p_auto_checkout_time: string
+          p_allowance: number
+        }
+        Returns: Json
+      }
+      void_guest_pass: {
+        Args: { p_purchase_id: string }
+        Returns: Json
+      }
     };
     Enums: {
       user_role: 'customer' | 'staff' | 'admin';
