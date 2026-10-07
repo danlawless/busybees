@@ -148,15 +148,28 @@ export async function GET(request: NextRequest) {
     const guestFamilies = [...new Set(guestRows.map((g) => g.customer_id))];
     let returnedAndPaid = 0;
     if (guestFamilies.length > 0) {
-      const { data: paid } = await supabase
-        .from('purchases')
-        .select('customer_id')
-        .in('customer_id', guestFamilies)
-        .is('guest_of_purchase_id', null)
-        .gt('price', 0);
-      returnedAndPaid = new Set((paid ?? []).map((p) => p.customer_id)).size;
+      const paidCustomerIds = new Set<string>();
+      // Chunk into groups of 100 to avoid URL limits
+      for (let i = 0; i < guestFamilies.length; i += 100) {
+        const chunk = guestFamilies.slice(i, i + 100);
+        const paidChunk = await fetchAllRows((from, to) =>
+          supabase
+            .from('purchases')
+            .select('customer_id')
+            .in('customer_id', chunk)
+            .is('guest_of_purchase_id', null)
+            .gt('price', 0)
+            .range(from, to)
+        );
+        paidChunk.forEach((p) => paidCustomerIds.add(p.customer_id));
+      }
+      returnedAndPaid = paidCustomerIds.size;
     }
-    const guestPasses = { issued: guestRows.length, families: guestFamilies.length, returnedAndPaid };
+    const guestPasses = {
+      issued: guestRows.length,
+      families: guestFamilies.length,
+      returnedAndPaid,
+    };
 
     return NextResponse.json({
       activeByType: Object.entries(activeByType).map(([name, value]) => ({

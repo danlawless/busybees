@@ -40,9 +40,9 @@ export function PassSection() {
       <ReportDateRangePicker value={dateRange} onChange={setDateRange} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <ReportKpiCard label="Guest passes used" value={data?.guestPasses.issued ?? 0} icon="🐝" loading={isLoading} />
-        <ReportKpiCard label="New families brought in" value={data?.guestPasses.families ?? 0} icon="👋" loading={isLoading} />
-        <ReportKpiCard label="…who have since paid" value={data?.guestPasses.returnedAndPaid ?? 0} icon="💳" loading={isLoading} />
+        <ReportKpiCard label="Guest passes used" value={data?.guestPasses?.issued ?? 0} icon="🐝" loading={isLoading} />
+        <ReportKpiCard label="New families brought in" value={data?.guestPasses?.families ?? 0} icon="👋" loading={isLoading} />
+        <ReportKpiCard label="…who have since paid" value={data?.guestPasses?.returnedAndPaid ?? 0} icon="💳" loading={isLoading} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
