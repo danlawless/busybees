@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import { useReportData, type PassData } from '@/hooks/useReportData';
 import { ReportChartCard } from './ReportChartCard';
+import { ReportKpiCard } from './ReportKpiCard';
 import { ReportDateRangePicker, type DateRange, getPresetRange } from './ReportDateRangePicker';
 import {
   CHART_COLORS,
@@ -37,6 +38,12 @@ export function PassSection() {
   return (
     <div className="space-y-6">
       <ReportDateRangePicker value={dateRange} onChange={setDateRange} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <ReportKpiCard label="Guest passes used" value={data?.guestPasses.issued ?? 0} icon="🐝" loading={isLoading} />
+        <ReportKpiCard label="New families brought in" value={data?.guestPasses.families ?? 0} icon="👋" loading={isLoading} />
+        <ReportKpiCard label="…who have since paid" value={data?.guestPasses.returnedAndPaid ?? 0} icon="💳" loading={isLoading} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Passes Donut */}
