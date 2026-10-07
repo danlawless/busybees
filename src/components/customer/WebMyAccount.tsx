@@ -24,6 +24,7 @@ import { formatCurrency } from '@/lib/utils/productHelpers';
 import { getPassKind, resolvePassForChild, type SelectablePass, type SiblingRule } from '@/lib/pos/passSelection';
 import { TODDLER_AGE_THRESHOLD } from '@/lib/utils/ageUtils';
 import { hasActiveMembership } from '@/lib/membership';
+import { GuestPassBanner } from '@/components/customer/GuestPassBanner';
 import { DayPassPicker } from '@/components/customer/DayPassPicker';
 import { parseDateString } from '@/lib/utils';
 import {
@@ -1128,6 +1129,8 @@ function WebMyAccountContent() {
             )}
           </div>
         </div>
+
+        <GuestPassBanner customerId={profile.id} />
 
         {/* Gift Card Redemption */}
         <Card className="p-4 bg-amber-50 border-amber-200">
