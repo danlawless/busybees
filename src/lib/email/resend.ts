@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
 import { partyPolicyEmailHtml, partyPolicyPlainText } from '@/lib/parties/cancellationPolicy';
+import { toPackageKey } from '@/lib/parties/packageKey';
 
 // Business email addresses
 export const BUSINESS_EMAIL = 'info@busybeesipc.com';
@@ -1567,8 +1568,11 @@ export async function sendPartyBookingConfirmationEmail(data: {
     day: 'numeric',
   });
 
-  // Get package-specific content
-  const packageContent = getPackageEmailContent(data.packageName, isSemiPrivate);
+  // Callers pass a key ('queen_bee') or a purchase's friendly name ('Queen Bee');
+  // without the key no package section matches and the email loses its
+  // schedule, arrival, supplies and cancellation policy.
+  const packageKey = toPackageKey(data.packageName) ?? data.packageName;
+  const packageContent = getPackageEmailContent(packageKey, isSemiPrivate);
 
   // Format package name for display
   const packageLabels: Record<string, string> = {
@@ -1576,7 +1580,7 @@ export async function sendPartyBookingConfirmationEmail(data: {
     worker_bee: 'Worker Bee',
     basic_bee: 'Basic Bee',
   };
-  const packageDisplay = packageLabels[data.packageName] || data.packageName;
+  const packageDisplay = packageLabels[packageKey] || data.packageName;
 
   // Format time for display (convert HH:MM:SS to readable format)
   const formatEmailTime = (time: string) => {

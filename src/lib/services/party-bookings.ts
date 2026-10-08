@@ -12,6 +12,7 @@ import {
   isValidBookingDate,
 } from '../validations/party-booking';
 import { formatDateToYYYYMMDD, parseDateString } from '../utils';
+import { toPackageKey, type PackageKey } from '@/lib/parties/packageKey';
 
 type PartyBooking = Database['public']['Tables']['party_bookings']['Row'];
 type PartyBookingInsert = Database['public']['Tables']['party_bookings']['Insert'];
@@ -663,40 +664,9 @@ export async function createOrUpdateBookingFromPurchase(
     throw new Error('Failed to check for existing booking');
   }
 
-  // Map package name to party_bookings package format
-  // The purchases store friendly names like "Queen Bee Party Package"
-  // party_bookings expects: queen_bee, worker_bee, or basic_bee
-  const packageNameLower = data.packageName.toLowerCase();
-
-  let mappedPackageName: 'queen_bee' | 'worker_bee' | 'basic_bee' = 'basic_bee';
-
-  // Check for queen bee variations
-  if (packageNameLower.includes('queen') ||
-      packageNameLower.includes('premium') ||
-      packageNameLower.includes('deluxe')) {
-    mappedPackageName = 'queen_bee';
-  }
-  // Check for worker bee variations
-  else if (packageNameLower.includes('worker') ||
-           packageNameLower.includes('standard') ||
-           packageNameLower.includes('classic')) {
-    mappedPackageName = 'worker_bee';
-  }
-  // Check for basic bee variations
-  else if (packageNameLower.includes('basic') ||
-           packageNameLower.includes('simple') ||
-           packageNameLower.includes('starter')) {
-    mappedPackageName = 'basic_bee';
-  }
-  // Check for private/semi-private (map to appropriate tier)
-  else if (packageNameLower.includes('private')) {
-    // Private parties are typically premium
-    mappedPackageName = 'queen_bee';
-  }
-  else if (packageNameLower.includes('semi')) {
-    // Semi-private are mid-tier
-    mappedPackageName = 'worker_bee';
-  }
+  // Purchases store friendly names ("Queen Bee Party Package"); party_bookings
+  // stores keys. Anything unrecognised has always been booked as Basic Bee.
+  const mappedPackageName: PackageKey = toPackageKey(data.packageName) ?? 'basic_bee';
 
   // Calculate additional kids count for planning purposes (staffing, supplies)
   // but use the actual purchase price - don't override what was paid
