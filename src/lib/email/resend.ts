@@ -50,6 +50,7 @@ interface SendEmailOptions {
   text: string;
   html?: string;
   cc?: string | string[];
+  bcc?: string | string[];
   replyTo?: string;
   headers?: Record<string, string>;
 }
@@ -106,7 +107,7 @@ function getSetupArrivalTime(startTime: string): string {
  * Send an email using Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  const { to, subject, text, html, cc, replyTo, headers } = options;
+  const { to, subject, text, html, cc, bcc, replyTo, headers } = options;
 
   // Get lazy-initialized client (returns null if API key is missing)
   const resend = getResendClient();
@@ -131,6 +132,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
       text,
       html,
       cc,
+      bcc,
       replyTo,
       headers,
     });
@@ -2101,7 +2103,9 @@ ${siteUrl}
 </html>
 `;
 
-  return sendEmail({ to: data.to, subject, text, html });
+  // Blind copy to the business, so the team sees every invitation link that
+  // goes out. Bcc, not cc: the host forwards this to guests.
+  return sendEmail({ to: data.to, subject, text, html, bcc: BUSINESS_EMAIL });
 }
 
 /**
