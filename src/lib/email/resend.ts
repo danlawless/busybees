@@ -7,6 +7,8 @@ import { Resend } from 'resend';
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
 import { parseDateString } from '@/lib/utils';
+import { partyPolicyEmailHtml, partyPolicyPlainText } from '@/lib/parties/cancellationPolicy';
+import { toPackageKey } from '@/lib/parties/packageKey';
 
 // Business email addresses
 export const BUSINESS_EMAIL = 'info@busybeesipc.com';
@@ -1281,28 +1283,7 @@ Please note that we must adhere to strict time blocks so our staff can properly 
                 </tr>
               </table>
 
-              <!-- Cancellation & Rescheduling Policy -->
-              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
-                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
-
-                    <p style="${subheadingStyle}">Notice Period</p>
-                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
-
-                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
-                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
-
-                    <p style="${subheadingStyle}">Rescheduling</p>
-                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
-
-                    <p style="${subheadingStyle}">Weather or Emergencies</p>
-                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
-                  </td>
-                </tr>
-              </table>
+              ${partyPolicyEmailHtml({ table: importantStyle, padding: sectionPadding, heading: headingStyle, subheading: subheadingStyle, text: textStyle })}
 
               <!-- Closing -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
@@ -1330,11 +1311,7 @@ SAFETY & FACILITY GUIDELINES
 Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
 Play Rules: All guests must follow standard Busy Bee play rules during the event.
 
-BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
-Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
-Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
-Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+${partyPolicyPlainText()}
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
 If you have any questions before the weekend, please don't hesitate to reach out.
@@ -1395,28 +1372,7 @@ Busy Bee's Party Team`;
                 </tr>
               </table>
 
-              <!-- Cancellation & Rescheduling Policy -->
-              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
-                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
-
-                    <p style="${subheadingStyle}">Notice Period</p>
-                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
-
-                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
-                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
-
-                    <p style="${subheadingStyle}">Rescheduling</p>
-                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
-
-                    <p style="${subheadingStyle}">Weather or Emergencies</p>
-                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
-                  </td>
-                </tr>
-              </table>
+              ${partyPolicyEmailHtml({ table: importantStyle, padding: sectionPadding, heading: headingStyle, subheading: subheadingStyle, text: textStyle })}
 
               <!-- Closing -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
@@ -1444,11 +1400,7 @@ SAFETY & FACILITY GUIDELINES
 Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
 Play Rules: All guests must follow standard Busy Bee play rules during the event.
 
-BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
-Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
-Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
-Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+${partyPolicyPlainText()}
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
 If you have any questions before the weekend, please don't hesitate to reach out.
@@ -1509,28 +1461,7 @@ Busy Bee's Party Team`;
                 </tr>
               </table>
 
-              <!-- Cancellation & Rescheduling Policy -->
-              <table cellpadding="0" cellspacing="0" style="${importantStyle}">
-                <tr>
-                  <td style="${sectionPadding}">
-                    <p style="${headingStyle}">📋 Birthday Party Cancellation &amp; Rescheduling Policy</p>
-                    <p style="${textStyle}">To prepare properly for your celebration, staff and resources are scheduled in advance.</p>
-
-                    <p style="${subheadingStyle}">Notice Period</p>
-                    <p style="${textStyle}">Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.</p>
-
-                    <p style="${subheadingStyle}">Less Than 7 Days Notice</p>
-                    <p style="${textStyle}">Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.</p>
-
-                    <p style="${subheadingStyle}">Rescheduling</p>
-                    <p style="${textStyle}">One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability).</p>
-                    <p style="${textStyle}">Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.</p>
-
-                    <p style="${subheadingStyle}">Weather or Emergencies</p>
-                    <p style="${textStyle}">In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.</p>
-                  </td>
-                </tr>
-              </table>
+              ${partyPolicyEmailHtml({ table: importantStyle, padding: sectionPadding, heading: headingStyle, subheading: subheadingStyle, text: textStyle })}
 
               <!-- Closing -->
               <table cellpadding="0" cellspacing="0" style="${sectionStyle}">
@@ -1558,11 +1489,7 @@ SAFETY & FACILITY GUIDELINES
 Waivers: All children participating in play must have a signed waiver completed by a parent or legal guardian. They can do this at check-in on the day of the birthday party.
 Play Rules: All guests must follow standard Busy Bee play rules during the event.
 
-BIRTHDAY PARTY CANCELLATION & RESCHEDULING POLICY
-Notice Period: Cancellations or rescheduling requests must be submitted via email at least 7 days prior to the event.
-Less Than 7 Days Notice: Cancellations made within 7 days of the party will result in the 50% deposit being forfeited.
-Rescheduling: One complimentary reschedule is allowed if requested at least 7 days prior (subject to availability). Rescheduling within the 7-day window may incur a fee of 25% of the total package cost. This is to cover lost revenue on the birthday slot that otherwise would have been available to another family.
-Weather or Emergencies: In cases of extreme weather or documented emergencies, please contact us as soon as possible and we will do our best to accommodate a new date without penalty.
+${partyPolicyPlainText()}
 
 Thank you again for choosing Busy Bee's for your celebration. We truly appreciate your business and look forward to hosting a fun and memorable party for your family!
 If you have any questions before the weekend, please don't hesitate to reach out.
@@ -1641,8 +1568,11 @@ export async function sendPartyBookingConfirmationEmail(data: {
     day: 'numeric',
   });
 
-  // Get package-specific content
-  const packageContent = getPackageEmailContent(data.packageName, isSemiPrivate);
+  // Callers pass a key ('queen_bee') or a purchase's friendly name ('Queen Bee');
+  // without the key no package section matches and the email loses its
+  // schedule, arrival, supplies and cancellation policy.
+  const packageKey = toPackageKey(data.packageName) ?? data.packageName;
+  const packageContent = getPackageEmailContent(packageKey, isSemiPrivate);
 
   // Format package name for display
   const packageLabels: Record<string, string> = {
@@ -1650,7 +1580,7 @@ export async function sendPartyBookingConfirmationEmail(data: {
     worker_bee: 'Worker Bee',
     basic_bee: 'Basic Bee',
   };
-  const packageDisplay = packageLabels[data.packageName] || data.packageName;
+  const packageDisplay = packageLabels[packageKey] || data.packageName;
 
   // Format time for display (convert HH:MM:SS to readable format)
   const formatEmailTime = (time: string) => {
