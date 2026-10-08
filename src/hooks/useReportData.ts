@@ -114,6 +114,7 @@ export interface PassData {
     expired: number;
   }>;
   usageRates: Array<{ type: string; avgUsed: number; included: number; rate: number }>;
+  guestPasses: { issued: number; families: number; returnedAndPaid: number };
 }
 
 export interface PartyData {

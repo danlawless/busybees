@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/utils/productHelpers";
 import { validateAgeForProduct, hasAgeRestriction, getProductAgeGroup, getAgeGroup } from "@/lib/utils/ageUtils";
 import { getNextClosingTime } from "@/lib/utils/timeUtils";
 import { parseDateString } from "@/lib/utils";
+import { GuestPassPanel } from "./GuestPassPanel";
 import {
     MEMBERSHIP_DISCOUNT_PERCENT,
     applyMemberDiscount,
@@ -3014,6 +3015,9 @@ export function CheckIn({
                                             {MEMBERSHIP_DISCOUNT_PERCENT}% off food &amp; retail, applied automatically
                                         </span>
                                     </div>
+                                )}
+                                {isActiveMember && displayCustomer && (
+                                    <GuestPassPanel customerId={displayCustomer.id} />
                                 )}
                                 {(headerGiftCardBalance ?? displayCustomer.giftCardBalance ?? 0) > 0 && (
                                     <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-yellow-100 border border-yellow-300 px-4 py-2">

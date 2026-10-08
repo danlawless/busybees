@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
           .select('purchase_date, price, type, gift_card_amount_used')
           .gte('purchase_date', range.startDate)
           .lte('purchase_date', range.endDate + 'T23:59:59')
+          // $0 guest passes are not transactions; keep them out of the average.
+          .is('guest_of_purchase_id', null)
           .order('purchase_date', { ascending: true })
           .range(from, to)
       ),

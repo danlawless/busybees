@@ -21,7 +21,7 @@ import * as Sentry from '@sentry/nextjs';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
-export type ThrottleScope = 'admin-pin' | 'pos-pin' | 'web-login' | 'web-login-account' | 'staff-login';
+export type ThrottleScope = 'admin-pin' | 'pos-pin' | 'web-login' | 'web-login-account' | 'staff-login' | 'guest-lookup';
 
 export interface ThrottleLimits {
   /** Failures allowed for one key (address or account) within the window. */
@@ -41,6 +41,11 @@ export const LIMITS: Record<ThrottleScope, ThrottleLimits> = {
   // otherwise keep that customer locked out with a trickle of wrong guesses.
   'web-login-account': { perKey: 20, overall: null, windowMinutes: 15 },
   'staff-login': { perKey: 5, overall: null, windowMinutes: 15 },
+  // Guest-pass lookups say whether a phone number is a customer. Every lookup
+  // counts, check and issue alike, and the key is the store's one public IP,
+  // shared by every till -- so 120 an hour leaves room for a busy Sunday
+  // (1 Nov) while still stopping anyone walking the phone book.
+  'guest-lookup': { perKey: 120, overall: null, windowMinutes: 60 },
 };
 
 /**

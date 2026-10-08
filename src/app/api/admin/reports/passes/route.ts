@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
           .from('purchases')
           .select('*')
           .in('type', ['day_pass', 'weekly_pass', 'monthly_pass'])
+          .is('guest_of_purchase_id', null)
+          // $0 member guest passes are not sales (see 057).
           .gte('purchase_date', range.startDate)
           .lte('purchase_date', range.endDate + 'T23:59:59')
           .order('purchase_date', { ascending: true })
@@ -42,6 +44,8 @@ export async function GET(request: NextRequest) {
           .from('purchases')
           .select('type, status, used_sessions, total_sessions')
           .in('type', ['day_pass', 'weekly_pass', 'monthly_pass'])
+          .is('guest_of_purchase_id', null)
+          // $0 member guest passes are not sales (see 057).
           .range(from, to)
       ),
     ]);
@@ -130,6 +134,43 @@ export async function GET(request: NextRequest) {
           : 0,
     }));
 
+    // Member guest passes in range, and how many of those families have since
+    // bought something themselves -- the measure of whether the perk works.
+    const guestRows = await fetchAllRows((from, to) =>
+      supabase
+        .from('purchases')
+        .select('customer_id, purchase_date')
+        .not('guest_of_purchase_id', 'is', null)
+        .gte('purchase_date', range.startDate)
+        .lte('purchase_date', range.endDate + 'T23:59:59')
+        .range(from, to)
+    );
+    const guestFamilies = [...new Set(guestRows.map((g) => g.customer_id))];
+    let returnedAndPaid = 0;
+    if (guestFamilies.length > 0) {
+      const paidCustomerIds = new Set<string>();
+      // Chunk into groups of 100 to avoid URL limits
+      for (let i = 0; i < guestFamilies.length; i += 100) {
+        const chunk = guestFamilies.slice(i, i + 100);
+        const paidChunk = await fetchAllRows((from, to) =>
+          supabase
+            .from('purchases')
+            .select('customer_id')
+            .in('customer_id', chunk)
+            .is('guest_of_purchase_id', null)
+            .gt('price', 0)
+            .range(from, to)
+        );
+        paidChunk.forEach((p) => paidCustomerIds.add(p.customer_id));
+      }
+      returnedAndPaid = paidCustomerIds.size;
+    }
+    const guestPasses = {
+      issued: guestRows.length,
+      families: guestFamilies.length,
+      returnedAndPaid,
+    };
+
     return NextResponse.json({
       activeByType: Object.entries(activeByType).map(([name, value]) => ({
         name,
@@ -138,6 +179,7 @@ export async function GET(request: NextRequest) {
       salesTrend,
       activeVsExpired,
       usageRates,
+      guestPasses,
     });
   } catch (error) {
     logger.error({ error }, 'Failed to fetch passes report');
