@@ -6,7 +6,15 @@
 
 import { createAdminClient } from '@/lib/supabase/server';
 import { fromPurchaseRow, isActiveMembership } from '@/lib/membership';
-import { GUEST_PASS_ALLOWANCE, guestPassesOpen, normalizeChildName, type GuestMatch } from './rules';
+import {
+  GUEST_PASS_ALLOWANCE,
+  decideGuestEligibility,
+  guestPassesOpen,
+  mergeGuestMatches,
+  normalizeChildName,
+  type GuestEligibility,
+  type GuestMatch,
+} from './rules';
 
 /** Escape % and _ so an email is matched literally by ILIKE. */
 function likeLiteral(value: string): string {
@@ -44,25 +52,59 @@ export async function findGuestMatches(input: {
   }
 
   if (input.child) {
-    const wanted = normalizeChildName(input.child.name);
-    const byChild = await db
-      .from('children')
-      .select('name, customer_id, users!inner(role)')
-      .eq('birthdate', input.child.birthdate);
-    if (byChild.error) throw byChild.error;
-    for (const c of byChild.data ?? []) {
-      if (normalizeChildName(c.name) !== wanted) continue;
-      const owner = Array.isArray(c.users) ? c.users[0] : c.users;
-      found.set(c.customer_id, owner?.role ?? null);
-    }
+    for (const [userId, role] of await childOwners([input.child])) found.set(userId, role);
   }
 
+  return withPurchaseCounts(found);
+}
+
+type ChildKey = { name: string; birthdate: string };
+
+/** Every account holding a child with one of these name + birthdate pairs. */
+async function childOwners(children: readonly ChildKey[]): Promise<Map<string, string | null>> {
+  const owners = new Map<string, string | null>(); // userId -> role
+  if (children.length === 0) return owners;
+  const wanted = new Set(children.map((c) => `${c.birthdate}|${normalizeChildName(c.name)}`));
+  const { data, error } = await createAdminClient()
+    .from('children')
+    .select('name, birthdate, customer_id, users!inner(role)')
+    .in('birthdate', [...new Set(children.map((c) => c.birthdate))]);
+  if (error) throw error;
+  for (const c of data ?? []) {
+    if (!wanted.has(`${c.birthdate}|${normalizeChildName(c.name)}`)) continue;
+    const owner = Array.isArray(c.users) ? c.users[0] : c.users;
+    owners.set(c.customer_id, owner?.role ?? null);
+  }
+  return owners;
+}
+
+async function withPurchaseCounts(found: Map<string, string | null>): Promise<GuestMatch[]> {
   const counts = await purchaseCounts([...found.keys()]);
   return [...found.entries()].map(([userId, role]) => ({
     userId,
     role,
     purchaseCount: counts.get(userId) ?? 0,
   }));
+}
+
+/**
+ * Is the friend eligible? Matches their phone, email and child, and -- when
+ * that lands on an empty account -- also matches every child already on that
+ * account, so an empty account (Dad's phone) cannot hide a child who is on a
+ * paying one (Mum's). Both /check and issuing decide through this.
+ */
+export async function resolveGuestEligibility(input: {
+  phone: string;
+  email?: string;
+  child?: ChildKey;
+}): Promise<GuestEligibility> {
+  const matches = await findGuestMatches(input);
+  const first = decideGuestEligibility(matches);
+  if (first.kind !== 'existing') return first;
+
+  const accountChildren = await getGuestAccountChildren(first.userId);
+  const childMatches = await withPurchaseCounts(await childOwners(accountChildren));
+  return decideGuestEligibility(mergeGuestMatches([matches, childMatches]));
 }
 
 export async function getGuestAccountChildren(userId: string) {
@@ -89,8 +131,16 @@ export interface GuestPassStatus {
   guests: Array<{ purchaseId: string; childName: string; checkedInAt: string; visitOpen: boolean }>;
 }
 
-/** Latest live membership row, chosen exactly as issue_guest_pass chooses it. */
-async function currentMembershipId(memberId: string, now: Date): Promise<string | null> {
+/**
+ * Latest live membership row, chosen exactly as issue_guest_pass chooses it,
+ * with its purchase_date: guest passes count from there, because legacy
+ * subscriptions renew in place (the webhook moves purchase_date forward on
+ * the same row).
+ */
+async function currentMembership(
+  memberId: string,
+  now: Date
+): Promise<{ id: string; purchaseDate: string | null } | null> {
   const { data, error } = await createAdminClient()
     .from('purchases')
     .select('id, type, status, expiry_date, actual_expiry_date, purchase_date')
@@ -100,21 +150,24 @@ async function currentMembershipId(memberId: string, now: Date): Promise<string 
     .order('purchase_date', { ascending: false });
   if (error) throw error;
   const live = (data ?? []).find((p) => isActiveMembership(fromPurchaseRow(p), now));
-  return live?.id ?? null;
+  return live ? { id: live.id, purchaseDate: live.purchase_date ?? null } : null;
 }
 
 export async function getGuestPassStatus(memberId: string, now: Date = new Date()): Promise<GuestPassStatus> {
   const open = guestPassesOpen(now);
-  const membershipId = await currentMembershipId(memberId, now);
-  if (!membershipId) {
+  const membership = await currentMembership(memberId, now);
+  if (!membership) {
     return { open, hasMembership: false, allowance: GUEST_PASS_ALLOWANCE, used: 0, remaining: 0, guests: [] };
   }
 
-  const { data, error } = await createAdminClient()
+  // This period only, as issue_guest_pass counts: an in-place renewal moves
+  // the membership's purchase_date forward, and older guests stop counting.
+  let guestQuery = createAdminClient()
     .from('purchases')
     .select('id, purchase_date, children(name), sessions(end_time)')
-    .eq('guest_of_purchase_id', membershipId)
-    .order('purchase_date', { ascending: true });
+    .eq('guest_of_purchase_id', membership.id);
+  if (membership.purchaseDate) guestQuery = guestQuery.gte('purchase_date', membership.purchaseDate);
+  const { data, error } = await guestQuery.order('purchase_date', { ascending: true });
   if (error) throw error;
 
   const guests = (data ?? []).map((p) => {

@@ -8,8 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/server';
 import { beginAttempt, clientAddress, TOO_MANY_ATTEMPTS } from '@/lib/auth/throttle';
-import { CONFLICT_MESSAGE, NOT_ELIGIBLE_MESSAGE, decideGuestEligibility } from '@/lib/guestPasses/rules';
-import { findGuestMatches, getGuestAccountChildren } from '@/lib/guestPasses/server';
+import { CONFLICT_MESSAGE, NOT_ELIGIBLE_MESSAGE } from '@/lib/guestPasses/rules';
+import { getGuestAccountChildren, resolveGuestEligibility } from '@/lib/guestPasses/server';
 import { logger } from '@/lib/logger';
 import { guestPassCaller } from '../callerGuard';
 
@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
   if (!attempt.allowed) return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
 
   try {
-    const eligibility = decideGuestEligibility(await findGuestMatches({ phone: parsed.data.phone }));
+    // Same decision as issuing, including the children already on an empty
+    // account, so the counter hears "not eligible" before filling anything in.
+    const eligibility = await resolveGuestEligibility({ phone: parsed.data.phone });
     switch (eligibility.kind) {
       case 'new':
         return NextResponse.json({ kind: 'new' });

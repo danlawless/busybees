@@ -51,6 +51,29 @@ export function decideGuestEligibility(matches: readonly GuestMatch[]): GuestEli
   return { kind: 'existing', userId: matches[0].userId };
 }
 
+/**
+ * Combine match lists (the friend's details, then the children already on a
+ * matched empty account) into one entry per account. An account seen twice
+ * keeps its strictest view: the higher purchase count, and a non-customer
+ * role over 'customer'.
+ */
+export function mergeGuestMatches(lists: readonly (readonly GuestMatch[])[]): GuestMatch[] {
+  const merged = new Map<string, GuestMatch>();
+  for (const m of lists.flat()) {
+    const seen = merged.get(m.userId);
+    if (!seen) {
+      merged.set(m.userId, { ...m });
+      continue;
+    }
+    merged.set(m.userId, {
+      userId: m.userId,
+      role: seen.role !== 'customer' ? seen.role : m.role,
+      purchaseCount: Math.max(seen.purchaseCount, m.purchaseCount),
+    });
+  }
+  return [...merged.values()];
+}
+
 export type GuestPassCaller =
   | { kind: 'allow'; memberId: string }
   | { kind: 'unauthenticated' }

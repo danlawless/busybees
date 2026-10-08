@@ -5,6 +5,7 @@ import {
   normalizeChildName,
   decideGuestEligibility,
   decideGuestPassCaller,
+  mergeGuestMatches,
   issueRefusalMessage,
   NOT_ELIGIBLE_MESSAGE,
 } from '../rules';
@@ -45,6 +46,30 @@ describe('decideGuestEligibility', () => {
   });
   it('two different empty accounts is a conflict, not a guess', () => {
     expect(decideGuestEligibility([empty('a'), empty('b')])).toEqual({ kind: 'conflict' });
+  });
+});
+
+describe('mergeGuestMatches', () => {
+  const empty = (userId: string) => ({ userId, role: 'customer', purchaseCount: 0 });
+
+  it('keeps one entry per account, in first-seen order', () => {
+    expect(mergeGuestMatches([[empty('a')], [empty('a'), empty('b')]])).toEqual([empty('a'), empty('b')]);
+  });
+  it('an empty account whose child is on a paying account is not eligible', () => {
+    // Dad's empty account (matched by phone) has Mia; Mum's paying account has Mia too.
+    const merged = mergeGuestMatches([[empty('dad')], [empty('dad'), { userId: 'mum', role: 'customer', purchaseCount: 3 }]]);
+    expect(decideGuestEligibility(merged)).toEqual({ kind: 'not_eligible' });
+  });
+  it('an empty account whose children match only itself stays eligible', () => {
+    expect(decideGuestEligibility(mergeGuestMatches([[empty('a')], [empty('a')]]))).toEqual({
+      kind: 'existing',
+      userId: 'a',
+    });
+  });
+  it('keeps the strictest view of an account seen twice', () => {
+    expect(
+      mergeGuestMatches([[empty('a')], [{ userId: 'a', role: 'staff', purchaseCount: 2 }]])
+    ).toEqual([{ userId: 'a', role: 'staff', purchaseCount: 2 }]);
   });
 });
 

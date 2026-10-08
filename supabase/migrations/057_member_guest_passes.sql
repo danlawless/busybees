@@ -3,8 +3,10 @@
 -- Member guest passes: a monthly member brings a new family's child in free,
 -- twice per membership period. A guest visit is a $0 "Guest Pass" day_pass
 -- purchase on the FRIEND's account, pointing at the member's membership
--- purchase. Renewal inserts a new membership row, so the count starts again
--- at 0 by itself.
+-- purchase. Only guest rows dated on or after the membership row's
+-- purchase_date count, so a renewal of either style starts the count again
+-- at 0: a new membership row (new id), or a legacy subscription renewed in
+-- place by the Stripe webhook (same row, purchase_date moved forward).
 --
 -- Counting and inserting live in one function that locks the membership row,
 -- so two requests at once cannot both spend the last pass. Both functions are
@@ -24,7 +26,8 @@ CREATE INDEX IF NOT EXISTS idx_purchases_guest_of
 -- verify-pricing.ts (all filter is_active) never show it.
 INSERT INTO public.passes (name, category, price, duration, sessions_included, description, is_active)
 SELECT 'Guest Pass', 'day', 0, 1, 1,
-       'Member guest pass: one free visit for a family new to Busy Bees, brought by a monthly member.',
+       'Member guest pass: one free visit for a family new to Busy Bees, brought by a monthly member. '
+       || 'Must stay inactive (never for sale) and must not be renamed: issue_guest_pass finds it by name.',
        false
 WHERE NOT EXISTS (SELECT 1 FROM public.passes WHERE name = 'Guest Pass');
 
@@ -39,6 +42,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   v_membership_id UUID;
+  v_membership_date TIMESTAMPTZ;
   v_guest_role TEXT;
   v_used INT;
   v_pass_id UUID;
@@ -51,7 +55,7 @@ BEGIN
 
   -- The member's current membership; the lock serializes every guest pass
   -- spent against it.
-  SELECT id INTO v_membership_id
+  SELECT id, purchase_date INTO v_membership_id, v_membership_date
   FROM public.purchases
   WHERE customer_id = p_member_id
     AND type = 'monthly_pass'
@@ -87,7 +91,12 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_new');
   END IF;
 
-  SELECT COUNT(*) INTO v_used FROM public.purchases WHERE guest_of_purchase_id = v_membership_id;
+  -- This period only: a legacy subscription renews in place, moving the
+  -- membership row's purchase_date forward, so older guest rows stop counting.
+  SELECT COUNT(*) INTO v_used
+  FROM public.purchases
+  WHERE guest_of_purchase_id = v_membership_id
+    AND (v_membership_date IS NULL OR purchase_date >= v_membership_date);
   IF v_used >= p_allowance THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'none_left');
   END IF;

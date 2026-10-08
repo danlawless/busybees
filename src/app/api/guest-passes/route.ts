@@ -23,16 +23,15 @@ import { logger } from '@/lib/logger';
 import {
   CONFLICT_MESSAGE,
   NOT_ELIGIBLE_MESSAGE,
-  decideGuestEligibility,
   guestPassesOpen,
   issueRefusalMessage,
   normalizeChildName,
 } from '@/lib/guestPasses/rules';
 import {
-  findGuestMatches,
   getGuestAccountChildren,
   getGuestPassStatus,
   issueGuestPassRpc,
+  resolveGuestEligibility,
   signChildWaiver,
 } from '@/lib/guestPasses/server';
 import { guestPassCaller } from './callerGuard';
@@ -97,8 +96,9 @@ export async function POST(request: NextRequest) {
   if (!attempt.allowed) return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
 
   try {
-    const matches = await findGuestMatches({ phone: body.phone, email: body.email, child: body.child });
-    const eligibility = decideGuestEligibility(matches);
+    // Also matches the children already on an empty account, so a child
+    // picked by child_id is checked against every other account too.
+    const eligibility = await resolveGuestEligibility({ phone: body.phone, email: body.email, child: body.child });
 
     let guestId: string;
     switch (eligibility.kind) {
