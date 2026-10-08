@@ -42,8 +42,10 @@ export const LIMITS: Record<ThrottleScope, ThrottleLimits> = {
   'web-login-account': { perKey: 20, overall: null, windowMinutes: 15 },
   'staff-login': { perKey: 5, overall: null, windowMinutes: 15 },
   // Guest-pass lookups say whether a phone number is a customer. Every lookup
-  // counts; 30 an hour is far more than a counter needs.
-  'guest-lookup': { perKey: 30, overall: null, windowMinutes: 60 },
+  // counts, check and issue alike, and the key is the store's one public IP,
+  // shared by every till -- so 120 an hour leaves room for a busy Sunday
+  // (1 Nov) while still stopping anyone walking the phone book.
+  'guest-lookup': { perKey: 120, overall: null, windowMinutes: 60 },
 };
 
 /**

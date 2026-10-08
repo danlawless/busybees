@@ -83,6 +83,10 @@ export async function createPosCustomer(input: unknown): Promise<CreatePosCustom
     password: hiddenPasswordFor(authData.user.id),
   });
   if (hiddenPasswordError) {
+    logger.error({ error: hiddenPasswordError }, 'Error setting hidden password');
+    // Clean up the auth user, or the email stays taken by an account no one
+    // can sign in to.
+    await supabase.auth.admin.deleteUser(authData.user.id);
     return { ok: false, status: 500, error: 'Failed to create account. Please try again.' };
   }
 

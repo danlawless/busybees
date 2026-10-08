@@ -46,6 +46,6 @@ describe('normalizeAddress', () => {
 
 describe('guest-pass lookups', () => {
   it('limits guest-pass lookups per address without an overall cap', () => {
-    expect(LIMITS['guest-lookup']).toEqual({ perKey: 30, overall: null, windowMinutes: 60 });
+    expect(LIMITS['guest-lookup']).toEqual({ perKey: 120, overall: null, windowMinutes: 60 });
   });
 });
