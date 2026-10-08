@@ -8,6 +8,7 @@ import { PartyPackageBackdrop } from '@/components/parties/PartyPackageBackdrop'
 import { PartyAvailabilityPreview } from '@/components/parties/PartyAvailabilityPreview'
 import { PartyBookingWizard } from '@/components/parties/PartyBookingWizard'
 import { SummerPartyNotice } from '@/components/parties/SummerPartyNotice'
+import { PartyPolicy } from '@/components/parties/PartyPolicy'
 import { motion } from 'framer-motion'
 import { AlertCircle, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
@@ -87,6 +88,9 @@ function PartiesContent() {
       <div id="party-packages">
         <PartyPackageBackdrop onChoose={handleBookParty} />
       </div>
+
+      {/* Cancellation & rescheduling policy — below the packages, before booking */}
+      <PartyPolicy />
 
       {/* Booking Wizard Modal */}
       {showBookingWizard && (
