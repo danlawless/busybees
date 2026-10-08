@@ -14,9 +14,45 @@ SELECT count(*) FROM purchases WHERE type='monthly_pass' AND status='active' AND
 
 Any number is fine: guest passes count only guest rows dated on or after the membership row's `purchase_date` (in both `issue_guest_pass` and the status endpoint), so these members' allowance resets on renewal too. T12 checks it.
 
+## Behaviour test script (run this)
+
+`docs/GUEST_PASSES_BEHAVIOUR_TESTS.sql` runs T1–T9 and T12 (plus T5b, T13, T14)
+in one go. Paste the whole file into the Supabase SQL Editor and run it.
+
+It is **safe on production**: it creates its own throwaway families (phones
+starting `000`, `@example.invalid` emails) inside one `DO` block that ends by
+raising an error on purpose, which rolls back everything it did. The error
+message is the report and should read `GUEST PASS TESTS: 13/13 passed.` Any
+other error also means nothing was saved. Best run after closing: the tests
+briefly lock the rows they create.
+
+Results: **7 Oct 2026, production, 13/13 passed.**
+
+Not covered by the script: T10 (needs two simultaneous sessions) and T11 (the
+child match through an empty account lives in the API, so test it at the POS;
+guest passes cannot be issued before 1 Nov).
+
+## Rollback
+
+057 only adds things. Before any guest pass has been issued, this removes it
+completely (revert the code first if it is deployed):
+
+```sql
+BEGIN;
+DROP FUNCTION IF EXISTS public.issue_guest_pass(UUID, UUID, UUID, TIMESTAMPTZ, INT);
+DROP FUNCTION IF EXISTS public.void_guest_pass(UUID);
+DELETE FROM public.passes WHERE name = 'Guest Pass' AND price = 0 AND is_active = false;
+DROP INDEX IF EXISTS public.idx_purchases_guest_of;
+ALTER TABLE public.purchases DROP COLUMN IF EXISTS guest_of_purchase_id;
+COMMIT;
+```
+
+Do not restore a backup to undo 057: a restore also loses every purchase and
+check-in made since the backup.
+
 ## Manual SQL Tests
 
-Run each test inside `BEGIN; … ROLLBACK;` against the restored copy. Substitute real IDs for M (member), G (guest), and C (child).
+Reference for the script above, and for running a test by hand. Run each test inside `BEGIN; … ROLLBACK;` against the restored copy. Substitute real IDs for M (member), G (guest), and C (child).
 
 | # | Setup | Call | Expect |
 |---|---|---|---|
@@ -35,8 +71,9 @@ Run each test inside `BEGIN; … ROLLBACK;` against the restored copy. Substitut
 
 ## Deployment Checklist
 
-- [ ] Run the legacy in-place subscription count (above) and note it
-- [ ] Apply migration 057 to restored production database copy and verify all tests pass
-- [ ] Apply migration 057 to production database
+- [x] Run the legacy in-place subscription count (above) and note it — 0 (7 Oct 2026)
+- [x] Apply migration 057 to production database (7 Oct 2026, verified)
+- [x] Run `GUEST_PASSES_BEHAVIOUR_TESTS.sql` — 13/13 passed on production (7 Oct 2026)
 - [ ] Deploy the branch with API routes calling `issue_guest_pass` and `void_guest_pass`
 - [ ] Monitor Sentry for function not found errors during rollout
+- [ ] 1 Nov, before opening: try T11 at the POS with a test family (expect "not eligible")
