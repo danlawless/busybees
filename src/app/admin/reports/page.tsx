@@ -19,7 +19,8 @@ export default function AdminReportsPage() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const handlePinSubmit = async () => {
-    if (pinInput.length !== 4) return;
+    // 4-8 digits, like the staff PIN (staff-login).
+    if (pinInput.length < 4) return;
 
     setIsAuthenticating(true);
     setPinError('');
@@ -76,7 +77,8 @@ export default function AdminReportsPage() {
                   onChange={(e) => setPinInput(e.target.value)}
                   onKeyDown={handlePinKeyDown}
                   placeholder="Enter PIN"
-                  maxLength={4}
+                  inputMode="numeric"
+                  maxLength={8}
                   className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-neutral-300 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 disabled:opacity-50"
                   autoFocus
                   disabled={isAuthenticating}
